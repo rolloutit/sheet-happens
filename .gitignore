@@ -1,0 +1,26 @@
+# dependencies
+node_modules
+
+# next
+.next
+out
+
+# production
+build
+storybook-static
+
+# testing
+coverage
+playwright-report
+test-results
+tsconfig.tsbuildinfo
+
+# env
+.env
+.env*.local
+
+# logs
+*.log
+
+# macOS
+.DS_Store
