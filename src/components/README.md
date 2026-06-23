@@ -34,3 +34,8 @@ Rules:
 - Prefer Server Components by default; add `"use client"` only for state, effects, browser APIs, timers, forms with live validation, and Radix interactive primitives.
 - Every reusable component needs Storybook coverage for variants, disabled/loading/error/empty states, dark/light theme, and mobile-relevant states.
 - Behavior gets a Storybook `play` test or a Vitest/Testing Library test.
+
+Implemented coverage:
+
+- UI primitives: Avatar, Badge, BulkBar, Button, Card, Checkbox, ChipButton, Combobox, DataTable, DatePicker, Dialog, Drawer, Dropdown, Dropzone, ErrorState, Field, IconButton, Input, ListRow, LockedState, Pager, Popover, SectionHead, SegmentedControl, Select, Skeleton, Switch, Tabs, Textarea, Tooltip.
+- Product blocks: AuthScreens, DashboardCards, WeeklyTimeGrid, TimesheetComponents, AdminReview, ManagementViews, Reports, SettingsPanels, Payslips, TweaksPanel.
