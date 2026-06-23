@@ -5,6 +5,10 @@ import { Reports } from ".";
 const meta = {
   title: "Sheet/Reports",
   component: Reports,
+  globals: {
+    theme: "light",
+    locale: "hu",
+  },
   args: {
     mode: "cost-free",
   },

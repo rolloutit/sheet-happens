@@ -5,6 +5,10 @@ import { TweaksPanel } from ".";
 const meta = {
   title: "Sheet/TweaksPanel",
   component: TweaksPanel,
+  globals: {
+    theme: "light",
+    locale: "hu",
+  },
   parameters: {
     layout: "fullscreen",
   },

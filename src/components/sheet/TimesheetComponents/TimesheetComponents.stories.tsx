@@ -5,6 +5,10 @@ import { TimesheetComponents } from ".";
 const meta = {
   title: "Sheet/TimesheetComponents",
   component: TimesheetComponents,
+  globals: {
+    theme: "light",
+    locale: "hu",
+  },
   args: {
     status: "approved",
   },

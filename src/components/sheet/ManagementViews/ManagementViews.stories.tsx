@@ -5,6 +5,10 @@ import { ManagementViews } from ".";
 const meta = {
   title: "Sheet/ManagementViews",
   component: ManagementViews,
+  globals: {
+    theme: "light",
+    locale: "hu",
+  },
   args: {
     view: "people",
   },

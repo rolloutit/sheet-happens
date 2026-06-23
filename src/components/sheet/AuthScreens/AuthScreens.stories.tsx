@@ -5,6 +5,10 @@ import { AuthScreens } from ".";
 const meta = {
   title: "Sheet/AuthScreens",
   component: AuthScreens,
+  globals: {
+    theme: "light",
+    locale: "hu",
+  },
   args: {
     mode: "sign-in",
   },

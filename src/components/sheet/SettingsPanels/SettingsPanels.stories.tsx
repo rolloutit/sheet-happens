@@ -5,6 +5,10 @@ import { SettingsPanels } from ".";
 const meta = {
   title: "Sheet/SettingsPanels",
   component: SettingsPanels,
+  globals: {
+    theme: "light",
+    locale: "hu",
+  },
   args: {
     section: "profile",
   },

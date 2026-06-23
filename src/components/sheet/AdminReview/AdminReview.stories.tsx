@@ -5,6 +5,10 @@ import { AdminReview } from ".";
 const meta = {
   title: "Sheet/AdminReview",
   component: AdminReview,
+  globals: {
+    theme: "light",
+    locale: "hu",
+  },
 } satisfies Meta<typeof AdminReview>;
 
 export default meta;

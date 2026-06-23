@@ -5,6 +5,10 @@ import { Payslips } from ".";
 const meta = {
   title: "Sheet/Payslips",
   component: Payslips,
+  globals: {
+    theme: "light",
+    locale: "hu",
+  },
   args: {
     role: "employee",
   },
