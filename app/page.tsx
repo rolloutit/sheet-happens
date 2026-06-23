@@ -42,8 +42,8 @@ export default function Home() {
             </h1>
             <p className="mt-4 text-base leading-7 text-muted-foreground sm:text-lg">
               The app now has the planned Next.js, Tailwind, Storybook, testing, and typed
-              component-library baseline. Build product components against the Claude design
-              inventory in `components.md`.
+              component-library baseline, plus the first broad slice of primitives and
+              product-specific blocks from `components.md`.
             </p>
           </div>
           <div className="flex flex-wrap gap-3">
