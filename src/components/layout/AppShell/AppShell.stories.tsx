@@ -10,6 +10,10 @@ const meta = {
   title: "Layout/AppShell",
   component: AppShell,
   tags: ["autodocs"],
+  globals: {
+    theme: "dark",
+    locale: "hu",
+  },
   parameters: {
     layout: "fullscreen",
   },
@@ -24,29 +28,29 @@ export const FoundationPage: Story = {
   },
   render: () => (
     <AppShell>
-      <main className="mx-auto grid max-w-5xl gap-6 px-4 py-8 sm:px-6">
+      <div className="mx-auto grid max-w-5xl gap-6 px-4 py-8 sm:px-6">
         <section className="rounded-[var(--radius-xl)] border border-border bg-card/80 p-6 shadow-soft">
           <div className="flex flex-wrap gap-2">
             <StatusPill status="submitted" />
             <StatusPill status="approved" />
             <StatusPill status="paid" />
           </div>
-          <h1 className="mt-4 text-3xl font-bold">App shell frame</h1>
+          <h1 className="mt-4 text-3xl font-bold">Alkalmazás váz</h1>
           <p className="mt-3 max-w-2xl text-sm leading-6 text-muted-foreground">
-            The layout story keeps navigation, header spacing, dark theme surfaces, and page
-            composition visible in the component library.
+            A layout story láthatóvá teszi a navigációt, a fejléc ritmusát és a sötét felületeket a
+            komponenskönyvtárban.
           </p>
           <div className="mt-5 flex flex-wrap gap-3">
-            <Button icon={Clock3}>Log time</Button>
-            <Button variant="cta">Submit month</Button>
+            <Button icon={Clock3}>Idő rögzítése</Button>
+            <Button variant="cta">Hónap beküldése</Button>
           </div>
         </section>
         <EmptyState
           icon={FileCheck2}
-          title="No pending review"
-          body="The layout should preserve comfortable empty-state spacing inside the app frame."
+          title="Nincs függő jóváhagyás"
+          body="A layout kényelmes üres állapot térközt tart az alkalmazás keretén belül."
         />
-      </main>
+      </div>
     </AppShell>
   ),
 };
