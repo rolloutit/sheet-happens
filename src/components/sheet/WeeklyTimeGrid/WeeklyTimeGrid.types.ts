@@ -18,5 +18,6 @@ export type TimeGridProject = {
 export type WeeklyTimeGridProps = {
   projects?: TimeGridProject[];
   locked?: boolean;
+  showTimer?: boolean;
   className?: string;
 };
