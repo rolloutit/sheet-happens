@@ -1,0 +1,3 @@
+export { Avatar } from "./Avatar";
+export type { AvatarProps, AvatarSize, AvatarTone } from "./Avatar.types";
+export { avatarVariants } from "./Avatar.variants";
