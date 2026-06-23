@@ -68,11 +68,11 @@
   --cta-foreground: #2f1802;
   --destructive: #ff6b6b;
   --destructive-foreground: #240707;
-  --success: #72df9a;
+  --success: #5fdaa8;
   --success-foreground: #082313;
-  --warning: #ffd166;
+  --warning: #fcba63;
   --warning-foreground: #2e2100;
-  --border: rgb(236 246 243 / 0.12);
+  --border: rgb(143 240 228 / 0.1);
   --input: rgb(236 246 243 / 0.14);
   --ring: #37e3de;
 
@@ -93,10 +93,10 @@
   --popover-foreground: #0a2930;
   --primary: #1f7475;
   --primary-foreground: #f7fffc;
-  --secondary: #f0ebe0;
+  --secondary: #faf5ee;
   --secondary-foreground: #0a2930;
-  --muted: #ebe3d5;
-  --muted-foreground: #5d706d;
+  --muted: #f4ece1;
+  --muted-foreground: #5b6266;
   --accent: #1f7475;
   --accent-foreground: #f7fffc;
   --cta: #ffcb97;
@@ -107,7 +107,7 @@
   --success-foreground: #f7fff9;
   --warning: #9a6500;
   --warning-foreground: #fff8e7;
-  --border: rgb(10 41 48 / 0.12);
+  --border: #ece4d8;
   --input: rgb(10 41 48 / 0.16);
   --ring: #1f7475;
 }
@@ -125,8 +125,8 @@ body {
   min-height: 100vh;
   margin: 0;
   background:
-    radial-gradient(circle at top left, rgb(55 227 222 / 0.16), transparent 30rem),
-    radial-gradient(circle at 80% 10%, rgb(255 198 139 / 0.11), transparent 24rem),
+    radial-gradient(circle at top left, rgb(55 227 222 / 0.12), transparent 30rem),
+    radial-gradient(circle at 80% 10%, rgb(255 198 139 / 0.14), transparent 24rem),
     var(--background);
   color: var(--foreground);
   font-family: var(--font-lexend);
