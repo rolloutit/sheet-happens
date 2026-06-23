@@ -1,5 +1,15 @@
-import { AlertCircle, ArrowUpRight, CheckCircle2, Clock3, Send, TrendingUp } from "lucide-react";
+import {
+  AlertCircle,
+  ArrowUpRight,
+  CheckCircle2,
+  Clock3,
+  FileWarning,
+  Send,
+  TrendingUp,
+  Users,
+} from "lucide-react";
 
+import { Avatar } from "@/src/components/ui/Avatar";
 import { Badge } from "@/src/components/ui/Badge";
 import { Button } from "@/src/components/ui/Button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/src/components/ui/Card";
@@ -8,33 +18,44 @@ import { cn } from "@/src/lib/utils";
 import type { DashboardCardsProps } from "./DashboardCards.types";
 
 export function DashboardCards({
-  name = "Lena",
+  name = "Márta",
   role = "contractor",
   className,
 }: DashboardCardsProps) {
+  const isAdmin = role === "admin";
+
   return (
-    <div className={cn("grid gap-4", className)}>
-      <Card variant="featured">
-        <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+    <div className={cn("grid gap-5", className)}>
+      <section className="flex flex-col gap-4 rounded-[var(--radius-xl)] border border-border bg-card/80 p-5 shadow-panel md:flex-row md:items-center md:justify-between">
+        <div className="flex items-center gap-4">
+          <Avatar name={name} size="lg" tone={isAdmin ? "teal" : "deep"} />
           <div>
-            <Badge tone={role === "admin" ? "warning" : "info"}>{role}</Badge>
-            <h2 className="mt-3 text-2xl font-semibold">Good morning, {name}</h2>
+            <Badge tone={isAdmin ? "warning" : "info"}>{isAdmin ? "admin" : role}</Badge>
+            <h2 className="mt-3 text-2xl font-semibold">Jó reggelt, {name}</h2>
             <p className="mt-1 text-sm text-muted-foreground">
-              June timesheet is 82 percent complete.
+              {isAdmin
+                ? "12 beküldés vár jóváhagyásra a júniusi zárás előtt."
+                : "A júniusi timesheet 82 százalékban kész."}
             </p>
           </div>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          <Button variant="soft" icon={ArrowUpRight}>
+            Riport megnyitása
+          </Button>
           <Button variant="cta" icon={Send}>
-            Submit timesheet
+            {isAdmin ? "Jóváhagyási sor" : "Timesheet beküldése"}
           </Button>
         </div>
-      </Card>
-      <div className="grid gap-4 md:grid-cols-3">
-        <StatCard label="Logged" value="132.5h" trend="+8%" />
-        <StatCard label="Billable" value="EUR 8,945" trend="+12%" />
-        <StatCard label="Missing days" value="2" warning />
+      </section>
+      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+        <StatCard label="Rögzített órák" value="1 284h" trend="+8%" />
+        <StatCard label="Billable érték" value="EUR 86k" trend="+12%" />
+        <StatCard label="Beküldve" value="48" icon="users" trend="+6" />
+        <StatCard label="Hiányzó napok" value="17" warning />
       </div>
       <div className="grid gap-4 lg:grid-cols-[1fr_1.1fr]">
-        <PriorityCard />
+        {isAdmin ? <FlaggedUsers /> : <PriorityCard />}
         <StatusOverview />
       </div>
     </div>
@@ -46,11 +67,13 @@ function StatCard({
   value,
   trend,
   warning,
+  icon,
 }: {
   label: string;
   value: string;
   trend?: string;
   warning?: boolean;
+  icon?: "clock" | "users";
 }) {
   return (
     <Card variant={warning ? "warning" : "elevated"}>
@@ -58,6 +81,8 @@ function StatCard({
         <CardTitle>{label}</CardTitle>
         {warning ? (
           <AlertCircle className="size-5 text-warning" aria-hidden="true" />
+        ) : icon === "users" ? (
+          <Users className="size-5 text-accent" aria-hidden="true" />
         ) : (
           <Clock3 className="size-5 text-accent" aria-hidden="true" />
         )}
@@ -70,7 +95,7 @@ function StatCard({
             {trend}
           </span>
         ) : (
-          <p className="text-sm text-muted-foreground">Needs attention</p>
+          <p className="text-sm text-muted-foreground">Figyelmet igényel</p>
         )}
         <Sparkline />
       </CardContent>
@@ -97,13 +122,13 @@ function PriorityCard() {
     <Card variant="elevated">
       <CardHeader>
         <div>
-          <CardTitle>Priority action</CardTitle>
-          <p className="mt-1 text-sm text-muted-foreground">Month-end checklist</p>
+          <CardTitle>Prioritás</CardTitle>
+          <p className="mt-1 text-sm text-muted-foreground">Hózárási ellenőrzőlista</p>
         </div>
-        <Badge tone="warning">Due soon</Badge>
+        <Badge tone="warning">Hamarosan</Badge>
       </CardHeader>
       <CardContent>
-        {["Review missing descriptions", "Upload invoice", "Confirm bank data"].map(
+        {["Hiányzó leírások ellenőrzése", "Számla feltöltése", "Bankadatok megerősítése"].map(
           (label, index) => (
             <label
               key={label}
@@ -119,19 +144,59 @@ function PriorityCard() {
   );
 }
 
+function FlaggedUsers() {
+  const users = [
+    { name: "Kovács Anna", detail: "2 hiányzó nap", tone: "warning" },
+    { name: "Tóth Bence", detail: "számla nélkül", tone: "danger" },
+    { name: "Nagy Eszter", detail: "jóváhagyásra vár", tone: "info" },
+  ] as const;
+
+  return (
+    <Card variant="elevated">
+      <CardHeader>
+        <div>
+          <CardTitle>Figyelmet igényel</CardTitle>
+          <p className="mt-1 text-sm text-muted-foreground">Admin teendők a zárás előtt</p>
+        </div>
+        <Badge tone="warning">3 jelzés</Badge>
+      </CardHeader>
+      <CardContent>
+        {users.map((user) => (
+          <div
+            key={user.name}
+            className="flex items-center justify-between gap-3 rounded-[var(--radius-md)] bg-secondary p-3"
+          >
+            <div className="flex items-center gap-3">
+              <Avatar name={user.name} size="sm" tone="deep" />
+              <div>
+                <p className="text-sm font-semibold">{user.name}</p>
+                <p className="text-xs text-muted-foreground">{user.detail}</p>
+              </div>
+            </div>
+            <FileWarning
+              className={cn("size-4", user.tone === "danger" ? "text-destructive" : "text-warning")}
+              aria-hidden="true"
+            />
+          </div>
+        ))}
+      </CardContent>
+    </Card>
+  );
+}
+
 function StatusOverview() {
   const segments = [
-    { label: "Submitted", value: 46, color: "bg-primary" },
-    { label: "Approved", value: 32, color: "bg-success" },
-    { label: "Rejected", value: 12, color: "bg-destructive" },
-    { label: "Missing", value: 10, color: "bg-muted" },
+    { label: "Beküldve", value: 46, color: "bg-primary" },
+    { label: "Jóváhagyva", value: 32, color: "bg-success" },
+    { label: "Elutasítva", value: 12, color: "bg-destructive" },
+    { label: "Hiányzik", value: 10, color: "bg-muted" },
   ];
   return (
     <Card variant="elevated">
       <CardHeader>
-        <CardTitle>Status overview</CardTitle>
+        <CardTitle>Státusz áttekintés</CardTitle>
         <Button variant="ghost" size="sm" icon={ArrowUpRight}>
-          Open
+          Megnyitás
         </Button>
       </CardHeader>
       <CardContent>

@@ -5,8 +5,12 @@ import { DashboardCards } from ".";
 const meta = {
   title: "Sheet/DashboardCards",
   component: DashboardCards,
+  globals: {
+    theme: "dark",
+    locale: "hu",
+  },
   args: {
-    name: "Lena",
+    name: "Léna",
     role: "contractor",
   },
 } satisfies Meta<typeof DashboardCards>;
@@ -18,7 +22,7 @@ export const Contractor: Story = {};
 
 export const Admin: Story = {
   args: {
-    name: "Marta",
+    name: "Márta",
     role: "admin",
   },
 };
