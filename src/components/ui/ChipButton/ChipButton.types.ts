@@ -7,5 +7,7 @@ export type ChipButtonProps = ButtonHTMLAttributes<HTMLButtonElement> &
   VariantProps<typeof chipButtonVariants> & {
     selected?: boolean;
     removable?: boolean;
+    removeLabel?: string;
+    onRemove?: () => void;
     leading?: ReactNode;
   };

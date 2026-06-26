@@ -1,5 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/nextjs-vite";
 import { Plus } from "lucide-react";
+import { expect, fn } from "storybook/test";
 
 import { ChipButton } from ".";
 
@@ -26,4 +27,17 @@ export const Variants: Story = {
       <ChipButton removable>Design team</ChipButton>
     </div>
   ),
+};
+
+export const Removable: Story = {
+  args: {
+    children: "Design team",
+    selected: true,
+    removeLabel: "Remove Design team",
+    onRemove: fn(),
+  },
+  play: async ({ args, canvas, userEvent }) => {
+    await userEvent.click(canvas.getByRole("button", { name: /remove design team/i }));
+    await expect(args.onRemove).toHaveBeenCalled();
+  },
 };
