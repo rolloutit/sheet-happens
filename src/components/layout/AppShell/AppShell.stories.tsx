@@ -1,5 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/nextjs-vite";
 import { Clock3, FileCheck2 } from "lucide-react";
+import { expect, screen, waitFor } from "storybook/test";
 
 import { EmptyState } from "@/src/components/sheet/EmptyState";
 import { StatusPill } from "@/src/components/sheet/StatusPill";
@@ -53,4 +54,27 @@ export const FoundationPage: Story = {
       </div>
     </AppShell>
   ),
+};
+
+export const MobileNavigation: Story = {
+  args: {
+    children: null,
+  },
+  render: () => (
+    <AppShell current="time" mobileNavigationMode="always">
+      <div className="grid gap-4 px-4 py-6">
+        <h1 className="text-2xl font-semibold">Mobil váz</h1>
+        <p className="text-sm text-muted-foreground">
+          A mobil navigáció drawerből nyílik, és menüpont választáskor bezár.
+        </p>
+      </div>
+    </AppShell>
+  ),
+  play: async ({ canvas, userEvent }) => {
+    await userEvent.click(canvas.getByRole("button", { name: /navigáció megnyitása/i }));
+    await expect(screen.getByRole("dialog")).toBeVisible();
+    await expect(screen.getByRole("navigation", { name: /mobile navigation/i })).toBeVisible();
+    await userEvent.click(screen.getByRole("link", { name: /timesheet/i }));
+    await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+  },
 };
