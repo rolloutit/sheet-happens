@@ -35,7 +35,39 @@ Rules:
 - Every reusable component needs Storybook coverage for variants, disabled/loading/error/empty states, dark/light theme, and mobile-relevant states.
 - Behavior gets a Storybook `play` test or a Vitest/Testing Library test.
 
+API conventions:
+
+- Export named public types from `*.types.ts`; component folders should not require importing private implementation details.
+- Prefer `variant`, `size`, `tone`, `density`, `state`, `mode`, and `status` for typed visual/state choices.
+- Keep boolean props for true binary behavior such as `disabled`, `loading`, `checked`, `open`, and `required`.
+- Avoid visual boolean clusters such as `primary`, `danger`, `small`, or `muted`; model those as typed variants.
+- Use discriminated unions for workflow/status-heavy product components.
+- Interactive non-button surfaces must render a real `button`/`a` or implement explicit keyboard semantics, labels, and focus state.
+- Callback props report user intent, not app-side persistence. Server mutations and optimistic state belong at screen level.
+- File/input primitives should expose accepted/rejected or valid/invalid paths separately when the caller needs to show app-specific errors.
+
+Quality gates:
+
+- `pnpm typecheck`
+- `pnpm lint`
+- `pnpm format`
+- `pnpm test`
+- `pnpm build-storybook`
+- `pnpm test-storybook`
+- `pnpm test:visual`
+- `pnpm e2e`
+
+Visual baseline workflow:
+
+- `pnpm test:visual` rebuilds Storybook and compares the checked-in Playwright screenshots.
+- `pnpm test:visual:update` refreshes those screenshots for intentional visual changes.
+
 Implemented coverage:
 
-- UI primitives: Avatar, Badge, BulkBar, Button, Card, Checkbox, ChipButton, Combobox, DataTable, DatePicker, Dialog, Drawer, Dropdown, Dropzone, ErrorState, Field, IconButton, Input, ListRow, LockedState, Pager, Popover, SectionHead, SegmentedControl, Select, Skeleton, Switch, Tabs, Textarea, Tooltip.
-- Product blocks: AuthScreens, DashboardCards, WeeklyTimeGrid, TimesheetComponents, AdminReview, ManagementViews, Reports, SettingsPanels, Payslips, TweaksPanel.
+- UI primitives: Avatar, Badge, BulkBar, Button, Card, Checkbox, ChipButton, CodeInput, Combobox, DataTable, DatePicker, Dialog, Drawer, Dropdown, Dropzone, ErrorState, Field, FormMessage, FormSection, IconButton, Input, ListRow, LockedState, Pager, PasswordInput, Popover, SectionHead, SegmentedControl, Select, Skeleton, StrengthMeter, Switch, Tabs, Textarea, Tooltip.
+- Product blocks: AuthScreens, ChartPrimitives, DashboardCards, DayDetailPanel, DocumentPreview, EmptyState, FlaggedUserList, InfoPageEditor, InvoiceUploadPanel, MonthRow, NotificationPreferences, PayslipAdminTable, PayslipMonthList, Payslips, PayslipSummaryCard, PayslipUploadPanel, PayslipViewer, PdfViewer, PeopleTable, PreferenceControls, ProfileSettingsPanel, ProjectDrawer, RateDrawer, ReportChartCard, ReportExportDialog, ReportFilterBar, Reports, ReportStatTile, RejectDialog, ReviewActionBar, ReviewDiffList, ReviewQueueTable, SecurityMethodList, SettingsPanels, StatCard, StatusOverview, StatusPill, SubmitTimesheetDialog, TimeBreakdownDialog, TimeEntryForm, TimeGridTimer, TimesheetStepper, TimesheetSummaryCard, TotpSetupDialog, WeeklyTimeGrid, TimesheetComponents, AdminReview, ManagementViews, Toast, TweaksPanel.
+- Layout blocks: AppShell, CommandPalette, CommandPill, LanguageToggle, MobileBottomBar, NotificationButton, ThemeProvider, UserMenu.
+
+Readiness tracking:
+
+- See `docs/component-library-audit.md` for the current inventory, API audit, and hardening backlog.
