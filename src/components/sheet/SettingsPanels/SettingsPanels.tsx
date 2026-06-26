@@ -1,30 +1,121 @@
-import { Bell, Fingerprint, KeyRound, Mail, QrCode, ShieldCheck, UserCircle } from "lucide-react";
+"use client";
 
-import { Avatar } from "@/src/components/ui/Avatar";
-import { Badge } from "@/src/components/ui/Badge";
+import { Bell, Fingerprint, KeyRound, Mail, QrCode, ShieldCheck } from "lucide-react";
+
 import { Button } from "@/src/components/ui/Button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/src/components/ui/Card";
-import { Combobox } from "@/src/components/ui/Combobox";
-import { Field } from "@/src/components/ui/Field";
-import { Input } from "@/src/components/ui/Input";
-import { SegmentedControl } from "@/src/components/ui/SegmentedControl";
-import { Switch } from "@/src/components/ui/Switch";
+import { Card } from "@/src/components/ui/Card";
 import { cn } from "@/src/lib/utils";
+import { NotificationPreferences } from "../NotificationPreferences";
+import { PreferenceControls } from "../PreferenceControls";
+import { ProfileSettingsPanel } from "../ProfileSettingsPanel";
+import { SecurityMethodList } from "../SecurityMethodList";
+import { TotpSetupDialog } from "../TotpSetupDialog";
+import type { NotificationPreferenceItem } from "../NotificationPreferences";
+import type { SecurityMethod } from "../SecurityMethodList";
 import type { SettingsPanelsProps } from "./SettingsPanels.types";
 
-export function SettingsPanels({ section = "profile", className }: SettingsPanelsProps) {
+const sections = ["profile", "security", "preferences", "notifications"] as const;
+
+const defaultProfile: NonNullable<SettingsPanelsProps["profile"]> = {
+  name: "Lena Kovacs",
+  subtitle: "Contractor - EUR - Apollo Migration",
+  fields: [
+    { id: "email", label: "Email", value: "lena@example.com" },
+    { id: "role", label: "Role", value: "Contractor" },
+  ],
+};
+
+const defaultSecurityMethods = [
+  {
+    id: "password",
+    label: "Password",
+    description: "Used for email sign-in.",
+    state: "set",
+    icon: KeyRound,
+    actionLabel: "Change",
+  },
+  {
+    id: "google",
+    label: "Google",
+    description: "Connected single sign-on provider.",
+    state: "connected",
+    icon: Mail,
+    actionLabel: "Manage",
+  },
+  {
+    id: "totp",
+    label: "TOTP",
+    description: "Use an authenticator app for 2FA.",
+    state: "not_enabled",
+    icon: QrCode,
+    actionLabel: "Enable",
+  },
+  {
+    id: "passkeys",
+    label: "Passkeys",
+    description: "Fast device-bound sign-in.",
+    state: "recommended",
+    icon: Fingerprint,
+    actionLabel: "Add",
+  },
+] satisfies SecurityMethod[];
+
+const defaultTimezoneOptions = [
+  { value: "Europe/Budapest", label: "Europe/Budapest", meta: "Detected" },
+  { value: "UTC", label: "UTC" },
+  { value: "America/New_York", label: "America/New York" },
+];
+
+const defaultNotificationItems = [
+  {
+    id: "weekly",
+    label: "Weekly reminders",
+    description: "Prompt users before the week closes.",
+    enabled: true,
+    icon: Bell,
+  },
+  {
+    id: "month-end",
+    label: "Month-end reminders",
+    description: "Remind users before payroll lock.",
+    enabled: false,
+    icon: Bell,
+  },
+  {
+    id: "workflow",
+    label: "Workflow events",
+    description: "Approval, rejection, upload, and payment events.",
+    enabled: true,
+    icon: ShieldCheck,
+  },
+] satisfies NotificationPreferenceItem[];
+
+export function SettingsPanels({
+  section = "profile",
+  onSectionChange,
+  profile = defaultProfile,
+  securityMethods = defaultSecurityMethods,
+  security,
+  totp,
+  preferences,
+  notifications,
+  onSecurityMethodAction,
+  className,
+}: SettingsPanelsProps) {
   return (
     <div className={cn("grid gap-4 lg:grid-cols-[14rem_1fr]", className)}>
       <Card variant="flat" className="h-fit">
         <nav className="grid gap-1" aria-label="Settings sections">
-          {(["profile", "security", "preferences", "notifications"] as const).map((item) => (
+          {sections.map((item) => (
             <button
               key={item}
               type="button"
+              aria-current={item === section ? "page" : undefined}
               className={cn(
                 "rounded-[var(--radius-md)] px-3 py-2 text-left font-ui text-sm font-semibold capitalize text-muted-foreground transition hover:bg-secondary hover:text-foreground",
                 item === section && "bg-primary/14 text-accent",
               )}
+              onClick={() => onSectionChange?.(item)}
             >
               {item}
             </button>
@@ -32,161 +123,35 @@ export function SettingsPanels({ section = "profile", className }: SettingsPanel
         </nav>
       </Card>
       <div className="grid gap-4">
-        {section === "profile" ? <ProfileSection /> : null}
-        {section === "security" ? <SecuritySection /> : null}
-        {section === "preferences" ? <PreferencesSection /> : null}
-        {section === "notifications" ? <NotificationsSection /> : null}
+        {section === "profile" ? <ProfileSettingsPanel {...profile} /> : null}
+        {section === "security" ? (
+          <>
+            <SecurityMethodList
+              methods={securityMethods}
+              onMethodAction={onSecurityMethodAction}
+              {...security}
+            />
+            <TotpSetupDialog
+              trigger={
+                <Button type="button" variant="cta" icon={QrCode}>
+                  Enable TOTP
+                </Button>
+              }
+              {...totp}
+            />
+          </>
+        ) : null}
+        {section === "preferences" ? (
+          <PreferenceControls
+            timezoneValue="Europe/Budapest"
+            timezoneOptions={defaultTimezoneOptions}
+            {...preferences}
+          />
+        ) : null}
+        {section === "notifications" ? (
+          <NotificationPreferences items={defaultNotificationItems} {...notifications} />
+        ) : null}
       </div>
     </div>
-  );
-}
-
-function ProfileSection() {
-  return (
-    <Card variant="elevated">
-      <CardHeader>
-        <CardTitle>Profile</CardTitle>
-        <Badge tone="info">Read only</Badge>
-      </CardHeader>
-      <CardContent>
-        <div className="flex items-center gap-4">
-          <Avatar name="Lena Kovacs" size="xl" />
-          <div>
-            <p className="text-lg font-semibold">Lena Kovacs</p>
-            <p className="text-sm text-muted-foreground">Contractor · EUR · Apollo Migration</p>
-          </div>
-        </div>
-        <div className="grid gap-3 md:grid-cols-2">
-          <Field label="Email">
-            <Input readOnly defaultValue="lena@example.com" />
-          </Field>
-          <Field label="Role">
-            <Input readOnly defaultValue="Contractor" />
-          </Field>
-        </div>
-      </CardContent>
-    </Card>
-  );
-}
-
-function SecuritySection() {
-  const methods = [
-    { label: "Password", icon: KeyRound, state: "Set" },
-    { label: "Google", icon: Mail, state: "Connected" },
-    { label: "TOTP", icon: QrCode, state: "Not enabled" },
-    { label: "Passkeys", icon: Fingerprint, state: "Recommended" },
-  ];
-  return (
-    <Card variant="elevated">
-      <CardHeader>
-        <CardTitle>Security</CardTitle>
-        <Badge tone="success">Protected</Badge>
-      </CardHeader>
-      <CardContent>
-        <div className="grid gap-3 md:grid-cols-2">
-          {methods.map((method) => (
-            <div
-              key={method.label}
-              className="rounded-[var(--radius-lg)] border border-border bg-secondary p-4"
-            >
-              <method.icon className="mb-3 size-5 text-accent" aria-hidden="true" />
-              <p className="font-ui text-sm font-semibold">{method.label}</p>
-              <p className="mt-1 text-sm text-muted-foreground">{method.state}</p>
-            </div>
-          ))}
-        </div>
-        <TotpModalPreview />
-      </CardContent>
-    </Card>
-  );
-}
-
-function TotpModalPreview() {
-  return (
-    <div className="rounded-[var(--radius-lg)] border border-border bg-card p-4">
-      <div className="flex items-center gap-3">
-        <span className="grid size-20 place-items-center rounded-[var(--radius-md)] bg-white text-slate-900">
-          <QrCode className="size-10" aria-hidden="true" />
-        </span>
-        <div>
-          <p className="font-ui text-sm font-semibold">TOTP setup modal</p>
-          <p className="text-sm text-muted-foreground">Manual key: SH-2026-DEMO</p>
-        </div>
-      </div>
-      <Input className="mt-4" placeholder="6 digit code" />
-    </div>
-  );
-}
-
-function PreferencesSection() {
-  return (
-    <Card variant="elevated">
-      <CardHeader>
-        <CardTitle>Preferences</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <div className="flex items-center justify-between rounded-[var(--radius-lg)] border border-border bg-secondary p-4">
-          <div className="flex items-center gap-3">
-            <UserCircle className="size-5 text-accent" aria-hidden="true" />
-            <div>
-              <p className="font-ui text-sm font-semibold">Avatar</p>
-              <p className="text-sm text-muted-foreground">
-                Upload, view, or delete a square avatar.
-              </p>
-            </div>
-          </div>
-          <Button variant="soft">Change</Button>
-        </div>
-        <Combobox
-          label="Timezone"
-          value="Europe/Budapest"
-          options={[
-            { value: "Europe/Budapest", label: "Europe/Budapest", meta: "Detected" },
-            { value: "UTC", label: "UTC" },
-            { value: "America/New_York", label: "America/New York" },
-          ]}
-        />
-      </CardContent>
-    </Card>
-  );
-}
-
-function NotificationsSection() {
-  return (
-    <Card variant="elevated">
-      <CardHeader>
-        <CardTitle>Notifications</CardTitle>
-        <Button variant="ghost" size="sm">
-          Reset
-        </Button>
-      </CardHeader>
-      <CardContent>
-        {["Weekly reminders", "Month-end reminders", "Workflow events"].map((label, index) => (
-          <label
-            key={label}
-            className="flex items-center justify-between rounded-[var(--radius-lg)] bg-secondary p-4"
-          >
-            <span className="flex items-center gap-3">
-              {index === 2 ? (
-                <ShieldCheck className="size-4 text-accent" aria-hidden="true" />
-              ) : (
-                <Bell className="size-4 text-accent" aria-hidden="true" />
-              )}
-              <span className="font-ui text-sm font-semibold">{label}</span>
-            </span>
-            <Switch checked={index !== 1} />
-          </label>
-        ))}
-        <SegmentedControl
-          label="Cadence"
-          value="fri"
-          items={[
-            { value: "wed", label: "Wed" },
-            { value: "fri", label: "Fri" },
-            { value: "mon", label: "Mon" },
-          ]}
-        />
-      </CardContent>
-    </Card>
   );
 }
