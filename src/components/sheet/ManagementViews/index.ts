@@ -1,2 +1,2 @@
 export { ManagementViews } from "./ManagementViews";
-export type { ManagementViewsProps } from "./ManagementViews.types";
+export type { ManagementView, ManagementViewsProps } from "./ManagementViews.types";

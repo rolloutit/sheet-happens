@@ -1,4 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/nextjs-vite";
+import { expect, fn } from "storybook/test";
 
 import { ManagementViews } from ".";
 
@@ -28,5 +29,43 @@ export const Projects: Story = {
 export const Rates: Story = {
   args: {
     view: "rates",
+  },
+};
+
+export const DataDrivenPeople: Story = {
+  args: {
+    view: "people",
+    onInvite: fn(),
+    onPersonEdit: fn(),
+    onPersonDelete: fn(),
+    onViewChange: fn(),
+    people: [
+      {
+        id: "1",
+        name: "Lena Kovacs",
+        email: "lena@example.com",
+        profile: "Contractor",
+        state: "active",
+        currency: "EUR",
+      },
+      {
+        id: "2",
+        name: "Mark Chen",
+        email: "mark@example.com",
+        profile: "Employee",
+        state: "inactive",
+        currency: "HUF",
+      },
+    ],
+  },
+  play: async ({ args, canvas, userEvent }) => {
+    await userEvent.click(canvas.getByRole("button", { name: /invite/i }));
+    await expect(args.onInvite).toHaveBeenCalled();
+
+    await userEvent.click(canvas.getByRole("button", { name: /edit lena kovacs/i }));
+    await expect(args.onPersonEdit).toHaveBeenCalledWith(args.people?.[0]);
+
+    await userEvent.click(canvas.getByRole("radio", { name: /projects/i }));
+    await expect(args.onViewChange).toHaveBeenCalledWith("projects");
   },
 };
