@@ -22,9 +22,12 @@
     "build-storybook": "storybook build",
     "test-storybook": "vitest run --config vitest.storybook.config.ts",
     "chromatic": "chromatic --exit-zero-on-changes",
+    "test:visual": "pnpm build-storybook && playwright test --config playwright.visual.config.ts",
+    "test:visual:static": "playwright test --config playwright.visual.config.ts",
+    "test:visual:update": "pnpm build-storybook && playwright test --config playwright.visual.config.ts --update-snapshots",
     "e2e": "playwright test",
     "e2e:update": "playwright test --update-snapshots",
-    "ci": "pnpm typecheck && pnpm lint && pnpm format && pnpm test && pnpm build-storybook && pnpm test-storybook && pnpm e2e"
+    "ci": "pnpm typecheck && pnpm lint && pnpm format && pnpm test && pnpm build-storybook && pnpm test-storybook && pnpm test:visual:static && pnpm e2e"
   },
   "dependencies": {
     "@hookform/resolvers": "latest",
