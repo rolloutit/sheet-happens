@@ -13,4 +13,6 @@ export type SegmentedControlProps = Omit<HTMLAttributes<HTMLDivElement>, "onChan
   onValueChange?: (value: string) => void;
   label: string;
   size?: "sm" | "md";
+  orientation?: "horizontal" | "vertical";
+  width?: "auto" | "full";
 };
