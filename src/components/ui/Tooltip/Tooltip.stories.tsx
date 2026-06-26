@@ -38,7 +38,7 @@ export const Basic: Story = {
 
 export const Side: Story = {
   render: () => (
-    <TooltipProvider>
+    <TooltipProvider delayDuration={0}>
       <Tooltip>
         <TooltipTrigger asChild>
           <Button variant="ghost">Why disabled?</Button>
@@ -47,4 +47,28 @@ export const Side: Story = {
       </Tooltip>
     </TooltipProvider>
   ),
+  play: async ({ canvas, userEvent }) => {
+    await userEvent.hover(canvas.getByRole("button", { name: /why disabled/i }));
+    const tooltipCopies = await screen.findAllByText("Admins can reopen rejected periods.");
+    await expect(tooltipCopies[0]).toBeVisible();
+  },
+};
+
+export const KeyboardFocus: Story = {
+  render: () => (
+    <TooltipProvider delayDuration={0}>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Button variant="soft">Export locked</Button>
+        </TooltipTrigger>
+        <TooltipContent side="bottom">Exports unlock after approval.</TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
+  ),
+  play: async ({ canvas, userEvent }) => {
+    await userEvent.tab();
+    await expect(canvas.getByRole("button", { name: /export locked/i })).toHaveFocus();
+    const tooltipCopies = await screen.findAllByText("Exports unlock after approval.");
+    await expect(tooltipCopies[0]).toBeVisible();
+  },
 };
