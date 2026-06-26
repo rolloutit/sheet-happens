@@ -65,3 +65,17 @@ export const Disabled: Story = {
     await expect(canvas.getByRole("button", { name: /approved/i })).toBeDisabled();
   },
 };
+
+export const AsLink: Story = {
+  render: () => (
+    <Button asChild variant="link">
+      <a href="/reports">Open reports</a>
+    </Button>
+  ),
+  play: async ({ canvas }) => {
+    await expect(canvas.getByRole("link", { name: /open reports/i })).toHaveAttribute(
+      "href",
+      "/reports",
+    );
+  },
+};
