@@ -1,2 +1,2 @@
 export { BulkBar } from "./BulkBar";
-export type { BulkBarProps } from "./BulkBar.types";
+export type { BulkBarLabels, BulkBarProps } from "./BulkBar.types";
