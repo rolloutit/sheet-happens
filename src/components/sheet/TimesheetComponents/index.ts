@@ -1,2 +1,4 @@
-export { MonthRow, TimesheetComponents } from "./TimesheetComponents";
-export type { TimesheetComponentsProps } from "./TimesheetComponents.types";
+export { TimesheetComponents } from "./TimesheetComponents";
+export { MonthRow } from "../MonthRow";
+export type { TimesheetBreakdownRow, TimesheetComponentsProps } from "./TimesheetComponents.types";
+export type { MonthRowProps } from "../MonthRow";
