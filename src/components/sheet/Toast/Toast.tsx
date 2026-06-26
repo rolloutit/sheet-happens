@@ -2,7 +2,7 @@
 
 import { Toaster, toast } from "sonner";
 
-import type { ToastKind } from "./Toast.types";
+import type { ToastKind, ToastOptions } from "./Toast.types";
 
 export function SheetToaster() {
   return (
@@ -20,9 +20,9 @@ export function SheetToaster() {
   );
 }
 
-export function notify(kind: ToastKind, message: string) {
-  if (kind === "success") return toast.success(message);
-  if (kind === "error") return toast.error(message);
-  if (kind === "warning") return toast.warning(message);
-  return toast(message);
+export function notify(kind: ToastKind, message: string, options?: ToastOptions) {
+  if (kind === "success") return toast.success(message, options);
+  if (kind === "error") return toast.error(message, options);
+  if (kind === "warning") return toast.warning(message, options);
+  return toast(message, options);
 }
