@@ -1,136 +1,134 @@
-import { Download, Eye, FileText, Upload } from "lucide-react";
+"use client";
 
-import { Avatar } from "@/src/components/ui/Avatar";
-import { Badge } from "@/src/components/ui/Badge";
-import { Button } from "@/src/components/ui/Button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/src/components/ui/Card";
-import { DataTable } from "@/src/components/ui/Table";
-import { Dropzone } from "@/src/components/ui/Dropzone";
-import { IconButton } from "@/src/components/ui/IconButton";
-import { Skeleton } from "@/src/components/ui/Skeleton";
+import { Download, Eye } from "lucide-react";
+
 import { cn } from "@/src/lib/utils";
+import { PayslipAdminTable } from "../PayslipAdminTable";
+import { PayslipMonthList } from "../PayslipMonthList";
+import { PayslipSummaryCard } from "../PayslipSummaryCard";
+import { PayslipUploadPanel } from "../PayslipUploadPanel";
+import { PayslipViewer } from "../PayslipViewer";
+import type { PayslipAdminRow } from "../PayslipAdminTable";
+import type { PayslipMonthItem } from "../PayslipMonthList";
 import type { PayslipsProps } from "./Payslips.types";
 
-const rows = [
+const defaultMonths = [
+  {
+    id: "june-2026",
+    month: "June 2026",
+    status: "available",
+    fileName: "payslip-june.pdf",
+    meta: "Published by payroll today.",
+  },
+  {
+    id: "may-2026",
+    month: "May 2026",
+    status: "available",
+    fileName: "payslip-may.pdf",
+    meta: "Downloaded 2 times.",
+  },
+  {
+    id: "april-2026",
+    month: "April 2026",
+    status: "missing",
+    meta: "Payroll has not published this payslip yet.",
+  },
+] satisfies PayslipMonthItem[];
+
+const defaultAdminRows = [
   {
     id: "1",
     person: "Lena Kovacs",
+    email: "lena@example.com",
     month: "June 2026",
-    status: "Available",
-    file: "payslip-june.pdf",
+    status: "available",
+    fileName: "payslip-june.pdf",
   },
-  { id: "2", person: "Mark Chen", month: "June 2026", status: "Missing", file: "" },
-];
+  {
+    id: "2",
+    person: "Mark Chen",
+    email: "mark@example.com",
+    month: "June 2026",
+    status: "missing",
+  },
+] satisfies PayslipAdminRow[];
 
-export function Payslips({ role = "employee", className }: PayslipsProps) {
+export function Payslips({
+  role = "employee",
+  latest,
+  months = defaultMonths,
+  selectedPayslipId,
+  viewer,
+  adminRows = defaultAdminRows,
+  adminSort,
+  uploadFiles = [{ id: "1", name: "lena-june.pdf", sizeLabel: "188 KB", status: "done" }],
+  uploadEmployee = "Lena Kovacs",
+  uploadMonth = "June 2026",
+  onAdminSortChange,
+  onPreviewPayslip,
+  onDownloadPayslip,
+  onUploadFilesSelected,
+  onUpload,
+  onAdminPreview,
+  onAdminDownload,
+  onAdminUpload,
+  className,
+}: PayslipsProps) {
+  const latestPayslip = latest ?? months[0];
+  const latestAvailable = latestPayslip?.status === "available";
+
   return (
     <div className={cn("grid gap-4", className)}>
-      {role === "employee" ? <MyPayslips /> : <PayslipAdmin />}
-      <PayslipViewerPreview />
-    </div>
-  );
-}
-
-function MyPayslips() {
-  return (
-    <>
-      <Card variant="featured">
-        <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-          <div>
-            <Badge tone="success">Latest available</Badge>
-            <h2 className="mt-3 text-2xl font-semibold">June 2026 payslip</h2>
-            <p className="mt-1 text-sm text-muted-foreground">Published by payroll today.</p>
-          </div>
-          <div className="flex gap-2">
-            <Button variant="soft" icon={Eye}>
-              Preview
-            </Button>
-            <Button variant="cta" icon={Download}>
-              Download
-            </Button>
-          </div>
-        </div>
-      </Card>
-      <Card variant="elevated">
-        <CardHeader>
-          <CardTitle>History</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {rows.slice(0, 1).map((row) => (
-            <div
-              key={row.id}
-              className="flex items-center gap-3 rounded-[var(--radius-lg)] bg-secondary p-3"
-            >
-              <FileText className="size-5 text-accent" aria-hidden="true" />
-              <div className="min-w-0 flex-1">
-                <p className="font-ui text-sm font-semibold">{row.month}</p>
-                <p className="text-sm text-muted-foreground">{row.file}</p>
-              </div>
-              <IconButton icon={Download} label="Download payslip" size="sm" />
-            </div>
-          ))}
-        </CardContent>
-      </Card>
-    </>
-  );
-}
-
-function PayslipAdmin() {
-  return (
-    <>
-      <Card variant="elevated">
-        <CardHeader>
-          <CardTitle>Upload sheet</CardTitle>
-          <Button variant="cta" icon={Upload}>
-            Upload
-          </Button>
-        </CardHeader>
-        <CardContent>
-          <Dropzone
-            label="Upload payslip PDF"
-            description="Select employee and month before upload."
-            files={[{ id: "1", name: "lena-june.pdf", sizeLabel: "188 KB", status: "done" }]}
+      {role === "employee" && latestPayslip ? (
+        <>
+          <PayslipSummaryCard
+            title={`${latestPayslip.month} payslip`}
+            status={latestPayslip.status}
+            statusLabel={latestAvailable ? "Latest available" : undefined}
+            meta={latestPayslip.meta}
+            secondaryAction={{
+              label: "Preview",
+              icon: Eye,
+              variant: "soft",
+              disabled: !latestAvailable,
+              onClick: latestAvailable ? () => onPreviewPayslip?.(latestPayslip) : undefined,
+            }}
+            primaryAction={{
+              label: "Download",
+              icon: Download,
+              variant: "cta",
+              disabled: !latestAvailable,
+              onClick: latestAvailable ? () => onDownloadPayslip?.(latestPayslip) : undefined,
+            }}
           />
-        </CardContent>
-      </Card>
-      <DataTable
-        rows={rows}
-        getRowKey={(row) => row.id}
-        columns={[
-          {
-            id: "person",
-            header: "Employee",
-            cell: (row) => (
-              <div className="flex items-center gap-3">
-                <Avatar name={row.person} size="sm" />
-                <span>{row.person}</span>
-              </div>
-            ),
-          },
-          { id: "month", header: "Month", accessor: "month" },
-          {
-            id: "status",
-            header: "Status",
-            cell: (row) => (
-              <Badge tone={row.status === "Available" ? "success" : "warning"}>{row.status}</Badge>
-            ),
-          },
-        ]}
-      />
-    </>
-  );
-}
-
-function PayslipViewerPreview() {
-  return (
-    <Card variant="elevated">
-      <CardHeader>
-        <CardTitle>Viewer</CardTitle>
-        <Badge tone="info">Signed link loading</Badge>
-      </CardHeader>
-      <CardContent>
-        <Skeleton variant="document" />
-      </CardContent>
-    </Card>
+          <PayslipMonthList
+            items={months}
+            selectedId={selectedPayslipId}
+            onPreview={onPreviewPayslip}
+            onDownload={onDownloadPayslip}
+          />
+        </>
+      ) : null}
+      {role === "admin" ? (
+        <>
+          <PayslipUploadPanel
+            selectedEmployee={uploadEmployee}
+            selectedMonth={uploadMonth}
+            files={uploadFiles}
+            onFilesSelected={onUploadFilesSelected}
+            onUpload={onUpload}
+          />
+          <PayslipAdminTable
+            rows={adminRows}
+            sort={adminSort}
+            onSortChange={onAdminSortChange}
+            onPreview={onAdminPreview}
+            onDownload={onAdminDownload}
+            onUpload={onAdminUpload}
+          />
+        </>
+      ) : null}
+      <PayslipViewer {...viewer} />
+    </div>
   );
 }
