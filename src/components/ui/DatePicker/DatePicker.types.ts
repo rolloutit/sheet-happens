@@ -5,6 +5,8 @@ export type DatePickerProps = Omit<HTMLAttributes<HTMLDivElement>, "onChange"> &
   onValueChange?: (value: Date | undefined) => void;
   label: string;
   placeholder?: string;
+  locale?: string;
+  disabled?: boolean;
   disabledDate?: (date: Date) => boolean;
   clearable?: boolean;
 };
