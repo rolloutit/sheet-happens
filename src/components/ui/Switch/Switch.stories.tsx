@@ -1,6 +1,7 @@
 import type { Meta, StoryObj } from "@storybook/nextjs-vite";
 import { expect } from "storybook/test";
 
+import { Field } from "../Field";
 import { Switch } from ".";
 
 const meta = {
@@ -70,4 +71,20 @@ export const States: Story = {
       </label>
     </div>
   ),
+};
+
+export const FieldIntegrated: Story = {
+  render: () => (
+    <Field label="Weekly reminder" hint="Sends a reminder before Friday close.">
+      {({ id, describedBy, invalid }) => (
+        <Switch id={id} aria-describedby={describedBy} aria-invalid={invalid || undefined} />
+      )}
+    </Field>
+  ),
+  play: async ({ canvas, userEvent }) => {
+    const toggle = canvas.getByRole("switch", { name: /weekly reminder/i });
+    await expect(toggle).toHaveAccessibleDescription(/before friday close/i);
+    await userEvent.click(toggle);
+    await expect(toggle).toBeChecked();
+  },
 };
