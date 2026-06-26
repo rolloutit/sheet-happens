@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/nextjs-vite";
-import { expect, screen } from "storybook/test";
+import { expect, screen, waitFor } from "storybook/test";
 
 import { Button } from "@/src/components/ui/Button";
 import { Popover, PopoverContent, PopoverTrigger } from ".";
@@ -32,6 +32,9 @@ export const Basic: Story = {
   play: async ({ canvas, userEvent }) => {
     await userEvent.click(canvas.getByRole("button", { name: /open filters/i }));
     await expect(screen.getByText("Filters")).toBeInTheDocument();
+    await userEvent.keyboard("{Escape}");
+    await waitFor(() => expect(screen.queryByText("Filters")).not.toBeInTheDocument());
+    await expect(canvas.getByRole("button", { name: /open filters/i })).toHaveFocus();
   },
 };
 
@@ -53,4 +56,13 @@ export const AlignStart: Story = {
       </PopoverContent>
     </Popover>
   ),
+  play: async ({ canvas, userEvent }) => {
+    await userEvent.click(canvas.getByRole("button", { name: /project picker/i }));
+    const internalTools = screen.getByRole("button", { name: /internal tools/i });
+    const clientPortal = screen.getByRole("button", { name: /client portal/i });
+    await expect(internalTools).toBeVisible();
+    await expect(internalTools).toHaveFocus();
+    await userEvent.tab();
+    await expect(clientPortal).toHaveFocus();
+  },
 };
