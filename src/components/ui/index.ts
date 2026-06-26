@@ -3,7 +3,7 @@ export type { AvatarProps, AvatarSize, AvatarTone } from "./Avatar";
 export { Badge, badgeVariants } from "./Badge";
 export type { BadgeProps } from "./Badge";
 export { BulkBar } from "./BulkBar";
-export type { BulkBarProps } from "./BulkBar";
+export type { BulkBarLabels, BulkBarProps } from "./BulkBar";
 export { Button, buttonVariants } from "./Button";
 export type { ButtonProps } from "./Button";
 export {
@@ -27,10 +27,19 @@ export { Checkbox } from "./Checkbox";
 export type { CheckboxProps } from "./Checkbox";
 export { ChipButton, chipButtonVariants } from "./ChipButton";
 export type { ChipButtonProps } from "./ChipButton";
+export { CodeInput } from "./CodeInput";
+export type { CodeInputProps } from "./CodeInput";
 export { Combobox } from "./Combobox";
 export type { ComboboxOption, ComboboxProps } from "./Combobox";
 export { DataTable } from "./Table";
-export type { DataTableProps, TableColumn } from "./Table";
+export type {
+  DataTableProps,
+  TableColumn,
+  TableDensity,
+  TableDisplayMode,
+  TableSort,
+  TableSortDirection,
+} from "./Table";
 export { DatePicker } from "./DatePicker";
 export type { DatePickerProps } from "./DatePicker";
 export {
@@ -75,24 +84,35 @@ export type {
 } from "./Drawer";
 export {
   Dropdown,
+  DropdownCheckboxItem,
   DropdownContent,
   DropdownItem,
   DropdownLabel,
+  DropdownRadioGroup,
+  DropdownRadioItem,
   DropdownSeparator,
   DropdownTrigger,
 } from "./Dropdown";
 export type {
+  DropdownCheckboxItemProps,
   DropdownContentProps,
   DropdownItemProps,
+  DropdownItemTone,
   DropdownLabelProps,
+  DropdownRadioGroupProps,
+  DropdownRadioItemProps,
   DropdownSeparatorProps,
 } from "./Dropdown";
 export { Dropzone } from "./Dropzone";
-export type { DropzoneFile, DropzoneProps } from "./Dropzone";
+export type { DropzoneFile, DropzoneFileStatus, DropzoneProps } from "./Dropzone";
 export { ErrorState } from "./ErrorState";
 export type { ErrorStateProps } from "./ErrorState";
 export { Field } from "./Field";
 export type { FieldProps } from "./Field";
+export { FormMessage } from "./FormMessage";
+export type { FormMessageProps, FormMessageTone } from "./FormMessage";
+export { FormSection } from "./FormSection";
+export type { FormSectionProps } from "./FormSection";
 export { IconButton, iconButtonVariants } from "./IconButton";
 export type { IconButtonProps } from "./IconButton";
 export { Input } from "./Input";
@@ -102,7 +122,9 @@ export type { ListRowProps } from "./ListRow";
 export { LockedState } from "./LockedState";
 export type { LockedStateProps } from "./LockedState";
 export { Pager } from "./Pager";
-export type { PagerProps } from "./Pager";
+export type { PagerLabels, PagerProps } from "./Pager";
+export { PasswordInput } from "./PasswordInput";
+export type { PasswordInputLabels, PasswordInputProps } from "./PasswordInput";
 export { Popover, PopoverAnchor, PopoverContent, PopoverTrigger } from "./Popover";
 export type { PopoverContentProps } from "./Popover";
 export { SectionHead } from "./SectionHead";
@@ -113,6 +135,14 @@ export { Select } from "./Select";
 export type { SelectOption, SelectProps } from "./Select";
 export { Skeleton } from "./Skeleton";
 export type { SkeletonProps, SkeletonVariant } from "./Skeleton";
+export { StrengthMeter, evaluatePasswordStrength } from "./StrengthMeter";
+export type {
+  PasswordStrengthResult,
+  StrengthMeterLabels,
+  StrengthMeterProps,
+  StrengthMeterScore,
+  StrengthRequirement,
+} from "./StrengthMeter";
 export { Switch } from "./Switch";
 export type { SwitchProps } from "./Switch";
 export { Tabs, TabsContent, TabsList, TabsTrigger } from "./Tabs";
