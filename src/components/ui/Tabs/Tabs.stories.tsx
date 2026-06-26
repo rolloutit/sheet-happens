@@ -28,6 +28,11 @@ export const Basic: Story = {
   play: async ({ canvas, userEvent }) => {
     await userEvent.click(canvas.getByRole("tab", { name: /day/i }));
     await expect(canvas.getByText("Day detail view")).toBeVisible();
+    await userEvent.keyboard("{ArrowRight}");
+    await expect(canvas.getByRole("tab", { name: /timer/i })).toHaveAttribute(
+      "data-state",
+      "active",
+    );
   },
 };
 
@@ -46,4 +51,53 @@ export const DisabledTab: Story = {
       <TabsContent value="paid">Paid queue</TabsContent>
     </Tabs>
   ),
+  play: async ({ canvas, userEvent }) => {
+    const paid = canvas.getByRole("tab", { name: /paid/i });
+    await expect(paid).toBeDisabled();
+    await userEvent.click(canvas.getByRole("tab", { name: /approved/i }));
+    await expect(canvas.getByText("Approved queue")).toBeVisible();
+    await expect(canvas.queryByText("Paid queue")).not.toBeInTheDocument();
+  },
+};
+
+export const Vertical: Story = {
+  render: () => (
+    <Tabs
+      defaultValue="profile"
+      orientation="vertical"
+      className="grid max-w-2xl grid-cols-[12rem_1fr] gap-4"
+    >
+      <TabsList
+        aria-label="Settings section"
+        className="h-auto flex-col items-stretch justify-start rounded-[var(--radius-lg)]"
+      >
+        <TabsTrigger value="profile" className="justify-start">
+          Profile
+        </TabsTrigger>
+        <TabsTrigger value="security" className="justify-start">
+          Security
+        </TabsTrigger>
+        <TabsTrigger value="notifications" className="justify-start">
+          Notifications
+        </TabsTrigger>
+      </TabsList>
+      <div>
+        <TabsContent value="profile" className="mt-0">
+          Profile settings
+        </TabsContent>
+        <TabsContent value="security" className="mt-0">
+          Security settings
+        </TabsContent>
+        <TabsContent value="notifications" className="mt-0">
+          Notification settings
+        </TabsContent>
+      </div>
+    </Tabs>
+  ),
+  play: async ({ canvas, userEvent }) => {
+    const profile = canvas.getByRole("tab", { name: /profile/i });
+    profile.focus();
+    await userEvent.keyboard("{ArrowDown}");
+    await expect(canvas.getByRole("tab", { name: /security/i })).toHaveFocus();
+  },
 };
