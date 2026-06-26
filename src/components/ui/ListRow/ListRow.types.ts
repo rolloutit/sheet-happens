@@ -7,6 +7,7 @@ export type ListRowProps = {
   trailing?: ReactNode;
   selected?: boolean;
   disabled?: boolean;
+  actionLabel?: string;
   onClick?: () => void;
   className?: string;
 };

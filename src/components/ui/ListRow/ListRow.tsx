@@ -8,6 +8,7 @@ export function ListRow({
   trailing,
   selected,
   disabled,
+  actionLabel,
   onClick,
   className,
 }: ListRowProps) {
@@ -31,11 +32,22 @@ export function ListRow({
 
   if (onClick) {
     return (
-      <button type="button" className={classes} onClick={onClick} disabled={disabled}>
+      <button
+        type="button"
+        className={classes}
+        aria-label={actionLabel}
+        aria-pressed={selected || undefined}
+        onClick={onClick}
+        disabled={disabled}
+      >
         {content}
       </button>
     );
   }
 
-  return <div className={classes}>{content}</div>;
+  return (
+    <div className={classes} aria-selected={selected || undefined}>
+      {content}
+    </div>
+  );
 }

@@ -1,5 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/nextjs-vite";
 import { CalendarDays } from "lucide-react";
+import { expect, fn } from "storybook/test";
 
 import { Badge } from "../Badge";
 import { ListRow } from ".";
@@ -19,3 +20,17 @@ export default meta;
 type Story = StoryObj<typeof meta>;
 
 export const Default: Story = {};
+
+export const Clickable: Story = {
+  args: {
+    selected: true,
+    actionLabel: "Open June 2026 timesheet",
+    onClick: fn(),
+  },
+  play: async ({ args, canvas, userEvent }) => {
+    const row = canvas.getByRole("button", { name: /open june 2026 timesheet/i });
+    await expect(row).toHaveAttribute("aria-pressed", "true");
+    await userEvent.click(row);
+    await expect(args.onClick).toHaveBeenCalled();
+  },
+};
