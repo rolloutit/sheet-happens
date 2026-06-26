@@ -1,6 +1,7 @@
 import type { Meta, StoryObj } from "@storybook/nextjs-vite";
 import { expect } from "storybook/test";
 
+import { Field } from "../Field";
 import { Checkbox } from ".";
 
 const meta = {
@@ -70,4 +71,20 @@ export const States: Story = {
       </label>
     </div>
   ),
+};
+
+export const FieldIntegrated: Story = {
+  render: () => (
+    <Field label="Submitted timesheets only" hint="Filters the review queue to submitted rows.">
+      {({ id, describedBy, invalid }) => (
+        <Checkbox id={id} aria-describedby={describedBy} aria-invalid={invalid || undefined} />
+      )}
+    </Field>
+  ),
+  play: async ({ canvas, userEvent }) => {
+    const checkbox = canvas.getByRole("checkbox", { name: /submitted timesheets only/i });
+    await expect(checkbox).toHaveAccessibleDescription(/filters the review queue/i);
+    await userEvent.click(checkbox);
+    await expect(checkbox).toBeChecked();
+  },
 };
