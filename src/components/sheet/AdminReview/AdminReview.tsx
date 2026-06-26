@@ -1,31 +1,23 @@
-import { CheckCircle2, FileText, Search, XCircle } from "lucide-react";
+"use client";
+
+import { Search } from "lucide-react";
 
 import { Badge } from "@/src/components/ui/Badge";
-import { BulkBar } from "@/src/components/ui/BulkBar";
 import { Button } from "@/src/components/ui/Button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/src/components/ui/Card";
-import { Checkbox } from "@/src/components/ui/Checkbox";
-import { DataTable } from "@/src/components/ui/Table";
+import { Card } from "@/src/components/ui/Card";
 import { Input } from "@/src/components/ui/Input";
 import { Pager } from "@/src/components/ui/Pager";
-import { Textarea } from "@/src/components/ui/Textarea";
 import { cn } from "@/src/lib/utils";
-import { StatusPill } from "../StatusPill";
-import type { AdminReviewProps, DiffBadgeState } from "./AdminReview.types";
+import { RejectDialog } from "../RejectDialog";
+import { ReviewActionBar } from "../ReviewActionBar";
+import { ReviewDiffList } from "../ReviewDiffList";
+import { ReviewQueueTable } from "../ReviewQueueTable";
+import type { AdminReviewProps } from "./AdminReview.types";
 
-type QueueRow = {
-  id: string;
-  name: string;
-  period: string;
-  project: string;
-  status: "submitted" | "approved" | "missing";
-  amount: string;
-};
-
-const rows: QueueRow[] = [
+const defaultRows = [
   {
     id: "1",
-    name: "Lena Kovacs",
+    person: "Lena Kovacs",
     period: "Jun 2026",
     project: "Apollo",
     status: "submitted",
@@ -33,23 +25,57 @@ const rows: QueueRow[] = [
   },
   {
     id: "2",
-    name: "Mark Chen",
+    person: "Mark Chen",
     period: "Jun 2026",
     project: "Helix",
     status: "missing",
     amount: "EUR 0",
+    disabled: true,
   },
   {
     id: "3",
-    name: "Sara Nagy",
+    person: "Sara Nagy",
     period: "Jun 2026",
     project: "Internal",
     status: "approved",
     amount: "EUR 6,280",
   },
-];
+] satisfies NonNullable<AdminReviewProps["rows"]>;
 
-export function AdminReview({ selectedCount = 2, className }: AdminReviewProps) {
+const defaultDiffItems = [
+  { id: "hours", state: "match", label: "Hours", delta: "0.0h" },
+  { id: "rate", state: "match", label: "Rate", delta: "EUR 0" },
+  { id: "invoice", state: "mismatch", label: "Invoice total", delta: "+EUR 125" },
+] satisfies NonNullable<AdminReviewProps["diffItems"]>;
+
+const defaultDiffTotals = [
+  { id: "timesheet", label: "Timesheet total", value: "EUR 8,945", tone: "neutral" },
+  { id: "invoice", label: "Invoice total", value: "EUR 9,070", tone: "warning" },
+] satisfies NonNullable<AdminReviewProps["diffTotals"]>;
+
+export function AdminReview({
+  rows = defaultRows,
+  selectedIds = ["1", "3"],
+  selectedCount,
+  onSelectedIdsChange,
+  onRowOpen,
+  sort,
+  onSortChange,
+  page = 1,
+  totalPages = 4,
+  totalItems = 48,
+  onPageChange,
+  diffItems = defaultDiffItems,
+  diffTotals = defaultDiffTotals,
+  diffFooter,
+  onApproveSelected,
+  onClearSelection,
+  onRejectSelected,
+  onRejectInvoice,
+  className,
+}: AdminReviewProps) {
+  const resolvedSelectedCount = selectedCount ?? selectedIds.length;
+
   return (
     <div className={cn("grid gap-4", className)}>
       <Card variant="elevated">
@@ -68,126 +94,53 @@ export function AdminReview({ selectedCount = 2, className }: AdminReviewProps) 
           </div>
         </div>
       </Card>
-      <DataTable
+      <ReviewQueueTable
         rows={rows}
-        getRowKey={(row) => row.id}
-        selectedRowKeys={["1", "3"]}
-        columns={[
-          {
-            id: "select",
-            header: "",
-            cell: (row) => <Checkbox checked={row.id !== "2"} />,
-            width: "3rem",
-          },
-          { id: "name", header: "Person", accessor: "name" },
-          { id: "period", header: "Period", accessor: "period" },
-          { id: "project", header: "Project", accessor: "project" },
-          {
-            id: "status",
-            header: "Status",
-            cell: (row) => (
-              <StatusPill status={row.status === "missing" ? "missing" : row.status} />
-            ),
-          },
-          { id: "amount", header: "Amount", accessor: "amount", align: "right" },
-        ]}
+        selectedIds={selectedIds}
+        onSelectedIdsChange={onSelectedIdsChange}
+        onRowOpen={onRowOpen}
+        sort={sort}
+        onSortChange={onSortChange}
       />
-      <BulkBar
-        selectedCount={selectedCount}
-        summary="Submitted rows are ready for approval."
-        secondaryAction={<Button variant="ghost">Clear</Button>}
-        primaryAction={<Button variant="cta">Bulk approve</Button>}
+      <ReviewActionBar
+        selectedCount={resolvedSelectedCount}
+        onClear={onClearSelection}
+        onApprove={onApproveSelected}
+        rejectAction={
+          <RejectDialog
+            trigger={
+              <Button type="button" variant="danger">
+                Bulk reject
+              </Button>
+            }
+            title="Reject selected submissions?"
+            confirmLabel="Reject selected"
+            onReject={onRejectSelected}
+          />
+        }
       />
-      <Pager page={1} totalPages={4} totalItems={48} />
-      <ReviewDetail />
-    </div>
-  );
-}
-
-function ReviewDetail() {
-  return (
-    <Card variant="elevated">
-      <CardHeader>
-        <div>
-          <CardTitle>Invoice diff</CardTitle>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Compare submitted timesheet totals with uploaded invoice.
-          </p>
-        </div>
-        <StatusPill status="invoiced" />
-      </CardHeader>
-      <CardContent>
-        <div className="grid gap-3 md:grid-cols-3">
-          <DiffBadge state="match" label="Hours" delta="0.0h" />
-          <DiffBadge state="match" label="Rate" delta="EUR 0" />
-          <DiffBadge state="mismatch" label="Invoice total" delta="+EUR 125" />
-        </div>
-        <div className="grid gap-4 lg:grid-cols-2">
-          <div className="rounded-[var(--radius-lg)] border border-border bg-secondary p-4">
-            <p className="font-ui text-sm font-semibold">Timesheet total</p>
-            <p className="mt-3 text-2xl font-semibold">EUR 8,945</p>
-          </div>
-          <div className="rounded-[var(--radius-lg)] border border-warning/35 bg-warning/10 p-4">
-            <p className="font-ui text-sm font-semibold">Invoice total</p>
-            <p className="mt-3 text-2xl font-semibold">EUR 9,070</p>
-          </div>
-        </div>
-        <RejectDialogPreview />
-      </CardContent>
-    </Card>
-  );
-}
-
-function DiffBadge({
-  state,
-  label,
-  delta,
-}: {
-  state: DiffBadgeState;
-  label: string;
-  delta: string;
-}) {
-  const Icon = state === "match" ? CheckCircle2 : XCircle;
-  return (
-    <div
-      className={cn(
-        "flex items-center gap-3 rounded-[var(--radius-lg)] border p-3",
-        state === "match"
-          ? "border-success/30 bg-success/10"
-          : "border-destructive/35 bg-destructive/10",
-      )}
-    >
-      <Icon
-        className={cn("size-5", state === "match" ? "text-success" : "text-destructive")}
-        aria-hidden="true"
+      <Pager
+        page={page}
+        totalPages={totalPages}
+        totalItems={totalItems}
+        onPageChange={onPageChange}
       />
-      <div>
-        <p className="font-ui text-sm font-semibold">{label}</p>
-        <p className="text-xs text-muted-foreground">{delta}</p>
-      </div>
-    </div>
-  );
-}
-
-function RejectDialogPreview() {
-  return (
-    <div className="rounded-[var(--radius-lg)] border border-border bg-card p-4">
-      <div className="mb-3 flex items-center gap-2">
-        <FileText className="size-4 text-destructive" aria-hidden="true" />
-        <p className="font-ui text-sm font-semibold">Reject dialog state</p>
-      </div>
-      <Textarea
-        placeholder="Explain what needs to be corrected before resubmission."
-        defaultValue=""
+      <ReviewDiffList
+        items={diffItems}
+        totals={diffTotals}
+        footer={
+          diffFooter ?? (
+            <RejectDialog
+              trigger={
+                <Button type="button" variant="danger" size="sm">
+                  Reject invoice
+                </Button>
+              }
+              onReject={onRejectInvoice}
+            />
+          )
+        }
       />
-      <div className="mt-3 flex justify-end gap-2">
-        <Button variant="ghost" size="sm">
-          Cancel
-        </Button>
-        <Button variant="danger" size="sm" disabled>
-          Reject invoice
-        </Button>
-      </div>
     </div>
   );
 }

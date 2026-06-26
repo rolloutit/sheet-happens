@@ -1,2 +1,3 @@
 export { AdminReview } from "./AdminReview";
-export type { AdminReviewProps, DiffBadgeState } from "./AdminReview.types";
+export type { AdminReviewProps } from "./AdminReview.types";
+export type { DiffBadgeState } from "../ReviewDiffList";
