@@ -1,2 +1,8 @@
 export { AuthScreens } from "./AuthScreens";
-export type { AuthScreenMode, AuthScreensProps } from "./AuthScreens.types";
+export type {
+  AuthPasswordSetupPayload,
+  AuthScreenMode,
+  AuthScreensProps,
+  AuthSignInPayload,
+  AuthVerificationMode,
+} from "./AuthScreens.types";

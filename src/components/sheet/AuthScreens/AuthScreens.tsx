@@ -1,13 +1,25 @@
+"use client";
+
 import { CheckCircle2, KeyRound, Mail, ShieldCheck, Sparkles } from "lucide-react";
+import { useState, type FormEvent } from "react";
 
 import { Badge } from "@/src/components/ui/Badge";
 import { Button } from "@/src/components/ui/Button";
 import { Card } from "@/src/components/ui/Card";
+import { CodeInput } from "@/src/components/ui/CodeInput";
 import { Field } from "@/src/components/ui/Field";
 import { Input } from "@/src/components/ui/Input";
+import { PasswordInput } from "@/src/components/ui/PasswordInput";
 import { SegmentedControl } from "@/src/components/ui/SegmentedControl";
+import { StrengthMeter, evaluatePasswordStrength } from "@/src/components/ui/StrengthMeter";
 import { cn } from "@/src/lib/utils";
-import type { AuthScreenMode, AuthScreensProps } from "./AuthScreens.types";
+import type {
+  AuthPasswordSetupPayload,
+  AuthScreenMode,
+  AuthScreensProps,
+  AuthSignInPayload,
+  AuthVerificationMode,
+} from "./AuthScreens.types";
 
 const headings: Record<AuthScreenMode, { eyebrow: string; title: string; subtitle: string }> = {
   "sign-in": {
@@ -51,6 +63,18 @@ export function AuthScreens({
   mode = "sign-in",
   email = "lena@example.com",
   className,
+  onSignIn,
+  onMagicLink,
+  onResetPassword,
+  onVerifyCode,
+  onVerificationModeChange,
+  onInvitePasswordSetup,
+  onInviteGoogle,
+  onPasswordSave,
+  onPasskeySetup,
+  onPasskeySkip,
+  onBackToSignIn,
+  onContinue,
 }: AuthScreensProps) {
   const head = headings[mode];
 
@@ -92,23 +116,63 @@ export function AuthScreens({
             <h2 className="text-2xl font-semibold">{head.title}</h2>
             <p className="text-sm leading-6 text-muted-foreground">{head.subtitle}</p>
           </div>
-          {mode === "sign-in" ? <SignInForm /> : null}
-          {mode === "two-factor" ? <TwoFactor email={email} /> : null}
-          {mode === "invite" ? <InviteIdentity /> : null}
-          {mode === "password-setup" ? <PasswordSetup /> : null}
-          {mode === "passkey" ? <PasskeyUpsell /> : null}
-          {mode === "reset-sent" ? <ResetSent email={email} /> : null}
-          {mode === "done" ? <DoneState /> : null}
+          {mode === "sign-in" ? (
+            <SignInForm
+              email={email}
+              onSignIn={onSignIn}
+              onMagicLink={onMagicLink}
+              onResetPassword={onResetPassword}
+            />
+          ) : null}
+          {mode === "two-factor" ? (
+            <TwoFactor
+              email={email}
+              onVerifyCode={onVerifyCode}
+              onVerificationModeChange={onVerificationModeChange}
+            />
+          ) : null}
+          {mode === "invite" ? (
+            <InviteIdentity
+              onInvitePasswordSetup={onInvitePasswordSetup}
+              onInviteGoogle={onInviteGoogle}
+            />
+          ) : null}
+          {mode === "password-setup" ? <PasswordSetup onPasswordSave={onPasswordSave} /> : null}
+          {mode === "passkey" ? (
+            <PasskeyUpsell onPasskeySetup={onPasskeySetup} onPasskeySkip={onPasskeySkip} />
+          ) : null}
+          {mode === "reset-sent" ? (
+            <ResetSent email={email} onBackToSignIn={onBackToSignIn} />
+          ) : null}
+          {mode === "done" ? <DoneState onContinue={onContinue} /> : null}
         </Card>
       </main>
     </div>
   );
 }
 
-function SignInForm() {
+function SignInForm({
+  email,
+  onSignIn,
+  onMagicLink,
+  onResetPassword,
+}: {
+  email: string;
+  onSignIn?: (payload: AuthSignInPayload) => void;
+  onMagicLink?: (email: string) => void;
+  onResetPassword?: (email: string) => void;
+}) {
+  const [emailValue, setEmailValue] = useState(email);
+  const [password, setPassword] = useState("");
+
+  function submit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    onSignIn?.({ email: emailValue, password });
+  }
+
   return (
-    <div className="grid gap-4">
-      <Button variant="cta" icon={KeyRound}>
+    <form className="grid gap-4" onSubmit={submit}>
+      <Button type="button" variant="cta" icon={KeyRound}>
         Continue with passkey
       </Button>
       <Field label="Email" htmlFor="auth-email">
@@ -116,95 +180,144 @@ function SignInForm() {
           id="auth-email"
           type="email"
           placeholder="you@company.com"
-          defaultValue="lena@example.com"
+          value={emailValue}
+          onChange={(event) => setEmailValue(event.target.value)}
         />
       </Field>
       <Field label="Password" htmlFor="auth-password">
-        <Input id="auth-password" type="password" placeholder="Password" />
+        <PasswordInput
+          id="auth-password"
+          placeholder="Password"
+          value={password}
+          onChange={(event) => setPassword(event.target.value)}
+        />
       </Field>
-      <Button>Sign in</Button>
+      <Button type="submit">Sign in</Button>
       <div className="flex justify-between text-sm">
-        <button type="button" className="text-accent hover:underline">
+        <button
+          type="button"
+          className="text-accent hover:underline"
+          onClick={() => onMagicLink?.(emailValue)}
+        >
           Send magic link
         </button>
-        <button type="button" className="text-muted-foreground hover:text-foreground">
+        <button
+          type="button"
+          className="text-muted-foreground hover:text-foreground"
+          onClick={() => onResetPassword?.(emailValue)}
+        >
           Reset password
         </button>
       </div>
-    </div>
+    </form>
   );
 }
 
-function TwoFactor({ email }: { email: string }) {
+function TwoFactor({
+  email,
+  onVerifyCode,
+  onVerificationModeChange,
+}: {
+  email: string;
+  onVerifyCode?: (code: string, mode: AuthVerificationMode) => void;
+  onVerificationModeChange?: (mode: AuthVerificationMode) => void;
+}) {
+  const [verificationMode, setVerificationMode] = useState<AuthVerificationMode>("totp");
+  const [code, setCode] = useState("222");
+
+  function changeMode(value: string) {
+    const nextMode = value as AuthVerificationMode;
+    setVerificationMode(nextMode);
+    onVerificationModeChange?.(nextMode);
+  }
+
   return (
     <div className="grid gap-4">
       <SegmentedControl
         label="Verification mode"
-        value="totp"
+        value={verificationMode}
+        onValueChange={changeMode}
         items={[
           { value: "totp", label: "TOTP" },
           { value: "email", label: "Email" },
         ]}
       />
-      <div className="grid grid-cols-6 gap-2">
-        {["", "", "", "", "", ""].map((_, index) => (
-          <div
-            key={index}
-            className="grid aspect-square place-items-center rounded-[var(--radius-md)] border border-input bg-card font-ui text-lg font-semibold"
-          >
-            {index < 3 ? index + 2 : ""}
-          </div>
-        ))}
-      </div>
+      <CodeInput label="Verification code" value={code} onValueChange={setCode} />
       <p className="text-sm text-muted-foreground">
         Email fallback available for {email} in 28 seconds.
       </p>
-      <Button disabled>Verify code</Button>
+      <Button
+        type="button"
+        disabled={code.length < 6}
+        onClick={() => onVerifyCode?.(code, verificationMode)}
+      >
+        Verify code
+      </Button>
     </div>
   );
 }
 
-function InviteIdentity() {
+function InviteIdentity({
+  onInvitePasswordSetup,
+  onInviteGoogle,
+}: {
+  onInvitePasswordSetup?: () => void;
+  onInviteGoogle?: () => void;
+}) {
   return (
     <div className="grid gap-4">
       <div className="rounded-[var(--radius-lg)] border border-border bg-secondary p-4">
         <p className="font-ui text-sm font-semibold">Lena Kovacs</p>
         <p className="text-sm text-muted-foreground">Contractor · Apollo Migration</p>
       </div>
-      <Button variant="cta">Set up password</Button>
-      <Button variant="soft">Continue with Google</Button>
+      <Button type="button" variant="cta" onClick={onInvitePasswordSetup}>
+        Set up password
+      </Button>
+      <Button type="button" variant="soft" onClick={onInviteGoogle}>
+        Continue with Google
+      </Button>
     </div>
   );
 }
 
-function PasswordSetup() {
+function PasswordSetup({
+  onPasswordSave,
+}: {
+  onPasswordSave?: (payload: AuthPasswordSetupPayload) => void;
+}) {
+  const [password, setPassword] = useState("CorrectHorse7!");
+  const strength = evaluatePasswordStrength(password);
+
   return (
-    <div className="grid gap-4">
-      <Field label="Password">
-        <Input type="password" defaultValue="correct horse battery" />
+    <form
+      className="grid gap-4"
+      onSubmit={(event) => {
+        event.preventDefault();
+        onPasswordSave?.({ password });
+      }}
+    >
+      <Field label="Password" htmlFor="new-password">
+        <PasswordInput
+          id="new-password"
+          value={password}
+          onChange={(event) => setPassword(event.target.value)}
+        />
       </Field>
-      <div className="grid grid-cols-4 gap-2">
-        {[0, 1, 2, 3].map((index) => (
-          <span
-            key={index}
-            className={cn("h-2 rounded-full", index < 3 ? "bg-primary" : "bg-secondary")}
-          />
-        ))}
-      </div>
-      <ul className="grid gap-2 text-sm text-muted-foreground">
-        {["12 characters", "Number or symbol", "Not reused"].map((rule) => (
-          <li key={rule} className="flex items-center gap-2">
-            <CheckCircle2 className="size-4 text-success" aria-hidden="true" />
-            {rule}
-          </li>
-        ))}
-      </ul>
-      <Button variant="cta">Save password</Button>
-    </div>
+      <StrengthMeter score={strength.score} requirements={strength.requirements} />
+      <Button type="submit" variant="cta">
+        Save password
+      </Button>
+    </form>
   );
 }
 
-function PasskeyUpsell() {
+function PasskeyUpsell({
+  onPasskeySetup,
+  onPasskeySkip,
+}: {
+  onPasskeySetup?: () => void;
+  onPasskeySkip?: () => void;
+}) {
   return (
     <div className="grid gap-4">
       {["No password typing", "Works with device biometrics", "Phishing resistant"].map(
@@ -218,31 +331,39 @@ function PasskeyUpsell() {
           </div>
         ),
       )}
-      <Button variant="cta">Set up passkey</Button>
-      <Button variant="ghost">Skip for now</Button>
+      <Button type="button" variant="cta" onClick={onPasskeySetup}>
+        Set up passkey
+      </Button>
+      <Button type="button" variant="ghost" onClick={onPasskeySkip}>
+        Skip for now
+      </Button>
     </div>
   );
 }
 
-function ResetSent({ email }: { email: string }) {
+function ResetSent({ email, onBackToSignIn }: { email: string; onBackToSignIn?: () => void }) {
   return (
     <div className="grid justify-items-center gap-4 text-center">
       <span className="inline-flex size-14 items-center justify-center rounded-full bg-primary/16 text-accent">
         <Mail className="size-6" aria-hidden="true" />
       </span>
       <p className="text-sm text-muted-foreground">We sent instructions to {email}.</p>
-      <Button variant="soft">Back to sign in</Button>
+      <Button type="button" variant="soft" onClick={onBackToSignIn}>
+        Back to sign in
+      </Button>
     </div>
   );
 }
 
-function DoneState() {
+function DoneState({ onContinue }: { onContinue?: () => void }) {
   return (
     <div className="grid justify-items-center gap-4 text-center">
       <span className="inline-flex size-16 items-center justify-center rounded-full bg-success/16 text-success">
         <CheckCircle2 className="size-8" aria-hidden="true" />
       </span>
-      <Button variant="cta">Continue to dashboard</Button>
+      <Button type="button" variant="cta" onClick={onContinue}>
+        Continue to dashboard
+      </Button>
     </div>
   );
 }
