@@ -16,4 +16,6 @@ export type ComboboxProps = Omit<HTMLAttributes<HTMLDivElement>, "onChange"> & {
   searchPlaceholder?: string;
   emptyLabel?: string;
   disabled?: boolean;
+  invalid?: boolean;
+  "aria-describedby"?: string;
 };
