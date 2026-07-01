@@ -34,6 +34,7 @@
     "ci": "pnpm typecheck && pnpm lint && pnpm format && pnpm test && pnpm build-storybook && pnpm test-storybook && pnpm test:visual:static && pnpm e2e"
   },
   "dependencies": {
+    "@better-auth/passkey": "^1.6.23",
     "@better-auth/prisma-adapter": "^1.6.23",
     "@hookform/resolvers": "latest",
     "@prisma/adapter-pg": "^7.8.0",
