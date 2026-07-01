@@ -1,0 +1,91 @@
+model Member {
+  id                  String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  authUserId          String            @unique @map("auth_user_id")
+  email               String            @unique @db.Citext
+  firstName           String            @map("first_name")
+  lastName            String            @map("last_name")
+  displayName         String            @map("display_name")
+  role                MemberRole        @default(MEMBER)
+  status              MemberStatus      @default(INVITED)
+  currentProfile      MemberProfileType @map("current_profile")
+  defaultCurrencyCode String            @default("EUR") @map("default_currency_code") @db.Char(3)
+  timezone            String
+  locale              String
+  activatedAt         DateTime?         @map("activated_at") @db.Timestamptz(6)
+  inactivatedAt       DateTime?         @map("inactivated_at") @db.Timestamptz(6)
+  deletedAt           DateTime?         @map("deleted_at") @db.Timestamptz(6)
+  createdAt           DateTime          @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt           DateTime          @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  authUser User @relation(fields: [authUserId], references: [id], onDelete: Restrict)
+
+  auditLogs               AuditLog[]                @relation("AuditActor")
+  assignmentRatePeriods   AssignmentRatePeriod[]    @relation("AssignmentRateCreatedBy")
+  contractorInvoices      ContractorInvoice[]       @relation("ContractorInvoiceUploadedBy")
+  createdDefaultRates     MemberDefaultRatePeriod[] @relation("MemberDefaultRateCreatedBy")
+  defaultRatePeriods      MemberDefaultRatePeriod[] @relation("MemberDefaultRateOwner")
+  documents               Document[]                @relation("DocumentOwner")
+  inactiveProjectWeeks    InactiveProjectWeek[]
+  infoPagesCreated        InfoPage[]                @relation("InfoPageCreatedBy")
+  infoPagesUpdated        InfoPage[]                @relation("InfoPageUpdatedBy")
+  infoPageVersions        InfoPageVersion[]         @relation("InfoPageVersionCreatedBy")
+  invitations             Invitation[]              @relation("InvitationMember")
+  invitedByInvitations    Invitation[]              @relation("InvitationInvitedBy")
+  notificationDeliveries  NotificationDelivery[]
+  notificationPreferences NotificationPreference?
+  payslips                Payslip[]                 @relation("PayslipEmployee")
+  profilePeriods          MemberProfilePeriod[]
+  projectAssignments      ProjectAssignment[]
+  reportExports           ReportExport[]
+  runningTimer            RunningTimer?
+  timeEntries             TimeEntry[]
+  timeEntryDrafts         TimeEntryDraft[]
+  timesheets              Timesheet[]               @relation("TimesheetContractor")
+  periodLocks             PeriodLock[]
+  timesheetSnapshotLines  TimesheetSnapshotLine[]
+  timesheetEvents         TimesheetEvent[]
+
+  @@index([status])
+  @@index([currentProfile])
+  @@index([email])
+  @@map("members")
+}
+
+model MemberProfilePeriod {
+  id        String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  memberId  String            @map("member_id") @db.Uuid
+  profile   MemberProfileType
+  validFrom DateTime          @map("valid_from") @db.Date
+  validTo   DateTime?         @map("valid_to") @db.Date
+  reason    String?
+  createdAt DateTime          @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  member Member @relation(fields: [memberId], references: [id], onDelete: Restrict)
+
+  @@index([memberId, validFrom])
+  @@map("member_profile_periods")
+}
+
+model Invitation {
+  id                String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  email             String            @db.Citext
+  firstName         String            @map("first_name")
+  lastName          String            @map("last_name")
+  role              MemberRole        @default(MEMBER)
+  profile           MemberProfileType
+  status            InvitationStatus  @default(PENDING)
+  memberId          String?           @map("member_id") @db.Uuid
+  tokenHash         String            @unique @map("token_hash")
+  expiresAt         DateTime          @map("expires_at") @db.Timestamptz(6)
+  acceptedAt        DateTime?         @map("accepted_at") @db.Timestamptz(6)
+  revokedAt         DateTime?         @map("revoked_at") @db.Timestamptz(6)
+  invitedByMemberId String            @map("invited_by_member_id") @db.Uuid
+  createdAt         DateTime          @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  invitedBy Member  @relation("InvitationInvitedBy", fields: [invitedByMemberId], references: [id], onDelete: Restrict)
+  member    Member? @relation("InvitationMember", fields: [memberId], references: [id], onDelete: SetNull)
+
+  @@index([email, status])
+  @@index([expiresAt])
+  @@map("invitations")
+}

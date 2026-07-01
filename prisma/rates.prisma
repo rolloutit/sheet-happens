@@ -1,0 +1,35 @@
+model MemberDefaultRatePeriod {
+  id                String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  memberId          String    @map("member_id") @db.Uuid
+  validFrom         DateTime  @map("valid_from") @db.Date
+  validTo           DateTime? @map("valid_to") @db.Date
+  hourlyRate        Decimal   @map("hourly_rate") @db.Decimal(14, 2)
+  currencyCode      String    @map("currency_code") @db.Char(3)
+  createdAt         DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  createdByMemberId String    @map("created_by_member_id") @db.Uuid
+  note              String?
+
+  createdBy Member @relation("MemberDefaultRateCreatedBy", fields: [createdByMemberId], references: [id], onDelete: Restrict)
+  member    Member @relation("MemberDefaultRateOwner", fields: [memberId], references: [id], onDelete: Restrict)
+
+  @@index([memberId, validFrom])
+  @@map("member_default_rate_periods")
+}
+
+model AssignmentRatePeriod {
+  id                  String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  projectAssignmentId String    @map("project_assignment_id") @db.Uuid
+  validFrom           DateTime  @map("valid_from") @db.Date
+  validTo             DateTime? @map("valid_to") @db.Date
+  hourlyRate          Decimal   @map("hourly_rate") @db.Decimal(14, 2)
+  currencyCode        String    @map("currency_code") @db.Char(3)
+  createdAt           DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  createdByMemberId   String    @map("created_by_member_id") @db.Uuid
+  note                String?
+
+  createdBy         Member            @relation("AssignmentRateCreatedBy", fields: [createdByMemberId], references: [id], onDelete: Restrict)
+  projectAssignment ProjectAssignment @relation(fields: [projectAssignmentId], references: [id], onDelete: Restrict)
+
+  @@index([projectAssignmentId, validFrom])
+  @@map("assignment_rate_periods")
+}

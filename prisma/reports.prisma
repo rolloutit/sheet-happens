@@ -1,0 +1,19 @@
+model ReportExport {
+  id                  String     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  title               String
+  mode                ReportMode
+  view                ReportView
+  filters             Json
+  timezone            String
+  renderSnapshot      Json       @map("render_snapshot")
+  documentId          String?    @unique @map("document_id") @db.Uuid
+  generatedByMemberId String     @map("generated_by_member_id") @db.Uuid
+  createdAt           DateTime   @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  document    Document? @relation(fields: [documentId], references: [id], onDelete: SetNull)
+  generatedBy Member    @relation(fields: [generatedByMemberId], references: [id], onDelete: Restrict)
+
+  @@index([generatedByMemberId, createdAt])
+  @@index([mode, createdAt])
+  @@map("report_exports")
+}

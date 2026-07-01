@@ -1,0 +1,48 @@
+model NotificationPreference {
+  id                     String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  memberId               String   @unique @map("member_id") @db.Uuid
+  weeklyHoursReminder    Boolean  @default(true) @map("weekly_hours_reminder")
+  monthlyInvoiceReminder Boolean  @default(true) @map("monthly_invoice_reminder")
+  workflowEmails         Boolean  @default(true) @map("workflow_emails")
+  createdAt              DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt              DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  member Member @relation(fields: [memberId], references: [id], onDelete: Cascade)
+
+  @@map("notification_preferences")
+}
+
+model NotificationDelivery {
+  id                String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  memberId          String?          @map("member_id") @db.Uuid
+  email             String           @db.Citext
+  type              NotificationType
+  status            DeliveryStatus   @default(QUEUED)
+  provider          String?
+  providerMessageId String?          @map("provider_message_id")
+  error             String?
+  metadata          Json             @default("{}")
+  createdAt         DateTime         @default(now()) @map("created_at") @db.Timestamptz(6)
+  sentAt            DateTime?        @map("sent_at") @db.Timestamptz(6)
+
+  member Member? @relation(fields: [memberId], references: [id], onDelete: SetNull)
+
+  @@index([memberId, createdAt])
+  @@index([status, createdAt])
+  @@index([type, createdAt])
+  @@map("notification_deliveries")
+}
+
+model JobRun {
+  id             String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  jobName        String    @map("job_name")
+  idempotencyKey String    @unique @map("idempotency_key")
+  startedAt      DateTime  @map("started_at") @db.Timestamptz(6)
+  finishedAt     DateTime? @map("finished_at") @db.Timestamptz(6)
+  status         String
+  metadata       Json      @default("{}")
+  error          String?
+
+  @@index([jobName, startedAt])
+  @@map("job_runs")
+}

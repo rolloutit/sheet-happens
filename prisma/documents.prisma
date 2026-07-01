@@ -1,0 +1,63 @@
+model Document {
+  id                 String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  type               DocumentType
+  status             DocumentStatus @default(PENDING)
+  ownerMemberId      String?        @map("owner_member_id") @db.Uuid
+  storageBucket      String         @map("storage_bucket")
+  storageKey         String         @unique @map("storage_key")
+  originalFilename   String         @map("original_filename")
+  contentType        String         @map("content_type")
+  byteSize           BigInt         @map("byte_size")
+  checksumSha256     String?        @map("checksum_sha256")
+  uploadedByMemberId String         @map("uploaded_by_member_id") @db.Uuid
+  createdAt          DateTime       @default(now()) @map("created_at") @db.Timestamptz(6)
+  deletedAt          DateTime?      @map("deleted_at") @db.Timestamptz(6)
+  deletedByMemberId  String?        @map("deleted_by_member_id") @db.Uuid
+
+  contractorInvoice ContractorInvoice?
+  owner             Member?            @relation("DocumentOwner", fields: [ownerMemberId], references: [id], onDelete: SetNull)
+  payslip           Payslip?
+  reportExport      ReportExport?
+
+  @@index([type, status])
+  @@index([ownerMemberId, type])
+  @@index([createdAt])
+  @@map("documents")
+}
+
+model ContractorInvoice {
+  id                  String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  timesheetId         String        @map("timesheet_id") @db.Uuid
+  timesheetRevisionId String        @map("timesheet_revision_id") @db.Uuid
+  correctionCaseId    String?       @map("correction_case_id") @db.Uuid
+  documentId          String        @unique @map("document_id") @db.Uuid
+  role                InvoiceRole
+  status              InvoiceStatus @default(UPLOADED)
+  invoiceNumber       String        @map("invoice_number")
+  declaredAmount      Decimal       @map("declared_amount") @db.Decimal(14, 2)
+  currencyCode        String        @map("currency_code") @db.Char(3)
+  referencesInvoiceId String?       @map("references_invoice_id") @db.Uuid
+  uploadedByMemberId  String        @map("uploaded_by_member_id") @db.Uuid
+  reviewedByMemberId  String?       @map("reviewed_by_member_id") @db.Uuid
+  reviewedAt          DateTime?     @map("reviewed_at") @db.Timestamptz(6)
+  rejectionReason     String?       @map("rejection_reason")
+  createdAt           DateTime      @default(now()) @map("created_at") @db.Timestamptz(6)
+  replacedByInvoiceId String?       @unique @map("replaced_by_invoice_id") @db.Uuid
+
+  cancellationForCase TimesheetCorrectionCase? @relation("CorrectionCancellationInvoice")
+  correctionCase      TimesheetCorrectionCase? @relation("CorrectionCaseInvoices", fields: [correctionCaseId], references: [id], onDelete: SetNull)
+  document            Document                 @relation(fields: [documentId], references: [id], onDelete: Restrict)
+  referencesInvoice   ContractorInvoice?       @relation("InvoiceReference", fields: [referencesInvoiceId], references: [id], onDelete: SetNull)
+  referencedBy        ContractorInvoice[]      @relation("InvoiceReference")
+  replacedByInvoice   ContractorInvoice?       @relation("InvoiceReplacement", fields: [replacedByInvoiceId], references: [id], onDelete: SetNull)
+  replacesInvoice     ContractorInvoice?       @relation("InvoiceReplacement")
+  timesheet           Timesheet                @relation(fields: [timesheetId], references: [id], onDelete: Cascade)
+  timesheetRevision   TimesheetRevision        @relation(fields: [timesheetRevisionId], references: [id], onDelete: Cascade)
+  uploadedBy          Member                   @relation("ContractorInvoiceUploadedBy", fields: [uploadedByMemberId], references: [id], onDelete: Restrict)
+
+  @@index([timesheetId, status])
+  @@index([timesheetRevisionId, role, status])
+  @@index([correctionCaseId])
+  @@index([invoiceNumber])
+  @@map("contractor_invoices")
+}

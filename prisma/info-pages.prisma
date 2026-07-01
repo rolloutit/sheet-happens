@@ -1,0 +1,37 @@
+model InfoPage {
+  id                 String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  slug               String         @unique
+  title              String
+  status             InfoPageStatus @default(DRAFT)
+  publishedVersionId String?        @map("published_version_id") @db.Uuid
+  createdByMemberId  String         @map("created_by_member_id") @db.Uuid
+  updatedByMemberId  String?        @map("updated_by_member_id") @db.Uuid
+  createdAt          DateTime       @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt          DateTime       @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  createdBy        Member            @relation("InfoPageCreatedBy", fields: [createdByMemberId], references: [id], onDelete: Restrict)
+  publishedVersion InfoPageVersion?  @relation("PublishedInfoPageVersion", fields: [publishedVersionId], references: [id], onDelete: SetNull)
+  updatedBy        Member?           @relation("InfoPageUpdatedBy", fields: [updatedByMemberId], references: [id], onDelete: SetNull)
+  versions         InfoPageVersion[] @relation("InfoPageVersions")
+
+  @@index([status])
+  @@map("info_pages")
+}
+
+model InfoPageVersion {
+  id                String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  infoPageId        String   @map("info_page_id") @db.Uuid
+  version           Int
+  title             String
+  bodyMarkdown      String   @map("body_markdown")
+  createdByMemberId String   @map("created_by_member_id") @db.Uuid
+  createdAt         DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  createdBy            Member     @relation("InfoPageVersionCreatedBy", fields: [createdByMemberId], references: [id], onDelete: Restrict)
+  infoPage             InfoPage   @relation("InfoPageVersions", fields: [infoPageId], references: [id], onDelete: Cascade)
+  publishedForInfoPage InfoPage[] @relation("PublishedInfoPageVersion")
+
+  @@unique([infoPageId, version])
+  @@index([createdAt])
+  @@map("info_page_versions")
+}

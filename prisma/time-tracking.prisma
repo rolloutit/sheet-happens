@@ -1,0 +1,80 @@
+model TimeEntry {
+  id                          String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  memberId                    String      @map("member_id") @db.Uuid
+  projectId                   String      @map("project_id") @db.Uuid
+  projectAssignmentId         String      @map("project_assignment_id") @db.Uuid
+  localDate                   DateTime    @map("local_date") @db.Date
+  timezone                    String
+  startedAt                   DateTime?   @map("started_at") @db.Timestamptz(6)
+  endedAt                     DateTime?   @map("ended_at") @db.Timestamptz(6)
+  durationMinutes             Int         @map("duration_minutes")
+  description                 String      @default("")
+  source                      EntrySource
+  lockedByTimesheetRevisionId String?     @map("locked_by_timesheet_revision_id") @db.Uuid
+  createdAt                   DateTime    @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt                   DateTime    @updatedAt @map("updated_at") @db.Timestamptz(6)
+  deletedAt                   DateTime?   @map("deleted_at") @db.Timestamptz(6)
+  createdByMemberId           String?     @map("created_by_member_id") @db.Uuid
+  updatedByMemberId           String?     @map("updated_by_member_id") @db.Uuid
+
+  lockedByRevision  TimesheetRevision?      @relation(fields: [lockedByTimesheetRevisionId], references: [id], onDelete: SetNull)
+  member            Member                  @relation(fields: [memberId], references: [id], onDelete: Restrict)
+  project           Project                 @relation(fields: [projectId], references: [id], onDelete: Restrict)
+  projectAssignment ProjectAssignment       @relation(fields: [projectAssignmentId], references: [id], onDelete: Restrict)
+  snapshotLines     TimesheetSnapshotLine[]
+
+  @@index([memberId, localDate])
+  @@index([projectId, localDate])
+  @@index([projectAssignmentId, localDate])
+  @@index([lockedByTimesheetRevisionId])
+  @@map("time_entries")
+}
+
+model RunningTimer {
+  id                  String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  memberId            String   @unique @map("member_id") @db.Uuid
+  projectId           String   @map("project_id") @db.Uuid
+  projectAssignmentId String   @map("project_assignment_id") @db.Uuid
+  description         String   @default("")
+  startedAt           DateTime @map("started_at") @db.Timestamptz(6)
+  timezone            String
+  createdAt           DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt           DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  member            Member            @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  projectAssignment ProjectAssignment @relation(fields: [projectAssignmentId], references: [id], onDelete: Restrict)
+
+  @@index([projectId])
+  @@map("running_timers")
+}
+
+model TimeEntryDraft {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  memberId  String   @map("member_id") @db.Uuid
+  draftKey  String   @map("draft_key")
+  payload   Json
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  member Member @relation(fields: [memberId], references: [id], onDelete: Cascade)
+
+  @@unique([memberId, draftKey])
+  @@map("time_entry_drafts")
+}
+
+model InactiveProjectWeek {
+  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  memberId      String   @map("member_id") @db.Uuid
+  projectId     String   @map("project_id") @db.Uuid
+  weekStartDate DateTime @map("week_start_date") @db.Date
+  timezone      String
+  note          String?
+  createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  member  Member  @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@unique([memberId, projectId, weekStartDate])
+  @@index([weekStartDate])
+  @@map("inactive_project_weeks")
+}

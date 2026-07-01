@@ -1,0 +1,77 @@
+model Project {
+  id         String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name       String
+  slug       String        @unique
+  status     ProjectStatus @default(ACTIVE)
+  startsOn   DateTime?     @map("starts_on") @db.Date
+  endsOn     DateTime?     @map("ends_on") @db.Date
+  isInternal Boolean       @default(false) @map("is_internal")
+  notes      String?
+  deletedAt  DateTime?     @map("deleted_at") @db.Timestamptz(6)
+  createdAt  DateTime      @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt  DateTime      @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  assignments          ProjectAssignment[]
+  groupProjects        ProjectGroupProject[]
+  inactiveProjectWeeks InactiveProjectWeek[]
+  snapshotLines        TimesheetSnapshotLine[]
+  timeEntries          TimeEntry[]
+
+  @@index([status])
+  @@index([startsOn, endsOn])
+  @@map("projects")
+}
+
+model ProjectGroup {
+  id          String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name        String
+  slug        String    @unique
+  description String?
+  active      Boolean   @default(true)
+  deletedAt   DateTime? @map("deleted_at") @db.Timestamptz(6)
+  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt   DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  projects ProjectGroupProject[]
+
+  @@map("project_groups")
+}
+
+model ProjectGroupProject {
+  projectGroupId String   @map("project_group_id") @db.Uuid
+  projectId      String   @map("project_id") @db.Uuid
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  project      Project      @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  projectGroup ProjectGroup @relation(fields: [projectGroupId], references: [id], onDelete: Cascade)
+
+  @@id([projectGroupId, projectId])
+  @@index([projectId])
+  @@map("project_group_projects")
+}
+
+model ProjectAssignment {
+  id                String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  memberId          String    @map("member_id") @db.Uuid
+  projectId         String    @map("project_id") @db.Uuid
+  active            Boolean   @default(true)
+  validFrom         DateTime  @map("valid_from") @db.Date
+  validTo           DateTime? @map("valid_to") @db.Date
+  notes             String?
+  createdAt         DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt         DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+  createdByMemberId String?   @map("created_by_member_id") @db.Uuid
+  updatedByMemberId String?   @map("updated_by_member_id") @db.Uuid
+
+  member        Member                  @relation(fields: [memberId], references: [id], onDelete: Restrict)
+  project       Project                 @relation(fields: [projectId], references: [id], onDelete: Restrict)
+  overrideRates AssignmentRatePeriod[]
+  runningTimers RunningTimer[]
+  snapshotLines TimesheetSnapshotLine[]
+  timeEntries   TimeEntry[]
+
+  @@index([memberId, active])
+  @@index([projectId, active])
+  @@index([memberId, projectId])
+  @@map("project_assignments")
+}

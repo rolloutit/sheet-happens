@@ -1,0 +1,188 @@
+enum MemberRole {
+  ADMIN  @map("admin")
+  MEMBER @map("member")
+
+  @@map("member_role")
+}
+
+enum MemberStatus {
+  INVITED  @map("invited")
+  ACTIVE   @map("active")
+  INACTIVE @map("inactive")
+  DELETED  @map("deleted")
+
+  @@map("member_status")
+}
+
+enum MemberProfileType {
+  EMPLOYEE   @map("employee")
+  CONTRACTOR @map("contractor")
+
+  @@map("member_profile_type")
+}
+
+enum InvitationStatus {
+  PENDING  @map("pending")
+  ACCEPTED @map("accepted")
+  EXPIRED  @map("expired")
+  REVOKED  @map("revoked")
+
+  @@map("invitation_status")
+}
+
+enum ProjectStatus {
+  ACTIVE   @map("active")
+  INACTIVE @map("inactive")
+  ARCHIVED @map("archived")
+
+  @@map("project_status")
+}
+
+enum EntrySource {
+  GRID  @map("grid")
+  FORM  @map("form")
+  TIMER @map("timer")
+
+  @@map("entry_source")
+}
+
+enum TimesheetStatus {
+  SUBMITTED        @map("submitted")
+  REJECTED         @map("rejected")
+  APPROVED         @map("approved")
+  INVOICED         @map("invoiced")
+  INVOICE_REJECTED @map("invoice_rejected")
+  ACCEPTED         @map("accepted")
+  PAID             @map("paid")
+
+  @@map("timesheet_status")
+}
+
+enum TimesheetEventType {
+  SUBMITTED                     @map("submitted")
+  APPROVED                      @map("approved")
+  REJECTED                      @map("rejected")
+  UNLOCKED                      @map("unlocked")
+  RESUBMITTED                   @map("resubmitted")
+  CORRECTION_OPENED             @map("correction_opened")
+  CANCELLATION_INVOICE_UPLOADED @map("cancellation_invoice_uploaded")
+  CORRECTED_REVISION_SUBMITTED  @map("corrected_revision_submitted")
+  INVOICE_UPLOADED              @map("invoice_uploaded")
+  INVOICE_ACCEPTED              @map("invoice_accepted")
+  INVOICE_REJECTED              @map("invoice_rejected")
+  CORRECTION_CLOSED             @map("correction_closed")
+  PAID                          @map("paid")
+
+  @@map("timesheet_event_type")
+}
+
+enum TimesheetCorrectionStatus {
+  OPEN                       @map("open")
+  CANCELLATION_REQUIRED      @map("cancellation_required")
+  CORRECTION_IN_PROGRESS     @map("correction_in_progress")
+  CORRECTED_INVOICE_REQUIRED @map("corrected_invoice_required")
+  CLOSED                     @map("closed")
+  CANCELLED                  @map("cancelled")
+
+  @@map("timesheet_correction_status")
+}
+
+enum RateSource {
+  MEMBER_DEFAULT   @map("member_default")
+  PROJECT_OVERRIDE @map("project_override")
+
+  @@map("rate_source")
+}
+
+enum DocumentType {
+  CONTRACTOR_INVOICE @map("contractor_invoice")
+  REPORT_EXPORT      @map("report_export")
+  PAYSLIP            @map("payslip")
+
+  @@map("document_type")
+}
+
+enum DocumentStatus {
+  PENDING   @map("pending")
+  AVAILABLE @map("available")
+  FAILED    @map("failed")
+  DELETED   @map("deleted")
+
+  @@map("document_status")
+}
+
+enum InvoiceRole {
+  ORIGINAL     @map("original")
+  REPLACEMENT  @map("replacement")
+  CANCELLATION @map("cancellation")
+  CORRECTED    @map("corrected")
+
+  @@map("invoice_role")
+}
+
+enum InvoiceStatus {
+  UPLOADED  @map("uploaded")
+  ACCEPTED  @map("accepted")
+  REJECTED  @map("rejected")
+  REPLACED  @map("replaced")
+  CANCELLED @map("cancelled")
+  DELETED   @map("deleted")
+
+  @@map("invoice_status")
+}
+
+enum ReportMode {
+  COST_FREE @map("cost_free")
+  INTERNAL  @map("internal")
+
+  @@map("report_mode")
+}
+
+enum ReportView {
+  USER    @map("user")
+  PROJECT @map("project")
+
+  @@map("report_view")
+}
+
+enum InfoPageStatus {
+  DRAFT     @map("draft")
+  PUBLISHED @map("published")
+  ARCHIVED  @map("archived")
+
+  @@map("info_page_status")
+}
+
+enum NotificationType {
+  INVITE                   @map("invite")
+  PASSWORD_RESET           @map("password_reset")
+  WEEKLY_HOURS_REMINDER    @map("weekly_hours_reminder")
+  MONTHLY_INVOICE_REMINDER @map("monthly_invoice_reminder")
+  TIMESHEET_SUBMITTED      @map("timesheet_submitted")
+  TIMESHEET_APPROVED       @map("timesheet_approved")
+  TIMESHEET_REJECTED       @map("timesheet_rejected")
+  INVOICE_UPLOADED         @map("invoice_uploaded")
+  INVOICE_REJECTED         @map("invoice_rejected")
+  INVOICE_ACCEPTED         @map("invoice_accepted")
+  TIMESHEET_PAID           @map("timesheet_paid")
+
+  @@map("notification_type")
+}
+
+enum DeliveryStatus {
+  QUEUED  @map("queued")
+  SENT    @map("sent")
+  FAILED  @map("failed")
+  SKIPPED @map("skipped")
+
+  @@map("delivery_status")
+}
+
+enum PayslipStatus {
+  AVAILABLE  @map("available")
+  MISSING    @map("missing")
+  PROCESSING @map("processing")
+  FAILED     @map("failed")
+
+  @@map("payslip_status")
+}

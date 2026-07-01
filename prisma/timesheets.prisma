@@ -1,0 +1,173 @@
+model Timesheet {
+  id                    String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  contractorMemberId    String          @map("contractor_member_id") @db.Uuid
+  periodStart           DateTime        @map("period_start") @db.Date
+  periodEnd             DateTime        @map("period_end") @db.Date
+  currencyCode          String          @map("currency_code") @db.Char(3)
+  status                TimesheetStatus
+  currentRevisionId     String?         @unique @map("current_revision_id") @db.Uuid
+  currentRevisionNumber Int             @default(0) @map("current_revision_number")
+  submittedAt           DateTime?       @map("submitted_at") @db.Timestamptz(6)
+  approvedAt            DateTime?       @map("approved_at") @db.Timestamptz(6)
+  acceptedAt            DateTime?       @map("accepted_at") @db.Timestamptz(6)
+  paidAt                DateTime?       @map("paid_at") @db.Timestamptz(6)
+  createdAt             DateTime        @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt             DateTime        @updatedAt @map("updated_at") @db.Timestamptz(6)
+  createdByMemberId     String?         @map("created_by_member_id") @db.Uuid
+  updatedByMemberId     String?         @map("updated_by_member_id") @db.Uuid
+
+  contractor      Member                    @relation("TimesheetContractor", fields: [contractorMemberId], references: [id], onDelete: Restrict)
+  currentRevision TimesheetRevision?        @relation("CurrentTimesheetRevision", fields: [currentRevisionId], references: [id], onDelete: SetNull)
+  correctionCases TimesheetCorrectionCase[]
+  events          TimesheetEvent[]
+  invoices        ContractorInvoice[]
+  locks           PeriodLock[]
+  revisions       TimesheetRevision[]       @relation("TimesheetRevisions")
+
+  @@unique([contractorMemberId, periodStart])
+  @@index([status, periodStart])
+  @@index([contractorMemberId, status])
+  @@index([periodStart, periodEnd])
+  @@map("timesheets")
+}
+
+model TimesheetRevision {
+  id                     String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  timesheetId            String          @map("timesheet_id") @db.Uuid
+  revisionNumber         Int             @map("revision_number")
+  status                 TimesheetStatus
+  correctionCaseId       String?         @map("correction_case_id") @db.Uuid
+  createdFromRevisionId  String?         @map("created_from_revision_id") @db.Uuid
+  supersededByRevisionId String?         @unique @map("superseded_by_revision_id") @db.Uuid
+  submittedAt            DateTime        @map("submitted_at") @db.Timestamptz(6)
+  approvedAt             DateTime?       @map("approved_at") @db.Timestamptz(6)
+  acceptedAt             DateTime?       @map("accepted_at") @db.Timestamptz(6)
+  paidAt                 DateTime?       @map("paid_at") @db.Timestamptz(6)
+  rejectedAt             DateTime?       @map("rejected_at") @db.Timestamptz(6)
+  rejectionReason        String?         @map("rejection_reason")
+  currencyCode           String          @map("currency_code") @db.Char(3)
+  totalMinutes           Int             @map("total_minutes")
+  totalAmount            Decimal         @map("total_amount") @db.Decimal(14, 2)
+  createdAt              DateTime        @default(now()) @map("created_at") @db.Timestamptz(6)
+  createdByMemberId      String          @map("created_by_member_id") @db.Uuid
+
+  correctionCase          TimesheetCorrectionCase?  @relation("CorrectionCaseRevisions", fields: [correctionCaseId], references: [id], onDelete: SetNull)
+  createdFromRevision     TimesheetRevision?        @relation("RevisionSource", fields: [createdFromRevisionId], references: [id], onDelete: SetNull)
+  createdRevisions        TimesheetRevision[]       @relation("RevisionSource")
+  currentForTimesheet     Timesheet?                @relation("CurrentTimesheetRevision")
+  events                  TimesheetEvent[]
+  invoices                ContractorInvoice[]
+  locks                   PeriodLock[]
+  openedCorrectionCases   TimesheetCorrectionCase[] @relation("CorrectionOpenedFromRevision")
+  snapshotLines           TimesheetSnapshotLine[]
+  supersededByRevision    TimesheetRevision?        @relation("RevisionSupersession", fields: [supersededByRevisionId], references: [id], onDelete: SetNull)
+  supersedesRevision      TimesheetRevision?        @relation("RevisionSupersession")
+  timesheet               Timesheet                 @relation("TimesheetRevisions", fields: [timesheetId], references: [id], onDelete: Cascade)
+  timeEntries             TimeEntry[]
+  timesheetCorrectionCase TimesheetCorrectionCase?
+
+  @@unique([timesheetId, revisionNumber])
+  @@index([timesheetId, revisionNumber])
+  @@index([status, submittedAt])
+  @@index([correctionCaseId])
+  @@map("timesheet_revisions")
+}
+
+model PeriodLock {
+  id                  String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  memberId            String    @map("member_id") @db.Uuid
+  periodStart         DateTime  @map("period_start") @db.Date
+  timesheetId         String    @map("timesheet_id") @db.Uuid
+  timesheetRevisionId String?   @map("timesheet_revision_id") @db.Uuid
+  lockedAt            DateTime  @map("locked_at") @db.Timestamptz(6)
+  lockedByMemberId    String    @map("locked_by_member_id") @db.Uuid
+  unlockedAt          DateTime? @map("unlocked_at") @db.Timestamptz(6)
+  unlockedByMemberId  String?   @map("unlocked_by_member_id") @db.Uuid
+  unlockReason        String?   @map("unlock_reason")
+
+  member            Member             @relation(fields: [memberId], references: [id], onDelete: Restrict)
+  timesheet         Timesheet          @relation(fields: [timesheetId], references: [id], onDelete: Cascade)
+  timesheetRevision TimesheetRevision? @relation(fields: [timesheetRevisionId], references: [id], onDelete: SetNull)
+
+  @@index([timesheetId])
+  @@index([timesheetRevisionId])
+  @@map("period_locks")
+}
+
+model TimesheetSnapshotLine {
+  id                  String     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  timesheetRevisionId String     @map("timesheet_revision_id") @db.Uuid
+  sourceTimeEntryId   String     @map("source_time_entry_id") @db.Uuid
+  memberId            String     @map("member_id") @db.Uuid
+  projectId           String     @map("project_id") @db.Uuid
+  projectAssignmentId String     @map("project_assignment_id") @db.Uuid
+  localDate           DateTime   @map("local_date") @db.Date
+  description         String
+  durationMinutes     Int        @map("duration_minutes")
+  rateSource          RateSource @map("rate_source")
+  sourceRatePeriodId  String?    @map("source_rate_period_id") @db.Uuid
+  hourlyRate          Decimal    @map("hourly_rate") @db.Decimal(14, 2)
+  currencyCode        String     @map("currency_code") @db.Char(3)
+  lineAmount          Decimal    @map("line_amount") @db.Decimal(14, 2)
+  createdAt           DateTime   @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  member            Member            @relation(fields: [memberId], references: [id], onDelete: Restrict)
+  project           Project           @relation(fields: [projectId], references: [id], onDelete: Restrict)
+  projectAssignment ProjectAssignment @relation(fields: [projectAssignmentId], references: [id], onDelete: Restrict)
+  sourceTimeEntry   TimeEntry         @relation(fields: [sourceTimeEntryId], references: [id], onDelete: Restrict)
+  timesheetRevision TimesheetRevision @relation(fields: [timesheetRevisionId], references: [id], onDelete: Cascade)
+
+  @@unique([timesheetRevisionId, sourceTimeEntryId])
+  @@index([timesheetRevisionId])
+  @@index([projectId, localDate])
+  @@map("timesheet_snapshot_lines")
+}
+
+model TimesheetCorrectionCase {
+  id                    String                    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  timesheetId           String                    @map("timesheet_id") @db.Uuid
+  openedFromRevisionId  String                    @map("opened_from_revision_id") @db.Uuid
+  correctedRevisionId   String?                   @unique @map("corrected_revision_id") @db.Uuid
+  cancellationInvoiceId String?                   @unique @map("cancellation_invoice_id") @db.Uuid
+  status                TimesheetCorrectionStatus
+  reason                String
+  openedByMemberId      String                    @map("opened_by_member_id") @db.Uuid
+  openedAt              DateTime                  @map("opened_at") @db.Timestamptz(6)
+  closedByMemberId      String?                   @map("closed_by_member_id") @db.Uuid
+  closedAt              DateTime?                 @map("closed_at") @db.Timestamptz(6)
+
+  cancellationInvoice ContractorInvoice?  @relation("CorrectionCancellationInvoice", fields: [cancellationInvoiceId], references: [id], onDelete: SetNull)
+  correctedRevision   TimesheetRevision?  @relation(fields: [correctedRevisionId], references: [id], onDelete: SetNull)
+  events              TimesheetEvent[]
+  invoices            ContractorInvoice[] @relation("CorrectionCaseInvoices")
+  openedFromRevision  TimesheetRevision   @relation("CorrectionOpenedFromRevision", fields: [openedFromRevisionId], references: [id], onDelete: Restrict)
+  revisions           TimesheetRevision[] @relation("CorrectionCaseRevisions")
+  timesheet           Timesheet           @relation(fields: [timesheetId], references: [id], onDelete: Cascade)
+
+  @@index([timesheetId, status])
+  @@index([openedFromRevisionId])
+  @@map("timesheet_correction_cases")
+}
+
+model TimesheetEvent {
+  id                  String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  timesheetId         String             @map("timesheet_id") @db.Uuid
+  timesheetRevisionId String?            @map("timesheet_revision_id") @db.Uuid
+  correctionCaseId    String?            @map("correction_case_id") @db.Uuid
+  eventType           TimesheetEventType @map("event_type")
+  actorMemberId       String             @map("actor_member_id") @db.Uuid
+  reason              String?
+  metadata            Json               @default("{}")
+  createdAt           DateTime           @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  actor             Member                   @relation(fields: [actorMemberId], references: [id], onDelete: Restrict)
+  correctionCase    TimesheetCorrectionCase? @relation(fields: [correctionCaseId], references: [id], onDelete: SetNull)
+  timesheet         Timesheet                @relation(fields: [timesheetId], references: [id], onDelete: Cascade)
+  timesheetRevision TimesheetRevision?       @relation(fields: [timesheetRevisionId], references: [id], onDelete: SetNull)
+
+  @@index([timesheetId, createdAt])
+  @@index([timesheetRevisionId, createdAt])
+  @@index([correctionCaseId, createdAt])
+  @@index([eventType, createdAt])
+  @@map("timesheet_events")
+}
