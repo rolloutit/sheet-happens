@@ -15,6 +15,9 @@ playwright-report
 test-results
 tsconfig.tsbuildinfo
 
+# generated
+src/server/db/generated
+
 # env
 .env
 .env*.local

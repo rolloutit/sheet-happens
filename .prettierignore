@@ -3,5 +3,6 @@ coverage
 node_modules
 playwright-report
 pnpm-lock.yaml
+src/server/db/generated
 storybook-static
 test-results

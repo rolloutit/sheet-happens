@@ -9,6 +9,7 @@ const eslintConfig = [
       "coverage/**",
       "node_modules/**",
       "playwright-report/**",
+      "src/server/db/generated/**",
       "storybook-static/**",
       "test-results/**",
     ],
