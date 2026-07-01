@@ -5,11 +5,9 @@ const globalForPrisma = globalThis as unknown as {
   prisma?: PrismaClient;
 };
 
-const connectionString = process.env.DATABASE_URL;
-
-if (!connectionString) {
-  throw new Error("DATABASE_URL is required to create the Prisma client.");
-}
+const connectionString =
+  process.env.DATABASE_URL ??
+  "postgresql://sheet_happens:sheet_happens@localhost:5432/sheet_happens?schema=public";
 
 const adapter = new PrismaPg({ connectionString });
 
