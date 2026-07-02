@@ -77,11 +77,91 @@ export type ActivateInvitationDeps = {
   now?: () => Date;
 };
 
+export type InvitationAcceptanceStatus = "PENDING" | "ACCEPTED" | "EXPIRED" | "REVOKED";
+
+export type InvitationAcceptanceDetails = {
+  id: string;
+  email: string;
+  name: string;
+  status: InvitationAcceptanceStatus;
+  expiresAt: Date;
+  expired: boolean;
+  available: boolean;
+};
+
+type InvitationAcceptanceDb = {
+  invitation: {
+    findUnique(args: {
+      where: { tokenHash: string };
+      select: {
+        id: true;
+        email: true;
+        firstName: true;
+        lastName: true;
+        tokenHash: true;
+        status: true;
+        expiresAt: true;
+      };
+    }): Promise<{
+      id: string;
+      email: string;
+      firstName: string;
+      lastName: string;
+      tokenHash: string;
+      status: InvitationAcceptanceStatus;
+      expiresAt: Date;
+    } | null>;
+  };
+};
+
+export type GetInvitationAcceptanceDetailsDeps = {
+  db?: InvitationAcceptanceDb;
+  now?: () => Date;
+};
+
 export class InvitationActivationError extends Error {
   constructor(message: string) {
     super(message);
     this.name = "InvitationActivationError";
   }
+}
+
+export async function getInvitationAcceptanceDetails(
+  token: string,
+  deps: GetInvitationAcceptanceDetailsDeps = {},
+): Promise<InvitationAcceptanceDetails | null> {
+  const db: InvitationAcceptanceDb = deps.db ?? (prisma as unknown as InvitationAcceptanceDb);
+  const now = deps.now?.() ?? new Date();
+  const tokenHash = hashInvitationToken(token);
+
+  const invitation = await db.invitation.findUnique({
+    where: { tokenHash },
+    select: {
+      id: true,
+      email: true,
+      firstName: true,
+      lastName: true,
+      tokenHash: true,
+      status: true,
+      expiresAt: true,
+    },
+  });
+
+  if (!invitation || !verifyInvitationToken(token, invitation.tokenHash)) {
+    return null;
+  }
+
+  const expired = invitation.expiresAt <= now;
+
+  return {
+    id: invitation.id,
+    email: invitation.email,
+    name: [invitation.firstName, invitation.lastName].filter(Boolean).join(" "),
+    status: invitation.status,
+    expiresAt: invitation.expiresAt,
+    expired,
+    available: invitation.status === "PENDING" && !expired,
+  };
 }
 
 export async function activateInvitation(

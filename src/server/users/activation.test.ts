@@ -1,7 +1,29 @@
 import { describe, expect, it, vi } from "vitest";
 
-import { activateInvitation, InvitationActivationError } from "./activation";
+import {
+  activateInvitation,
+  getInvitationAcceptanceDetails,
+  InvitationActivationError,
+} from "./activation";
 import { hashInvitationToken } from "./invitation-tokens";
+
+function createInvitationAcceptanceDb(
+  invitation: {
+    id: string;
+    email: string;
+    firstName: string;
+    lastName: string;
+    tokenHash: string;
+    status: "PENDING" | "ACCEPTED" | "EXPIRED" | "REVOKED";
+    expiresAt: Date;
+  } | null,
+) {
+  return {
+    invitation: {
+      findUnique: vi.fn().mockResolvedValue(invitation),
+    },
+  };
+}
 
 function createActivationDb(
   invitation: Awaited<ReturnType<typeof createInvitationRecord>> | null,
@@ -160,5 +182,62 @@ describe("activateInvitation", () => {
         },
       ),
     ).rejects.toBeInstanceOf(InvitationActivationError);
+  });
+});
+
+describe("getInvitationAcceptanceDetails", () => {
+  it("returns public invitation details for a valid pending token", async () => {
+    const db = createInvitationAcceptanceDb({
+      id: "invitation-1",
+      email: "user@example.com",
+      firstName: "User",
+      lastName: "Example",
+      tokenHash: hashInvitationToken("invite-token"),
+      status: "PENDING",
+      expiresAt: new Date("2026-07-10T00:00:00.000Z"),
+    });
+
+    await expect(
+      getInvitationAcceptanceDetails("invite-token", {
+        db,
+        now: () => new Date("2026-07-02T00:00:00.000Z"),
+      }),
+    ).resolves.toEqual({
+      id: "invitation-1",
+      email: "user@example.com",
+      name: "User Example",
+      status: "PENDING",
+      expiresAt: new Date("2026-07-10T00:00:00.000Z"),
+      expired: false,
+      available: true,
+    });
+  });
+
+  it("returns null for an invalid token", async () => {
+    const db = createInvitationAcceptanceDb(null);
+
+    await expect(getInvitationAcceptanceDetails("bad-token", { db })).resolves.toBeNull();
+  });
+
+  it("marks expired invitations unavailable", async () => {
+    const db = createInvitationAcceptanceDb({
+      id: "invitation-1",
+      email: "user@example.com",
+      firstName: "User",
+      lastName: "Example",
+      tokenHash: hashInvitationToken("invite-token"),
+      status: "PENDING",
+      expiresAt: new Date("2026-07-01T00:00:00.000Z"),
+    });
+
+    await expect(
+      getInvitationAcceptanceDetails("invite-token", {
+        db,
+        now: () => new Date("2026-07-02T00:00:00.000Z"),
+      }),
+    ).resolves.toMatchObject({
+      expired: true,
+      available: false,
+    });
   });
 });
