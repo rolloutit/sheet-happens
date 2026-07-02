@@ -1,6 +1,6 @@
 model Member {
   id                  String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  authUserId          String            @unique @map("auth_user_id")
+  authUserId          String?           @unique @map("auth_user_id")
   email               String            @unique @db.Citext
   firstName           String            @map("first_name")
   lastName            String            @map("last_name")
@@ -17,7 +17,7 @@ model Member {
   createdAt           DateTime          @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt           DateTime          @updatedAt @map("updated_at") @db.Timestamptz(6)
 
-  authUser User @relation(fields: [authUserId], references: [id], onDelete: Restrict)
+  authUser User? @relation(fields: [authUserId], references: [id], onDelete: Restrict)
 
   auditLogs               AuditLog[]                @relation("AuditActor")
   assignmentRatePeriods   AssignmentRatePeriod[]    @relation("AssignmentRateCreatedBy")

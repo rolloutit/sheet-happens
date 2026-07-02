@@ -37,7 +37,8 @@ Sheet Happens owns:
 - User lifecycle status: invited, active, inactive, deleted.
 - Audit logs and workflow events.
 
-`members.auth_user_id` links one domain member to one Better Auth user.
+`members.auth_user_id` links one domain member to one Better Auth user. It is nullable while a member
+is only invited and must be set during activation.
 
 ## Invite-Only Rule
 
@@ -55,13 +56,14 @@ enumeration, but no email is sent.
 ## Invitation Flow
 
 1. Admin creates invitation with email, name, role, and profile type.
-2. System creates or reserves a `members` row with status `invited`.
+2. System creates or reserves a `members` row with status `invited` and no `auth_user_id` yet.
 3. System creates `member_profile_periods` row beginning on activation date or first valid work date,
    depending on admin input.
 4. System sends invite email with a magic-link sign-in route.
 5. User opens link.
 6. Better Auth verifies the magic-link token and creates the auth `user` if needed.
-7. Domain activation links `members.auth_user_id`, marks member `active`, and writes audit log.
+7. Domain activation links `members.auth_user_id`, marks member `active`, marks the invitation
+   `accepted`, and writes audit log.
 8. User is taken through first-run security setup:
    - Register a passkey.
    - Enable TOTP 2FA.
