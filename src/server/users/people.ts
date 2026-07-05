@@ -4,13 +4,16 @@ import type { PersonRowState, PersonTableRow } from "@/src/components/sheet/Peop
 
 export type PeopleMemberStatus = "INVITED" | "ACTIVE" | "INACTIVE" | "DELETED";
 export type PeopleMemberProfile = "EMPLOYEE" | "CONTRACTOR";
+export type PeopleMemberRole = "ADMIN" | "MEMBER";
 
 export type PeopleMemberRow = {
   id: string;
+  authUserId: string | null;
   email: string;
   firstName: string;
   lastName: string;
   displayName: string;
+  role: PeopleMemberRole;
   status: PeopleMemberStatus;
   currentProfile: PeopleMemberProfile;
   defaultCurrencyCode: string;
@@ -23,10 +26,12 @@ export async function listPeopleForAdmin(): Promise<PersonTableRow[]> {
   const members = await prisma.member.findMany({
     select: {
       id: true,
+      authUserId: true,
       email: true,
       firstName: true,
       lastName: true,
       displayName: true,
+      role: true,
       status: true,
       currentProfile: true,
       defaultCurrencyCode: true,
@@ -44,8 +49,11 @@ export function mapMemberToPersonRow(member: PeopleMemberRow): PersonTableRow {
     name: getMemberDisplayName(member),
     email: member.email,
     profile: formatProfile(member.currentProfile),
+    role: formatRole(member.role),
+    roleValue: member.role,
     state: mapMemberState(member),
     currency: member.defaultCurrencyCode,
+    hasAuthUser: Boolean(member.authUserId),
   };
 }
 
@@ -59,6 +67,10 @@ function getMemberDisplayName(member: PeopleMemberRow) {
 
 function formatProfile(profile: PeopleMemberProfile) {
   return profile === "CONTRACTOR" ? "Contractor" : "Employee";
+}
+
+function formatRole(role: PeopleMemberRole) {
+  return role === "ADMIN" ? "Admin" : "Member";
 }
 
 function mapMemberState(member: PeopleMemberRow): PersonRowState {

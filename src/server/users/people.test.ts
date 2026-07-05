@@ -5,10 +5,12 @@ import type { PeopleMemberRow } from "./people";
 
 const baseMember: PeopleMemberRow = {
   id: "member-1",
+  authUserId: "auth-user-1",
   email: "alex@example.com",
   firstName: "Alex",
   lastName: "Taylor",
   displayName: "Alex Taylor",
+  role: "MEMBER",
   status: "ACTIVE",
   currentProfile: "CONTRACTOR",
   defaultCurrencyCode: "EUR",
@@ -22,8 +24,11 @@ describe("mapMemberToPersonRow", () => {
       name: "Alex Taylor",
       email: "alex@example.com",
       profile: "Contractor",
+      role: "Member",
+      roleValue: "MEMBER",
       state: "active",
       currency: "EUR",
+      hasAuthUser: true,
     });
   });
 
