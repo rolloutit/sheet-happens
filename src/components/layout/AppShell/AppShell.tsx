@@ -107,7 +107,12 @@ export function AppShell({
 
     if (actionId === "sign-out") {
       await authClient.signOut();
-      window.location.href = "/";
+      window.location.href = "/login";
+      return;
+    }
+
+    if (actionId === "settings" || actionId === "profile") {
+      window.location.href = "/settings";
     }
   }
 
@@ -297,6 +302,8 @@ function NavGroup({
 }
 
 function pageTitle(current: string) {
+  if (current === "settings") return "Beállítások";
+
   const item = navItems.find((navItem) => navItem.id === current);
   return item?.label ?? "Irányítópult";
 }
