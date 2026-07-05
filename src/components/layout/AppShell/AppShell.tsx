@@ -23,6 +23,7 @@ import {
   DrawerTitle,
   DrawerTrigger,
 } from "@/src/components/ui/Drawer";
+import { authClient } from "@/src/lib/auth-client";
 import { CommandPill } from "../CommandPill";
 import { LanguageToggle } from "../LanguageToggle";
 import { MobileBottomBar } from "../MobileBottomBar";
@@ -96,6 +97,18 @@ export function AppShell({
 
   function handleNavigate(itemId: string) {
     onNavigate?.(itemId);
+  }
+
+  async function handleUserAction(actionId: string) {
+    if (onUserAction) {
+      onUserAction(actionId);
+      return;
+    }
+
+    if (actionId === "sign-out") {
+      await authClient.signOut();
+      window.location.href = "/";
+    }
   }
 
   return (
@@ -229,7 +242,7 @@ export function AppShell({
                 onMarkAllRead={onMarkAllRead}
                 onViewAll={onViewNotifications}
               />
-              <UserMenu user={user} actions={userActions} onAction={onUserAction} />
+              <UserMenu user={user} actions={userActions} onAction={handleUserAction} />
             </div>
           </div>
         </header>
