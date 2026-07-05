@@ -13,7 +13,7 @@
     "start": "next start",
     "postinstall": "prisma generate",
     "db:format": "prisma format",
-    "db:dev": "node scripts/dev-db.mjs start",
+    "db:dev": "node scripts/dev-db.mjs",
     "db:dev:reset": "node scripts/dev-db.mjs reset",
     "db:dev:seed": "node scripts/dev-db.mjs seed",
     "db:dev:stop": "node scripts/dev-db.mjs stop",

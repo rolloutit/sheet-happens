@@ -24,10 +24,13 @@ Click `Email sign-in link`, open the magic link printed in the `pnpm dev` termin
 Useful commands:
 
 ```bash
-pnpm db:dev        # start, push schema, seed
-pnpm db:dev:reset  # delete the Docker volume, recreate schema, seed
-pnpm db:dev:seed   # seed the currently running DB only
-pnpm db:dev:stop   # stop the Docker services, keep the volume
+pnpm db:dev         # start, push schema, seed
+pnpm db:dev reset   # delete the Docker volume, recreate schema, seed
+pnpm db:dev seed    # seed the currently running DB only
+pnpm db:dev stop    # stop the Docker services, keep the volume
+pnpm db:dev:reset   # alias for pnpm db:dev reset
+pnpm db:dev:seed    # alias for pnpm db:dev seed
+pnpm db:dev:stop    # alias for pnpm db:dev stop
 ```
 
 The default connection string is:
