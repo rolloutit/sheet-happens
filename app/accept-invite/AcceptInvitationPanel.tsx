@@ -1,6 +1,7 @@
 "use client";
 
 import { CheckCircle2, Mail, Send, ShieldAlert } from "lucide-react";
+import Link from "next/link";
 import { useActionState, useMemo, useState } from "react";
 import { useFormStatus } from "react-dom";
 
@@ -87,7 +88,29 @@ export function AcceptInvitationPanel({
     });
   }
 
+  if (activationState.status === "success") {
+    return (
+      <InvitationResult
+        icon={CheckCircle2}
+        title="Account activated"
+        message="Your Sheet Happens account is active. You can continue to the app."
+        tone="success"
+      />
+    );
+  }
+
   if (!available) {
+    if (status === "ACCEPTED") {
+      return (
+        <InvitationResult
+          icon={CheckCircle2}
+          title="Invitation already accepted"
+          message="This invitation has already been used. Continue to the app if you are signed in with this account."
+          tone="success"
+        />
+      );
+    }
+
     return (
       <ErrorState
         icon={expired ? ShieldAlert : CheckCircle2}
@@ -150,6 +173,35 @@ export function AcceptInvitationPanel({
           </Button>
         </CardFooter>
       ) : null}
+    </Card>
+  );
+}
+
+function InvitationResult({
+  icon: Icon,
+  title,
+  message,
+  tone,
+}: {
+  icon: typeof CheckCircle2;
+  title: string;
+  message: string;
+  tone: "success";
+}) {
+  return (
+    <Card density="lg" className="w-full max-w-xl">
+      <CardHeader className="block">
+        <span className="mb-4 inline-flex size-12 items-center justify-center rounded-full bg-success/16 text-success">
+          <Icon className="size-6" aria-hidden="true" />
+        </span>
+        <CardTitle>{title}</CardTitle>
+        <CardDescription>{message}</CardDescription>
+      </CardHeader>
+      <CardFooter>
+        <Button asChild variant={tone === "success" ? "primary" : "soft"}>
+          <Link href="/">Continue</Link>
+        </Button>
+      </CardFooter>
     </Card>
   );
 }
