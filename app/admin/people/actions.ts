@@ -4,8 +4,21 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
 import { AuthenticationError, AuthorizationError, requireAdmin } from "@/src/server/auth/session";
-import { InvitationConflictError, inviteMember } from "@/src/server/users";
-import type { InviteMemberActionState, InviteMemberField } from "./actions.types";
+import {
+  changeMemberRole,
+  deactivateMember,
+  InvitationConflictError,
+  inviteMember,
+  MemberLifecycleError,
+  reactivateMember,
+  resendMemberInvitation,
+  revokeMemberInvitation,
+} from "@/src/server/users";
+import type {
+  AdminPeopleActionState,
+  InviteMemberActionState,
+  InviteMemberField,
+} from "./actions.types";
 
 const inviteMemberSchema = z.object({
   email: z.string().trim().email("Enter a valid email address."),
@@ -81,6 +94,65 @@ export async function inviteMemberAction(
   }
 }
 
+export async function resendMemberInviteAction(memberId: string): Promise<AdminPeopleActionState> {
+  return runAdminPeopleAction(async (adminId) => {
+    const invitation = await resendMemberInvitation({
+      memberId,
+      actorMemberId: adminId,
+    });
+
+    return `Invitation resent to ${invitation.email}.`;
+  });
+}
+
+export async function revokeMemberInviteAction(memberId: string): Promise<AdminPeopleActionState> {
+  return runAdminPeopleAction(async (adminId) => {
+    await revokeMemberInvitation({
+      memberId,
+      actorMemberId: adminId,
+    });
+
+    return "Invitation revoked.";
+  });
+}
+
+export async function deactivateMemberAction(memberId: string): Promise<AdminPeopleActionState> {
+  return runAdminPeopleAction(async (adminId) => {
+    await deactivateMember({
+      memberId,
+      actorMemberId: adminId,
+    });
+
+    return "Member deactivated.";
+  });
+}
+
+export async function reactivateMemberAction(memberId: string): Promise<AdminPeopleActionState> {
+  return runAdminPeopleAction(async (adminId) => {
+    await reactivateMember({
+      memberId,
+      actorMemberId: adminId,
+    });
+
+    return "Member reactivated.";
+  });
+}
+
+export async function changeMemberRoleAction(
+  memberId: string,
+  role: "ADMIN" | "MEMBER",
+): Promise<AdminPeopleActionState> {
+  return runAdminPeopleAction(async (adminId) => {
+    await changeMemberRole({
+      memberId,
+      actorMemberId: adminId,
+      role,
+    });
+
+    return `Role changed to ${role === "ADMIN" ? "Admin" : "Member"}.`;
+  });
+}
+
 function getFormString(formData: FormData, name: InviteMemberField) {
   const value = formData.get(name);
   return typeof value === "string" ? value : "";
@@ -98,6 +170,39 @@ function getFieldErrors(error: z.ZodError): InviteMemberActionState["fieldErrors
   }
 
   return fieldErrors;
+}
+
+async function runAdminPeopleAction(
+  action: (adminId: string) => Promise<string>,
+): Promise<AdminPeopleActionState> {
+  try {
+    const admin = await requireAdmin();
+    const message = await action(admin.id);
+
+    revalidatePath("/admin/people");
+
+    return {
+      status: "success",
+      message,
+    };
+  } catch (error) {
+    if (
+      error instanceof InvitationConflictError ||
+      error instanceof MemberLifecycleError ||
+      error instanceof AuthenticationError ||
+      error instanceof AuthorizationError
+    ) {
+      return {
+        status: "error",
+        message: error.message,
+      };
+    }
+
+    return {
+      status: "error",
+      message: "The member action could not be completed. Try again later.",
+    };
+  }
 }
 
 function isInviteMemberField(field: unknown): field is InviteMemberField {

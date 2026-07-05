@@ -13,3 +13,8 @@ export type InviteMemberActionState = {
   message?: string;
   fieldErrors?: Partial<Record<InviteMemberField, string>>;
 };
+
+export type AdminPeopleActionState = {
+  status: "success" | "error";
+  message: string;
+};
