@@ -21,6 +21,7 @@ export function PeopleTable({
   onEdit,
   onDelete,
   onRowOpen,
+  rowActions,
   sort,
   onSortChange,
   loading,
@@ -65,6 +66,17 @@ export function PeopleTable({
           cell: (row) => <Badge tone="cta">{row.profile}</Badge>,
         },
         {
+          id: "role",
+          header: "Role",
+          accessor: "role",
+          sortable: true,
+          cell: (row) => (
+            <Badge tone={row.roleValue === "ADMIN" ? "warning" : "neutral"}>
+              {row.role ?? "Member"}
+            </Badge>
+          ),
+        },
+        {
           id: "state",
           header: "State",
           accessor: "state",
@@ -102,6 +114,7 @@ export function PeopleTable({
                   }}
                 />
               ) : null}
+              {rowActions?.(row)}
             </div>
           ),
           align: "right",
