@@ -29,8 +29,14 @@ type InviteMemberTransaction = {
         id: true;
         status: true;
         deletedAt: true;
+        authUserId: true;
       };
-    }): Promise<{ id: string; status: string; deletedAt: Date | null } | null>;
+    }): Promise<{
+      id: string;
+      status: string;
+      deletedAt: Date | null;
+      authUserId: string | null;
+    } | null>;
     create(args: {
       data: {
         email: string;
@@ -43,6 +49,22 @@ type InviteMemberTransaction = {
         defaultCurrencyCode: string;
         timezone: string;
         locale: string;
+      };
+      select: { id: true };
+    }): Promise<{ id: string }>;
+    update(args: {
+      where: { id: string };
+      data: {
+        firstName: string;
+        lastName: string;
+        displayName: string;
+        role: "ADMIN" | "MEMBER";
+        status: "INVITED";
+        currentProfile: "CONTRACTOR" | "EMPLOYEE";
+        defaultCurrencyCode: string;
+        timezone: string;
+        locale: string;
+        inactivatedAt: null;
       };
       select: { id: true };
     }): Promise<{ id: string }>;
@@ -166,10 +188,11 @@ export async function inviteMember(input: InviteMemberInput, deps: InviteMemberD
         id: true,
         status: true,
         deletedAt: true,
+        authUserId: true,
       },
     });
 
-    if (existingMember && (existingMember.status !== "INVITED" || existingMember.deletedAt)) {
+    if (existingMember && !canInviteExistingMember(existingMember)) {
       throw new InvitationConflictError("A non-invited member already exists for this email.");
     }
 
@@ -190,25 +213,44 @@ export async function inviteMember(input: InviteMemberInput, deps: InviteMemberD
       throw new InvitationConflictError("A pending invitation already exists for this email.");
     }
 
-    const member =
-      existingMember ??
-      (await tx.member.create({
-        data: {
-          email,
-          firstName,
-          lastName,
-          displayName,
-          role,
-          status: "INVITED",
-          currentProfile: input.profile,
-          defaultCurrencyCode,
-          timezone: input.timezone,
-          locale: input.locale,
-        },
-        select: {
-          id: true,
-        },
-      }));
+    const member = existingMember
+      ? await tx.member.update({
+          where: {
+            id: existingMember.id,
+          },
+          data: {
+            firstName,
+            lastName,
+            displayName,
+            role,
+            status: "INVITED",
+            currentProfile: input.profile,
+            defaultCurrencyCode,
+            timezone: input.timezone,
+            locale: input.locale,
+            inactivatedAt: null,
+          },
+          select: {
+            id: true,
+          },
+        })
+      : await tx.member.create({
+          data: {
+            email,
+            firstName,
+            lastName,
+            displayName,
+            role,
+            status: "INVITED",
+            currentProfile: input.profile,
+            defaultCurrencyCode,
+            timezone: input.timezone,
+            locale: input.locale,
+          },
+          select: {
+            id: true,
+          },
+        });
 
     if (!existingMember) {
       await tx.memberProfilePeriod.create({
@@ -273,4 +315,20 @@ export async function inviteMember(input: InviteMemberInput, deps: InviteMemberD
     acceptUrl,
     expiresAt,
   };
+}
+
+function canInviteExistingMember(member: {
+  status: string;
+  deletedAt: Date | null;
+  authUserId: string | null;
+}) {
+  if (member.deletedAt) {
+    return false;
+  }
+
+  if (member.status === "INVITED") {
+    return true;
+  }
+
+  return member.status === "INACTIVE" && !member.authUserId;
 }

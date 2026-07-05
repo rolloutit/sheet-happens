@@ -4,7 +4,12 @@ import { inviteMember, InvitationConflictError } from "./invitations";
 
 function createInviteDb(
   overrides: {
-    existingMember?: { id: string; status: string; deletedAt: Date | null } | null;
+    existingMember?: {
+      id: string;
+      status: string;
+      deletedAt: Date | null;
+      authUserId: string | null;
+    } | null;
     pendingInvitation?: { id: string } | null;
   } = {},
 ) {
@@ -12,6 +17,7 @@ function createInviteDb(
     member: {
       findUnique: vi.fn().mockResolvedValue(overrides.existingMember ?? null),
       create: vi.fn().mockResolvedValue({ id: "member-1" }),
+      update: vi.fn().mockResolvedValue({ id: "member-existing" }),
     },
     memberProfilePeriod: {
       create: vi.fn().mockResolvedValue({ id: "profile-period-1" }),
@@ -109,7 +115,12 @@ describe("inviteMember", () => {
 
   it("does not create a new member when re-inviting an invited member after an expired invite", async () => {
     const { db, tx } = createInviteDb({
-      existingMember: { id: "member-existing", status: "INVITED", deletedAt: null },
+      existingMember: {
+        id: "member-existing",
+        status: "INVITED",
+        deletedAt: null,
+        authUserId: null,
+      },
     });
 
     await inviteMember(
@@ -131,6 +142,16 @@ describe("inviteMember", () => {
     );
 
     expect(tx.member.create).not.toHaveBeenCalled();
+    expect(tx.member.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: {
+          id: "member-existing",
+        },
+        data: expect.objectContaining({
+          status: "INVITED",
+        }),
+      }),
+    );
     expect(tx.memberProfilePeriod.create).not.toHaveBeenCalled();
     expect(tx.invitation.create).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -143,7 +164,12 @@ describe("inviteMember", () => {
 
   it("rejects invitations for existing non-invited members", async () => {
     const { db } = createInviteDb({
-      existingMember: { id: "member-active", status: "ACTIVE", deletedAt: null },
+      existingMember: {
+        id: "member-active",
+        status: "ACTIVE",
+        deletedAt: null,
+        authUserId: "auth-user-1",
+      },
     });
 
     await expect(
