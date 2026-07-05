@@ -30,8 +30,8 @@ export function InviteMemberForm() {
 
   return (
     <form ref={formRef} action={formAction} className="grid gap-5">
-      <div className="grid gap-4 sm:grid-cols-2">
-        <Field label="First name" required error={state.fieldErrors?.firstName}>
+      <div className="grid gap-4 md:grid-cols-3">
+        <Field label="First name" required reserveMessageSpace error={state.fieldErrors?.firstName}>
           {({ id, describedBy, invalid, required }) => (
             <Input
               id={id}
@@ -43,7 +43,7 @@ export function InviteMemberForm() {
             />
           )}
         </Field>
-        <Field label="Last name" required error={state.fieldErrors?.lastName}>
+        <Field label="Last name" required reserveMessageSpace error={state.fieldErrors?.lastName}>
           {({ id, describedBy, invalid, required }) => (
             <Input
               id={id}
@@ -55,24 +55,24 @@ export function InviteMemberForm() {
             />
           )}
         </Field>
+
+        <Field label="Email" required reserveMessageSpace error={state.fieldErrors?.email}>
+          {({ id, describedBy, invalid, required }) => (
+            <Input
+              id={id}
+              name="email"
+              type="email"
+              autoComplete="email"
+              aria-describedby={describedBy}
+              invalid={invalid}
+              required={required}
+            />
+          )}
+        </Field>
       </div>
 
-      <Field label="Email" required error={state.fieldErrors?.email}>
-        {({ id, describedBy, invalid, required }) => (
-          <Input
-            id={id}
-            name="email"
-            type="email"
-            autoComplete="email"
-            aria-describedby={describedBy}
-            invalid={invalid}
-            required={required}
-          />
-        )}
-      </Field>
-
-      <div className="grid gap-4 sm:grid-cols-2">
-        <Field label="Profile" required error={state.fieldErrors?.profile}>
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-[minmax(10rem,1fr)_minmax(10rem,1fr)_minmax(7rem,0.75fr)_minmax(12rem,1.25fr)_minmax(6rem,0.6fr)]">
+        <Field label="Profile" required reserveMessageSpace error={state.fieldErrors?.profile}>
           {({ id, describedBy, invalid, required }) => (
             <select
               id={id}
@@ -88,7 +88,7 @@ export function InviteMemberForm() {
             </select>
           )}
         </Field>
-        <Field label="Role" required error={state.fieldErrors?.role}>
+        <Field label="Role" required reserveMessageSpace error={state.fieldErrors?.role}>
           {({ id, describedBy, invalid, required }) => (
             <select
               id={id}
@@ -104,12 +104,10 @@ export function InviteMemberForm() {
             </select>
           )}
         </Field>
-      </div>
-
-      <div className="grid gap-4 sm:grid-cols-3">
         <Field
           label="Currency"
           required
+          reserveMessageSpace
           hint="Default billing/reporting currency."
           error={state.fieldErrors?.defaultCurrencyCode}
         >
@@ -125,7 +123,7 @@ export function InviteMemberForm() {
             />
           )}
         </Field>
-        <Field label="Timezone" required error={state.fieldErrors?.timezone}>
+        <Field label="Timezone" required reserveMessageSpace error={state.fieldErrors?.timezone}>
           {({ id, describedBy, invalid, required }) => (
             <Input
               id={id}
@@ -137,7 +135,7 @@ export function InviteMemberForm() {
             />
           )}
         </Field>
-        <Field label="Locale" required error={state.fieldErrors?.locale}>
+        <Field label="Locale" required reserveMessageSpace error={state.fieldErrors?.locale}>
           {({ id, describedBy, invalid, required }) => (
             <Input
               id={id}

@@ -11,6 +11,7 @@ export function Field({
   required,
   hint,
   error,
+  reserveMessageSpace,
   children,
   className,
 }: FieldProps) {
@@ -37,6 +38,10 @@ export function Field({
       ) : hint ? (
         <FormMessage id={hintId} tone="hint">
           {hint}
+        </FormMessage>
+      ) : reserveMessageSpace ? (
+        <FormMessage tone="hint" className="invisible" aria-hidden="true">
+          .
         </FormMessage>
       ) : null}
     </div>

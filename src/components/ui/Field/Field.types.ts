@@ -14,6 +14,7 @@ export type FieldProps = {
   required?: boolean;
   hint?: ReactNode;
   error?: ReactNode;
+  reserveMessageSpace?: boolean;
   children: ReactNode | ((field: FieldRenderProps) => ReactNode);
   className?: string;
 };
