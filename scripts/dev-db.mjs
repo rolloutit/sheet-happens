@@ -116,7 +116,7 @@ async function dockerCompose(args) {
 }
 
 async function prismaDbPush() {
-  await run("pnpm", ["exec", "prisma", "db", "push", "--skip-generate"], {
+  await run("pnpm", ["exec", "prisma", "db", "push"], {
     cwd: rootDir,
     env: {
       ...process.env,
