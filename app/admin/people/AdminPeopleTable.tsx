@@ -1,6 +1,15 @@
 "use client";
 
-import { Archive, Ban, LogOut, Mail, RotateCcw, ShieldCheck, UserMinus } from "lucide-react";
+import {
+  Archive,
+  Ban,
+  LogOut,
+  Mail,
+  MoreHorizontal,
+  RotateCcw,
+  ShieldCheck,
+  UserMinus,
+} from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 
@@ -16,6 +25,15 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/src/components/ui/Dialog";
+import {
+  Dropdown,
+  DropdownContent,
+  DropdownItem,
+  DropdownLabel,
+  DropdownSeparator,
+  DropdownTrigger,
+} from "@/src/components/ui/Dropdown";
+import { IconButton } from "@/src/components/ui/IconButton";
 import type { MemberPreferenceOptions } from "@/src/lib/member-preferences";
 import { cn } from "@/src/lib/utils";
 import type { AdminPersonRow } from "@/src/server/users";
@@ -104,104 +122,32 @@ export function AdminPeopleTable({
           setMessage(null);
         }}
         rowActions={(row) => (
-          <div className="flex flex-wrap justify-end gap-2">
-            <RoleSelect
+          <div className="flex justify-end">
+            <PersonActionsMenu
               row={row}
-              pending={isPending(row, "role")}
-              onChange={(role) => {
+              currentMemberId={currentMemberId}
+              isPending={(action) => isPending(row, action)}
+              onChangeRole={(role) => {
                 runAction(row, "role", () => changeMemberRoleAction(row.id, role));
               }}
+              onResend={() => runAction(row, "resend", () => resendMemberInviteAction(row.id))}
+              onRevokeInvite={() =>
+                runAction(row, "revoke", () => revokeMemberInviteAction(row.id))
+              }
+              onRevokeSessions={() =>
+                runAction(row, "sessions", () => revokeMemberSessionsAction(row.id))
+              }
+              onDeactivate={() =>
+                runAction(row, "deactivate", () => deactivateMemberAction(row.id))
+              }
+              onReactivate={() =>
+                runAction(row, "reactivate", () => reactivateMemberAction(row.id))
+              }
+              onArchive={() => {
+                setArchivingMember(getAdminPersonRow(rows, row));
+                setMessage(null);
+              }}
             />
-            {row.state === "invited" ? (
-              <>
-                <Button
-                  type="button"
-                  variant="soft"
-                  size="sm"
-                  icon={Mail}
-                  loading={isPending(row, "resend")}
-                  onClick={() => runAction(row, "resend", () => resendMemberInviteAction(row.id))}
-                >
-                  Resend
-                </Button>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  icon={Ban}
-                  loading={isPending(row, "revoke")}
-                  onClick={() => runAction(row, "revoke", () => revokeMemberInviteAction(row.id))}
-                >
-                  Revoke
-                </Button>
-              </>
-            ) : null}
-            {row.state === "active" ? (
-              <>
-                <Button
-                  type="button"
-                  variant="soft"
-                  size="sm"
-                  icon={LogOut}
-                  loading={isPending(row, "sessions")}
-                  onClick={() =>
-                    runAction(row, "sessions", () => revokeMemberSessionsAction(row.id))
-                  }
-                >
-                  Revoke sessions
-                </Button>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  icon={UserMinus}
-                  loading={isPending(row, "deactivate")}
-                  onClick={() => runAction(row, "deactivate", () => deactivateMemberAction(row.id))}
-                >
-                  Deactivate
-                </Button>
-              </>
-            ) : null}
-            {row.state === "inactive" && row.hasAuthUser ? (
-              <>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  icon={LogOut}
-                  loading={isPending(row, "sessions")}
-                  onClick={() =>
-                    runAction(row, "sessions", () => revokeMemberSessionsAction(row.id))
-                  }
-                >
-                  Revoke sessions
-                </Button>
-                <Button
-                  type="button"
-                  variant="soft"
-                  size="sm"
-                  icon={RotateCcw}
-                  loading={isPending(row, "reactivate")}
-                  onClick={() => runAction(row, "reactivate", () => reactivateMemberAction(row.id))}
-                >
-                  Reactivate
-                </Button>
-              </>
-            ) : null}
-            {row.state !== "locked" && row.id !== currentMemberId ? (
-              <Button
-                type="button"
-                variant="danger"
-                size="sm"
-                icon={Archive}
-                onClick={() => {
-                  setArchivingMember(getAdminPersonRow(rows, row));
-                  setMessage(null);
-                }}
-              >
-                Archive
-              </Button>
-            ) : null}
           </div>
         )}
       />
@@ -234,6 +180,98 @@ export function AdminPeopleTable({
 
 function getAdminPersonRow(rows: AdminPersonRow[], row: PersonTableRow) {
   return rows.find((candidate) => candidate.id === row.id) ?? null;
+}
+
+function PersonActionsMenu({
+  row,
+  currentMemberId,
+  isPending,
+  onChangeRole,
+  onResend,
+  onRevokeInvite,
+  onRevokeSessions,
+  onDeactivate,
+  onReactivate,
+  onArchive,
+}: {
+  row: PersonTableRow;
+  currentMemberId: string;
+  isPending: (action: PendingAction) => boolean;
+  onChangeRole: (role: PersonRoleValue) => void;
+  onResend: () => void;
+  onRevokeInvite: () => void;
+  onRevokeSessions: () => void;
+  onDeactivate: () => void;
+  onReactivate: () => void;
+  onArchive: () => void;
+}) {
+  if (row.state === "locked") {
+    return null;
+  }
+
+  const isSelf = row.id === currentMemberId;
+  const nextRole: PersonRoleValue = row.roleValue === "ADMIN" ? "MEMBER" : "ADMIN";
+
+  return (
+    <Dropdown>
+      <DropdownTrigger asChild>
+        <IconButton
+          icon={MoreHorizontal}
+          label={`Open actions for ${row.name}`}
+          size="sm"
+          variant="ghost"
+        />
+      </DropdownTrigger>
+      <DropdownContent align="end">
+        <DropdownLabel>Actions</DropdownLabel>
+        {!isSelf ? (
+          <DropdownItem disabled={isPending("role")} onSelect={() => onChangeRole(nextRole)}>
+            <ShieldCheck className="size-4" aria-hidden="true" />
+            {nextRole === "ADMIN" ? "Make admin" : "Make member"}
+          </DropdownItem>
+        ) : null}
+        {row.state === "invited" ? (
+          <>
+            <DropdownItem disabled={isPending("resend")} onSelect={onResend}>
+              <Mail className="size-4" aria-hidden="true" />
+              Resend invitation
+            </DropdownItem>
+            <DropdownItem disabled={isPending("revoke")} onSelect={onRevokeInvite}>
+              <Ban className="size-4" aria-hidden="true" />
+              Revoke invitation
+            </DropdownItem>
+          </>
+        ) : null}
+        {row.hasAuthUser && !isSelf ? (
+          <DropdownItem disabled={isPending("sessions")} onSelect={onRevokeSessions}>
+            <LogOut className="size-4" aria-hidden="true" />
+            Revoke sessions
+          </DropdownItem>
+        ) : null}
+        {row.state === "active" && !isSelf ? (
+          <DropdownItem disabled={isPending("deactivate")} onSelect={onDeactivate}>
+            <UserMinus className="size-4" aria-hidden="true" />
+            Deactivate
+          </DropdownItem>
+        ) : null}
+        {row.state === "inactive" && row.hasAuthUser ? (
+          <DropdownItem disabled={isPending("reactivate")} onSelect={onReactivate}>
+            <RotateCcw className="size-4" aria-hidden="true" />
+            Reactivate
+          </DropdownItem>
+        ) : null}
+        {!isSelf ? (
+          <>
+            <DropdownSeparator />
+            <DropdownItem tone="danger" onSelect={onArchive}>
+              <Archive className="size-4" aria-hidden="true" />
+              Archive
+            </DropdownItem>
+          </>
+        ) : null}
+      </DropdownContent>
+    </Dropdown>
+  );
 }
 
 function ArchiveMemberDialog({
@@ -280,35 +318,5 @@ function ArchiveMemberDialog({
         </DialogFooter>
       </DialogContent>
     </Dialog>
-  );
-}
-
-function RoleSelect({
-  row,
-  pending,
-  onChange,
-}: {
-  row: PersonTableRow;
-  pending: boolean;
-  onChange: (role: PersonRoleValue) => void;
-}) {
-  if (row.state === "locked") {
-    return null;
-  }
-
-  return (
-    <label className="inline-flex items-center gap-2">
-      <ShieldCheck className="size-4 text-muted-foreground" aria-hidden="true" />
-      <span className="sr-only">Change role for {row.name}</span>
-      <select
-        value={row.roleValue ?? "MEMBER"}
-        disabled={pending}
-        onChange={(event) => onChange(event.currentTarget.value as PersonRoleValue)}
-        className="h-9 rounded-[var(--radius-md)] border border-input bg-background/50 px-2 text-sm text-foreground shadow-sm transition focus-visible:border-ring focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/35 disabled:cursor-not-allowed disabled:opacity-50"
-      >
-        <option value="MEMBER">Member</option>
-        <option value="ADMIN">Admin</option>
-      </select>
-    </label>
   );
 }
