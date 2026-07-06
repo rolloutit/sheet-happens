@@ -149,8 +149,8 @@ Audit at minimum:
 - Role change.
 - Profile transition.
 - Session revocation.
-- 2FA enabled/disabled.
-- Passkey added/deleted.
+- 2FA enabled/disabled and backup-code regeneration.
+- Passkey added/renamed/deleted.
 
 Auth secrets, TOTP secrets, passkey public keys, backup codes, and magic-link tokens must not be
 stored in domain audit details.

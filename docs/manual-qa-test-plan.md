@@ -12,6 +12,8 @@ Replace placeholder values before sharing a concrete test run:
 - `{ADMIN_INVITE_TOKEN}`: pending admin invitation token.
 - `{CONTRACTOR_INVITE_TOKEN}`: pending contractor invitation token.
 - `{INVALID_INVITE_TOKEN}`: deliberately invalid invitation token for negative testing.
+- `{AUDIT_LOG_VIEW}`: audit-log viewer, admin export, or database access path for checking audit
+  rows.
 - `{INVITED_EMAIL}`: email address that owns the tested invitation.
 - `{INVITED_FIRST_NAME}`: first name used when creating a new invited member.
 - `{INVITED_LAST_NAME}`: last name used when creating a new invited member.
@@ -32,6 +34,8 @@ Replace placeholder values before sharing a concrete test run:
 - Capture screenshots for failures and include the full URL, excluding secret tokens when sharing
   outside the project team.
 - Do not reuse one-time backup codes across repeated test runs.
+- When a scenario mentions audit rows, verify them through `{AUDIT_LOG_VIEW}` if the current test
+  environment exposes audit-log access.
 
 ## Smoke: Deployment Is Reachable
 
@@ -226,8 +230,27 @@ Expected result:
 Expected result:
 
 - Deactivation blocks that member from protected app access.
+- Deactivation revokes that member's active sessions.
 - Reactivation restores access.
 - The member directory reflects the latest state.
+- Audit rows are recorded for `member.deactivated`, `member.session_revoked`, and
+  `member.reactivated`.
+
+### Revoke Member Sessions
+
+1. Sign in as `{ADMIN_EMAIL}` with TOTP enabled and verified in one browser profile.
+2. Sign in as `{CONTRACTOR_EMAIL}` or `{EMPLOYEE_EMAIL}` in a second browser profile.
+3. In the admin browser, open `https://{DOMAIN_NAME}/admin/people`.
+4. Find the signed-in contractor or employee.
+5. Click `Revoke sessions`.
+6. In the contractor or employee browser, refresh `https://{DOMAIN_NAME}/dashboard`.
+
+Expected result:
+
+- The admin browser shows how many sessions were revoked.
+- The contractor or employee is forced back through sign-in before accessing protected pages again.
+- The admin cannot revoke their own sessions from this table.
+- An audit row is recorded for `member.session_revoked` with reason `admin_revoke`.
 
 ## Security Settings
 
@@ -282,6 +305,7 @@ Expected result:
 - The passkey is added.
 - The passkey appears in the registered passkeys list.
 - The passkey can be renamed or removed.
+- An audit row is recorded for `security.passkey_added` without passkey public key material.
 
 ### Passkey Login
 
@@ -308,6 +332,21 @@ Expected result:
 - The passkey disappears from the list.
 - The removed passkey cannot be used for login anymore.
 - Magic-link login remains available.
+- An audit row is recorded for `security.passkey_deleted` without passkey public key material.
+
+### Rename Passkey
+
+1. Sign in as the user who owns a registered passkey.
+2. Open `https://{DOMAIN_NAME}/settings`.
+3. Find the registered passkey.
+4. Change the passkey name.
+5. Click `Save`.
+6. Refresh the settings page.
+
+Expected result:
+
+- The updated passkey name remains visible after refresh.
+- An audit row is recorded for `security.passkey_renamed`.
 
 ## TOTP 2FA
 
@@ -326,6 +365,7 @@ Expected result:
 - Backup codes are shown.
 - The user remains signed in.
 - Store backup codes for later backup-code tests.
+- An audit row is recorded for `security.totp_enabled` without the TOTP secret or backup codes.
 
 Fallback check:
 
@@ -410,6 +450,26 @@ Expected result:
   passkey, remains available.
 - If no passkey remains, protected pages redirect to `/settings?setup=required...`.
 - Admin users cannot use admin pages again until TOTP is re-enabled.
+- An audit row is recorded for `security.totp_disabled`.
+
+### Regenerate Backup Codes
+
+1. Sign in as the user who has TOTP enabled.
+2. Open `https://{DOMAIN_NAME}/settings`.
+3. Click `New backup codes`.
+4. Confirm the browser prompt.
+5. Store one of the newly displayed backup codes.
+6. Sign out and sign in until `/two-factor` is shown.
+7. Open the `Backup code` tab.
+8. Enter the stored new backup code.
+9. Try one of the older backup codes from before regeneration.
+
+Expected result:
+
+- New backup codes are displayed after regeneration.
+- A new backup code can complete the 2FA challenge once.
+- Older backup codes no longer work.
+- An audit row is recorded for `security.backup_codes_regenerated` without any backup-code values.
 
 ## Account Status And Lifecycle
 
@@ -462,7 +522,9 @@ Expected result:
 - Users without passkey or TOTP are redirected to the security setup gate.
 - Admin users without TOTP are redirected to the admin TOTP gate.
 - Admin people page can invite, resend, deactivate, and reactivate members.
+- Admin people page can revoke member sessions.
 - Passkey add, login, rename, and remove still work.
 - TOTP setup, challenge, invalid-code handling, trusted device, backup code, and disable still work.
+- TOTP disablement and backup-code regeneration create audit rows without storing secrets.
 - `/dashboard`, `/settings`, `/admin/people`, `/two-factor`, and `/account-status` render without
   layout breakage on desktop and mobile widths.
