@@ -6,20 +6,33 @@ import { z } from "zod";
 import { requireAdminAppMemberForAction } from "@/src/server/auth/app-access";
 import { AuthenticationError, AuthorizationError } from "@/src/server/auth/session";
 import {
+  isSupportedCurrencyCode,
+  isSupportedLocale,
+  isSupportedTimeZone,
+  normalizeCurrencyCode,
+  normalizeLocale,
+  normalizeTimeZone,
+} from "@/src/lib/member-preferences";
+import {
   changeMemberRole,
   deactivateMember,
   InvitationConflictError,
   inviteMember,
+  MemberDetailsError,
   MemberLifecycleError,
   reactivateMember,
   revokeMemberSessions,
   resendMemberInvitation,
   revokeMemberInvitation,
+  updateMemberDetails,
 } from "@/src/server/users";
 import type {
   AdminPeopleActionState,
   InviteMemberActionState,
   InviteMemberField,
+  UpdateMemberDetailsActionInput,
+  UpdateMemberDetailsActionState,
+  UpdateMemberDetailsField,
 } from "./actions.types";
 
 const inviteMemberSchema = z.object({
@@ -34,11 +47,35 @@ const inviteMemberSchema = z.object({
   }),
   defaultCurrencyCode: z
     .string()
-    .trim()
-    .toUpperCase()
-    .regex(/^[A-Z]{3}$/, "Use a 3-letter currency code."),
-  timezone: z.string().trim().min(1, "Timezone is required."),
-  locale: z.string().trim().min(2, "Locale is required."),
+    .transform(normalizeCurrencyCode)
+    .refine(isSupportedCurrencyCode, "Choose a supported currency."),
+  timezone: z
+    .string()
+    .transform(normalizeTimeZone)
+    .refine(isSupportedTimeZone, "Choose a supported timezone."),
+  locale: z
+    .string()
+    .transform(normalizeLocale)
+    .refine(isSupportedLocale, "Choose a supported language."),
+});
+
+const updateMemberDetailsSchema = z.object({
+  memberId: z.string().trim().min(1, "Member id is missing."),
+  firstName: z.string().trim().min(1, "First name is required."),
+  lastName: z.string().trim().min(1, "Last name is required."),
+  displayName: z.string().trim().max(120, "Display name must be 120 characters or less."),
+  defaultCurrencyCode: z
+    .string()
+    .transform(normalizeCurrencyCode)
+    .refine(isSupportedCurrencyCode, "Choose a supported currency."),
+  timezone: z
+    .string()
+    .transform(normalizeTimeZone)
+    .refine(isSupportedTimeZone, "Choose a supported timezone."),
+  locale: z
+    .string()
+    .transform(normalizeLocale)
+    .refine(isSupportedLocale, "Choose a supported language."),
 });
 
 export async function inviteMemberAction(
@@ -92,6 +129,51 @@ export async function inviteMemberAction(
     return {
       status: "error",
       message: "The invitation could not be sent. Try again later.",
+    };
+  }
+}
+
+export async function updateMemberDetailsAction(
+  input: UpdateMemberDetailsActionInput,
+): Promise<UpdateMemberDetailsActionState> {
+  const parsed = updateMemberDetailsSchema.safeParse(input);
+
+  if (!parsed.success) {
+    return {
+      status: "error",
+      message: "Fix the highlighted fields and try again.",
+      fieldErrors: getUpdateMemberDetailsFieldErrors(parsed.error),
+    };
+  }
+
+  try {
+    const { member: admin } = await requireAdminAppMemberForAction();
+    const result = await updateMemberDetails({
+      ...parsed.data,
+      actorMemberId: admin.id,
+    });
+
+    revalidatePath("/admin/people");
+
+    return {
+      status: "success",
+      message: result.changed ? "Member details updated." : "No changes to save.",
+    };
+  } catch (error) {
+    if (
+      error instanceof MemberDetailsError ||
+      error instanceof AuthenticationError ||
+      error instanceof AuthorizationError
+    ) {
+      return {
+        status: "error",
+        message: error.message,
+      };
+    }
+
+    return {
+      status: "error",
+      message: "The member details could not be updated. Try again later.",
     };
   }
 }
@@ -187,6 +269,22 @@ function getFieldErrors(error: z.ZodError): InviteMemberActionState["fieldErrors
   return fieldErrors;
 }
 
+function getUpdateMemberDetailsFieldErrors(
+  error: z.ZodError,
+): UpdateMemberDetailsActionState["fieldErrors"] {
+  const fieldErrors: UpdateMemberDetailsActionState["fieldErrors"] = {};
+
+  for (const issue of error.issues) {
+    const field = issue.path.at(0);
+
+    if (isUpdateMemberDetailsField(field) && !fieldErrors[field]) {
+      fieldErrors[field] = issue.message;
+    }
+  }
+
+  return fieldErrors;
+}
+
 async function runAdminPeopleAction(
   action: (adminId: string) => Promise<string>,
 ): Promise<AdminPeopleActionState> {
@@ -203,6 +301,7 @@ async function runAdminPeopleAction(
   } catch (error) {
     if (
       error instanceof InvitationConflictError ||
+      error instanceof MemberDetailsError ||
       error instanceof MemberLifecycleError ||
       error instanceof AuthenticationError ||
       error instanceof AuthorizationError
@@ -218,6 +317,17 @@ async function runAdminPeopleAction(
       message: "The member action could not be completed. Try again later.",
     };
   }
+}
+
+function isUpdateMemberDetailsField(field: unknown): field is UpdateMemberDetailsField {
+  return (
+    field === "firstName" ||
+    field === "lastName" ||
+    field === "displayName" ||
+    field === "defaultCurrencyCode" ||
+    field === "timezone" ||
+    field === "locale"
+  );
 }
 
 function isInviteMemberField(field: unknown): field is InviteMemberField {
