@@ -3,7 +3,11 @@
 import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
 
-import { requireActiveAppMemberForAction } from "@/src/server/auth/app-access";
+import {
+  requireActiveAppMemberForAction,
+  requireSecuritySettingsAppMember,
+} from "@/src/server/auth/app-access";
+import { clearSecondFactorCookie } from "@/src/server/auth/second-factor";
 import { AuthenticationError, AuthorizationError } from "@/src/server/auth/session";
 import { prisma } from "@/src/server/db/client";
 import type {
@@ -199,6 +203,93 @@ export async function deletePasskeyAction(
     return {
       status: "error",
       message: "Could not remove the passkey.",
+    };
+  }
+}
+
+export async function auditTotpDisabledAction(): Promise<SecuritySettingsActionState> {
+  try {
+    const { member } = await requireSecuritySettingsAppMember("/settings");
+    const requestHeaders = await headers();
+
+    if (!member.authUserId) {
+      throw new AuthorizationError("No auth account is linked to this member.");
+    }
+
+    await prisma.auditLog.create({
+      data: {
+        actorMemberId: member.id,
+        action: "security.totp_disabled",
+        targetType: "member",
+        targetId: member.id,
+        after: {
+          authUserId: member.authUserId,
+        },
+        ipAddress: requestHeaders.get("x-forwarded-for"),
+        userAgent: requestHeaders.get("user-agent"),
+      },
+    });
+    await clearSecondFactorCookie();
+    revalidatePath("/settings");
+
+    return {
+      status: "success",
+      message: "Authenticator app disablement audited.",
+    };
+  } catch (error) {
+    if (error instanceof AuthenticationError || error instanceof AuthorizationError) {
+      return {
+        status: "error",
+        message: error.message,
+      };
+    }
+
+    return {
+      status: "error",
+      message: "Authenticator app was disabled, but the audit event could not be recorded.",
+    };
+  }
+}
+
+export async function auditBackupCodesRegeneratedAction(): Promise<SecuritySettingsActionState> {
+  try {
+    const { member } = await requireSecuritySettingsAppMember("/settings");
+    const requestHeaders = await headers();
+
+    if (!member.authUserId) {
+      throw new AuthorizationError("No auth account is linked to this member.");
+    }
+
+    await prisma.auditLog.create({
+      data: {
+        actorMemberId: member.id,
+        action: "security.backup_codes_regenerated",
+        targetType: "member",
+        targetId: member.id,
+        after: {
+          authUserId: member.authUserId,
+        },
+        ipAddress: requestHeaders.get("x-forwarded-for"),
+        userAgent: requestHeaders.get("user-agent"),
+      },
+    });
+    revalidatePath("/settings");
+
+    return {
+      status: "success",
+      message: "Backup-code regeneration audited.",
+    };
+  } catch (error) {
+    if (error instanceof AuthenticationError || error instanceof AuthorizationError) {
+      return {
+        status: "error",
+        message: error.message,
+      };
+    }
+
+    return {
+      status: "error",
+      message: "Backup codes were regenerated, but the audit event could not be recorded.",
     };
   }
 }

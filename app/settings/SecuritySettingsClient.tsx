@@ -37,8 +37,13 @@ import { FormSection } from "@/src/components/ui/FormSection";
 import { Input } from "@/src/components/ui/Input";
 import { authClient } from "@/src/lib/auth-client";
 import { cn } from "@/src/lib/utils";
-import { clearSecondFactorAction, verifySecondFactorAction } from "../two-factor/actions";
-import { deletePasskeyAction, renamePasskeyAction } from "./actions";
+import { verifySecondFactorAction } from "../two-factor/actions";
+import {
+  auditBackupCodesRegeneratedAction,
+  auditTotpDisabledAction,
+  deletePasskeyAction,
+  renamePasskeyAction,
+} from "./actions";
 import type { SecuritySettingsActionState } from "./actions.types";
 
 export type SecuritySettingsClientProps = {
@@ -333,10 +338,11 @@ export function SecuritySettingsClient({ user, passkeys, twoFactor }: SecuritySe
 
     setTotpSetup({ status: "idle" });
     setBackupCodes([]);
-    await clearSecondFactorAction();
+    const auditResult = await auditTotpDisabledAction();
     setNotice({
-      tone: "success",
-      message: "Authenticator app disabled.",
+      tone: auditResult.status === "success" ? "success" : "error",
+      message:
+        auditResult.status === "success" ? "Authenticator app disabled." : auditResult.message,
     });
     router.refresh();
   }
@@ -362,9 +368,13 @@ export function SecuritySettingsClient({ user, passkeys, twoFactor }: SecuritySe
     }
 
     setBackupCodes(result.data.backupCodes);
+    const auditResult = await auditBackupCodesRegeneratedAction();
     setNotice({
-      tone: "success",
-      message: "New backup codes generated. Store them now.",
+      tone: auditResult.status === "success" ? "success" : "error",
+      message:
+        auditResult.status === "success"
+          ? "New backup codes generated. Store them now."
+          : auditResult.message,
     });
   }
 

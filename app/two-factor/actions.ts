@@ -34,6 +34,10 @@ export async function verifySecondFactorAction(
         headers: requestHeaders,
       })
       .catch(() => null);
+    const setupSessionUserId = existingSession?.user.id;
+    const wasTotpEnabled = Boolean(
+      (existingSession?.user as { twoFactorEnabled?: boolean } | undefined)?.twoFactorEnabled,
+    );
     const verificationStartedAt = new Date(Date.now() - 1000);
     const result =
       input.method === "totp"
@@ -79,6 +83,18 @@ export async function verifySecondFactorAction(
       sessionToken,
       trustDevice: input.trustDevice,
     });
+
+    if (
+      input.method === "totp" &&
+      setupSessionUserId &&
+      normalizedResult.userId === setupSessionUserId &&
+      !wasTotpEnabled
+    ) {
+      await auditTotpEnabled({
+        userId: normalizedResult.userId,
+        requestHeaders,
+      });
+    }
 
     return {
       status: "success",
@@ -183,4 +199,31 @@ function getSecondFactorErrorMessage(error: unknown) {
   }
 
   return maybeError.body?.message ?? maybeError.message ?? "Could not verify the second factor.";
+}
+
+async function auditTotpEnabled(input: { userId: string; requestHeaders: Headers }) {
+  const member = await prisma.member.findUnique({
+    where: {
+      authUserId: input.userId,
+    },
+    select: {
+      id: true,
+    },
+  });
+
+  if (!member) return;
+
+  await prisma.auditLog.create({
+    data: {
+      actorMemberId: member.id,
+      action: "security.totp_enabled",
+      targetType: "member",
+      targetId: member.id,
+      after: {
+        authUserId: input.userId,
+      },
+      ipAddress: input.requestHeaders.get("x-forwarded-for"),
+      userAgent: input.requestHeaders.get("user-agent"),
+    },
+  });
 }

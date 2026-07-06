@@ -26,6 +26,15 @@ const trustedOrigins = [
     .filter(Boolean),
 ];
 
+type PasskeyAuditRecord = {
+  id?: unknown;
+  userId?: unknown;
+  name?: unknown;
+  deviceType?: unknown;
+  backedUp?: unknown;
+  transports?: unknown;
+};
+
 export const auth = betterAuth({
   appName,
   baseURL: authOrigin,
@@ -43,6 +52,13 @@ export const auth = betterAuth({
           }
 
           return false;
+        },
+      },
+    },
+    passkey: {
+      create: {
+        after: async (passkey: PasskeyAuditRecord) => {
+          await auditPasskeyAdded(passkey);
         },
       },
     },
@@ -87,4 +103,36 @@ function getAuthSecret() {
   }
 
   return developmentFallbackSecret;
+}
+
+async function auditPasskeyAdded(passkey: PasskeyAuditRecord) {
+  if (typeof passkey.id !== "string" || typeof passkey.userId !== "string") {
+    return;
+  }
+
+  const member = await prisma.member.findUnique({
+    where: {
+      authUserId: passkey.userId,
+    },
+    select: {
+      id: true,
+    },
+  });
+
+  if (!member) return;
+
+  await prisma.auditLog.create({
+    data: {
+      actorMemberId: member.id,
+      action: "security.passkey_added",
+      targetType: "passkey",
+      targetId: passkey.id,
+      after: {
+        name: typeof passkey.name === "string" ? passkey.name : null,
+        deviceType: typeof passkey.deviceType === "string" ? passkey.deviceType : null,
+        backedUp: typeof passkey.backedUp === "boolean" ? passkey.backedUp : null,
+        transports: typeof passkey.transports === "string" ? passkey.transports : null,
+      },
+    },
+  });
 }
