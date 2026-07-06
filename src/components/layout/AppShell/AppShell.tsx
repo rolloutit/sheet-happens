@@ -32,13 +32,19 @@ import { UserMenu } from "../UserMenu";
 import type { AppShellProps } from "./AppShell.types";
 
 const navItems = [
-  { id: "dashboard", label: "Irányítópult", icon: LayoutDashboard, group: "main", href: "#" },
+  {
+    id: "dashboard",
+    label: "Irányítópult",
+    icon: LayoutDashboard,
+    group: "main",
+    href: "/dashboard",
+  },
   { id: "time", label: "Időkövetés", icon: Clock3, group: "main", href: "#" },
   { id: "timesheets", label: "Timesheet", icon: CalendarDays, group: "main", href: "#" },
   { id: "review", label: "Jóváhagyás", icon: WalletCards, group: "admin", href: "#" },
   { id: "reports", label: "Riportok", icon: BarChart3, group: "admin", href: "#" },
   { id: "projects", label: "Projektek", icon: FolderKanban, group: "admin", href: "#" },
-  { id: "people", label: "Emberek", icon: Users, group: "admin", href: "#" },
+  { id: "people", label: "Emberek", icon: Users, group: "admin", href: "/admin/people" },
   { id: "rates", label: "Óradíjak", icon: WalletCards, group: "admin", href: "#" },
   { id: "info", label: "Információs oldal", icon: BookOpen, group: "admin", href: "#" },
 ] as const;
@@ -96,7 +102,16 @@ export function AppShell({
   }
 
   function handleNavigate(itemId: string) {
-    onNavigate?.(itemId);
+    if (onNavigate) {
+      onNavigate(itemId);
+      return;
+    }
+
+    const item = navItems.find((navItem) => navItem.id === itemId);
+
+    if (item && item.href !== "#") {
+      window.location.href = item.href;
+    }
   }
 
   async function handleUserAction(actionId: string) {

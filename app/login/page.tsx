@@ -2,7 +2,12 @@ import type { Route } from "next";
 import { redirect } from "next/navigation";
 
 import { LoginPanel } from "./LoginPanel";
-import { getCurrentMember } from "@/src/server/auth/session";
+import {
+  accountStatusRoute,
+  getAppAccessState,
+  sanitizeCallbackURL,
+  secondFactorRoute,
+} from "@/src/server/auth/app-access";
 
 type LoginPageProps = {
   searchParams: Promise<{
@@ -16,11 +21,19 @@ export const dynamic = "force-dynamic";
 
 export default async function LoginPage({ searchParams }: LoginPageProps) {
   const params = await searchParams;
-  const callbackURL = getLocalCallbackURL(params.callbackURL);
-  const currentMember = await getCurrentMember();
+  const callbackURL = sanitizeCallbackURL(getSingleParam(params.callbackURL));
+  const access = await getAppAccessState();
 
-  if (currentMember?.status === "ACTIVE" && !currentMember.deletedAt) {
+  if (access.status === "active") {
     redirect(callbackURL as Route);
+  }
+
+  if (access.status === "second_factor_required") {
+    redirect(secondFactorRoute(callbackURL));
+  }
+
+  if (access.status !== "anonymous") {
+    redirect(accountStatusRoute(callbackURL));
   }
 
   return (
@@ -32,16 +45,6 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
       />
     </main>
   );
-}
-
-function getLocalCallbackURL(value: string | string[] | undefined) {
-  const callbackURL = getSingleParam(value) || "/settings";
-
-  if (!callbackURL.startsWith("/") || callbackURL.startsWith("//")) {
-    return "/settings";
-  }
-
-  return callbackURL;
 }
 
 function getSingleParam(value: string | string[] | undefined) {
