@@ -3,7 +3,8 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
-import { AuthenticationError, AuthorizationError, requireAdmin } from "@/src/server/auth/session";
+import { requireAdminAppMemberForAction } from "@/src/server/auth/app-access";
+import { AuthenticationError, AuthorizationError } from "@/src/server/auth/session";
 import {
   changeMemberRole,
   deactivateMember,
@@ -63,7 +64,7 @@ export async function inviteMemberAction(
   }
 
   try {
-    const admin = await requireAdmin();
+    const { member: admin } = await requireAdminAppMemberForAction();
     const invitation = await inviteMember({
       ...parsed.data,
       invitedByMemberId: admin.id,
@@ -176,7 +177,7 @@ async function runAdminPeopleAction(
   action: (adminId: string) => Promise<string>,
 ): Promise<AdminPeopleActionState> {
   try {
-    const admin = await requireAdmin();
+    const { member: admin } = await requireAdminAppMemberForAction();
     const message = await action(admin.id);
 
     revalidatePath("/admin/people");

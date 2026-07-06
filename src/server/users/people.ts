@@ -1,5 +1,5 @@
 import { prisma } from "@/src/server/db/client";
-import { requireAdmin } from "@/src/server/auth/session";
+import { requireAdminAppMemberForAction } from "@/src/server/auth/app-access";
 import type { PersonRowState, PersonTableRow } from "@/src/components/sheet/PeopleTable";
 
 export type PeopleMemberStatus = "INVITED" | "ACTIVE" | "INACTIVE" | "DELETED";
@@ -21,7 +21,7 @@ export type PeopleMemberRow = {
 };
 
 export async function listPeopleForAdmin(): Promise<PersonTableRow[]> {
-  await requireAdmin();
+  await requireAdminAppMemberForAction();
 
   const members = await prisma.member.findMany({
     select: {

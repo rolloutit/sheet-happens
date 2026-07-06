@@ -3,11 +3,8 @@
 import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
 
-import {
-  AuthenticationError,
-  AuthorizationError,
-  requireActiveMember,
-} from "@/src/server/auth/session";
+import { requireActiveAppMemberForAction } from "@/src/server/auth/app-access";
+import { AuthenticationError, AuthorizationError } from "@/src/server/auth/session";
 import { prisma } from "@/src/server/db/client";
 import type {
   DeletePasskeyActionInput,
@@ -35,7 +32,7 @@ export async function renamePasskeyAction(
   }
 
   try {
-    const member = await requireActiveMember();
+    const { member } = await requireActiveAppMemberForAction();
     const requestHeaders = await headers();
 
     if (!member.authUserId) {
@@ -127,7 +124,7 @@ export async function deletePasskeyAction(
   }
 
   try {
-    const member = await requireActiveMember();
+    const { member } = await requireActiveAppMemberForAction();
     const requestHeaders = await headers();
 
     if (!member.authUserId) {

@@ -1,6 +1,7 @@
 "use client";
 
 import { CheckCircle2, Mail, Send, ShieldAlert } from "lucide-react";
+import type { Route } from "next";
 import Link from "next/link";
 import { useActionState, useMemo, useState } from "react";
 import { useFormStatus } from "react-dom";
@@ -199,7 +200,7 @@ function InvitationResult({
       </CardHeader>
       <CardFooter>
         <Button asChild variant={tone === "success" ? "primary" : "soft"}>
-          <Link href="/">Continue</Link>
+          <Link href={"/dashboard" as Route}>Continue</Link>
         </Button>
       </CardFooter>
     </Card>
