@@ -1,6 +1,6 @@
 "use client";
 
-import { Save } from "lucide-react";
+import { CalendarClock, Save } from "lucide-react";
 import { type FormEvent, useState, useTransition } from "react";
 
 import { Button } from "@/src/components/ui/Button";
@@ -14,11 +14,14 @@ import {
 } from "@/src/components/ui/Drawer";
 import { Field } from "@/src/components/ui/Field";
 import { Input } from "@/src/components/ui/Input";
+import { Textarea } from "@/src/components/ui/Textarea";
 import type { MemberPreferenceOptions } from "@/src/lib/member-preferences";
 import type { AdminPersonRow } from "@/src/server/users";
-import { updateMemberDetailsAction } from "./actions";
+import { scheduleProfileTransitionAction, updateMemberDetailsAction } from "./actions";
 import type {
   AdminPeopleActionState,
+  ScheduleProfileTransitionActionInput,
+  ScheduleProfileTransitionActionState,
   UpdateMemberDetailsActionInput,
   UpdateMemberDetailsActionState,
 } from "./actions.types";
@@ -28,17 +31,20 @@ export type MemberEditDrawerProps = {
   member: AdminPersonRow | null;
   open: boolean;
   preferenceOptions: MemberPreferenceOptions;
+  todayDate: string;
   onOpenChange: (open: boolean) => void;
   onResult: (result: AdminPeopleActionState) => void;
   onSaved: () => void;
 };
 
 type EditableValues = Omit<UpdateMemberDetailsActionInput, "memberId">;
+type ProfileTransitionValues = Omit<ScheduleProfileTransitionActionInput, "memberId">;
 
 export function MemberEditDrawer({
   member,
   open,
   preferenceOptions,
+  todayDate,
   onOpenChange,
   onResult,
   onSaved,
@@ -49,8 +55,8 @@ export function MemberEditDrawer({
         <DrawerHeader>
           <DrawerTitle className="text-2xl font-semibold text-foreground">Edit member</DrawerTitle>
           <DrawerDescription className="text-sm leading-6 text-muted-foreground">
-            Update domain member details. Auth account data, role, and profile transitions are
-            managed separately.
+            Update domain member details and schedule effective-dated profile transitions. Auth
+            account data and role changes are managed separately.
           </DrawerDescription>
         </DrawerHeader>
 
@@ -59,6 +65,7 @@ export function MemberEditDrawer({
             key={member.id}
             member={member}
             preferenceOptions={preferenceOptions}
+            todayDate={todayDate}
             onCancel={() => onOpenChange(false)}
             onResult={onResult}
             onSaved={() => {
@@ -75,12 +82,14 @@ export function MemberEditDrawer({
 function MemberEditForm({
   member,
   preferenceOptions,
+  todayDate,
   onCancel,
   onResult,
   onSaved,
 }: {
   member: AdminPersonRow;
   preferenceOptions: MemberPreferenceOptions;
+  todayDate: string;
   onCancel: () => void;
   onResult: (result: AdminPeopleActionState) => void;
   onSaved: () => void;
@@ -120,124 +129,275 @@ function MemberEditForm({
   }
 
   return (
-    <form className="grid gap-5" onSubmit={submit}>
+    <div className="grid gap-5">
       <div className="rounded-[var(--radius-lg)] border border-border bg-secondary/50 p-4">
         <p className="font-ui text-sm font-semibold text-foreground">{member.name}</p>
         <p className="mt-1 text-sm text-muted-foreground">{member.email}</p>
+        <p className="mt-2 text-xs text-muted-foreground">
+          Current profile: <span className="font-medium text-foreground">{member.profile}</span>
+          {member.scheduledProfile && member.scheduledProfileValidFrom
+            ? `, scheduled: ${member.scheduledProfile} on ${member.scheduledProfileValidFrom}`
+            : ""}
+        </p>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2">
-        <Field label="First name" required reserveMessageSpace error={fieldErrors?.firstName}>
-          {({ id, describedBy, invalid, required }) => (
+      <form className="grid gap-5" onSubmit={submit}>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <Field label="First name" required reserveMessageSpace error={fieldErrors?.firstName}>
+            {({ id, describedBy, invalid, required }) => (
+              <Input
+                id={id}
+                value={values.firstName}
+                autoComplete="given-name"
+                aria-describedby={describedBy}
+                invalid={invalid}
+                required={required}
+                onChange={(event) => updateField("firstName", event.target.value)}
+              />
+            )}
+          </Field>
+          <Field label="Last name" required reserveMessageSpace error={fieldErrors?.lastName}>
+            {({ id, describedBy, invalid, required }) => (
+              <Input
+                id={id}
+                value={values.lastName}
+                autoComplete="family-name"
+                aria-describedby={describedBy}
+                invalid={invalid}
+                required={required}
+                onChange={(event) => updateField("lastName", event.target.value)}
+              />
+            )}
+          </Field>
+        </div>
+
+        <Field
+          label="Display name"
+          reserveMessageSpace
+          hint="Leave empty to use first and last name."
+          error={fieldErrors?.displayName}
+        >
+          {({ id, describedBy, invalid }) => (
             <Input
               id={id}
-              value={values.firstName}
-              autoComplete="given-name"
+              value={values.displayName}
+              autoComplete="name"
+              maxLength={120}
               aria-describedby={describedBy}
               invalid={invalid}
-              required={required}
-              onChange={(event) => updateField("firstName", event.target.value)}
+              onChange={(event) => updateField("displayName", event.target.value)}
             />
           )}
         </Field>
-        <Field label="Last name" required reserveMessageSpace error={fieldErrors?.lastName}>
+
+        <div className="grid gap-4 sm:grid-cols-[minmax(7rem,0.75fr)_minmax(12rem,1.25fr)_minmax(7rem,0.75fr)]">
+          <Field
+            label="Currency"
+            required
+            reserveMessageSpace
+            error={fieldErrors?.defaultCurrencyCode}
+          >
+            {({ id, describedBy, invalid, required }) => (
+              <select
+                id={id}
+                value={values.defaultCurrencyCode}
+                aria-describedby={describedBy}
+                aria-invalid={invalid}
+                required={required}
+                className={nativeSelectClassName}
+                onChange={(event) => updateField("defaultCurrencyCode", event.target.value)}
+              >
+                {preferenceOptions.currencies.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            )}
+          </Field>
+          <Field label="Timezone" required reserveMessageSpace error={fieldErrors?.timezone}>
+            {({ id, describedBy, invalid, required }) => (
+              <select
+                id={id}
+                value={values.timezone}
+                aria-describedby={describedBy}
+                aria-invalid={invalid}
+                required={required}
+                className={nativeSelectClassName}
+                onChange={(event) => updateField("timezone", event.target.value)}
+              >
+                {preferenceOptions.timezones.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            )}
+          </Field>
+          <Field label="Locale" required reserveMessageSpace error={fieldErrors?.locale}>
+            {({ id, describedBy, invalid, required }) => (
+              <select
+                id={id}
+                value={values.locale}
+                aria-describedby={describedBy}
+                aria-invalid={invalid}
+                required={required}
+                className={nativeSelectClassName}
+                onChange={(event) => updateField("locale", event.target.value)}
+              >
+                {preferenceOptions.locales.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            )}
+          </Field>
+        </div>
+
+        {status && status.status === "error" ? (
+          <p
+            role="alert"
+            className="rounded-[var(--radius-md)] border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive"
+          >
+            {status.message}
+          </p>
+        ) : null}
+
+        <DrawerFooter>
+          <Button type="button" variant="ghost" disabled={isPending} onClick={onCancel}>
+            Cancel
+          </Button>
+          <Button type="submit" icon={Save} loading={isPending}>
+            Save changes
+          </Button>
+        </DrawerFooter>
+      </form>
+
+      <ProfileTransitionForm
+        member={member}
+        todayDate={todayDate}
+        onResult={onResult}
+        onSaved={onSaved}
+      />
+    </div>
+  );
+}
+
+function ProfileTransitionForm({
+  member,
+  todayDate,
+  onResult,
+  onSaved,
+}: {
+  member: AdminPersonRow;
+  todayDate: string;
+  onResult: (result: AdminPeopleActionState) => void;
+  onSaved: () => void;
+}) {
+  const [values, setValues] = useState<ProfileTransitionValues>(() => ({
+    profile: getOppositeProfile(member.profileValue),
+    validFrom: todayDate,
+    reason: "",
+  }));
+  const [fieldErrors, setFieldErrors] =
+    useState<ScheduleProfileTransitionActionState["fieldErrors"]>(undefined);
+  const [status, setStatus] = useState<ScheduleProfileTransitionActionState | null>(null);
+  const [isPending, startTransition] = useTransition();
+
+  function updateField(field: keyof ProfileTransitionValues, value: string) {
+    setValues((current) => ({
+      ...current,
+      [field]: value,
+    }));
+  }
+
+  function submit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setStatus(null);
+    setFieldErrors(undefined);
+
+    startTransition(async () => {
+      const result = await scheduleProfileTransitionAction({
+        memberId: member.id,
+        ...values,
+      });
+
+      setStatus(result);
+      setFieldErrors(result.fieldErrors);
+      onResult(result);
+
+      if (result.status === "success") {
+        onSaved();
+      }
+    });
+  }
+
+  return (
+    <form
+      className="grid gap-4 rounded-[var(--radius-lg)] border border-border bg-secondary/30 p-4"
+      onSubmit={submit}
+    >
+      <div>
+        <p className="font-ui text-sm font-semibold text-foreground">Profile transition</p>
+        <p className="mt-1 text-sm leading-6 text-muted-foreground">
+          Schedule employee/contractor profile changes with an effective date.
+        </p>
+      </div>
+
+      <div className="grid gap-4 sm:grid-cols-[minmax(10rem,1fr)_minmax(10rem,1fr)]">
+        <Field label="New profile" required reserveMessageSpace error={fieldErrors?.profile}>
+          {({ id, describedBy, invalid, required }) => (
+            <select
+              id={id}
+              value={values.profile}
+              aria-describedby={describedBy}
+              aria-invalid={invalid}
+              required={required}
+              className={nativeSelectClassName}
+              onChange={(event) =>
+                updateField("profile", event.target.value as ProfileTransitionValues["profile"])
+              }
+            >
+              <option value="CONTRACTOR">Contractor</option>
+              <option value="EMPLOYEE">Employee</option>
+            </select>
+          )}
+        </Field>
+
+        <Field label="Effective date" required reserveMessageSpace error={fieldErrors?.validFrom}>
           {({ id, describedBy, invalid, required }) => (
             <Input
               id={id}
-              value={values.lastName}
-              autoComplete="family-name"
+              type="date"
+              value={values.validFrom}
+              min={todayDate}
               aria-describedby={describedBy}
               invalid={invalid}
               required={required}
-              onChange={(event) => updateField("lastName", event.target.value)}
+              onChange={(event) => updateField("validFrom", event.target.value)}
             />
           )}
         </Field>
       </div>
 
       <Field
-        label="Display name"
+        label="Reason"
         reserveMessageSpace
-        hint="Leave empty to use first and last name."
-        error={fieldErrors?.displayName}
+        hint="Stored in profile history and audit metadata."
+        error={fieldErrors?.reason}
       >
         {({ id, describedBy, invalid }) => (
-          <Input
+          <Textarea
             id={id}
-            value={values.displayName}
-            autoComplete="name"
-            maxLength={120}
+            value={values.reason}
+            maxLength={500}
             aria-describedby={describedBy}
             invalid={invalid}
-            onChange={(event) => updateField("displayName", event.target.value)}
+            onChange={(event) => updateField("reason", event.target.value)}
           />
         )}
       </Field>
-
-      <div className="grid gap-4 sm:grid-cols-[minmax(7rem,0.75fr)_minmax(12rem,1.25fr)_minmax(7rem,0.75fr)]">
-        <Field
-          label="Currency"
-          required
-          reserveMessageSpace
-          error={fieldErrors?.defaultCurrencyCode}
-        >
-          {({ id, describedBy, invalid, required }) => (
-            <select
-              id={id}
-              value={values.defaultCurrencyCode}
-              aria-describedby={describedBy}
-              aria-invalid={invalid}
-              required={required}
-              className={nativeSelectClassName}
-              onChange={(event) => updateField("defaultCurrencyCode", event.target.value)}
-            >
-              {preferenceOptions.currencies.map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
-          )}
-        </Field>
-        <Field label="Timezone" required reserveMessageSpace error={fieldErrors?.timezone}>
-          {({ id, describedBy, invalid, required }) => (
-            <select
-              id={id}
-              value={values.timezone}
-              aria-describedby={describedBy}
-              aria-invalid={invalid}
-              required={required}
-              className={nativeSelectClassName}
-              onChange={(event) => updateField("timezone", event.target.value)}
-            >
-              {preferenceOptions.timezones.map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
-          )}
-        </Field>
-        <Field label="Locale" required reserveMessageSpace error={fieldErrors?.locale}>
-          {({ id, describedBy, invalid, required }) => (
-            <select
-              id={id}
-              value={values.locale}
-              aria-describedby={describedBy}
-              aria-invalid={invalid}
-              required={required}
-              className={nativeSelectClassName}
-              onChange={(event) => updateField("locale", event.target.value)}
-            >
-              {preferenceOptions.locales.map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
-          )}
-        </Field>
-      </div>
 
       {status && status.status === "error" ? (
         <p
@@ -249,11 +409,8 @@ function MemberEditForm({
       ) : null}
 
       <DrawerFooter>
-        <Button type="button" variant="ghost" disabled={isPending} onClick={onCancel}>
-          Cancel
-        </Button>
-        <Button type="submit" icon={Save} loading={isPending}>
-          Save changes
+        <Button type="submit" icon={CalendarClock} loading={isPending}>
+          Schedule transition
         </Button>
       </DrawerFooter>
     </form>
@@ -269,4 +426,10 @@ function getEditableValues(member: AdminPersonRow | null): EditableValues {
     timezone: member?.timezone ?? "Europe/Budapest",
     locale: member?.locale ?? "en",
   };
+}
+
+function getOppositeProfile(
+  profile: AdminPersonRow["profileValue"],
+): ProfileTransitionValues["profile"] {
+  return profile === "EMPLOYEE" ? "CONTRACTOR" : "EMPLOYEE";
 }

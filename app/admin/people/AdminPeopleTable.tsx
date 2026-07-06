@@ -24,11 +24,12 @@ import { MemberEditDrawer } from "./MemberEditDrawer";
 export type AdminPeopleTableProps = {
   rows: AdminPersonRow[];
   preferenceOptions: MemberPreferenceOptions;
+  todayDate: string;
 };
 
 type PendingAction = "resend" | "revoke" | "sessions" | "deactivate" | "reactivate" | "role";
 
-export function AdminPeopleTable({ rows, preferenceOptions }: AdminPeopleTableProps) {
+export function AdminPeopleTable({ rows, preferenceOptions, todayDate }: AdminPeopleTableProps) {
   const router = useRouter();
   const [message, setMessage] = useState<AdminPeopleActionState | null>(null);
   const [pendingKey, setPendingKey] = useState<string | null>(null);
@@ -174,6 +175,7 @@ export function AdminPeopleTable({ rows, preferenceOptions }: AdminPeopleTablePr
         member={editingMember}
         open={Boolean(editingMember)}
         preferenceOptions={preferenceOptions}
+        todayDate={todayDate}
         onOpenChange={(open) => {
           if (!open) setEditingMember(null);
         }}

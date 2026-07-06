@@ -11,6 +11,8 @@ export type InviteMemberField =
 export type UpdateMemberDetailsField =
   "firstName" | "lastName" | "displayName" | "defaultCurrencyCode" | "timezone" | "locale";
 
+export type ScheduleProfileTransitionField = "profile" | "validFrom" | "reason";
+
 export type UpdateMemberDetailsActionInput = {
   memberId: string;
   firstName: string;
@@ -19,6 +21,13 @@ export type UpdateMemberDetailsActionInput = {
   defaultCurrencyCode: string;
   timezone: string;
   locale: string;
+};
+
+export type ScheduleProfileTransitionActionInput = {
+  memberId: string;
+  profile: "EMPLOYEE" | "CONTRACTOR";
+  validFrom: string;
+  reason: string;
 };
 
 export type InviteMemberActionState = {
@@ -31,6 +40,12 @@ export type UpdateMemberDetailsActionState = {
   status: "success" | "error";
   message: string;
   fieldErrors?: Partial<Record<UpdateMemberDetailsField, string>>;
+};
+
+export type ScheduleProfileTransitionActionState = {
+  status: "success" | "error";
+  message: string;
+  fieldErrors?: Partial<Record<ScheduleProfileTransitionField, string>>;
 };
 
 export type AdminPeopleActionState = {

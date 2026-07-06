@@ -20,8 +20,10 @@ import {
   inviteMember,
   MemberDetailsError,
   MemberLifecycleError,
+  MemberProfileTransitionError,
   reactivateMember,
   revokeMemberSessions,
+  scheduleMemberProfileTransition,
   resendMemberInvitation,
   revokeMemberInvitation,
   updateMemberDetails,
@@ -30,6 +32,9 @@ import type {
   AdminPeopleActionState,
   InviteMemberActionState,
   InviteMemberField,
+  ScheduleProfileTransitionActionInput,
+  ScheduleProfileTransitionActionState,
+  ScheduleProfileTransitionField,
   UpdateMemberDetailsActionInput,
   UpdateMemberDetailsActionState,
   UpdateMemberDetailsField,
@@ -76,6 +81,19 @@ const updateMemberDetailsSchema = z.object({
     .string()
     .transform(normalizeLocale)
     .refine(isSupportedLocale, "Choose a supported language."),
+});
+
+const scheduleProfileTransitionSchema = z.object({
+  memberId: z.string().trim().min(1, "Member id is missing."),
+  profile: z.enum(["EMPLOYEE", "CONTRACTOR"], {
+    error: "Choose a valid profile.",
+  }),
+  validFrom: z
+    .string()
+    .trim()
+    .refine(isDateInputValue, "Choose a valid effective date.")
+    .transform(parseDateInputValue),
+  reason: z.string().trim().max(500, "Reason must be 500 characters or less."),
 });
 
 export async function inviteMemberAction(
@@ -174,6 +192,53 @@ export async function updateMemberDetailsAction(
     return {
       status: "error",
       message: "The member details could not be updated. Try again later.",
+    };
+  }
+}
+
+export async function scheduleProfileTransitionAction(
+  input: ScheduleProfileTransitionActionInput,
+): Promise<ScheduleProfileTransitionActionState> {
+  const parsed = scheduleProfileTransitionSchema.safeParse(input);
+
+  if (!parsed.success) {
+    return {
+      status: "error",
+      message: "Fix the highlighted fields and try again.",
+      fieldErrors: getScheduleProfileTransitionFieldErrors(parsed.error),
+    };
+  }
+
+  try {
+    const { member: admin } = await requireAdminAppMemberForAction();
+    const result = await scheduleMemberProfileTransition({
+      ...parsed.data,
+      actorMemberId: admin.id,
+    });
+
+    revalidatePath("/admin/people");
+
+    return {
+      status: "success",
+      message: result.immediate
+        ? "Profile changed."
+        : `Profile transition scheduled for ${result.validFrom}.`,
+    };
+  } catch (error) {
+    if (
+      error instanceof MemberProfileTransitionError ||
+      error instanceof AuthenticationError ||
+      error instanceof AuthorizationError
+    ) {
+      return {
+        status: "error",
+        message: error.message,
+      };
+    }
+
+    return {
+      status: "error",
+      message: "The profile transition could not be scheduled. Try again later.",
     };
   }
 }
@@ -285,6 +350,22 @@ function getUpdateMemberDetailsFieldErrors(
   return fieldErrors;
 }
 
+function getScheduleProfileTransitionFieldErrors(
+  error: z.ZodError,
+): ScheduleProfileTransitionActionState["fieldErrors"] {
+  const fieldErrors: ScheduleProfileTransitionActionState["fieldErrors"] = {};
+
+  for (const issue of error.issues) {
+    const field = issue.path.at(0);
+
+    if (isScheduleProfileTransitionField(field) && !fieldErrors[field]) {
+      fieldErrors[field] = issue.message;
+    }
+  }
+
+  return fieldErrors;
+}
+
 async function runAdminPeopleAction(
   action: (adminId: string) => Promise<string>,
 ): Promise<AdminPeopleActionState> {
@@ -303,6 +384,7 @@ async function runAdminPeopleAction(
       error instanceof InvitationConflictError ||
       error instanceof MemberDetailsError ||
       error instanceof MemberLifecycleError ||
+      error instanceof MemberProfileTransitionError ||
       error instanceof AuthenticationError ||
       error instanceof AuthorizationError
     ) {
@@ -330,6 +412,10 @@ function isUpdateMemberDetailsField(field: unknown): field is UpdateMemberDetail
   );
 }
 
+function isScheduleProfileTransitionField(field: unknown): field is ScheduleProfileTransitionField {
+  return field === "profile" || field === "validFrom" || field === "reason";
+}
+
 function isInviteMemberField(field: unknown): field is InviteMemberField {
   return (
     field === "email" ||
@@ -345,4 +431,20 @@ function isInviteMemberField(field: unknown): field is InviteMemberField {
 
 function formatSessionCount(count: number) {
   return `${count} session${count === 1 ? "" : "s"}`;
+}
+
+function isDateInputValue(value: string) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
+
+  const date = parseDateInputValue(value);
+  return !Number.isNaN(date.valueOf()) && formatDateInputValue(date) === value;
+}
+
+function parseDateInputValue(value: string) {
+  const [year, month, day] = value.split("-").map(Number);
+  return new Date(Date.UTC(year, month - 1, day));
+}
+
+function formatDateInputValue(value: Date) {
+  return value.toISOString().slice(0, 10);
 }

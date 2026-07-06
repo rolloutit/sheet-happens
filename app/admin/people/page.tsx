@@ -18,6 +18,7 @@ export default async function AdminPeoplePage() {
   const { member: admin } = await requireAdminAppMember("/admin/people");
   const people = await listPeopleForAdmin();
   const preferenceOptions = getMemberPreferenceOptions();
+  const todayDate = new Date().toISOString().slice(0, 10);
 
   return (
     <AppShell current="people" role="admin" user={mapMemberToShellUser(admin)}>
@@ -75,7 +76,11 @@ export default async function AdminPeoplePage() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <AdminPeopleTable rows={people} preferenceOptions={preferenceOptions} />
+              <AdminPeopleTable
+                rows={people}
+                preferenceOptions={preferenceOptions}
+                todayDate={todayDate}
+              />
             </CardContent>
           </Card>
         </div>
