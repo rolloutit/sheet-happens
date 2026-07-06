@@ -278,6 +278,40 @@ Expected result:
 - Audit rows are recorded for `member.deactivated`, `member.session_revoked`, and
   `member.reactivated`.
 
+### Archive Member
+
+1. Sign in as `{ADMIN_EMAIL}` with TOTP enabled and verified.
+2. Open `https://{DOMAIN_NAME}/admin/people`.
+3. Find an active, inactive, or invited non-admin test member.
+4. Click `Archive`.
+5. Confirm the archive dialog.
+6. Refresh `https://{DOMAIN_NAME}/admin/people`.
+
+Expected result:
+
+- A success message confirms that the member was archived.
+- The member directory shows the archived member as locked.
+- Active sessions for that member are revoked.
+- Pending invitations for that member are revoked.
+- The archived member cannot open protected app pages.
+- Historical time entries, timesheets, invoices, payslips, reports, and audit records remain.
+- An audit row is recorded for `member.deleted`.
+- For linked auth users, an audit row is recorded for `member.session_revoked`.
+- For pending invitations, an audit row is recorded for `member.pending_invitations_revoked`.
+
+### Archive Safety Guards
+
+1. Sign in as `{ADMIN_EMAIL}` with TOTP enabled and verified.
+2. Open `https://{DOMAIN_NAME}/admin/people`.
+3. Confirm the current admin row does not offer `Archive`.
+4. Try to archive the last active admin using a test setup with no other active admins.
+
+Expected result:
+
+- Admins cannot archive their own account from the people table.
+- The server rejects archiving the last active admin.
+- The member remains active when the last-admin guard rejects the action.
+
 ### Revoke Member Sessions
 
 1. Sign in as `{ADMIN_EMAIL}` with TOTP enabled and verified in one browser profile.
@@ -540,6 +574,20 @@ Expected result:
 - The member is told to activate the invitation first.
 - Dashboard content is not visible until activation succeeds.
 
+### Archived Member Is Blocked
+
+1. Sign in as `{ADMIN_EMAIL}` with TOTP enabled and verified.
+2. Archive `{CONTRACTOR_EMAIL}` from `/admin/people`.
+3. Sign out.
+4. Sign in as `{CONTRACTOR_EMAIL}` if authentication is still possible.
+5. Open `https://{DOMAIN_NAME}/dashboard`.
+
+Expected result:
+
+- The archived member sees an account status page.
+- Dashboard content is not visible.
+- Reusing an old invitation link for that member does not reactivate the archived account.
+
 ## Navigation
 
 ### Sidebar Real Routes
@@ -564,7 +612,7 @@ Expected result:
 - Non-admin users cannot open admin routes.
 - Users without passkey or TOTP are redirected to the security setup gate.
 - Admin users without TOTP are redirected to the admin TOTP gate.
-- Admin people page can invite, resend, edit, deactivate, and reactivate members.
+- Admin people page can invite, resend, edit, deactivate, reactivate, and archive members.
 - Admin people page can revoke member sessions.
 - Passkey add, login, rename, and remove still work.
 - TOTP setup, challenge, invalid-code handling, trusted device, backup-code fallback, and disable
