@@ -47,13 +47,13 @@ export const TwoFactor: Story = {
     onVerificationModeChange: fn(),
   },
   play: async ({ args, canvas, userEvent }) => {
-    await userEvent.click(canvas.getByRole("radio", { name: /email/i }));
-    await expect(args.onVerificationModeChange).toHaveBeenCalledWith("email");
+    await userEvent.click(canvas.getByRole("radio", { name: /backup code/i }));
+    await expect(args.onVerificationModeChange).toHaveBeenCalledWith("backup_code");
 
     await userEvent.click(canvas.getByRole("textbox", { name: /verification code digit 1/i }));
     await userEvent.paste("222456");
     await userEvent.click(canvas.getByRole("button", { name: /verify code/i }));
-    await expect(args.onVerifyCode).toHaveBeenCalledWith("222456", "email");
+    await expect(args.onVerifyCode).toHaveBeenCalledWith("222456", "backup_code");
   },
 };
 

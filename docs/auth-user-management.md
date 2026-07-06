@@ -66,11 +66,11 @@ enumeration, but no email is sent.
    `accepted`, and writes audit log.
 8. User is taken through first-run security setup:
    - Register a passkey.
-   - Enable TOTP 2FA.
-   - Store backup codes.
+   - Enable authenticator-app TOTP 2FA.
+   - Store backup codes for TOTP recovery.
 
-Passkey and 2FA setup can be strongly encouraged during onboarding. Admins should be required to
-enable 2FA before using back-office management features.
+Passkey and authenticator-app 2FA setup can be strongly encouraged during onboarding. Admins should
+be required to enable TOTP before using back-office management features.
 
 ## Sign-In Flow
 
@@ -89,7 +89,10 @@ and enforce domain status:
 
 ## 2FA Rules
 
-- TOTP is the v1 second factor.
+- TOTP is the v1 authenticator-app second factor.
+- Backup codes are the v1 fallback for TOTP when the authenticator app is unavailable.
+- Email magic links are the passwordless sign-in method and must not satisfy admin 2FA by
+  themselves.
 - Backup codes are generated and stored by Better Auth.
 - Passwordless users must be able to enable/manage 2FA, so Better Auth 2FA uses passwordless mode.
 - Trusted devices may be allowed for ordinary members.

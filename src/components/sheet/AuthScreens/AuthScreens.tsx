@@ -30,7 +30,7 @@ const headings: Record<AuthScreenMode, { eyebrow: string; title: string; subtitl
   "two-factor": {
     eyebrow: "Verification",
     title: "Enter your 6 digit code",
-    subtitle: "Use your authenticator app or request an email code.",
+    subtitle: "Use your authenticator app or one of your saved backup codes.",
   },
   invite: {
     eyebrow: "Invite accepted",
@@ -126,7 +126,6 @@ export function AuthScreens({
           ) : null}
           {mode === "two-factor" ? (
             <TwoFactor
-              email={email}
               onVerifyCode={onVerifyCode}
               onVerificationModeChange={onVerificationModeChange}
             />
@@ -214,11 +213,9 @@ function SignInForm({
 }
 
 function TwoFactor({
-  email,
   onVerifyCode,
   onVerificationModeChange,
 }: {
-  email: string;
   onVerifyCode?: (code: string, mode: AuthVerificationMode) => void;
   onVerificationModeChange?: (mode: AuthVerificationMode) => void;
 }) {
@@ -239,16 +236,17 @@ function TwoFactor({
         onValueChange={changeMode}
         items={[
           { value: "totp", label: "TOTP" },
-          { value: "email", label: "Email" },
+          { value: "backup_code", label: "Backup code" },
         ]}
       />
       <CodeInput label="Verification code" value={code} onValueChange={setCode} />
       <p className="text-sm text-muted-foreground">
-        Email fallback available for {email} in 28 seconds.
+        Backup codes are the fallback when the authenticator app is unavailable. Email magic links
+        are used for sign-in, not for bypassing 2FA.
       </p>
       <Button
         type="button"
-        disabled={code.length < 6}
+        disabled={verificationMode === "totp" ? code.length < 6 : code.trim().length === 0}
         onClick={() => onVerifyCode?.(code, verificationMode)}
       >
         Verify code

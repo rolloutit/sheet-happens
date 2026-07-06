@@ -128,7 +128,7 @@ function SecuritySetupBanner({
           {complete
             ? "Security setup is complete. You can continue to the protected app."
             : adminTotpRequired
-              ? "Admin tools require authenticator-app verification. Enable TOTP before returning to management screens."
+              ? "Admin tools require authenticator-app 2FA. Enable TOTP before returning to management screens."
               : "Add a passkey or enable an authenticator app before continuing to the protected app."}
         </CardDescription>
       </CardHeader>
@@ -143,7 +143,9 @@ function SecuritySetupBanner({
           <p className="text-sm text-muted-foreground">
             {complete
               ? "No further security action is required right now."
-              : "Use the passkey or authenticator-app controls below to satisfy this requirement."}
+              : adminTotpRequired
+                ? "Use the authenticator-app controls below to satisfy the admin 2FA requirement. Passkeys remain available for sign-in, but they do not replace admin TOTP in v1."
+                : "Use the passkey or authenticator-app controls below to satisfy this requirement."}
           </p>
         </CardContent>
       )}

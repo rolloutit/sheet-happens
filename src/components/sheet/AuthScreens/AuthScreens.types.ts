@@ -1,13 +1,7 @@
 export type AuthScreenMode =
-  | "sign-in"
-  | "two-factor"
-  | "invite"
-  | "password-setup"
-  | "passkey"
-  | "reset-sent"
-  | "done";
+  "sign-in" | "two-factor" | "invite" | "password-setup" | "passkey" | "reset-sent" | "done";
 
-export type AuthVerificationMode = "totp" | "email";
+export type AuthVerificationMode = "totp" | "backup_code";
 
 export type AuthSignInPayload = {
   email: string;
