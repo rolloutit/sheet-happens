@@ -14,6 +14,8 @@ const baseMember: PeopleMemberRow = {
   status: "ACTIVE",
   currentProfile: "CONTRACTOR",
   defaultCurrencyCode: "EUR",
+  timezone: "Europe/Budapest",
+  locale: "en",
   deletedAt: null,
 };
 
@@ -23,11 +25,17 @@ describe("mapMemberToPersonRow", () => {
       id: "member-1",
       name: "Alex Taylor",
       email: "alex@example.com",
+      firstName: "Alex",
+      lastName: "Taylor",
+      displayName: "Alex Taylor",
       profile: "Contractor",
       role: "Member",
       roleValue: "MEMBER",
       state: "active",
       currency: "EUR",
+      defaultCurrencyCode: "EUR",
+      timezone: "Europe/Budapest",
+      locale: "en",
       hasAuthUser: true,
     });
   });

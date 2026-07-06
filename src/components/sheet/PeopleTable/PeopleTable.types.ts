@@ -9,11 +9,17 @@ export type PersonTableRow = {
   id: string;
   name: string;
   email: string;
+  firstName?: string;
+  lastName?: string;
+  displayName?: string;
   profile: string;
   role?: string;
   roleValue?: PersonRoleValue;
   state: PersonRowState;
   currency: string;
+  defaultCurrencyCode?: string;
+  timezone?: string;
+  locale?: string;
   hasAuthUser?: boolean;
   avatarTone?: AvatarTone;
 };

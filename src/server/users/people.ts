@@ -17,10 +17,21 @@ export type PeopleMemberRow = {
   status: PeopleMemberStatus;
   currentProfile: PeopleMemberProfile;
   defaultCurrencyCode: string;
+  timezone: string;
+  locale: string;
   deletedAt: Date | null;
 };
 
-export async function listPeopleForAdmin(): Promise<PersonTableRow[]> {
+export type AdminPersonRow = PersonTableRow & {
+  firstName: string;
+  lastName: string;
+  displayName: string;
+  defaultCurrencyCode: string;
+  timezone: string;
+  locale: string;
+};
+
+export async function listPeopleForAdmin(): Promise<AdminPersonRow[]> {
   await requireAdminAppMemberForAction();
 
   const members = await prisma.member.findMany({
@@ -35,6 +46,8 @@ export async function listPeopleForAdmin(): Promise<PersonTableRow[]> {
       status: true,
       currentProfile: true,
       defaultCurrencyCode: true,
+      timezone: true,
+      locale: true,
       deletedAt: true,
     },
     orderBy: [{ lastName: "asc" }, { firstName: "asc" }, { email: "asc" }],
@@ -43,16 +56,22 @@ export async function listPeopleForAdmin(): Promise<PersonTableRow[]> {
   return members.map(mapMemberToPersonRow);
 }
 
-export function mapMemberToPersonRow(member: PeopleMemberRow): PersonTableRow {
+export function mapMemberToPersonRow(member: PeopleMemberRow): AdminPersonRow {
   return {
     id: member.id,
     name: getMemberDisplayName(member),
     email: member.email,
+    firstName: member.firstName,
+    lastName: member.lastName,
+    displayName: member.displayName,
     profile: formatProfile(member.currentProfile),
     role: formatRole(member.role),
     roleValue: member.role,
     state: mapMemberState(member),
     currency: member.defaultCurrencyCode,
+    defaultCurrencyCode: member.defaultCurrencyCode,
+    timezone: member.timezone,
+    locale: member.locale,
     hasAuthUser: Boolean(member.authUserId),
   };
 }
