@@ -182,6 +182,7 @@ Expected result:
 
 - The people page opens.
 - The invite form is visible.
+- Currency, timezone, and locale are dropdowns.
 - The member directory table is visible.
 - The app shell user menu shows the admin user.
 
@@ -217,6 +218,25 @@ Expected result:
 
 - A success message confirms the invitation was resent.
 - The invited email receives a new invitation link.
+
+### Edit Member Details
+
+1. Sign in as `{ADMIN_EMAIL}` with TOTP enabled and verified.
+2. Open `https://{DOMAIN_NAME}/admin/people`.
+3. Find an invited, active, or inactive member.
+4. Click the edit action.
+5. Change first name, last name, display name, currency, timezone, and locale.
+6. Click `Save changes`.
+7. Refresh `https://{DOMAIN_NAME}/admin/people`.
+
+Expected result:
+
+- The edit drawer opens with the member's current domain profile values.
+- Currency, timezone, and locale are dropdowns.
+- The updated member name and currency are visible after saving and after refresh.
+- Empty required fields show validation errors.
+- The member's Better Auth email/account is not changed by this flow.
+- An audit row is recorded for `member.updated` with before and after values.
 
 ### Deactivate And Reactivate Member
 
@@ -521,7 +541,7 @@ Expected result:
 - Non-admin users cannot open admin routes.
 - Users without passkey or TOTP are redirected to the security setup gate.
 - Admin users without TOTP are redirected to the admin TOTP gate.
-- Admin people page can invite, resend, deactivate, and reactivate members.
+- Admin people page can invite, resend, edit, deactivate, and reactivate members.
 - Admin people page can revoke member sessions.
 - Passkey add, login, rename, and remove still work.
 - TOTP setup, challenge, invalid-code handling, trusted device, backup code, and disable still work.
