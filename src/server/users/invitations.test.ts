@@ -214,4 +214,30 @@ describe("inviteMember", () => {
       ),
     ).rejects.toBeInstanceOf(InvitationConflictError);
   });
+
+  it("rejects unsupported member preference values", async () => {
+    const { db } = createInviteDb();
+    const sendEmail = vi.fn().mockResolvedValue(undefined);
+
+    await expect(
+      inviteMember(
+        {
+          email: "contractor@example.com",
+          firstName: "Invalid",
+          lastName: "Preferences",
+          profile: "CONTRACTOR",
+          defaultCurrencyCode: "ZZZ",
+          timezone: "Europe/Budapest",
+          locale: "en",
+          invitedByMemberId: "admin-1",
+        },
+        {
+          db,
+          sendEmail,
+        },
+      ),
+    ).rejects.toBeInstanceOf(InvitationConflictError);
+    expect(db.$transaction).not.toHaveBeenCalled();
+    expect(sendEmail).not.toHaveBeenCalled();
+  });
 });

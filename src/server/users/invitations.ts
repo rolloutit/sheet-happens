@@ -1,3 +1,11 @@
+import {
+  isSupportedCurrencyCode,
+  isSupportedLocale,
+  isSupportedTimeZone,
+  normalizeCurrencyCode,
+  normalizeLocale,
+  normalizeTimeZone,
+} from "@/src/lib/member-preferences";
 import { prisma } from "@/src/server/db/client";
 import { sendInvitationEmail } from "@/src/server/auth/auth-emails";
 import { createInvitationToken, hashInvitationToken } from "@/src/server/users/invitation-tokens";
@@ -171,7 +179,9 @@ export async function inviteMember(input: InviteMemberInput, deps: InviteMemberD
   const lastName = input.lastName.trim();
   const displayName = getDisplayName(firstName, lastName);
   const role = input.role ?? "MEMBER";
-  const defaultCurrencyCode = input.defaultCurrencyCode ?? "EUR";
+  const defaultCurrencyCode = normalizeCurrencyCode(input.defaultCurrencyCode ?? "EUR");
+  const timezone = normalizeTimeZone(input.timezone);
+  const locale = normalizeLocale(input.locale);
   const validFrom = input.validFrom ?? now;
   const expiresAt = input.expiresAt ?? addDays(now, 14);
   const token = createToken();
@@ -179,6 +189,16 @@ export async function inviteMember(input: InviteMemberInput, deps: InviteMemberD
 
   if (!email || !firstName || !lastName || !displayName) {
     throw new InvitationConflictError("Invitation requires email, first name, and last name.");
+  }
+
+  if (
+    !isSupportedCurrencyCode(defaultCurrencyCode) ||
+    !isSupportedTimeZone(timezone) ||
+    !isSupportedLocale(locale)
+  ) {
+    throw new InvitationConflictError(
+      "Invitation requires supported currency, timezone, and locale.",
+    );
   }
 
   const result = await db.$transaction(async (tx) => {
@@ -226,8 +246,8 @@ export async function inviteMember(input: InviteMemberInput, deps: InviteMemberD
             status: "INVITED",
             currentProfile: input.profile,
             defaultCurrencyCode,
-            timezone: input.timezone,
-            locale: input.locale,
+            timezone,
+            locale,
             inactivatedAt: null,
           },
           select: {
@@ -244,8 +264,8 @@ export async function inviteMember(input: InviteMemberInput, deps: InviteMemberD
             status: "INVITED",
             currentProfile: input.profile,
             defaultCurrencyCode,
-            timezone: input.timezone,
-            locale: input.locale,
+            timezone,
+            locale,
           },
           select: {
             id: true,
