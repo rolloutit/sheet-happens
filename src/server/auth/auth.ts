@@ -1,5 +1,3 @@
-import { randomBytes } from "node:crypto";
-
 import { passkey } from "@better-auth/passkey";
 import { prismaAdapter } from "@better-auth/prisma-adapter";
 import { betterAuth } from "better-auth";
@@ -11,15 +9,30 @@ import { sendMagicLinkEmail } from "@/src/server/auth/auth-emails";
 import { prisma } from "@/src/server/db/client";
 
 const appName = "Sheet Happens";
-const developmentFallbackSecret = randomBytes(32).toString("base64url");
+const developmentFallbackSecret =
+  "sheet-happens-local-dev-only-auth-secret-please-set-better-auth-secret";
 export const authSecret = getAuthSecret();
 const authBaseUrl =
   process.env.BETTER_AUTH_URL ?? process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
 const authUrl = new URL(authBaseUrl);
 const authOrigin = authUrl.origin;
+const localDevelopmentOrigins = ["http://localhost:3000", "http://127.0.0.1:3000"];
+const authBaseURLConfig =
+  process.env.NODE_ENV === "production"
+    ? authOrigin
+    : {
+        allowedHosts: Array.from(new Set([authUrl.host, "localhost:3000", "127.0.0.1:3000"])),
+        fallback: authOrigin,
+      };
+const passkeyOrigins =
+  process.env.NODE_ENV === "production"
+    ? authOrigin
+    : Array.from(new Set([authOrigin, ...localDevelopmentOrigins]));
+const passkeyRpID = process.env.NODE_ENV === "production" ? authUrl.hostname : undefined;
 
 const trustedOrigins = [
   authOrigin,
+  ...(process.env.NODE_ENV === "production" ? [] : localDevelopmentOrigins),
   ...(process.env.AUTH_TRUSTED_ORIGINS ?? "")
     .split(",")
     .map((origin) => origin.trim())
@@ -37,7 +50,7 @@ type PasskeyAuditRecord = {
 
 export const auth = betterAuth({
   appName,
-  baseURL: authOrigin,
+  baseURL: authBaseURLConfig,
   secret: authSecret,
   trustedOrigins,
   database: prismaAdapter(prisma, {
@@ -79,9 +92,9 @@ export const auth = betterAuth({
       },
     }),
     passkey({
-      rpID: authUrl.hostname,
+      ...(passkeyRpID ? { rpID: passkeyRpID } : {}),
       rpName: appName,
-      origin: authOrigin,
+      origin: passkeyOrigins,
     }),
     twoFactor({
       allowPasswordless: true,

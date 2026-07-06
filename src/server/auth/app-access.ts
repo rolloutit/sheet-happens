@@ -330,6 +330,10 @@ export function sanitizeCallbackURL(callbackURL: string | undefined) {
     return "/dashboard";
   }
 
+  if (callbackURL.startsWith("/login") || callbackURL.startsWith("/two-factor")) {
+    return "/dashboard";
+  }
+
   return callbackURL;
 }
 
