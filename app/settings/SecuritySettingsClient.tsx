@@ -7,6 +7,7 @@ import {
   KeyRound,
   MailCheck,
   Pencil,
+  QrCode,
   RefreshCw,
   ShieldCheck,
   ShieldPlus,
@@ -15,7 +16,8 @@ import {
   TriangleAlert,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useMemo, useState, useTransition } from "react";
+import { useEffect, useMemo, useState, useTransition } from "react";
+import { toDataURL } from "qrcode";
 
 import { SecurityMethodList } from "@/src/components/sheet/SecurityMethodList";
 import type { SecurityMethod } from "@/src/components/sheet/SecurityMethodList";
@@ -35,6 +37,7 @@ import { FormSection } from "@/src/components/ui/FormSection";
 import { Input } from "@/src/components/ui/Input";
 import { authClient } from "@/src/lib/auth-client";
 import { cn } from "@/src/lib/utils";
+import { clearSecondFactorAction, verifySecondFactorAction } from "../two-factor/actions";
 import { deletePasskeyAction, renamePasskeyAction } from "./actions";
 import type { SecuritySettingsActionState } from "./actions.types";
 
@@ -102,6 +105,8 @@ export function SecuritySettingsClient({ user, passkeys, twoFactor }: SecuritySe
   const [totpSetup, setTotpSetup] = useState<TotpSetupState>({ status: "idle" });
   const [totpCode, setTotpCode] = useState("");
   const [backupCodes, setBackupCodes] = useState<string[]>([]);
+  const [totpQrCode, setTotpQrCode] = useState<{ uri: string; dataUrl: string } | null>(null);
+  const [totpQrCodeErrorUri, setTotpQrCodeErrorUri] = useState<string | null>(null);
 
   const methods = useMemo<SecurityMethod[]>(
     () => [
@@ -139,6 +144,41 @@ export function SecuritySettingsClient({ user, passkeys, twoFactor }: SecuritySe
     ],
     [passkeys.length, twoFactor.enabled, user.email],
   );
+
+  const totpUri = totpSetup.status === "ready" ? totpSetup.totpURI : "";
+  const totpQrCodeDataUrl = totpQrCode?.uri === totpUri ? totpQrCode.dataUrl : null;
+  const totpQrCodeError = totpQrCodeErrorUri === totpUri;
+
+  useEffect(() => {
+    if (!totpUri) return;
+    let cancelled = false;
+
+    void toDataURL(totpUri, {
+      errorCorrectionLevel: "M",
+      margin: 2,
+      scale: 8,
+      color: {
+        dark: "#0a1917",
+        light: "#ffffff",
+      },
+    })
+      .then((dataUrl) => {
+        if (!cancelled) {
+          setTotpQrCode({
+            uri: totpUri,
+            dataUrl,
+          });
+          setTotpQrCodeErrorUri(null);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) setTotpQrCodeErrorUri(totpUri);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [totpUri]);
 
   async function addPasskey(authenticatorAttachment: "platform" | "cross-platform") {
     const action: PendingAction =
@@ -247,16 +287,17 @@ export function SecuritySettingsClient({ user, passkeys, twoFactor }: SecuritySe
     setPendingAction("verify-totp");
     setNotice(null);
 
-    const result = await authClient.twoFactor.verifyTotp({
+    const result = await verifySecondFactorAction({
+      method: "totp",
       code: totpCode,
     });
 
     setPendingAction(null);
 
-    if (result.error) {
+    if (result.status === "error") {
       setNotice({
         tone: "error",
-        message: getAuthErrorMessage(result.error, "Invalid authenticator code."),
+        message: result.message,
       });
       return;
     }
@@ -292,6 +333,7 @@ export function SecuritySettingsClient({ user, passkeys, twoFactor }: SecuritySe
 
     setTotpSetup({ status: "idle" });
     setBackupCodes([]);
+    await clearSecondFactorAction();
     setNotice({
       tone: "success",
       message: "Authenticator app disabled.",
@@ -613,18 +655,43 @@ export function SecuritySettingsClient({ user, passkeys, twoFactor }: SecuritySe
 
           {totpSetup.status === "ready" ? (
             <div className="grid gap-5 rounded-[var(--radius-lg)] border border-border bg-secondary/50 p-4">
-              <div className="grid gap-4 lg:grid-cols-[12rem_minmax(0,1fr)]">
-                <div className="grid aspect-square place-items-center rounded-[var(--radius-md)] border border-border bg-background text-center">
-                  <div>
-                    <Smartphone className="mx-auto size-10 text-accent" aria-hidden="true" />
-                    <p className="mt-3 px-4 font-ui text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">
-                      Authenticator URI
-                    </p>
+              <div className="grid gap-4 lg:grid-cols-[14rem_minmax(0,1fr)]">
+                <div className="grid content-start gap-2">
+                  <div className="grid aspect-square place-items-center rounded-[var(--radius-md)] border border-border bg-white p-3 text-center shadow-sm">
+                    {totpQrCodeDataUrl ? (
+                      // eslint-disable-next-line @next/next/no-img-element -- QR code is a generated data URL, not an optimizable remote/static image.
+                      <img
+                        src={totpQrCodeDataUrl}
+                        alt="Authenticator app setup QR code"
+                        className="size-full"
+                      />
+                    ) : (
+                      <div className="grid justify-items-center gap-3 text-slate-700">
+                        <QrCode className="size-10" aria-hidden="true" />
+                        <p className="px-4 text-xs font-semibold">
+                          {totpQrCodeError ? "QR unavailable" : "Generating QR"}
+                        </p>
+                      </div>
+                    )}
                   </div>
+                  <p className="text-center font-ui text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+                    Scan QR code
+                  </p>
                 </div>
                 <div className="grid content-start gap-3">
                   <div>
-                    <p className="font-ui text-sm font-semibold text-foreground">Manual key</p>
+                    <p className="font-ui text-sm font-semibold text-foreground">
+                      Scan with your authenticator app
+                    </p>
+                    <p className="mt-1 text-sm leading-6 text-muted-foreground">
+                      Open {user.email} in your authenticator app, scan the QR code, then enter the
+                      current 6-digit code below.
+                    </p>
+                  </div>
+                  <div>
+                    <p className="font-ui text-sm font-semibold text-foreground">
+                      Manual key fallback
+                    </p>
                     <p className="mt-1 break-all rounded-[var(--radius-md)] border border-border bg-background/60 px-3 py-2 font-mono text-sm text-muted-foreground">
                       {totpSecret}
                     </p>
@@ -648,7 +715,7 @@ export function SecuritySettingsClient({ user, passkeys, twoFactor }: SecuritySe
 
               <div className="grid gap-3 lg:grid-cols-[minmax(16rem,22rem)_auto] lg:items-end">
                 <Field
-                  label="6 digit code"
+                  label="6-digit code"
                   hint="Enter the current code from your authenticator app."
                 >
                   {({ describedBy }) => (
