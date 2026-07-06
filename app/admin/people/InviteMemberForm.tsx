@@ -7,16 +7,15 @@ import { useFormStatus } from "react-dom";
 import { Button } from "@/src/components/ui/Button";
 import { Field } from "@/src/components/ui/Field";
 import { Input } from "@/src/components/ui/Input";
+import { currencyOptions, localeOptions, timezoneOptions } from "@/src/lib/member-preferences";
 import { cn } from "@/src/lib/utils";
 import { inviteMemberAction } from "./actions";
 import type { InviteMemberActionState } from "./actions.types";
+import { nativeSelectClassName } from "./formStyles";
 
 const initialState: InviteMemberActionState = {
   status: "idle",
 };
-
-const selectClassName =
-  "flex h-10 w-full rounded-[var(--radius-md)] border border-input bg-background/50 px-3 py-2 text-sm text-foreground shadow-sm transition focus-visible:border-ring focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/35 disabled:cursor-not-allowed disabled:opacity-50 aria-[invalid=true]:border-destructive aria-[invalid=true]:ring-destructive/30";
 
 export function InviteMemberForm() {
   const [state, formAction] = useActionState(inviteMemberAction, initialState);
@@ -81,7 +80,7 @@ export function InviteMemberForm() {
               aria-describedby={describedBy}
               aria-invalid={invalid}
               required={required}
-              className={selectClassName}
+              className={nativeSelectClassName}
             >
               <option value="CONTRACTOR">Contractor</option>
               <option value="EMPLOYEE">Employee</option>
@@ -97,7 +96,7 @@ export function InviteMemberForm() {
               aria-describedby={describedBy}
               aria-invalid={invalid}
               required={required}
-              className={selectClassName}
+              className={nativeSelectClassName}
             >
               <option value="MEMBER">Member</option>
               <option value="ADMIN">Admin</option>
@@ -112,39 +111,59 @@ export function InviteMemberForm() {
           error={state.fieldErrors?.defaultCurrencyCode}
         >
           {({ id, describedBy, invalid, required }) => (
-            <Input
+            <select
               id={id}
               name="defaultCurrencyCode"
               defaultValue="EUR"
-              maxLength={3}
               aria-describedby={describedBy}
-              invalid={invalid}
+              aria-invalid={invalid}
               required={required}
-            />
+              className={nativeSelectClassName}
+            >
+              {currencyOptions.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
           )}
         </Field>
         <Field label="Timezone" required reserveMessageSpace error={state.fieldErrors?.timezone}>
           {({ id, describedBy, invalid, required }) => (
-            <Input
+            <select
               id={id}
               name="timezone"
               defaultValue="Europe/Budapest"
               aria-describedby={describedBy}
-              invalid={invalid}
+              aria-invalid={invalid}
               required={required}
-            />
+              className={nativeSelectClassName}
+            >
+              {timezoneOptions.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
           )}
         </Field>
         <Field label="Locale" required reserveMessageSpace error={state.fieldErrors?.locale}>
           {({ id, describedBy, invalid, required }) => (
-            <Input
+            <select
               id={id}
               name="locale"
               defaultValue="en"
               aria-describedby={describedBy}
-              invalid={invalid}
+              aria-invalid={invalid}
               required={required}
-            />
+              className={nativeSelectClassName}
+            >
+              {localeOptions.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
           )}
         </Field>
       </div>
