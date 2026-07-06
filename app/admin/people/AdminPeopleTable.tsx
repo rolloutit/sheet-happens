@@ -1,12 +1,14 @@
 "use client";
 
 import { Ban, LogOut, Mail, RotateCcw, ShieldCheck, UserMinus } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 
 import { PeopleTable } from "@/src/components/sheet/PeopleTable";
 import type { PersonRoleValue, PersonTableRow } from "@/src/components/sheet/PeopleTable";
 import { Button } from "@/src/components/ui/Button";
 import { cn } from "@/src/lib/utils";
+import type { AdminPersonRow } from "@/src/server/users";
 import {
   changeMemberRoleAction,
   deactivateMemberAction,
@@ -16,16 +18,19 @@ import {
   revokeMemberInviteAction,
 } from "./actions";
 import type { AdminPeopleActionState } from "./actions.types";
+import { MemberEditDrawer } from "./MemberEditDrawer";
 
 export type AdminPeopleTableProps = {
-  rows: PersonTableRow[];
+  rows: AdminPersonRow[];
 };
 
 type PendingAction = "resend" | "revoke" | "sessions" | "deactivate" | "reactivate" | "role";
 
 export function AdminPeopleTable({ rows }: AdminPeopleTableProps) {
+  const router = useRouter();
   const [message, setMessage] = useState<AdminPeopleActionState | null>(null);
   const [pendingKey, setPendingKey] = useState<string | null>(null);
+  const [editingMember, setEditingMember] = useState<AdminPersonRow | null>(null);
   const [, startTransition] = useTransition();
 
   function runAction(
@@ -40,6 +45,10 @@ export function AdminPeopleTable({ rows }: AdminPeopleTableProps) {
       const result = await callback();
       setMessage(result);
       setPendingKey(null);
+
+      if (result.status === "success") {
+        router.refresh();
+      }
     });
   }
 
@@ -66,6 +75,10 @@ export function AdminPeopleTable({ rows }: AdminPeopleTableProps) {
         rows={rows}
         labels={{
           empty: "No members have been invited yet.",
+        }}
+        onEdit={(row) => {
+          setEditingMember(getAdminPersonRow(rows, row));
+          setMessage(null);
         }}
         rowActions={(row) => (
           <div className="flex flex-wrap justify-end gap-2">
@@ -155,8 +168,21 @@ export function AdminPeopleTable({ rows }: AdminPeopleTableProps) {
           </div>
         )}
       />
+      <MemberEditDrawer
+        member={editingMember}
+        open={Boolean(editingMember)}
+        onOpenChange={(open) => {
+          if (!open) setEditingMember(null);
+        }}
+        onResult={setMessage}
+        onSaved={() => router.refresh()}
+      />
     </div>
   );
+}
+
+function getAdminPersonRow(rows: AdminPersonRow[], row: PersonTableRow) {
+  return rows.find((candidate) => candidate.id === row.id) ?? null;
 }
 
 function RoleSelect({
