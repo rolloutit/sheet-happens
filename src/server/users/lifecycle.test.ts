@@ -8,6 +8,7 @@ import {
   revokeMemberSessions,
   resendMemberInvitation,
   revokeMemberInvitation,
+  softDeleteMember,
 } from "./lifecycle";
 
 type TestMember = {
@@ -38,16 +39,20 @@ function createLifecycleDb(
   overrides: {
     member?: TestMember | null;
     invitation?: { id: string } | null;
+    activeAdminCount?: number;
+    revokedInvitationCount?: number;
   } = {},
 ) {
   const tx = {
     member: {
       findUnique: vi.fn().mockResolvedValue(overrides.member ?? baseMember),
+      count: vi.fn().mockResolvedValue(overrides.activeAdminCount ?? 1),
       update: vi.fn().mockResolvedValue({ id: "member-1" }),
     },
     invitation: {
       findFirst: vi.fn().mockResolvedValue(overrides.invitation ?? { id: "invitation-1" }),
       update: vi.fn().mockResolvedValue({ id: "invitation-1" }),
+      updateMany: vi.fn().mockResolvedValue({ count: overrides.revokedInvitationCount ?? 0 }),
     },
     auditLog: {
       create: vi.fn().mockResolvedValue({ id: "audit-1" }),
@@ -190,6 +195,112 @@ describe("member lifecycle services", () => {
         { db },
       ),
     ).rejects.toBeInstanceOf(MemberLifecycleError);
+  });
+
+  it("archives members, revokes sessions, revokes pending invitations, and audits the change", async () => {
+    const { db, tx } = createLifecycleDb({
+      revokedInvitationCount: 1,
+    });
+    const now = new Date("2026-07-05T00:00:00.000Z");
+
+    const result = await softDeleteMember(
+      {
+        memberId: "member-1",
+        actorMemberId: "admin-1",
+      },
+      {
+        db,
+        now: () => now,
+      },
+    );
+
+    expect(tx.invitation.updateMany).toHaveBeenCalledWith({
+      where: {
+        memberId: "member-1",
+        status: "PENDING",
+      },
+      data: {
+        status: "REVOKED",
+        revokedAt: now,
+      },
+    });
+    expect(tx.member.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: {
+          status: "DELETED",
+          inactivatedAt: now,
+          deletedAt: now,
+        },
+      }),
+    );
+    expect(tx.session.deleteMany).toHaveBeenCalledWith({
+      where: {
+        userId: "auth-user-1",
+      },
+    });
+    expect(tx.auditLog.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          action: "member.deleted",
+          before: {
+            status: "ACTIVE",
+            deletedAt: null,
+          },
+          after: {
+            status: "DELETED",
+            deletedAt: now,
+          },
+        }),
+      }),
+    );
+    expect(tx.auditLog.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          action: "member.session_revoked",
+          after: expect.objectContaining({
+            reason: "member_deleted",
+            revokedSessionCount: 2,
+          }),
+        }),
+      }),
+    );
+    expect(result).toEqual({
+      memberId: "member-1",
+      revokedInvitationCount: 1,
+      revokedSessionCount: 2,
+    });
+  });
+
+  it("rejects self-archive and last active admin archive", async () => {
+    const { db } = createLifecycleDb();
+
+    await expect(
+      softDeleteMember(
+        {
+          memberId: "member-1",
+          actorMemberId: "member-1",
+        },
+        { db },
+      ),
+    ).rejects.toThrow("You cannot archive your own account.");
+
+    const { db: lastAdminDb } = createLifecycleDb({
+      member: {
+        ...baseMember,
+        role: "ADMIN",
+      },
+      activeAdminCount: 0,
+    });
+
+    await expect(
+      softDeleteMember(
+        {
+          memberId: "member-1",
+          actorMemberId: "admin-1",
+        },
+        { db: lastAdminDb },
+      ),
+    ).rejects.toThrow("At least one active admin must remain.");
   });
 
   it("reactivates inactive members with linked auth users", async () => {

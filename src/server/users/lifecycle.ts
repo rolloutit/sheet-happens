@@ -8,7 +8,8 @@ import {
 import { createInvitationToken, hashInvitationToken } from "@/src/server/users/invitation-tokens";
 
 export type MemberLifecycleRole = "ADMIN" | "MEMBER";
-export type SessionRevocationReason = "admin_revoke" | "member_deactivated";
+export type MemberLifecycleStatus = "INVITED" | "ACTIVE" | "INACTIVE" | "DELETED";
+export type SessionRevocationReason = "admin_revoke" | "member_deactivated" | "member_deleted";
 
 export type MemberLifecycleInput = {
   memberId: string;
@@ -46,9 +47,17 @@ type MemberLifecycleTransaction = {
       lastName: string;
       displayName: string;
       role: MemberLifecycleRole;
-      status: string;
+      status: MemberLifecycleStatus;
       deletedAt: Date | null;
     } | null>;
+    count(args: {
+      where: {
+        id?: { not: string };
+        role?: MemberLifecycleRole;
+        status?: MemberLifecycleStatus;
+        deletedAt?: null;
+      };
+    }): Promise<number>;
     update(args: {
       where: { id: string };
       data: Record<string, unknown>;
@@ -70,6 +79,13 @@ type MemberLifecycleTransaction = {
       data: Record<string, unknown>;
       select?: { id: true };
     }): Promise<{ id: string }>;
+    updateMany(args: {
+      where: {
+        memberId: string;
+        status: "PENDING";
+      };
+      data: Record<string, unknown>;
+    }): Promise<{ count: number }>;
   };
   auditLog: {
     create(args: {
@@ -78,7 +94,8 @@ type MemberLifecycleTransaction = {
         action: string;
         targetType: string;
         targetId: string;
-        after: Record<string, unknown>;
+        before?: Record<string, unknown>;
+        after?: Record<string, unknown>;
       };
     }): Promise<unknown>;
   };
@@ -291,6 +308,108 @@ export async function deactivateMember(
 
     return {
       memberId: member.id,
+      revokedSessionCount,
+    };
+  });
+}
+
+export async function softDeleteMember(
+  input: MemberLifecycleInput,
+  deps: MemberLifecycleDeps = {},
+) {
+  const db: MemberLifecycleDb = deps.db ?? (prisma as unknown as MemberLifecycleDb);
+  const now = deps.now?.() ?? new Date();
+
+  return db.$transaction(async (tx) => {
+    const member = await findMember(tx, input.memberId);
+
+    if (member.id === input.actorMemberId) {
+      throw new MemberLifecycleError("You cannot archive your own account.");
+    }
+
+    if (member.deletedAt || member.status === "DELETED") {
+      throw new MemberLifecycleError("This member is already archived.");
+    }
+
+    if (member.role === "ADMIN") {
+      const remainingActiveAdminCount = await tx.member.count({
+        where: {
+          id: {
+            not: member.id,
+          },
+          role: "ADMIN",
+          status: "ACTIVE",
+          deletedAt: null,
+        },
+      });
+
+      if (remainingActiveAdminCount === 0) {
+        throw new MemberLifecycleError("At least one active admin must remain.");
+      }
+    }
+
+    const revokedInvitations = await tx.invitation.updateMany({
+      where: {
+        memberId: member.id,
+        status: "PENDING",
+      },
+      data: {
+        status: "REVOKED",
+        revokedAt: now,
+      },
+    });
+
+    if (revokedInvitations.count > 0) {
+      await tx.auditLog.create({
+        data: {
+          actorMemberId: input.actorMemberId,
+          action: "member.pending_invitations_revoked",
+          targetType: "member",
+          targetId: member.id,
+          after: {
+            reason: "member_deleted",
+            revokedInvitationCount: revokedInvitations.count,
+          },
+        },
+      });
+    }
+
+    await tx.member.update({
+      where: { id: member.id },
+      data: {
+        status: "DELETED",
+        inactivatedAt: now,
+        deletedAt: now,
+      },
+      select: { id: true },
+    });
+
+    await tx.auditLog.create({
+      data: {
+        actorMemberId: input.actorMemberId,
+        action: "member.deleted",
+        targetType: "member",
+        targetId: member.id,
+        before: {
+          status: member.status,
+          deletedAt: member.deletedAt,
+        },
+        after: {
+          status: "DELETED",
+          deletedAt: now,
+        },
+      },
+    });
+
+    const revokedSessionCount = await revokeAuthSessionsForMember(tx, {
+      member,
+      actorMemberId: input.actorMemberId,
+      reason: "member_deleted",
+    });
+
+    return {
+      memberId: member.id,
+      revokedInvitationCount: revokedInvitations.count,
       revokedSessionCount,
     };
   });
