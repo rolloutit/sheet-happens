@@ -29,6 +29,7 @@ describe("mapMemberToPersonRow", () => {
       lastName: "Taylor",
       displayName: "Alex Taylor",
       profile: "Contractor",
+      profileValue: "CONTRACTOR",
       role: "Member",
       roleValue: "MEMBER",
       state: "active",
@@ -51,7 +52,26 @@ describe("mapMemberToPersonRow", () => {
     ).toMatchObject({
       name: "Alex Taylor",
       profile: "Employee",
+      profileValue: "EMPLOYEE",
       state: "invited",
+    });
+  });
+
+  it("maps the next scheduled profile transition", () => {
+    expect(
+      mapMemberToPersonRow({
+        ...baseMember,
+        profilePeriods: [
+          {
+            profile: "EMPLOYEE",
+            validFrom: new Date("2026-08-01T00:00:00.000Z"),
+          },
+        ],
+      }),
+    ).toMatchObject({
+      scheduledProfile: "Employee",
+      scheduledProfileValue: "EMPLOYEE",
+      scheduledProfileValidFrom: "2026-08-01",
     });
   });
 

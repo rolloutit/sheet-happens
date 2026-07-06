@@ -20,12 +20,20 @@ export type PeopleMemberRow = {
   timezone: string;
   locale: string;
   deletedAt: Date | null;
+  profilePeriods?: Array<{
+    profile: PeopleMemberProfile;
+    validFrom: Date;
+  }>;
 };
 
 export type AdminPersonRow = PersonTableRow & {
   firstName: string;
   lastName: string;
   displayName: string;
+  profileValue: PeopleMemberProfile;
+  scheduledProfile?: string;
+  scheduledProfileValue?: PeopleMemberProfile;
+  scheduledProfileValidFrom?: string;
   defaultCurrencyCode: string;
   timezone: string;
   locale: string;
@@ -33,6 +41,7 @@ export type AdminPersonRow = PersonTableRow & {
 
 export async function listPeopleForAdmin(): Promise<AdminPersonRow[]> {
   await requireAdminAppMemberForAction();
+  const today = getTodayDateOnly();
 
   const members = await prisma.member.findMany({
     select: {
@@ -49,6 +58,21 @@ export async function listPeopleForAdmin(): Promise<AdminPersonRow[]> {
       timezone: true,
       locale: true,
       deletedAt: true,
+      profilePeriods: {
+        where: {
+          validFrom: {
+            gt: today,
+          },
+        },
+        orderBy: {
+          validFrom: "asc",
+        },
+        take: 1,
+        select: {
+          profile: true,
+          validFrom: true,
+        },
+      },
     },
     orderBy: [{ lastName: "asc" }, { firstName: "asc" }, { email: "asc" }],
   });
@@ -57,6 +81,8 @@ export async function listPeopleForAdmin(): Promise<AdminPersonRow[]> {
 }
 
 export function mapMemberToPersonRow(member: PeopleMemberRow): AdminPersonRow {
+  const scheduledProfilePeriod = member.profilePeriods?.at(0);
+
   return {
     id: member.id,
     name: getMemberDisplayName(member),
@@ -65,6 +91,14 @@ export function mapMemberToPersonRow(member: PeopleMemberRow): AdminPersonRow {
     lastName: member.lastName,
     displayName: member.displayName,
     profile: formatProfile(member.currentProfile),
+    profileValue: member.currentProfile,
+    scheduledProfile: scheduledProfilePeriod
+      ? formatProfile(scheduledProfilePeriod.profile)
+      : undefined,
+    scheduledProfileValue: scheduledProfilePeriod?.profile,
+    scheduledProfileValidFrom: scheduledProfilePeriod
+      ? formatDateOnly(scheduledProfilePeriod.validFrom)
+      : undefined,
     role: formatRole(member.role),
     roleValue: member.role,
     state: mapMemberState(member),
@@ -74,6 +108,11 @@ export function mapMemberToPersonRow(member: PeopleMemberRow): AdminPersonRow {
     locale: member.locale,
     hasAuthUser: Boolean(member.authUserId),
   };
+}
+
+function getTodayDateOnly() {
+  const now = new Date();
+  return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
 }
 
 function getMemberDisplayName(member: PeopleMemberRow) {
@@ -86,6 +125,10 @@ function getMemberDisplayName(member: PeopleMemberRow) {
 
 function formatProfile(profile: PeopleMemberProfile) {
   return profile === "CONTRACTOR" ? "Contractor" : "Employee";
+}
+
+function formatDateOnly(date: Date) {
+  return date.toISOString().slice(0, 10);
 }
 
 function formatRole(role: PeopleMemberRole) {

@@ -63,7 +63,16 @@ export function PeopleTable({
           header: "Profile",
           accessor: "profile",
           sortable: true,
-          cell: (row) => <Badge tone="cta">{row.profile}</Badge>,
+          cell: (row) => (
+            <div className="grid gap-1">
+              <Badge tone="cta">{row.profile}</Badge>
+              {row.scheduledProfile && row.scheduledProfileValidFrom ? (
+                <p className="text-xs text-muted-foreground">
+                  Scheduled: {row.scheduledProfile} on {row.scheduledProfileValidFrom}
+                </p>
+              ) : null}
+            </div>
+          ),
         },
         {
           id: "role",

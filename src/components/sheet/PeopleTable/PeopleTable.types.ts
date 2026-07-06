@@ -4,6 +4,7 @@ import type { TableSort } from "@/src/components/ui/Table";
 
 export type PersonRowState = "active" | "inactive" | "invited" | "locked";
 export type PersonRoleValue = "ADMIN" | "MEMBER";
+export type PersonProfileValue = "EMPLOYEE" | "CONTRACTOR";
 
 export type PersonTableRow = {
   id: string;
@@ -13,6 +14,10 @@ export type PersonTableRow = {
   lastName?: string;
   displayName?: string;
   profile: string;
+  profileValue?: PersonProfileValue;
+  scheduledProfile?: string;
+  scheduledProfileValue?: PersonProfileValue;
+  scheduledProfileValidFrom?: string;
   role?: string;
   roleValue?: PersonRoleValue;
   state: PersonRowState;
