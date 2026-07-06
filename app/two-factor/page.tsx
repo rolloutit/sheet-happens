@@ -5,7 +5,9 @@ import { TwoFactorChallengePanel } from "./TwoFactorChallengePanel";
 import {
   accountStatusRoute,
   getAppAccessState,
+  loginRoute,
   sanitizeCallbackURL,
+  securitySetupRoute,
 } from "@/src/server/auth/app-access";
 
 type TwoFactorPageProps = {
@@ -25,7 +27,15 @@ export default async function TwoFactorPage({ searchParams }: TwoFactorPageProps
     redirect(callbackURL as Route);
   }
 
-  if (access.status !== "anonymous" && access.status !== "second_factor_required") {
+  if (access.status === "anonymous") {
+    redirect(loginRoute(callbackURL));
+  }
+
+  if (access.status === "security_setup_required") {
+    redirect(securitySetupRoute(callbackURL));
+  }
+
+  if (access.status !== "second_factor_required") {
     redirect(accountStatusRoute(callbackURL));
   }
 

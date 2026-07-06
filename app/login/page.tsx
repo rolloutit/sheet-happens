@@ -6,6 +6,7 @@ import {
   accountStatusRoute,
   getAppAccessState,
   sanitizeCallbackURL,
+  securitySetupRoute,
   secondFactorRoute,
 } from "@/src/server/auth/app-access";
 
@@ -30,6 +31,10 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
 
   if (access.status === "second_factor_required") {
     redirect(secondFactorRoute(callbackURL));
+  }
+
+  if (access.status === "security_setup_required") {
+    redirect(securitySetupRoute(callbackURL));
   }
 
   if (access.status !== "anonymous") {

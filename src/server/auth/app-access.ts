@@ -25,6 +25,12 @@ export type AppAccessState =
       authUser: AppAuthUser;
     }
   | {
+      status: "security_setup_required";
+      session: NonNullable<Awaited<ReturnType<typeof getSession>>>;
+      member: AppMember;
+      authUser: AppAuthUser;
+    }
+  | {
       status: "active";
       session: NonNullable<Awaited<ReturnType<typeof getSession>>>;
       member: AppMember;
@@ -32,6 +38,10 @@ export type AppAccessState =
     };
 
 export type ActiveAppAccess = Extract<AppAccessState, { status: "active" }>;
+export type SecuritySettingsAppAccess = Extract<
+  AppAccessState,
+  { status: "active" | "security_setup_required" }
+>;
 
 export type AppMember = {
   id: string;
@@ -51,6 +61,7 @@ export type AppAuthUser = {
   name: string;
   email: string;
   twoFactorEnabled: boolean;
+  passkeyCount: number;
 };
 
 export async function getAppAccessState(): Promise<AppAccessState> {
@@ -65,7 +76,7 @@ export async function getAppAccessState(): Promise<AppAccessState> {
     };
   }
 
-  const [member, authUser] = await Promise.all([
+  const [member, authUser, passkeyCount] = await Promise.all([
     prisma.member.findUnique({
       where: {
         authUserId: session.user.id,
@@ -94,16 +105,27 @@ export async function getAppAccessState(): Promise<AppAccessState> {
         twoFactorEnabled: true,
       },
     }),
+    prisma.passkey.count({
+      where: {
+        userId: session.user.id,
+      },
+    }),
   ]);
 
-  const resolvedAuthUser =
-    authUser ??
-    ({
-      id: session.user.id,
-      name: session.user.name,
-      email: session.user.email,
-      twoFactorEnabled: Boolean((session.user as { twoFactorEnabled?: boolean }).twoFactorEnabled),
-    } satisfies AppAuthUser);
+  const resolvedAuthUser: AppAuthUser = authUser
+    ? {
+        ...authUser,
+        passkeyCount,
+      }
+    : {
+        id: session.user.id,
+        name: session.user.name,
+        email: session.user.email,
+        twoFactorEnabled: Boolean(
+          (session.user as { twoFactorEnabled?: boolean }).twoFactorEnabled,
+        ),
+        passkeyCount,
+      };
 
   if (!member) {
     return {
@@ -165,6 +187,15 @@ export async function getAppAccessState(): Promise<AppAccessState> {
     };
   }
 
+  if (!hasCompletedSecuritySetup(resolvedAuthUser)) {
+    return {
+      status: "security_setup_required",
+      session,
+      member,
+      authUser: resolvedAuthUser,
+    };
+  }
+
   return {
     status: "active",
     session,
@@ -184,6 +215,10 @@ export async function requireActiveAppMember(callbackURL: string): Promise<Activ
     redirect(secondFactorRoute(callbackURL));
   }
 
+  if (state.status === "security_setup_required") {
+    redirect(securitySetupRoute(callbackURL));
+  }
+
   if (state.status !== "active") {
     redirect(accountStatusRoute(callbackURL));
   }
@@ -196,6 +231,30 @@ export async function requireAdminAppMember(callbackURL: string): Promise<Active
 
   if (state.member.role !== "ADMIN") {
     redirect(accountStatusRoute(callbackURL, "admin-required"));
+  }
+
+  if (!state.authUser.twoFactorEnabled) {
+    redirect(securitySetupRoute(callbackURL, "admin-totp-required"));
+  }
+
+  return state;
+}
+
+export async function requireSecuritySettingsAppMember(
+  callbackURL: string,
+): Promise<SecuritySettingsAppAccess> {
+  const state = await getAppAccessState();
+
+  if (state.status === "anonymous") {
+    redirect(loginRoute(callbackURL));
+  }
+
+  if (state.status === "second_factor_required") {
+    redirect(secondFactorRoute(callbackURL));
+  }
+
+  if (state.status !== "active" && state.status !== "security_setup_required") {
+    redirect(accountStatusRoute(callbackURL));
   }
 
   return state;
@@ -212,6 +271,10 @@ export async function requireActiveAppMemberForAction(): Promise<ActiveAppAccess
     throw new AuthorizationError("Second-factor verification required.");
   }
 
+  if (state.status === "security_setup_required") {
+    throw new AuthorizationError("Complete security setup before using Sheet Happens.");
+  }
+
   if (state.status !== "active") {
     throw new AuthorizationError("Your Sheet Happens account is not active.");
   }
@@ -226,6 +289,10 @@ export async function requireAdminAppMemberForAction(): Promise<ActiveAppAccess>
     throw new AuthorizationError("Admin access required.");
   }
 
+  if (!state.authUser.twoFactorEnabled) {
+    throw new AuthorizationError("Authenticator app setup is required for admin actions.");
+  }
+
   return state;
 }
 
@@ -235,6 +302,17 @@ export function loginRoute(callbackURL: string) {
 
 export function secondFactorRoute(callbackURL: string) {
   return `/two-factor?callbackURL=${encodeURIComponent(sanitizeCallbackURL(callbackURL))}` as Route;
+}
+
+export function securitySetupRoute(callbackURL: string, reason?: string) {
+  const params = new URLSearchParams({
+    setup: "required",
+    callbackURL: sanitizeCallbackURL(callbackURL),
+  });
+
+  if (reason) params.set("reason", reason);
+
+  return `/settings?${params.toString()}` as Route;
 }
 
 export function accountStatusRoute(callbackURL: string, reason?: string) {
@@ -283,4 +361,8 @@ function getInitials(name: string) {
     .slice(0, 2)
     .map((part) => part.at(0)?.toUpperCase() ?? "")
     .join("");
+}
+
+function hasCompletedSecuritySetup(authUser: AppAuthUser) {
+  return authUser.twoFactorEnabled || authUser.passkeyCount > 0;
 }
