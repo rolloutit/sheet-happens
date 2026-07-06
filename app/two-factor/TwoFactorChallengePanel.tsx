@@ -1,0 +1,167 @@
+"use client";
+
+import { KeyRound, LifeBuoy, ShieldCheck } from "lucide-react";
+import type { Route } from "next";
+import Link from "next/link";
+import { useMemo, useState, useTransition } from "react";
+
+import { Badge } from "@/src/components/ui/Badge";
+import { Button } from "@/src/components/ui/Button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/src/components/ui/Card";
+import { Checkbox } from "@/src/components/ui/Checkbox";
+import { CodeInput } from "@/src/components/ui/CodeInput";
+import { Field } from "@/src/components/ui/Field";
+import { Input } from "@/src/components/ui/Input";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/src/components/ui/Tabs";
+import { cn } from "@/src/lib/utils";
+import { verifySecondFactorAction } from "./actions";
+import type { VerifySecondFactorActionState } from "./actions.types";
+
+export type TwoFactorChallengePanelProps = {
+  callbackURL: string;
+};
+
+type SecondFactorMethod = "totp" | "backup_code";
+
+export function TwoFactorChallengePanel({ callbackURL }: TwoFactorChallengePanelProps) {
+  const [method, setMethod] = useState<SecondFactorMethod>("totp");
+  const [totpCode, setTotpCode] = useState("");
+  const [backupCode, setBackupCode] = useState("");
+  const [trustDevice, setTrustDevice] = useState(false);
+  const [state, setState] = useState<VerifySecondFactorActionState | null>(null);
+  const [isPending, startTransition] = useTransition();
+  const loginHref = useMemo(
+    () => `/login?callbackURL=${encodeURIComponent(callbackURL)}`,
+    [callbackURL],
+  );
+
+  function submitSecondFactor() {
+    setState(null);
+
+    startTransition(async () => {
+      const result = await verifySecondFactorAction({
+        method,
+        code: method === "totp" ? totpCode : backupCode,
+        trustDevice,
+      });
+
+      if (result.status === "success") {
+        window.location.href = callbackURL;
+        return;
+      }
+
+      setState(result);
+    });
+  }
+
+  const canSubmit = method === "totp" ? totpCode.length === 6 : backupCode.trim().length > 0;
+
+  return (
+    <Card density="lg" variant="elevated" className="w-full max-w-xl">
+      <CardHeader className="block">
+        <Badge tone="info">Second factor</Badge>
+        <CardTitle className="mt-4 text-2xl">Verify your sign-in</CardTitle>
+        <CardDescription>
+          Enter an authenticator-app code or one of your saved backup codes.
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="gap-5">
+        {state ? <SecondFactorStatus state={state} /> : null}
+
+        <Tabs value={method} onValueChange={(value) => setMethod(value as SecondFactorMethod)}>
+          <TabsList className="grid w-full grid-cols-2">
+            <TabsTrigger value="totp">Authenticator</TabsTrigger>
+            <TabsTrigger value="backup_code">Backup code</TabsTrigger>
+          </TabsList>
+          <TabsContent value="totp">
+            <Field label="6 digit code" hint="Use the current code from your authenticator app.">
+              {({ describedBy }) => (
+                <CodeInput
+                  label="Authenticator code"
+                  value={totpCode}
+                  onValueChange={setTotpCode}
+                  disabled={isPending}
+                  invalid={state?.status === "error"}
+                  aria-describedby={describedBy}
+                />
+              )}
+            </Field>
+          </TabsContent>
+          <TabsContent value="backup_code">
+            <Field label="Backup code" hint="Backup codes can only be used once.">
+              {({ id, describedBy, invalid }) => (
+                <Input
+                  id={id}
+                  value={backupCode}
+                  autoComplete="one-time-code"
+                  disabled={isPending}
+                  invalid={invalid || state?.status === "error"}
+                  aria-describedby={describedBy}
+                  onChange={(event) => setBackupCode(event.target.value)}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter" && canSubmit && !isPending) {
+                      event.preventDefault();
+                      submitSecondFactor();
+                    }
+                  }}
+                />
+              )}
+            </Field>
+          </TabsContent>
+        </Tabs>
+
+        <label className="flex items-start gap-3 rounded-[var(--radius-md)] border border-border bg-secondary/60 p-3 text-sm text-muted-foreground">
+          <Checkbox
+            checked={trustDevice}
+            disabled={isPending}
+            onCheckedChange={(checked) => setTrustDevice(checked === true)}
+            aria-label="Trust this device for 30 days"
+          />
+          <span>
+            <span className="font-ui font-semibold text-foreground">Trust this device</span>
+            <span className="block leading-6">Skip this challenge here for 30 days.</span>
+          </span>
+        </label>
+      </CardContent>
+      <CardFooter className="justify-between">
+        <Button asChild variant="ghost">
+          <Link href={loginHref as Route}>
+            <LifeBuoy aria-hidden="true" />
+            Use another sign-in
+          </Link>
+        </Button>
+        <Button
+          type="button"
+          icon={method === "totp" ? ShieldCheck : KeyRound}
+          loading={isPending}
+          disabled={!canSubmit}
+          onClick={submitSecondFactor}
+        >
+          Verify
+        </Button>
+      </CardFooter>
+    </Card>
+  );
+}
+
+function SecondFactorStatus({ state }: { state: VerifySecondFactorActionState }) {
+  return (
+    <p
+      role={state.status === "error" ? "alert" : "status"}
+      className={cn(
+        "rounded-[var(--radius-md)] border px-3 py-2 text-sm",
+        state.status === "success" && "border-success/40 bg-success/10 text-success",
+        state.status === "error" && "border-destructive/40 bg-destructive/10 text-destructive",
+      )}
+    >
+      {state.message}
+    </p>
+  );
+}

@@ -6,5 +6,5 @@ const baseURL = process.env.NEXT_PUBLIC_BETTER_AUTH_URL;
 
 export const authClient = createAuthClient({
   ...(baseURL ? { baseURL } : {}),
-  plugins: [magicLinkClient(), passkeyClient(), twoFactorClient()],
+  plugins: [magicLinkClient(), passkeyClient(), twoFactorClient({ twoFactorPage: "/two-factor" })],
 });

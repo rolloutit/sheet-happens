@@ -9,7 +9,8 @@ import { sendMagicLinkEmail } from "@/src/server/auth/auth-emails";
 import { prisma } from "@/src/server/db/client";
 
 const appName = "Sheet Happens";
-const developmentFallbackSecret = "REMOVED-DEV-SECRET";
+export const developmentFallbackSecret = "REMOVED-DEV-SECRET";
+export const authSecret = process.env.BETTER_AUTH_SECRET ?? developmentFallbackSecret;
 const authBaseUrl =
   process.env.BETTER_AUTH_URL ?? process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
 const authUrl = new URL(authBaseUrl);
@@ -26,7 +27,7 @@ const trustedOrigins = [
 export const auth = betterAuth({
   appName,
   baseURL: authOrigin,
-  secret: process.env.BETTER_AUTH_SECRET ?? developmentFallbackSecret,
+  secret: authSecret,
   trustedOrigins,
   database: prismaAdapter(prisma, {
     provider: "postgresql",
