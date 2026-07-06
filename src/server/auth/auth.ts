@@ -1,3 +1,5 @@
+import { randomBytes } from "node:crypto";
+
 import { passkey } from "@better-auth/passkey";
 import { prismaAdapter } from "@better-auth/prisma-adapter";
 import { betterAuth } from "better-auth";
@@ -9,8 +11,8 @@ import { sendMagicLinkEmail } from "@/src/server/auth/auth-emails";
 import { prisma } from "@/src/server/db/client";
 
 const appName = "Sheet Happens";
-export const developmentFallbackSecret = "REMOVED-DEV-SECRET";
-export const authSecret = process.env.BETTER_AUTH_SECRET ?? developmentFallbackSecret;
+const developmentFallbackSecret = randomBytes(32).toString("base64url");
+export const authSecret = getAuthSecret();
 const authBaseUrl =
   process.env.BETTER_AUTH_URL ?? process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
 const authUrl = new URL(authBaseUrl);
@@ -74,3 +76,15 @@ export const auth = betterAuth({
 });
 
 export type Auth = typeof auth;
+
+function getAuthSecret() {
+  if (process.env.BETTER_AUTH_SECRET) {
+    return process.env.BETTER_AUTH_SECRET;
+  }
+
+  if (process.env.NODE_ENV === "production") {
+    throw new Error("BETTER_AUTH_SECRET is required in production.");
+  }
+
+  return developmentFallbackSecret;
+}
