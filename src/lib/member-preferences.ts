@@ -3,6 +3,12 @@ export type SelectOption = {
   label: string;
 };
 
+export type MemberPreferenceOptions = {
+  currencies: readonly SelectOption[];
+  timezones: readonly SelectOption[];
+  locales: readonly SelectOption[];
+};
+
 const fallbackCurrencyCodes = ["EUR", "HUF", "USD", "GBP", "CHF"];
 const fallbackTimeZones = ["Europe/Budapest", "Europe/London", "UTC"];
 const preferredCurrencyCodes = ["EUR", "HUF", "USD", "GBP", "CHF"];
@@ -35,6 +41,14 @@ export const timezoneOptions = movePreferredValuesFirst(supportedTimeZones, pref
     label: formatTimeZoneLabel(timeZone),
   }),
 ) satisfies SelectOption[];
+
+export function getMemberPreferenceOptions(): MemberPreferenceOptions {
+  return {
+    currencies: currencyOptions,
+    timezones: timezoneOptions,
+    locales: localeOptions,
+  };
+}
 
 export function normalizeCurrencyCode(value: string) {
   return value.trim().toUpperCase();

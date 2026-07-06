@@ -7,6 +7,7 @@ import { useState, useTransition } from "react";
 import { PeopleTable } from "@/src/components/sheet/PeopleTable";
 import type { PersonRoleValue, PersonTableRow } from "@/src/components/sheet/PeopleTable";
 import { Button } from "@/src/components/ui/Button";
+import type { MemberPreferenceOptions } from "@/src/lib/member-preferences";
 import { cn } from "@/src/lib/utils";
 import type { AdminPersonRow } from "@/src/server/users";
 import {
@@ -22,11 +23,12 @@ import { MemberEditDrawer } from "./MemberEditDrawer";
 
 export type AdminPeopleTableProps = {
   rows: AdminPersonRow[];
+  preferenceOptions: MemberPreferenceOptions;
 };
 
 type PendingAction = "resend" | "revoke" | "sessions" | "deactivate" | "reactivate" | "role";
 
-export function AdminPeopleTable({ rows }: AdminPeopleTableProps) {
+export function AdminPeopleTable({ rows, preferenceOptions }: AdminPeopleTableProps) {
   const router = useRouter();
   const [message, setMessage] = useState<AdminPeopleActionState | null>(null);
   const [pendingKey, setPendingKey] = useState<string | null>(null);
@@ -171,6 +173,7 @@ export function AdminPeopleTable({ rows }: AdminPeopleTableProps) {
       <MemberEditDrawer
         member={editingMember}
         open={Boolean(editingMember)}
+        preferenceOptions={preferenceOptions}
         onOpenChange={(open) => {
           if (!open) setEditingMember(null);
         }}

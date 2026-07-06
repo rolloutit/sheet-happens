@@ -7,7 +7,7 @@ import { useFormStatus } from "react-dom";
 import { Button } from "@/src/components/ui/Button";
 import { Field } from "@/src/components/ui/Field";
 import { Input } from "@/src/components/ui/Input";
-import { currencyOptions, localeOptions, timezoneOptions } from "@/src/lib/member-preferences";
+import type { MemberPreferenceOptions } from "@/src/lib/member-preferences";
 import { cn } from "@/src/lib/utils";
 import { inviteMemberAction } from "./actions";
 import type { InviteMemberActionState } from "./actions.types";
@@ -17,7 +17,11 @@ const initialState: InviteMemberActionState = {
   status: "idle",
 };
 
-export function InviteMemberForm() {
+export type InviteMemberFormProps = {
+  preferenceOptions: MemberPreferenceOptions;
+};
+
+export function InviteMemberForm({ preferenceOptions }: InviteMemberFormProps) {
   const [state, formAction] = useActionState(inviteMemberAction, initialState);
   const formRef = useRef<HTMLFormElement>(null);
 
@@ -120,7 +124,7 @@ export function InviteMemberForm() {
               required={required}
               className={nativeSelectClassName}
             >
-              {currencyOptions.map((option) => (
+              {preferenceOptions.currencies.map((option) => (
                 <option key={option.value} value={option.value}>
                   {option.label}
                 </option>
@@ -139,7 +143,7 @@ export function InviteMemberForm() {
               required={required}
               className={nativeSelectClassName}
             >
-              {timezoneOptions.map((option) => (
+              {preferenceOptions.timezones.map((option) => (
                 <option key={option.value} value={option.value}>
                   {option.label}
                 </option>
@@ -158,7 +162,7 @@ export function InviteMemberForm() {
               required={required}
               className={nativeSelectClassName}
             >
-              {localeOptions.map((option) => (
+              {preferenceOptions.locales.map((option) => (
                 <option key={option.value} value={option.value}>
                   {option.label}
                 </option>

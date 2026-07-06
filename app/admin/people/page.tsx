@@ -6,6 +6,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/src/components/ui/Card";
+import { getMemberPreferenceOptions } from "@/src/lib/member-preferences";
 import { mapMemberToShellUser, requireAdminAppMember } from "@/src/server/auth/app-access";
 import { listPeopleForAdmin } from "@/src/server/users";
 import { AdminPeopleTable } from "./AdminPeopleTable";
@@ -16,6 +17,7 @@ export const dynamic = "force-dynamic";
 export default async function AdminPeoplePage() {
   const { member: admin } = await requireAdminAppMember("/admin/people");
   const people = await listPeopleForAdmin();
+  const preferenceOptions = getMemberPreferenceOptions();
 
   return (
     <AppShell current="people" role="admin" user={mapMemberToShellUser(admin)}>
@@ -61,7 +63,7 @@ export default async function AdminPeoplePage() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <InviteMemberForm />
+              <InviteMemberForm preferenceOptions={preferenceOptions} />
             </CardContent>
           </Card>
 
@@ -73,7 +75,7 @@ export default async function AdminPeoplePage() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <AdminPeopleTable rows={people} />
+              <AdminPeopleTable rows={people} preferenceOptions={preferenceOptions} />
             </CardContent>
           </Card>
         </div>

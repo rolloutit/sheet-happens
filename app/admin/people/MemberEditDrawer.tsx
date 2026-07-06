@@ -14,7 +14,7 @@ import {
 } from "@/src/components/ui/Drawer";
 import { Field } from "@/src/components/ui/Field";
 import { Input } from "@/src/components/ui/Input";
-import { currencyOptions, localeOptions, timezoneOptions } from "@/src/lib/member-preferences";
+import type { MemberPreferenceOptions } from "@/src/lib/member-preferences";
 import type { AdminPersonRow } from "@/src/server/users";
 import { updateMemberDetailsAction } from "./actions";
 import type {
@@ -27,6 +27,7 @@ import { nativeSelectClassName } from "./formStyles";
 export type MemberEditDrawerProps = {
   member: AdminPersonRow | null;
   open: boolean;
+  preferenceOptions: MemberPreferenceOptions;
   onOpenChange: (open: boolean) => void;
   onResult: (result: AdminPeopleActionState) => void;
   onSaved: () => void;
@@ -37,6 +38,7 @@ type EditableValues = Omit<UpdateMemberDetailsActionInput, "memberId">;
 export function MemberEditDrawer({
   member,
   open,
+  preferenceOptions,
   onOpenChange,
   onResult,
   onSaved,
@@ -56,6 +58,7 @@ export function MemberEditDrawer({
           <MemberEditForm
             key={member.id}
             member={member}
+            preferenceOptions={preferenceOptions}
             onCancel={() => onOpenChange(false)}
             onResult={onResult}
             onSaved={() => {
@@ -71,11 +74,13 @@ export function MemberEditDrawer({
 
 function MemberEditForm({
   member,
+  preferenceOptions,
   onCancel,
   onResult,
   onSaved,
 }: {
   member: AdminPersonRow;
+  preferenceOptions: MemberPreferenceOptions;
   onCancel: () => void;
   onResult: (result: AdminPeopleActionState) => void;
   onSaved: () => void;
@@ -186,7 +191,7 @@ function MemberEditForm({
               className={nativeSelectClassName}
               onChange={(event) => updateField("defaultCurrencyCode", event.target.value)}
             >
-              {currencyOptions.map((option) => (
+              {preferenceOptions.currencies.map((option) => (
                 <option key={option.value} value={option.value}>
                   {option.label}
                 </option>
@@ -205,7 +210,7 @@ function MemberEditForm({
               className={nativeSelectClassName}
               onChange={(event) => updateField("timezone", event.target.value)}
             >
-              {timezoneOptions.map((option) => (
+              {preferenceOptions.timezones.map((option) => (
                 <option key={option.value} value={option.value}>
                   {option.label}
                 </option>
@@ -224,7 +229,7 @@ function MemberEditForm({
               className={nativeSelectClassName}
               onChange={(event) => updateField("locale", event.target.value)}
             >
-              {localeOptions.map((option) => (
+              {preferenceOptions.locales.map((option) => (
                 <option key={option.value} value={option.value}>
                   {option.label}
                 </option>
