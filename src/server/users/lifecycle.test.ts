@@ -5,6 +5,7 @@ import {
   deactivateMember,
   MemberLifecycleError,
   reactivateMember,
+  revokeMemberSessions,
   resendMemberInvitation,
   revokeMemberInvitation,
 } from "./lifecycle";
@@ -50,6 +51,9 @@ function createLifecycleDb(
     },
     auditLog: {
       create: vi.fn().mockResolvedValue({ id: "audit-1" }),
+    },
+    session: {
+      deleteMany: vi.fn().mockResolvedValue({ count: 2 }),
     },
   };
 
@@ -142,7 +146,7 @@ describe("member lifecycle services", () => {
   it("deactivates active members but rejects self-deactivation", async () => {
     const { db, tx } = createLifecycleDb();
 
-    await deactivateMember(
+    const result = await deactivateMember(
       {
         memberId: "member-1",
         actorMemberId: "admin-1",
@@ -157,6 +161,25 @@ describe("member lifecycle services", () => {
         }),
       }),
     );
+    expect(tx.session.deleteMany).toHaveBeenCalledWith({
+      where: {
+        userId: "auth-user-1",
+      },
+    });
+    expect(tx.auditLog.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          action: "member.session_revoked",
+          after: expect.objectContaining({
+            reason: "member_deactivated",
+            revokedSessionCount: 2,
+          }),
+        }),
+      }),
+    );
+    expect(result).toMatchObject({
+      revokedSessionCount: 2,
+    });
 
     await expect(
       deactivateMember(
@@ -193,6 +216,40 @@ describe("member lifecycle services", () => {
         },
       }),
     );
+  });
+
+  it("revokes linked member sessions", async () => {
+    const { db, tx } = createLifecycleDb();
+
+    const result = await revokeMemberSessions(
+      {
+        memberId: "member-1",
+        actorMemberId: "admin-1",
+      },
+      { db },
+    );
+
+    expect(tx.session.deleteMany).toHaveBeenCalledWith({
+      where: {
+        userId: "auth-user-1",
+      },
+    });
+    expect(tx.auditLog.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          action: "member.session_revoked",
+          targetId: "member-1",
+          after: {
+            reason: "admin_revoke",
+            revokedSessionCount: 2,
+          },
+        }),
+      }),
+    );
+    expect(result).toEqual({
+      memberId: "member-1",
+      revokedSessionCount: 2,
+    });
   });
 
   it("changes roles but rejects self role changes", async () => {

@@ -8,6 +8,7 @@ import {
 import { createInvitationToken, hashInvitationToken } from "@/src/server/users/invitation-tokens";
 
 export type MemberLifecycleRole = "ADMIN" | "MEMBER";
+export type SessionRevocationReason = "admin_revoke" | "member_deactivated";
 
 export type MemberLifecycleInput = {
   memberId: string;
@@ -80,6 +81,9 @@ type MemberLifecycleTransaction = {
         after: Record<string, unknown>;
       };
     }): Promise<unknown>;
+  };
+  session: {
+    deleteMany(args: { where: { userId: string } }): Promise<{ count: number }>;
   };
 };
 
@@ -279,8 +283,49 @@ export async function deactivateMember(
       },
     });
 
+    const revokedSessionCount = await revokeAuthSessionsForMember(tx, {
+      member,
+      actorMemberId: input.actorMemberId,
+      reason: "member_deactivated",
+    });
+
     return {
       memberId: member.id,
+      revokedSessionCount,
+    };
+  });
+}
+
+export async function revokeMemberSessions(
+  input: MemberLifecycleInput,
+  deps: MemberLifecycleDeps = {},
+) {
+  const db: MemberLifecycleDb = deps.db ?? (prisma as unknown as MemberLifecycleDb);
+
+  return db.$transaction(async (tx) => {
+    const member = await findMember(tx, input.memberId);
+
+    if (member.id === input.actorMemberId) {
+      throw new MemberLifecycleError("You cannot revoke your own sessions here.");
+    }
+
+    if (member.deletedAt) {
+      throw new MemberLifecycleError("Deleted members cannot be changed.");
+    }
+
+    if (!member.authUserId) {
+      throw new MemberLifecycleError("This member has no linked auth account.");
+    }
+
+    const revokedSessionCount = await revokeAuthSessionsForMember(tx, {
+      member,
+      actorMemberId: input.actorMemberId,
+      reason: "admin_revoke",
+    });
+
+    return {
+      memberId: member.id,
+      revokedSessionCount,
     };
   });
 }
@@ -395,6 +440,41 @@ async function findMember(tx: MemberLifecycleTransaction, memberId: string) {
   }
 
   return member;
+}
+
+async function revokeAuthSessionsForMember(
+  tx: MemberLifecycleTransaction,
+  input: {
+    member: {
+      id: string;
+      authUserId: string | null;
+    };
+    actorMemberId: string;
+    reason: SessionRevocationReason;
+  },
+) {
+  if (!input.member.authUserId) return 0;
+
+  const result = await tx.session.deleteMany({
+    where: {
+      userId: input.member.authUserId,
+    },
+  });
+
+  await tx.auditLog.create({
+    data: {
+      actorMemberId: input.actorMemberId,
+      action: "member.session_revoked",
+      targetType: "member",
+      targetId: input.member.id,
+      after: {
+        reason: input.reason,
+        revokedSessionCount: result.count,
+      },
+    },
+  });
+
+  return result.count;
 }
 
 function addDays(date: Date, days: number) {
