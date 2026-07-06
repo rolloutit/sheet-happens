@@ -73,7 +73,9 @@ Expected result:
 Expected result:
 
 - The account activation succeeds.
-- The user is sent to `https://{DOMAIN_NAME}/dashboard`.
+- If the account has no passkey and no TOTP yet, the user is redirected to
+  `https://{DOMAIN_NAME}/settings?setup=required...`.
+- After adding a passkey or enabling TOTP, the user can open `https://{DOMAIN_NAME}/dashboard`.
 - The member profile is active.
 - Opening the same invitation link again shows that the invitation has already been accepted.
 
@@ -111,8 +113,9 @@ Expected result:
 
 Expected result:
 
-- The user lands on `https://{DOMAIN_NAME}/dashboard`, unless 2FA is enabled.
 - If 2FA is enabled, the user lands on `https://{DOMAIN_NAME}/two-factor?...`.
+- If the user has no passkey and no TOTP yet, the user lands on `/settings?setup=required...`.
+- Otherwise, the user lands on `https://{DOMAIN_NAME}/dashboard`.
 
 ### Unknown Email Does Not Reveal Account State
 
@@ -143,7 +146,8 @@ Expected result:
 
 ### Active Member Can Open Dashboard
 
-1. Sign in as `{CONTRACTOR_EMAIL}` or `{EMPLOYEE_EMAIL}`.
+1. Sign in as `{CONTRACTOR_EMAIL}` or `{EMPLOYEE_EMAIL}` after that account has either a passkey
+   or TOTP enabled.
 2. Open `https://{DOMAIN_NAME}/dashboard`.
 
 Expected result:
@@ -154,7 +158,8 @@ Expected result:
 
 ### Non-Admin Member Cannot Open People Admin
 
-1. Sign in as `{CONTRACTOR_EMAIL}` or `{EMPLOYEE_EMAIL}`.
+1. Sign in as `{CONTRACTOR_EMAIL}` or `{EMPLOYEE_EMAIL}` after that account has either a passkey
+   or TOTP enabled.
 2. Open `https://{DOMAIN_NAME}/admin/people`.
 
 Expected result:
@@ -166,7 +171,7 @@ Expected result:
 
 ### Admin Can Open People Page
 
-1. Sign in as `{ADMIN_EMAIL}`.
+1. Sign in as `{ADMIN_EMAIL}` with TOTP enabled and verified.
 2. Open `https://{DOMAIN_NAME}/admin/people`.
 
 Expected result:
@@ -178,7 +183,7 @@ Expected result:
 
 ### Invite Member
 
-1. Sign in as `{ADMIN_EMAIL}`.
+1. Sign in as `{ADMIN_EMAIL}` with TOTP enabled and verified.
 2. Open `https://{DOMAIN_NAME}/admin/people`.
 3. Fill the invite form:
    - First name: `{INVITED_FIRST_NAME}`
@@ -199,7 +204,7 @@ Expected result:
 
 ### Resend Invitation
 
-1. Sign in as `{ADMIN_EMAIL}`.
+1. Sign in as `{ADMIN_EMAIL}` with TOTP enabled and verified.
 2. Open `https://{DOMAIN_NAME}/admin/people`.
 3. Find a member with state `invited`.
 4. Click the resend invitation action.
@@ -211,7 +216,7 @@ Expected result:
 
 ### Deactivate And Reactivate Member
 
-1. Sign in as `{ADMIN_EMAIL}`.
+1. Sign in as `{ADMIN_EMAIL}` with TOTP enabled and verified.
 2. Open `https://{DOMAIN_NAME}/admin/people`.
 3. Find an active non-admin test member.
 4. Click the deactivate action.
@@ -225,6 +230,31 @@ Expected result:
 - The member directory reflects the latest state.
 
 ## Security Settings
+
+### Security Setup Gate
+
+1. Sign in as an active member that has no passkey and no TOTP.
+2. Open `https://{DOMAIN_NAME}/dashboard`.
+3. Open `https://{DOMAIN_NAME}/settings`.
+
+Expected result:
+
+- `/dashboard` redirects to `/settings?setup=required...`.
+- The settings page shows an action-required security setup banner.
+- The user can still access the passkey and authenticator-app controls.
+- After adding a passkey or enabling TOTP, `/dashboard` opens.
+
+### Admin TOTP Gate
+
+1. Sign in as an admin that has a passkey but does not have TOTP enabled.
+2. Open `https://{DOMAIN_NAME}/admin/people`.
+3. Open `https://{DOMAIN_NAME}/settings`.
+
+Expected result:
+
+- `/admin/people` redirects to `/settings?setup=required&...reason=admin-totp-required...`.
+- The settings page explains that admin tools require authenticator-app verification.
+- After enabling and verifying TOTP, `/admin/people` opens.
 
 ### Open Security Settings
 
@@ -376,13 +406,16 @@ Expected result:
 Expected result:
 
 - Authenticator app is disabled.
-- Future sign-ins no longer require `/two-factor`.
+- Future sign-ins no longer require `/two-factor` only if another security method, such as a
+  passkey, remains available.
+- If no passkey remains, protected pages redirect to `/settings?setup=required...`.
+- Admin users cannot use admin pages again until TOTP is re-enabled.
 
 ## Account Status And Lifecycle
 
 ### Inactive Member Is Blocked
 
-1. Sign in as `{ADMIN_EMAIL}`.
+1. Sign in as `{ADMIN_EMAIL}` with TOTP enabled and verified.
 2. Deactivate `{CONTRACTOR_EMAIL}` from `/admin/people`.
 3. Sign out.
 4. Sign in as `{CONTRACTOR_EMAIL}`.
@@ -408,7 +441,7 @@ Expected result:
 
 ### Sidebar Real Routes
 
-1. Sign in as `{ADMIN_EMAIL}`.
+1. Sign in as `{ADMIN_EMAIL}` with TOTP enabled and verified.
 2. Open `https://{DOMAIN_NAME}/dashboard`.
 3. Click `Irányítópult` in the sidebar.
 4. Click `Emberek` in the sidebar.
@@ -426,6 +459,8 @@ Expected result:
 - Unknown email login does not reveal account state.
 - Signed-out users cannot open protected routes.
 - Non-admin users cannot open admin routes.
+- Users without passkey or TOTP are redirected to the security setup gate.
+- Admin users without TOTP are redirected to the admin TOTP gate.
 - Admin people page can invite, resend, deactivate, and reactivate members.
 - Passkey add, login, rename, and remove still work.
 - TOTP setup, challenge, invalid-code handling, trusted device, backup code, and disable still work.
