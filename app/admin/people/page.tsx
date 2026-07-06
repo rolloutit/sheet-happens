@@ -78,6 +78,7 @@ export default async function AdminPeoplePage() {
             <CardContent>
               <AdminPeopleTable
                 rows={people}
+                currentMemberId={admin.id}
                 preferenceOptions={preferenceOptions}
                 todayDate={todayDate}
               />

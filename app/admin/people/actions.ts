@@ -26,6 +26,7 @@ import {
   scheduleMemberProfileTransition,
   resendMemberInvitation,
   revokeMemberInvitation,
+  softDeleteMember,
   updateMemberDetails,
 } from "@/src/server/users";
 import type {
@@ -287,6 +288,17 @@ export async function reactivateMemberAction(memberId: string): Promise<AdminPeo
   });
 }
 
+export async function softDeleteMemberAction(memberId: string): Promise<AdminPeopleActionState> {
+  return runAdminPeopleAction(async (adminId) => {
+    const result = await softDeleteMember({
+      memberId,
+      actorMemberId: adminId,
+    });
+
+    return `Member archived. ${formatSessionCount(result.revokedSessionCount)} revoked. ${formatInvitationCount(result.revokedInvitationCount)} revoked.`;
+  });
+}
+
 export async function revokeMemberSessionsAction(
   memberId: string,
 ): Promise<AdminPeopleActionState> {
@@ -431,6 +443,10 @@ function isInviteMemberField(field: unknown): field is InviteMemberField {
 
 function formatSessionCount(count: number) {
   return `${count} session${count === 1 ? "" : "s"}`;
+}
+
+function formatInvitationCount(count: number) {
+  return `${count} pending invitation${count === 1 ? "" : "s"}`;
 }
 
 function isDateInputValue(value: string) {

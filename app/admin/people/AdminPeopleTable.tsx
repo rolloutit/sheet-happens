@@ -1,12 +1,21 @@
 "use client";
 
-import { Ban, LogOut, Mail, RotateCcw, ShieldCheck, UserMinus } from "lucide-react";
+import { Archive, Ban, LogOut, Mail, RotateCcw, ShieldCheck, UserMinus } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 
 import { PeopleTable } from "@/src/components/sheet/PeopleTable";
 import type { PersonRoleValue, PersonTableRow } from "@/src/components/sheet/PeopleTable";
 import { Button } from "@/src/components/ui/Button";
+import {
+  Dialog,
+  DialogClose,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/src/components/ui/Dialog";
 import type { MemberPreferenceOptions } from "@/src/lib/member-preferences";
 import { cn } from "@/src/lib/utils";
 import type { AdminPersonRow } from "@/src/server/users";
@@ -17,29 +26,39 @@ import {
   resendMemberInviteAction,
   revokeMemberSessionsAction,
   revokeMemberInviteAction,
+  softDeleteMemberAction,
 } from "./actions";
 import type { AdminPeopleActionState } from "./actions.types";
 import { MemberEditDrawer } from "./MemberEditDrawer";
 
 export type AdminPeopleTableProps = {
   rows: AdminPersonRow[];
+  currentMemberId: string;
   preferenceOptions: MemberPreferenceOptions;
   todayDate: string;
 };
 
-type PendingAction = "resend" | "revoke" | "sessions" | "deactivate" | "reactivate" | "role";
+type PendingAction =
+  "resend" | "revoke" | "sessions" | "deactivate" | "reactivate" | "role" | "archive";
 
-export function AdminPeopleTable({ rows, preferenceOptions, todayDate }: AdminPeopleTableProps) {
+export function AdminPeopleTable({
+  rows,
+  currentMemberId,
+  preferenceOptions,
+  todayDate,
+}: AdminPeopleTableProps) {
   const router = useRouter();
   const [message, setMessage] = useState<AdminPeopleActionState | null>(null);
   const [pendingKey, setPendingKey] = useState<string | null>(null);
   const [editingMember, setEditingMember] = useState<AdminPersonRow | null>(null);
+  const [archivingMember, setArchivingMember] = useState<AdminPersonRow | null>(null);
   const [, startTransition] = useTransition();
 
   function runAction(
     row: PersonTableRow,
     action: PendingAction,
     callback: () => Promise<AdminPeopleActionState>,
+    options: { onSuccess?: () => void } = {},
   ) {
     setPendingKey(`${row.id}:${action}`);
     setMessage(null);
@@ -50,6 +69,7 @@ export function AdminPeopleTable({ rows, preferenceOptions, todayDate }: AdminPe
       setPendingKey(null);
 
       if (result.status === "success") {
+        options.onSuccess?.();
         router.refresh();
       }
     });
@@ -168,8 +188,34 @@ export function AdminPeopleTable({ rows, preferenceOptions, todayDate }: AdminPe
                 </Button>
               </>
             ) : null}
+            {row.state !== "locked" && row.id !== currentMemberId ? (
+              <Button
+                type="button"
+                variant="danger"
+                size="sm"
+                icon={Archive}
+                onClick={() => {
+                  setArchivingMember(getAdminPersonRow(rows, row));
+                  setMessage(null);
+                }}
+              >
+                Archive
+              </Button>
+            ) : null}
           </div>
         )}
+      />
+      <ArchiveMemberDialog
+        member={archivingMember}
+        pending={archivingMember ? isPending(archivingMember, "archive") : false}
+        onOpenChange={(open) => {
+          if (!open) setArchivingMember(null);
+        }}
+        onConfirm={(row) => {
+          runAction(row, "archive", () => softDeleteMemberAction(row.id), {
+            onSuccess: () => setArchivingMember(null),
+          });
+        }}
       />
       <MemberEditDrawer
         member={editingMember}
@@ -188,6 +234,53 @@ export function AdminPeopleTable({ rows, preferenceOptions, todayDate }: AdminPe
 
 function getAdminPersonRow(rows: AdminPersonRow[], row: PersonTableRow) {
   return rows.find((candidate) => candidate.id === row.id) ?? null;
+}
+
+function ArchiveMemberDialog({
+  member,
+  pending,
+  onOpenChange,
+  onConfirm,
+}: {
+  member: AdminPersonRow | null;
+  pending: boolean;
+  onOpenChange: (open: boolean) => void;
+  onConfirm: (member: AdminPersonRow) => void;
+}) {
+  return (
+    <Dialog open={Boolean(member)} onOpenChange={onOpenChange}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>{member ? `Archive ${member.name}?` : "Archive member?"}</DialogTitle>
+          <DialogDescription>
+            This blocks future app access and revokes active sessions, but keeps historical records
+            for reporting, invoices, payslips, and audit history.
+          </DialogDescription>
+        </DialogHeader>
+        <div className="rounded-[var(--radius-md)] border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+          This is not GDPR erasure. Personal data anonymization is a separate controlled workflow.
+        </div>
+        <DialogFooter>
+          <DialogClose asChild>
+            <Button type="button" variant="ghost" disabled={pending}>
+              Cancel
+            </Button>
+          </DialogClose>
+          <Button
+            type="button"
+            variant="danger"
+            icon={Archive}
+            loading={pending}
+            onClick={() => {
+              if (member) onConfirm(member);
+            }}
+          >
+            Archive member
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
 }
 
 function RoleSelect({
