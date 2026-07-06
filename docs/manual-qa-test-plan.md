@@ -238,6 +238,28 @@ Expected result:
 - The member's Better Auth email/account is not changed by this flow.
 - An audit row is recorded for `member.updated` with before and after values.
 
+### Schedule Profile Transition
+
+1. Sign in as `{ADMIN_EMAIL}` with TOTP enabled and verified.
+2. Open `https://{DOMAIN_NAME}/admin/people`.
+3. Find an invited, active, or inactive member.
+4. Click the edit action.
+5. In `Profile transition`, choose the opposite profile.
+6. Choose `{PROFILE_TRANSITION_VALID_FROM}` as today or a future date.
+7. Enter `{PROFILE_TRANSITION_REASON}`.
+8. Click `Schedule transition`.
+9. Refresh `https://{DOMAIN_NAME}/admin/people`.
+
+Expected result:
+
+- A success message confirms either immediate profile change or scheduled transition.
+- If the effective date is today, the member's current profile changes after refresh.
+- If the effective date is in the future, the people table shows the scheduled profile and date.
+- Past effective dates show validation errors and do not create profile history.
+- A second future transition for the same member is rejected until the existing one is handled.
+- An audit row is recorded for `member.profile_changed` or
+  `member.profile_transition_scheduled`.
+
 ### Deactivate And Reactivate Member
 
 1. Sign in as `{ADMIN_EMAIL}` with TOTP enabled and verified.
@@ -296,7 +318,7 @@ Expected result:
 Expected result:
 
 - `/admin/people` redirects to `/settings?setup=required&...reason=admin-totp-required...`.
-- The settings page explains that admin tools require authenticator-app verification.
+- The settings page explains that admin tools require authenticator-app 2FA.
 - After enabling and verifying TOTP, `/admin/people` opens.
 
 ### Open Security Settings
@@ -402,6 +424,7 @@ Fallback check:
 Expected result:
 
 - After the magic-link email is opened, the app redirects to `/two-factor`.
+- The magic-link sign-in does not satisfy the 2FA challenge by itself.
 - `/dashboard` is not accessible until the TOTP code is verified.
 
 ### Verify TOTP Challenge
@@ -544,7 +567,8 @@ Expected result:
 - Admin people page can invite, resend, edit, deactivate, and reactivate members.
 - Admin people page can revoke member sessions.
 - Passkey add, login, rename, and remove still work.
-- TOTP setup, challenge, invalid-code handling, trusted device, backup code, and disable still work.
+- TOTP setup, challenge, invalid-code handling, trusted device, backup-code fallback, and disable
+  still work.
 - TOTP disablement and backup-code regeneration create audit rows without storing secrets.
 - `/dashboard`, `/settings`, `/admin/people`, `/two-factor`, and `/account-status` render without
   layout breakage on desktop and mobile widths.
