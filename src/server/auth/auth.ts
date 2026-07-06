@@ -4,7 +4,7 @@ import { betterAuth } from "better-auth";
 import { nextCookies } from "better-auth/next-js";
 import { magicLink, twoFactor } from "better-auth/plugins";
 
-import { canSendAuthLink } from "@/src/server/auth/invite-policy";
+import { canCreateAuthUser, canSendAuthLink } from "@/src/server/auth/invite-policy";
 import { sendMagicLinkEmail } from "@/src/server/auth/auth-emails";
 import { prisma } from "@/src/server/db/client";
 
@@ -32,6 +32,19 @@ export const auth = betterAuth({
   database: prismaAdapter(prisma, {
     provider: "postgresql",
   }),
+  databaseHooks: {
+    user: {
+      create: {
+        before: async (user) => {
+          if (await canCreateAuthUser(user.email)) {
+            return;
+          }
+
+          return false;
+        },
+      },
+    },
+  },
   emailAndPassword: {
     enabled: false,
   },
