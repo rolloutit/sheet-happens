@@ -12,6 +12,7 @@ import {
   inviteMember,
   MemberLifecycleError,
   reactivateMember,
+  revokeMemberSessions,
   resendMemberInvitation,
   revokeMemberInvitation,
 } from "@/src/server/users";
@@ -119,12 +120,12 @@ export async function revokeMemberInviteAction(memberId: string): Promise<AdminP
 
 export async function deactivateMemberAction(memberId: string): Promise<AdminPeopleActionState> {
   return runAdminPeopleAction(async (adminId) => {
-    await deactivateMember({
+    const result = await deactivateMember({
       memberId,
       actorMemberId: adminId,
     });
 
-    return "Member deactivated.";
+    return `Member deactivated. ${formatSessionCount(result.revokedSessionCount)} revoked.`;
   });
 }
 
@@ -136,6 +137,19 @@ export async function reactivateMemberAction(memberId: string): Promise<AdminPeo
     });
 
     return "Member reactivated.";
+  });
+}
+
+export async function revokeMemberSessionsAction(
+  memberId: string,
+): Promise<AdminPeopleActionState> {
+  return runAdminPeopleAction(async (adminId) => {
+    const result = await revokeMemberSessions({
+      memberId,
+      actorMemberId: adminId,
+    });
+
+    return `${formatSessionCount(result.revokedSessionCount)} revoked.`;
   });
 }
 
@@ -217,4 +231,8 @@ function isInviteMemberField(field: unknown): field is InviteMemberField {
     field === "timezone" ||
     field === "locale"
   );
+}
+
+function formatSessionCount(count: number) {
+  return `${count} session${count === 1 ? "" : "s"}`;
 }

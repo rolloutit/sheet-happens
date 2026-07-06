@@ -1,6 +1,6 @@
 "use client";
 
-import { Ban, Mail, RotateCcw, ShieldCheck, UserMinus } from "lucide-react";
+import { Ban, LogOut, Mail, RotateCcw, ShieldCheck, UserMinus } from "lucide-react";
 import { useState, useTransition } from "react";
 
 import { PeopleTable } from "@/src/components/sheet/PeopleTable";
@@ -12,6 +12,7 @@ import {
   deactivateMemberAction,
   reactivateMemberAction,
   resendMemberInviteAction,
+  revokeMemberSessionsAction,
   revokeMemberInviteAction,
 } from "./actions";
 import type { AdminPeopleActionState } from "./actions.types";
@@ -20,7 +21,7 @@ export type AdminPeopleTableProps = {
   rows: PersonTableRow[];
 };
 
-type PendingAction = "resend" | "revoke" | "deactivate" | "reactivate" | "role";
+type PendingAction = "resend" | "revoke" | "sessions" | "deactivate" | "reactivate" | "role";
 
 export function AdminPeopleTable({ rows }: AdminPeopleTableProps) {
   const [message, setMessage] = useState<AdminPeopleActionState | null>(null);
@@ -100,28 +101,56 @@ export function AdminPeopleTable({ rows }: AdminPeopleTableProps) {
               </>
             ) : null}
             {row.state === "active" ? (
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                icon={UserMinus}
-                loading={isPending(row, "deactivate")}
-                onClick={() => runAction(row, "deactivate", () => deactivateMemberAction(row.id))}
-              >
-                Deactivate
-              </Button>
+              <>
+                <Button
+                  type="button"
+                  variant="soft"
+                  size="sm"
+                  icon={LogOut}
+                  loading={isPending(row, "sessions")}
+                  onClick={() =>
+                    runAction(row, "sessions", () => revokeMemberSessionsAction(row.id))
+                  }
+                >
+                  Revoke sessions
+                </Button>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  icon={UserMinus}
+                  loading={isPending(row, "deactivate")}
+                  onClick={() => runAction(row, "deactivate", () => deactivateMemberAction(row.id))}
+                >
+                  Deactivate
+                </Button>
+              </>
             ) : null}
             {row.state === "inactive" && row.hasAuthUser ? (
-              <Button
-                type="button"
-                variant="soft"
-                size="sm"
-                icon={RotateCcw}
-                loading={isPending(row, "reactivate")}
-                onClick={() => runAction(row, "reactivate", () => reactivateMemberAction(row.id))}
-              >
-                Reactivate
-              </Button>
+              <>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  icon={LogOut}
+                  loading={isPending(row, "sessions")}
+                  onClick={() =>
+                    runAction(row, "sessions", () => revokeMemberSessionsAction(row.id))
+                  }
+                >
+                  Revoke sessions
+                </Button>
+                <Button
+                  type="button"
+                  variant="soft"
+                  size="sm"
+                  icon={RotateCcw}
+                  loading={isPending(row, "reactivate")}
+                  onClick={() => runAction(row, "reactivate", () => reactivateMemberAction(row.id))}
+                >
+                  Reactivate
+                </Button>
+              </>
             ) : null}
           </div>
         )}
