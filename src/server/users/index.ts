@@ -4,3 +4,4 @@ export * from "./invitations";
 export * from "./lifecycle";
 export * from "./member-details";
 export * from "./people";
+export * from "./profile-transition";
