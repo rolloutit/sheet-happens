@@ -1,11 +1,5 @@
 export type TimeGridCellState =
-  | "empty"
-  | "filled"
-  | "editing"
-  | "today"
-  | "future"
-  | "warning"
-  | "locked";
+  "empty" | "filled" | "editing" | "today" | "future" | "warning" | "locked";
 
 export type TimeGridDayState = "normal" | "today" | "future";
 
