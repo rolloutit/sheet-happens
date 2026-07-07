@@ -5,9 +5,11 @@ import {
   CalendarX2,
   CheckCircle2,
   Edit3,
+  FolderOpen,
   MoreHorizontal,
   PauseCircle,
   Save,
+  Search,
   UserPlus,
   Users,
 } from "lucide-react";
@@ -42,6 +44,7 @@ import { Textarea } from "@/src/components/ui/Textarea";
 import { cn } from "@/src/lib/utils";
 import type {
   AdminProjectAssignmentRow,
+  AdminProjectGroupRow,
   AdminProjectRow,
   ProjectAssignableMemberRow,
   ProjectAssignmentMemberProfile,
@@ -69,6 +72,7 @@ import { nativeCheckboxClassName, nativeSelectClassName } from "./formStyles";
 
 export type AdminProjectsTableProps = {
   rows: AdminProjectRow[];
+  groups: AdminProjectGroupRow[];
   assignments: AdminProjectAssignmentRow[];
   assignableMembers: ProjectAssignableMemberRow[];
   todayDate: string;
@@ -76,6 +80,7 @@ export type AdminProjectsTableProps = {
 
 type ProjectTableRow = AdminProjectRow & Record<string, unknown>;
 type PendingAction = "edit" | "status" | "archive";
+type ProjectStatusFilter = "all" | "ACTIVE" | "INACTIVE" | "internal";
 
 const statusTone: Record<ProjectLifecycleStatus, BadgeProps["tone"]> = {
   ACTIVE: "success",
@@ -97,11 +102,15 @@ const assignmentProfileTone: Record<ProjectAssignmentMemberProfile, BadgeProps["
 
 export function AdminProjectsTable({
   rows,
+  groups,
   assignments,
   assignableMembers,
   todayDate,
 }: AdminProjectsTableProps) {
   const router = useRouter();
+  const [query, setQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState<ProjectStatusFilter>("all");
+  const [groupFilter, setGroupFilter] = useState("all");
   const [message, setMessage] = useState<ProjectActionState | null>(null);
   const [pendingKey, setPendingKey] = useState<string | null>(null);
   const [editingProject, setEditingProject] = useState<AdminProjectRow | null>(null);
@@ -113,7 +122,36 @@ export function AdminProjectsTable({
   );
   const [assignmentPendingKey, setAssignmentPendingKey] = useState<string | null>(null);
   const [, startTransition] = useTransition();
-  const tableRows = rows as ProjectTableRow[];
+  const filteredRows = rows.filter((row) => {
+    const normalizedQuery = query.trim().toLowerCase();
+
+    if (
+      normalizedQuery &&
+      !row.name.toLowerCase().includes(normalizedQuery) &&
+      !row.slug.toLowerCase().includes(normalizedQuery) &&
+      !(row.notes ?? "").toLowerCase().includes(normalizedQuery) &&
+      !row.groups.some((group) => group.name.toLowerCase().includes(normalizedQuery))
+    ) {
+      return false;
+    }
+
+    if (statusFilter === "internal" && !row.isInternal) return false;
+    if (statusFilter !== "all" && statusFilter !== "internal" && row.status !== statusFilter) {
+      return false;
+    }
+
+    if (groupFilter === "ungrouped" && row.groups.length > 0) return false;
+    if (
+      groupFilter !== "all" &&
+      groupFilter !== "ungrouped" &&
+      !row.groups.some((group) => group.id === groupFilter)
+    ) {
+      return false;
+    }
+
+    return true;
+  });
+  const tableRows = filteredRows as ProjectTableRow[];
 
   function runAction(
     row: AdminProjectRow,
@@ -180,11 +218,63 @@ export function AdminProjectsTable({
         </p>
       ) : null}
 
+      <div className="grid gap-3 rounded-[var(--radius-lg)] border border-border bg-background/45 p-3 lg:grid-cols-[minmax(16rem,1fr)_auto_auto]">
+        <label className="flex h-10 items-center gap-2 rounded-[var(--radius-md)] border border-border bg-card px-3 shadow-soft">
+          <Search className="size-4 text-muted-foreground" aria-hidden="true" />
+          <span className="sr-only">Search projects</span>
+          <input
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+            placeholder="Search projects..."
+            className="min-w-0 flex-1 bg-transparent text-sm text-foreground outline-none placeholder:text-muted-foreground"
+          />
+        </label>
+
+        <label className="grid h-10 grid-cols-[auto_1fr] items-center gap-2 rounded-[var(--radius-md)] border border-border bg-card px-3 shadow-soft">
+          <span className="font-ui text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+            State
+          </span>
+          <select
+            value={statusFilter}
+            onChange={(event) => setStatusFilter(event.target.value as ProjectStatusFilter)}
+            className="min-w-28 bg-transparent text-sm font-semibold text-foreground outline-none"
+          >
+            <option value="all">All</option>
+            <option value="ACTIVE">Active</option>
+            <option value="INACTIVE">Inactive</option>
+            <option value="internal">Internal</option>
+          </select>
+        </label>
+
+        <label className="grid h-10 grid-cols-[auto_1fr] items-center gap-2 rounded-[var(--radius-md)] border border-border bg-card px-3 shadow-soft">
+          <span className="font-ui text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+            Group
+          </span>
+          <select
+            value={groupFilter}
+            onChange={(event) => setGroupFilter(event.target.value)}
+            className="min-w-36 bg-transparent text-sm font-semibold text-foreground outline-none"
+          >
+            <option value="all">All</option>
+            <option value="ungrouped">Ungrouped</option>
+            {groups.map((group) => (
+              <option key={group.id} value={group.id}>
+                {group.name}
+              </option>
+            ))}
+          </select>
+        </label>
+      </div>
+
       <DataTable
         caption="Project management table"
         aria-label="Project management table"
         rows={tableRows}
-        empty="No projects have been created yet."
+        empty={
+          rows.length
+            ? "No projects match the current filters."
+            : "No projects have been created yet."
+        }
         getRowKey={(row) => row.id}
         displayMode="responsive"
         density="comfortable"
@@ -201,6 +291,12 @@ export function AdminProjectsTable({
                     {row.slug}
                   </code>
                   {row.isInternal ? <Badge tone="cta">Internal</Badge> : null}
+                  {row.groups.map((group) => (
+                    <Badge key={group.id} tone="info">
+                      <FolderOpen className="size-3" aria-hidden="true" />
+                      {group.name}
+                    </Badge>
+                  ))}
                 </div>
                 {row.notes ? (
                   <p className="max-w-xl text-xs leading-5 text-muted-foreground">{row.notes}</p>

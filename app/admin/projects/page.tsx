@@ -10,8 +10,10 @@ import { mapMemberToShellUser, requireAdminAppMember } from "@/src/server/auth/a
 import {
   listProjectAssignableMembersForAdmin,
   listProjectAssignmentsForAdmin,
+  listProjectGroupsForAdmin,
   listProjectsForAdmin,
 } from "@/src/server/projects";
+import { AdminProjectGroupsPanel } from "./AdminProjectGroupsPanel";
 import { AdminProjectsTable } from "./AdminProjectsTable";
 import { ProjectCreateForm } from "./ProjectCreateForm";
 
@@ -19,8 +21,9 @@ export const dynamic = "force-dynamic";
 
 export default async function AdminProjectsPage() {
   const { member: admin } = await requireAdminAppMember("/admin/projects");
-  const [projects, assignments, assignableMembers] = await Promise.all([
+  const [projects, groups, assignments, assignableMembers] = await Promise.all([
     listProjectsForAdmin(),
+    listProjectGroupsForAdmin(),
     listProjectAssignmentsForAdmin(),
     listProjectAssignableMembersForAdmin(),
   ]);
@@ -91,10 +94,23 @@ export default async function AdminProjectsPage() {
             <CardContent>
               <AdminProjectsTable
                 rows={projects}
+                groups={groups}
                 assignments={assignments}
                 assignableMembers={assignableMembers}
                 todayDate={todayDate}
               />
+            </CardContent>
+          </Card>
+
+          <Card density="lg">
+            <CardHeader className="block">
+              <CardTitle>Project groups</CardTitle>
+              <CardDescription>
+                Organize projects into helper groups for filters and admin workflows.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <AdminProjectGroupsPanel groups={groups} projects={projects} />
             </CardContent>
           </Card>
         </div>
