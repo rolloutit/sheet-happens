@@ -69,6 +69,7 @@ export function AdminRatesTable({
   const [profileFilter, setProfileFilter] = useState<ProfileFilter>("all");
   const [rateFilter, setRateFilter] = useState<RateFilter>("all");
   const [projectFilter, setProjectFilter] = useState("all");
+  const [groupFilter, setGroupFilter] = useState("all");
   const [selectedMemberId, setSelectedMemberId] = useState<string | null>(null);
   const [actionState, setActionState] = useState<RateActionState>(initialActionState);
   const [pendingKey, setPendingKey] = useState<string | null>(null);
@@ -82,6 +83,24 @@ export function AdminRatesTable({
     }),
     [assignmentRates, rows],
   );
+
+  const groupOptions = useMemo(() => {
+    const groupsById = new Map<string, { id: string; name: string }>();
+
+    for (const project of projects) {
+      for (const group of project.groups) {
+        groupsById.set(group.id, group);
+      }
+    }
+
+    return Array.from(groupsById.values()).sort((left, right) =>
+      left.name.localeCompare(right.name),
+    );
+  }, [projects]);
+
+  const projectGroupsByProjectId = useMemo(() => {
+    return new Map(projects.map((project) => [project.id, project.groups]));
+  }, [projects]);
 
   const filteredRows = rows.filter((row) => {
     const normalizedQuery = query.trim().toLowerCase();
@@ -99,10 +118,23 @@ export function AdminRatesTable({
     if (rateFilter === "none" && row.currentRate) return false;
 
     if (projectFilter !== "all") {
-      return assignmentRates.some(
+      const hasProjectAssignment = assignmentRates.some(
         (assignment) =>
           assignment.memberId === row.memberId && assignment.projectId === projectFilter,
       );
+
+      if (!hasProjectAssignment) return false;
+    }
+
+    if (groupFilter !== "all") {
+      return assignmentRates.some((assignment) => {
+        if (assignment.memberId !== row.memberId) return false;
+        const projectGroups = projectGroupsByProjectId.get(assignment.projectId) ?? [];
+
+        if (groupFilter === "ungrouped") return projectGroups.length === 0;
+
+        return projectGroups.some((group) => group.id === groupFilter);
+      });
     }
 
     return true;
@@ -153,8 +185,8 @@ export function AdminRatesTable({
       </div>
 
       <div className="grid gap-3">
-        <div className="grid gap-3 lg:grid-cols-[minmax(16rem,1fr)_auto_auto_auto]">
-          <label className="flex h-10 items-center gap-2 rounded-[var(--radius-md)] border border-border bg-card px-3 shadow-soft">
+        <div className="flex flex-wrap items-center gap-3">
+          <label className="flex h-10 min-w-[min(16rem,100%)] flex-[1_1_18rem] items-center gap-2 rounded-[var(--radius-md)] border border-border bg-card px-3 shadow-soft">
             <Search className="size-4 text-muted-foreground" aria-hidden="true" />
             <span className="sr-only">Search rates</span>
             <input
@@ -164,41 +196,65 @@ export function AdminRatesTable({
               className="min-w-0 flex-1 bg-transparent text-sm text-foreground outline-none placeholder:text-muted-foreground"
             />
           </label>
-          <SegmentedControl
-            label="Profile filter"
-            size="sm"
-            value={profileFilter}
-            onValueChange={(value) => setProfileFilter(value as ProfileFilter)}
-            items={[
-              { value: "all", label: "All" },
-              { value: "CONTRACTOR", label: "Contractor" },
-              { value: "EMPLOYEE", label: "Employee" },
-            ]}
-          />
-          <SegmentedControl
-            label="Rate filter"
-            size="sm"
-            value={rateFilter}
-            onValueChange={(value) => setRateFilter(value as RateFilter)}
-            items={[
-              { value: "all", label: "All" },
-              { value: "has", label: "Has rate" },
-              { value: "none", label: "Missing" },
-            ]}
-          />
-          <label className="grid h-10 grid-cols-[auto_1fr] items-center gap-2 rounded-[var(--radius-md)] border border-border bg-card px-3 shadow-soft">
+          <div className="min-w-0 max-w-full overflow-x-auto">
+            <SegmentedControl
+              label="Profile filter"
+              size="sm"
+              value={profileFilter}
+              onValueChange={(value) => setProfileFilter(value as ProfileFilter)}
+              className="whitespace-nowrap"
+              items={[
+                { value: "all", label: "All" },
+                { value: "CONTRACTOR", label: "Contractor" },
+                { value: "EMPLOYEE", label: "Employee" },
+              ]}
+            />
+          </div>
+          <div className="min-w-0 max-w-full overflow-x-auto">
+            <SegmentedControl
+              label="Rate filter"
+              size="sm"
+              value={rateFilter}
+              onValueChange={(value) => setRateFilter(value as RateFilter)}
+              className="whitespace-nowrap"
+              items={[
+                { value: "all", label: "All" },
+                { value: "has", label: "Has rate" },
+                { value: "none", label: "Missing" },
+              ]}
+            />
+          </div>
+          <label className="grid h-10 min-w-[min(14rem,100%)] flex-[1_1_14rem] grid-cols-[auto_minmax(0,1fr)] items-center gap-2 rounded-[var(--radius-md)] border border-border bg-card px-3 shadow-soft sm:max-w-72">
             <span className="font-ui text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
               Project
             </span>
             <select
               value={projectFilter}
               onChange={(event) => setProjectFilter(event.target.value)}
-              className="min-w-36 bg-transparent text-sm font-semibold text-foreground outline-none"
+              className="min-w-0 bg-transparent text-sm font-semibold text-foreground outline-none"
             >
               <option value="all">All</option>
               {projects.map((project) => (
                 <option key={project.id} value={project.id}>
                   {project.name}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="grid h-10 min-w-[min(14rem,100%)] flex-[1_1_14rem] grid-cols-[auto_minmax(0,1fr)] items-center gap-2 rounded-[var(--radius-md)] border border-border bg-card px-3 shadow-soft sm:max-w-72">
+            <span className="font-ui text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+              Group
+            </span>
+            <select
+              value={groupFilter}
+              onChange={(event) => setGroupFilter(event.target.value)}
+              className="min-w-0 bg-transparent text-sm font-semibold text-foreground outline-none"
+            >
+              <option value="all">All</option>
+              <option value="ungrouped">Ungrouped</option>
+              {groupOptions.map((group) => (
+                <option key={group.id} value={group.id}>
+                  {group.name}
                 </option>
               ))}
             </select>
