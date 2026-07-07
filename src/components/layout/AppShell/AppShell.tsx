@@ -51,7 +51,7 @@ const navItems = [
     href: "/admin/projects",
   },
   { id: "people", label: "Emberek", icon: Users, group: "admin", href: "/admin/people" },
-  { id: "rates", label: "Óradíjak", icon: WalletCards, group: "admin", href: "#" },
+  { id: "rates", label: "Óradíjak", icon: WalletCards, group: "admin", href: "/admin/rates" },
   { id: "info", label: "Információs oldal", icon: BookOpen, group: "admin", href: "#" },
 ] as const;
 
