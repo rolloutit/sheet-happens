@@ -7,7 +7,11 @@ import {
   CardTitle,
 } from "@/src/components/ui/Card";
 import { mapMemberToShellUser, requireAdminAppMember } from "@/src/server/auth/app-access";
-import { listProjectsForAdmin } from "@/src/server/projects";
+import {
+  listProjectAssignableMembersForAdmin,
+  listProjectAssignmentsForAdmin,
+  listProjectsForAdmin,
+} from "@/src/server/projects";
 import { AdminProjectsTable } from "./AdminProjectsTable";
 import { ProjectCreateForm } from "./ProjectCreateForm";
 
@@ -15,9 +19,14 @@ export const dynamic = "force-dynamic";
 
 export default async function AdminProjectsPage() {
   const { member: admin } = await requireAdminAppMember("/admin/projects");
-  const projects = await listProjectsForAdmin();
+  const [projects, assignments, assignableMembers] = await Promise.all([
+    listProjectsForAdmin(),
+    listProjectAssignmentsForAdmin(),
+    listProjectAssignableMembersForAdmin(),
+  ]);
   const activeProjects = projects.filter((project) => project.status === "ACTIVE").length;
   const internalProjects = projects.filter((project) => project.isInternal).length;
+  const todayDate = new Date().toISOString().slice(0, 10);
 
   return (
     <AppShell current="projects" role="admin" user={mapMemberToShellUser(admin)}>
@@ -80,7 +89,12 @@ export default async function AdminProjectsPage() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <AdminProjectsTable rows={projects} />
+              <AdminProjectsTable
+                rows={projects}
+                assignments={assignments}
+                assignableMembers={assignableMembers}
+                todayDate={todayDate}
+              />
             </CardContent>
           </Card>
         </div>

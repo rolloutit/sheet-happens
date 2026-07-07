@@ -8,16 +8,25 @@ import { requireAdminAppMemberForAction } from "@/src/server/auth/app-access";
 import { AuthenticationError, AuthorizationError } from "@/src/server/auth/session";
 import { Prisma } from "@/src/server/db/generated/client";
 import {
+  assignMemberToProject,
   archiveProject,
   changeProjectStatus,
+  closeProjectAssignment,
   createProject,
+  ProjectAssignmentError,
   ProjectManagementError,
+  updateProjectAssignment,
   updateProject,
   type ProjectRequestMetadata,
 } from "@/src/server/projects";
 import type {
+  AssignProjectMemberActionInput,
+  CloseProjectAssignmentActionInput,
+  ProjectAssignmentActionState,
+  ProjectAssignmentFormField,
   ProjectActionState,
   ProjectFormField,
+  UpdateProjectAssignmentActionInput,
   UpdateProjectActionInput,
 } from "./actions.types";
 
@@ -43,6 +52,50 @@ const projectFormSchema = z
       });
     }
   });
+
+const assignmentBaseSchema = z.object({
+  memberId: z.string().trim().min(1, "Choose a member."),
+  validFrom: z
+    .string()
+    .trim()
+    .min(1, "Assignment start date is required.")
+    .refine(isDateInputValue, "Choose a valid start date."),
+  validTo: projectDateSchema,
+  active: z.boolean(),
+  notes: z.string().trim().max(1000, "Notes must be 1000 characters or less."),
+});
+
+const assignmentFormSchema = assignmentBaseSchema.superRefine(validateAssignmentDateRange);
+
+const updateAssignmentFormSchema = assignmentBaseSchema
+  .omit({
+    memberId: true,
+  })
+  .superRefine(validateAssignmentDateRange);
+
+function validateAssignmentDateRange(
+  value: { validFrom: string; validTo: string },
+  context: z.RefinementCtx,
+) {
+  if (!value.validTo) return;
+
+  if (value.validTo < value.validFrom) {
+    context.addIssue({
+      code: "custom",
+      message: "Assignment end date cannot be before the start date.",
+      path: ["validTo"],
+    });
+  }
+}
+
+const closeAssignmentSchema = z.object({
+  assignmentId: z.string().trim().min(1, "Assignment id is missing."),
+  validTo: z
+    .string()
+    .trim()
+    .min(1, "Assignment end date is required.")
+    .refine(isDateInputValue, "Choose a valid end date."),
+});
 
 export async function createProjectAction(
   _previousState: ProjectActionState,
@@ -169,6 +222,109 @@ export async function archiveProjectAction(projectId: string): Promise<ProjectAc
   }
 }
 
+export async function assignProjectMemberAction(
+  input: AssignProjectMemberActionInput,
+): Promise<ProjectAssignmentActionState> {
+  const parsed = assignmentFormSchema.safeParse(input);
+
+  if (!parsed.success) {
+    return {
+      status: "error",
+      message: "Fix the highlighted assignment fields and try again.",
+      fieldErrors: getProjectAssignmentFieldErrors(parsed.error),
+    };
+  }
+
+  try {
+    const { member: admin } = await requireAdminAppMemberForAction();
+    await assignMemberToProject({
+      ...parsed.data,
+      projectId: input.projectId,
+      validFrom: parseRequiredDate(parsed.data.validFrom),
+      validTo: parseOptionalDate(parsed.data.validTo),
+      actorMemberId: admin.id,
+      requestMetadata: await getProjectRequestMetadata(),
+    });
+
+    revalidatePath("/admin/projects");
+
+    return {
+      status: "success",
+      message: "Member assigned to project.",
+    };
+  } catch (error) {
+    return mapProjectAssignmentActionError(error, "The project assignment could not be created.");
+  }
+}
+
+export async function updateProjectAssignmentAction(
+  input: UpdateProjectAssignmentActionInput,
+): Promise<ProjectAssignmentActionState> {
+  const parsed = updateAssignmentFormSchema.safeParse(input);
+
+  if (!parsed.success) {
+    return {
+      status: "error",
+      message: "Fix the highlighted assignment fields and try again.",
+      fieldErrors: getProjectAssignmentFieldErrors(parsed.error),
+    };
+  }
+
+  try {
+    const { member: admin } = await requireAdminAppMemberForAction();
+    const result = await updateProjectAssignment({
+      ...parsed.data,
+      assignmentId: input.assignmentId,
+      validFrom: parseRequiredDate(parsed.data.validFrom),
+      validTo: parseOptionalDate(parsed.data.validTo),
+      actorMemberId: admin.id,
+      requestMetadata: await getProjectRequestMetadata(),
+    });
+
+    revalidatePath("/admin/projects");
+
+    return {
+      status: "success",
+      message: result.changed ? "Project assignment updated." : "No assignment changes to save.",
+    };
+  } catch (error) {
+    return mapProjectAssignmentActionError(error, "The project assignment could not be updated.");
+  }
+}
+
+export async function closeProjectAssignmentAction(
+  input: CloseProjectAssignmentActionInput,
+): Promise<ProjectAssignmentActionState> {
+  const parsed = closeAssignmentSchema.safeParse(input);
+
+  if (!parsed.success) {
+    return {
+      status: "error",
+      message: "Fix the highlighted assignment fields and try again.",
+      fieldErrors: getProjectAssignmentFieldErrors(parsed.error),
+    };
+  }
+
+  try {
+    const { member: admin } = await requireAdminAppMemberForAction();
+    await closeProjectAssignment({
+      assignmentId: parsed.data.assignmentId,
+      validTo: parseRequiredDate(parsed.data.validTo),
+      actorMemberId: admin.id,
+      requestMetadata: await getProjectRequestMetadata(),
+    });
+
+    revalidatePath("/admin/projects");
+
+    return {
+      status: "success",
+      message: "Project assignment ended.",
+    };
+  } catch (error) {
+    return mapProjectAssignmentActionError(error, "The project assignment could not be ended.");
+  }
+}
+
 function getFormString(formData: FormData, name: ProjectFormField) {
   const value = formData.get(name);
   return typeof value === "string" ? value : "";
@@ -188,6 +344,10 @@ function parseOptionalDate(value: string) {
   return new Date(`${value}T00:00:00.000Z`);
 }
 
+function parseRequiredDate(value: string) {
+  return new Date(`${value}T00:00:00.000Z`);
+}
+
 function getProjectFieldErrors(error: z.ZodError): ProjectActionState["fieldErrors"] {
   const fieldErrors: ProjectActionState["fieldErrors"] = {};
 
@@ -195,6 +355,22 @@ function getProjectFieldErrors(error: z.ZodError): ProjectActionState["fieldErro
     const field = issue.path.at(0);
 
     if (isProjectFormField(field) && !fieldErrors[field]) {
+      fieldErrors[field] = issue.message;
+    }
+  }
+
+  return fieldErrors;
+}
+
+function getProjectAssignmentFieldErrors(
+  error: z.ZodError,
+): ProjectAssignmentActionState["fieldErrors"] {
+  const fieldErrors: ProjectAssignmentActionState["fieldErrors"] = {};
+
+  for (const issue of error.issues) {
+    const field = issue.path.at(0);
+
+    if (isProjectAssignmentFormField(field) && !fieldErrors[field]) {
       fieldErrors[field] = issue.message;
     }
   }
@@ -213,6 +389,16 @@ function isProjectFormField(field: unknown): field is ProjectFormField {
   );
 }
 
+function isProjectAssignmentFormField(field: unknown): field is ProjectAssignmentFormField {
+  return (
+    field === "memberId" ||
+    field === "validFrom" ||
+    field === "validTo" ||
+    field === "active" ||
+    field === "notes"
+  );
+}
+
 async function getProjectRequestMetadata(): Promise<ProjectRequestMetadata> {
   const requestHeaders = await headers();
 
@@ -222,11 +408,24 @@ async function getProjectRequestMetadata(): Promise<ProjectRequestMetadata> {
   };
 }
 
+function mapProjectAssignmentActionError(
+  error: unknown,
+  fallback: string,
+): ProjectAssignmentActionState {
+  const result = mapProjectActionError(error, fallback);
+
+  return {
+    status: result.status,
+    message: result.message,
+  };
+}
+
 function mapProjectActionError(error: unknown, fallback: string): ProjectActionState {
   console.error("[admin/projects] action failed", error);
 
   if (
     error instanceof ProjectManagementError ||
+    error instanceof ProjectAssignmentError ||
     error instanceof AuthenticationError ||
     error instanceof AuthorizationError
   ) {
