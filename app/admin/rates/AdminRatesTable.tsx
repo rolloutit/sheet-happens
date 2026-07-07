@@ -382,6 +382,7 @@ function RateManagementDrawer({
 }) {
   const [centralFormOpen, setCentralFormOpen] = useState(false);
   const [newOverrideOpen, setNewOverrideOpen] = useState(false);
+  const [newOverrideAssignmentId, setNewOverrideAssignmentId] = useState<string | null>(null);
   const [overrideFormAssignmentId, setOverrideFormAssignmentId] = useState<string | null>(null);
   const defaultCurrency = member?.currentRate?.currencyCode ?? member?.defaultCurrencyCode ?? "EUR";
   const existingOverrides = assignments.filter(
@@ -520,20 +521,25 @@ function RateManagementDrawer({
                       variant="ghost"
                       size="sm"
                       icon={Plus}
-                      onClick={() => setNewOverrideOpen(true)}
+                      onClick={() => {
+                        setNewOverrideAssignmentId(null);
+                        setNewOverrideOpen(true);
+                      }}
                     >
                       Add override
                     </Button>
                   ) : null}
                 </div>
 
-                {newOverrideOpen ? (
+                {newOverrideOpen && addableAssignments.length > 0 ? (
                   <div className="rounded-[var(--radius-lg)] border border-dashed border-border bg-background/45 p-4">
                     <OverrideRateForm
                       key={addableAssignments
                         .map((assignment) => assignment.assignmentId)
+                        .concat(newOverrideAssignmentId ?? "auto")
                         .join(":")}
                       assignments={addableAssignments}
+                      initialAssignmentId={newOverrideAssignmentId}
                       defaultCurrency={defaultCurrency}
                       todayDate={todayDate}
                       currencyOptions={currencyOptions}
@@ -547,7 +553,9 @@ function RateManagementDrawer({
                   </div>
                 ) : null}
 
-                {existingOverrides.length === 0 && !newOverrideOpen ? (
+                {existingOverrides.length === 0 &&
+                addableAssignments.length > 0 &&
+                !newOverrideOpen ? (
                   <p className="text-sm text-muted-foreground">No project override.</p>
                 ) : (
                   existingOverrides.map((assignment) => {
@@ -605,6 +613,23 @@ function RateManagementDrawer({
                     );
                   })
                 )}
+
+                {addableAssignments.length > 0 && !newOverrideOpen ? (
+                  <AvailableOverrideProjects
+                    assignments={addableAssignments}
+                    onAddOverride={(assignmentId) => {
+                      setNewOverrideAssignmentId(assignmentId);
+                      setNewOverrideOpen(true);
+                    }}
+                  />
+                ) : null}
+
+                {addableAssignments.length === 0 && !newOverrideOpen ? (
+                  <UnavailableOverrideProjects
+                    hasAssignments={assignments.length > 0}
+                    hasExistingOverrides={existingOverrides.length > 0}
+                  />
+                ) : null}
               </section>
             ) : null}
           </div>
@@ -616,6 +641,7 @@ function RateManagementDrawer({
 
 function OverrideRateForm({
   assignments,
+  initialAssignmentId,
   defaultCurrency,
   todayDate,
   currencyOptions,
@@ -625,6 +651,7 @@ function OverrideRateForm({
   onSubmit,
 }: {
   assignments: AdminAssignmentRateRow[];
+  initialAssignmentId?: string | null;
   defaultCurrency: string;
   todayDate: string;
   currencyOptions: readonly SelectOption[];
@@ -633,7 +660,9 @@ function OverrideRateForm({
   onCancel: () => void;
   onSubmit: (input: CreateAssignmentOverrideRateActionInput) => void;
 }) {
-  const [assignmentId, setAssignmentId] = useState(assignments[0]?.assignmentId ?? "");
+  const [assignmentId, setAssignmentId] = useState(
+    initialAssignmentId ?? assignments[0]?.assignmentId ?? "",
+  );
 
   return (
     <div className="grid gap-4">
@@ -670,6 +699,69 @@ function OverrideRateForm({
           })
         }
       />
+    </div>
+  );
+}
+
+function AvailableOverrideProjects({
+  assignments,
+  onAddOverride,
+}: {
+  assignments: AdminAssignmentRateRow[];
+  onAddOverride: (assignmentId: string) => void;
+}) {
+  return (
+    <div className="grid gap-2 rounded-[var(--radius-lg)] border border-border bg-background/45 p-3">
+      <div>
+        <p className="font-ui text-sm font-semibold text-foreground">Projects using central rate</p>
+        <p className="mt-1 text-xs text-muted-foreground">
+          Add an override for any other assigned project.
+        </p>
+      </div>
+      <div className="grid gap-2">
+        {assignments.map((assignment) => (
+          <div
+            key={assignment.assignmentId}
+            className="flex flex-col gap-2 rounded-[var(--radius-md)] border border-border bg-card px-3 py-2 sm:flex-row sm:items-center sm:justify-between"
+          >
+            <div>
+              <p className="font-ui text-sm font-semibold text-foreground">
+                {assignment.projectName}
+              </p>
+              <p className="text-xs text-muted-foreground">Currently follows central rate.</p>
+            </div>
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              icon={Plus}
+              onClick={() => onAddOverride(assignment.assignmentId)}
+            >
+              Add override
+            </Button>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function UnavailableOverrideProjects({
+  hasAssignments,
+  hasExistingOverrides,
+}: {
+  hasAssignments: boolean;
+  hasExistingOverrides: boolean;
+}) {
+  const message = !hasAssignments
+    ? "This contractor is not assigned to any project yet. Assign them to a project before adding an override."
+    : hasExistingOverrides
+      ? "All assigned projects already have overrides. Use Add period on a project to schedule the next override period."
+      : "No assigned projects are available for overrides.";
+
+  return (
+    <div className="rounded-[var(--radius-lg)] border border-dashed border-border bg-background/45 px-3 py-3 text-sm text-muted-foreground">
+      {message}
     </div>
   );
 }
