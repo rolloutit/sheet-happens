@@ -1,0 +1,930 @@
+"use client";
+
+import { BadgeDollarSign, ChevronRight, MinusCircle, Plus, Search } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { useMemo, useState, useTransition } from "react";
+
+import { Badge } from "@/src/components/ui/Badge";
+import type { BadgeProps } from "@/src/components/ui/Badge";
+import { Button } from "@/src/components/ui/Button";
+import {
+  Drawer,
+  DrawerContent,
+  DrawerDescription,
+  DrawerFooter,
+  DrawerHeader,
+  DrawerTitle,
+} from "@/src/components/ui/Drawer";
+import { Field } from "@/src/components/ui/Field";
+import { Input } from "@/src/components/ui/Input";
+import { SegmentedControl } from "@/src/components/ui/SegmentedControl";
+import type { SelectOption } from "@/src/lib/member-preferences";
+import { cn } from "@/src/lib/utils";
+import type { AdminProjectRow } from "@/src/server/projects";
+import type {
+  AdminAssignmentRateRow,
+  AdminMemberRateRow,
+  AdminRatePeriodRow,
+  RateMemberProfile,
+} from "@/src/server/rates";
+import { createAssignmentOverrideRateAction, createMemberDefaultRateAction } from "./actions";
+import type {
+  CreateAssignmentOverrideRateActionInput,
+  CreateMemberDefaultRateActionInput,
+  RateActionState,
+  RateFormField,
+} from "./actions.types";
+import { nativeSelectClassName } from "./formStyles";
+
+export type AdminRatesTableProps = {
+  rows: AdminMemberRateRow[];
+  assignmentRates: AdminAssignmentRateRow[];
+  projects: AdminProjectRow[];
+  currencyOptions: readonly SelectOption[];
+  todayDate: string;
+};
+
+type ProfileFilter = "all" | RateMemberProfile;
+type RateFilter = "all" | "has" | "none";
+
+const profileTone: Record<RateMemberProfile, BadgeProps["tone"]> = {
+  CONTRACTOR: "cta",
+  EMPLOYEE: "info",
+};
+
+const initialActionState: RateActionState = {
+  status: "idle",
+  message: "",
+};
+
+export function AdminRatesTable({
+  rows,
+  assignmentRates,
+  projects,
+  currencyOptions,
+  todayDate,
+}: AdminRatesTableProps) {
+  const router = useRouter();
+  const [query, setQuery] = useState("");
+  const [profileFilter, setProfileFilter] = useState<ProfileFilter>("all");
+  const [rateFilter, setRateFilter] = useState<RateFilter>("all");
+  const [projectFilter, setProjectFilter] = useState("all");
+  const [selectedMemberId, setSelectedMemberId] = useState<string | null>(null);
+  const [actionState, setActionState] = useState<RateActionState>(initialActionState);
+  const [pendingKey, setPendingKey] = useState<string | null>(null);
+  const [, startTransition] = useTransition();
+
+  const stats = useMemo(
+    () => ({
+      withRate: rows.filter((row) => row.currentRate).length,
+      missing: rows.filter((row) => !row.currentRate).length,
+      overrides: assignmentRates.filter((rate) => rate.overrideRatePeriods.length > 0).length,
+    }),
+    [assignmentRates, rows],
+  );
+
+  const filteredRows = rows.filter((row) => {
+    const normalizedQuery = query.trim().toLowerCase();
+
+    if (
+      normalizedQuery &&
+      !row.memberName.toLowerCase().includes(normalizedQuery) &&
+      !row.memberEmail.toLowerCase().includes(normalizedQuery)
+    ) {
+      return false;
+    }
+
+    if (profileFilter !== "all" && row.memberProfile !== profileFilter) return false;
+    if (rateFilter === "has" && !row.currentRate) return false;
+    if (rateFilter === "none" && row.currentRate) return false;
+
+    if (projectFilter !== "all") {
+      return assignmentRates.some(
+        (assignment) =>
+          assignment.memberId === row.memberId && assignment.projectId === projectFilter,
+      );
+    }
+
+    return true;
+  });
+
+  const selectedMember = selectedMemberId
+    ? (rows.find((row) => row.memberId === selectedMemberId) ?? null)
+    : null;
+  const selectedAssignments = selectedMember
+    ? assignmentRates.filter((assignment) => assignment.memberId === selectedMember.memberId)
+    : [];
+
+  function runAction(key: string, callback: () => Promise<RateActionState>) {
+    setPendingKey(key);
+    setActionState(initialActionState);
+
+    startTransition(async () => {
+      const result = await callback();
+      setActionState(result);
+      setPendingKey(null);
+
+      if (result.status === "success") {
+        router.refresh();
+      }
+    });
+  }
+
+  function saveCentralRate(input: CreateMemberDefaultRateActionInput) {
+    runAction(`member:${input.memberId}`, () => createMemberDefaultRateAction(input));
+  }
+
+  function saveAssignmentOverride(input: CreateAssignmentOverrideRateActionInput) {
+    runAction(`assignment:${input.projectAssignmentId}`, () =>
+      createAssignmentOverrideRateAction(input),
+    );
+  }
+
+  return (
+    <div className="grid gap-4">
+      <div className="grid gap-3 md:grid-cols-3">
+        <RateStat value={stats.withRate} label="With rate" />
+        <RateStat
+          value={stats.missing}
+          label="Missing rate"
+          tone={stats.missing ? "warning" : undefined}
+        />
+        <RateStat value={stats.overrides} label="Project overrides" />
+      </div>
+
+      <div className="grid gap-3">
+        <div className="grid gap-3 lg:grid-cols-[minmax(16rem,1fr)_auto_auto_auto]">
+          <label className="flex h-10 items-center gap-2 rounded-[var(--radius-md)] border border-border bg-card px-3 shadow-soft">
+            <Search className="size-4 text-muted-foreground" aria-hidden="true" />
+            <span className="sr-only">Search rates</span>
+            <input
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+              placeholder="Search..."
+              className="min-w-0 flex-1 bg-transparent text-sm text-foreground outline-none placeholder:text-muted-foreground"
+            />
+          </label>
+          <SegmentedControl
+            label="Profile filter"
+            size="sm"
+            value={profileFilter}
+            onValueChange={(value) => setProfileFilter(value as ProfileFilter)}
+            items={[
+              { value: "all", label: "All" },
+              { value: "CONTRACTOR", label: "Contractor" },
+              { value: "EMPLOYEE", label: "Employee" },
+            ]}
+          />
+          <SegmentedControl
+            label="Rate filter"
+            size="sm"
+            value={rateFilter}
+            onValueChange={(value) => setRateFilter(value as RateFilter)}
+            items={[
+              { value: "all", label: "All" },
+              { value: "has", label: "Has rate" },
+              { value: "none", label: "Missing" },
+            ]}
+          />
+          <label className="grid h-10 grid-cols-[auto_1fr] items-center gap-2 rounded-[var(--radius-md)] border border-border bg-card px-3 shadow-soft">
+            <span className="font-ui text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+              Project
+            </span>
+            <select
+              value={projectFilter}
+              onChange={(event) => setProjectFilter(event.target.value)}
+              className="min-w-36 bg-transparent text-sm font-semibold text-foreground outline-none"
+            >
+              <option value="all">All</option>
+              {projects.map((project) => (
+                <option key={project.id} value={project.id}>
+                  {project.name}
+                </option>
+              ))}
+            </select>
+          </label>
+        </div>
+      </div>
+
+      <div className="overflow-hidden rounded-[var(--radius-lg)] border border-border bg-card shadow-soft">
+        <table className="w-full border-collapse">
+          <caption className="sr-only">Rate roster</caption>
+          <thead>
+            <tr className="border-b border-border bg-background/45">
+              <RateHead>Name</RateHead>
+              <RateHead className="hidden md:table-cell">Profile</RateHead>
+              <RateHead>Current rate</RateHead>
+              <RateHead className="hidden md:table-cell">Project overrides</RateHead>
+              <RateHead>
+                <span className="sr-only">Open</span>
+              </RateHead>
+            </tr>
+          </thead>
+          <tbody>
+            {filteredRows.length === 0 ? (
+              <tr>
+                <td colSpan={5} className="px-6 py-12 text-center text-sm text-muted-foreground">
+                  No rates match the current filters.
+                </td>
+              </tr>
+            ) : (
+              filteredRows.map((row) => {
+                const overrideCount = getMemberOverrideCount(row.memberId, assignmentRates);
+
+                return (
+                  <tr
+                    key={row.memberId}
+                    tabIndex={0}
+                    role="button"
+                    aria-label={`Open rate drawer for ${row.memberName}`}
+                    onClick={() => {
+                      setSelectedMemberId(row.memberId);
+                      setActionState(initialActionState);
+                    }}
+                    onKeyDown={(event) => {
+                      if (event.key === "Enter" || event.key === " ") {
+                        event.preventDefault();
+                        setSelectedMemberId(row.memberId);
+                        setActionState(initialActionState);
+                      }
+                    }}
+                    className="cursor-pointer border-b border-border transition hover:bg-secondary/45 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring last:border-b-0"
+                  >
+                    <td className="px-4 py-3">
+                      <div className="flex min-w-0 items-center gap-3">
+                        <RateAvatar name={row.memberName} />
+                        <div className="min-w-0">
+                          <p className="truncate font-ui text-sm font-semibold text-foreground">
+                            {row.memberName}
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            {formatStatus(row.memberStatus)}
+                          </p>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="hidden px-4 py-3 md:table-cell">
+                      <Badge tone={profileTone[row.memberProfile]}>
+                        {formatProfile(row.memberProfile)}
+                      </Badge>
+                    </td>
+                    <td className="px-4 py-3">
+                      {row.currentRate ? (
+                        <p className="font-ui text-sm font-semibold text-foreground">
+                          {formatRateValue(row.currentRate)}
+                        </p>
+                      ) : (
+                        <span className="inline-flex items-center gap-1 rounded-[var(--radius-pill)] bg-warning/12 px-2.5 py-1 text-xs font-semibold text-warning">
+                          <MinusCircle className="size-3" aria-hidden="true" />
+                          Missing
+                        </span>
+                      )}
+                    </td>
+                    <td className="hidden px-4 py-3 md:table-cell">
+                      {row.memberProfile === "CONTRACTOR" && overrideCount > 0 ? (
+                        <span className="inline-flex items-center gap-1 text-sm text-foreground">
+                          <span className="rounded-[var(--radius-pill)] bg-primary/12 px-2 py-0.5 font-ui text-xs font-semibold text-accent">
+                            {overrideCount}
+                          </span>
+                          override{overrideCount === 1 ? "" : "s"}
+                        </span>
+                      ) : (
+                        <span className="text-sm text-muted-foreground">-</span>
+                      )}
+                    </td>
+                    <td className="px-4 py-3 text-right">
+                      <ChevronRight
+                        className="ml-auto size-4 text-muted-foreground"
+                        aria-hidden="true"
+                      />
+                    </td>
+                  </tr>
+                );
+              })
+            )}
+          </tbody>
+        </table>
+      </div>
+
+      <RateManagementDrawer
+        key={selectedMember?.memberId ?? "closed"}
+        member={selectedMember}
+        assignments={selectedAssignments}
+        currencyOptions={currencyOptions}
+        todayDate={todayDate}
+        actionState={actionState}
+        pendingKey={pendingKey}
+        onOpenChange={(open) => {
+          if (!open) {
+            setSelectedMemberId(null);
+            setActionState(initialActionState);
+          }
+        }}
+        onCreateCentralRate={saveCentralRate}
+        onCreateAssignmentOverride={saveAssignmentOverride}
+      />
+    </div>
+  );
+}
+
+function RateStat({ value, label, tone }: { value: number; label: string; tone?: "warning" }) {
+  return (
+    <div className="rounded-[var(--radius-lg)] border border-border bg-card px-4 py-3 shadow-soft">
+      <p
+        className={cn(
+          "text-2xl font-semibold text-foreground",
+          tone === "warning" && "text-warning",
+        )}
+      >
+        {value}
+      </p>
+      <p className="font-ui text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+        {label}
+      </p>
+    </div>
+  );
+}
+
+function RateHead({ className, children }: { className?: string; children: React.ReactNode }) {
+  return (
+    <th
+      scope="col"
+      className={cn(
+        "px-4 py-3 text-left font-ui text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground",
+        className,
+      )}
+    >
+      {children}
+    </th>
+  );
+}
+
+function RateManagementDrawer({
+  member,
+  assignments,
+  currencyOptions,
+  todayDate,
+  actionState,
+  pendingKey,
+  onOpenChange,
+  onCreateCentralRate,
+  onCreateAssignmentOverride,
+}: {
+  member: AdminMemberRateRow | null;
+  assignments: AdminAssignmentRateRow[];
+  currencyOptions: readonly SelectOption[];
+  todayDate: string;
+  actionState: RateActionState;
+  pendingKey: string | null;
+  onOpenChange: (open: boolean) => void;
+  onCreateCentralRate: (input: CreateMemberDefaultRateActionInput) => void;
+  onCreateAssignmentOverride: (input: CreateAssignmentOverrideRateActionInput) => void;
+}) {
+  const [centralFormOpen, setCentralFormOpen] = useState(false);
+  const [newOverrideOpen, setNewOverrideOpen] = useState(false);
+  const [overrideFormAssignmentId, setOverrideFormAssignmentId] = useState<string | null>(null);
+  const defaultCurrency = member?.currentRate?.currencyCode ?? member?.defaultCurrencyCode ?? "EUR";
+  const existingOverrides = assignments.filter(
+    (assignment) => assignment.overrideRatePeriods.length > 0,
+  );
+  const addableAssignments = assignments.filter(
+    (assignment) => assignment.overrideRatePeriods.length === 0,
+  );
+  const pendingCentral = member ? pendingKey === `member:${member.memberId}` : false;
+
+  return (
+    <Drawer open={Boolean(member)} onOpenChange={onOpenChange}>
+      {member ? (
+        <DrawerContent className="w-[min(38rem,100vw)] gap-0 overflow-hidden p-0">
+          <div className="flex items-start gap-3 border-b border-border px-5 py-5">
+            <RateAvatar name={member.memberName} size="lg" />
+            <div className="min-w-0 flex-1">
+              <DrawerHeader className="gap-1 p-0 pr-0">
+                <DrawerTitle className="truncate text-xl font-semibold text-foreground">
+                  {member.memberName}
+                </DrawerTitle>
+                <DrawerDescription asChild>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Badge tone={profileTone[member.memberProfile]}>
+                      {formatProfile(member.memberProfile)}
+                    </Badge>
+                    <span className="text-xs text-muted-foreground">
+                      {formatStatus(member.memberStatus)}
+                    </span>
+                  </div>
+                </DrawerDescription>
+              </DrawerHeader>
+            </div>
+            <div className="pr-9 text-right">
+              {member.currentRate ? (
+                <>
+                  <p className="font-ui text-lg font-semibold text-foreground">
+                    {formatRateValue(member.currentRate)}
+                  </p>
+                  <p className="text-xs text-muted-foreground">Current rate</p>
+                </>
+              ) : (
+                <span className="inline-flex items-center gap-1 rounded-[var(--radius-pill)] bg-warning/12 px-2.5 py-1 text-xs font-semibold text-warning">
+                  <MinusCircle className="size-3" aria-hidden="true" />
+                  Missing
+                </span>
+              )}
+            </div>
+          </div>
+
+          <div className="grid max-h-[calc(100vh-6rem)] gap-6 overflow-y-auto px-5 py-5">
+            {actionState.message ? (
+              <p
+                role={actionState.status === "error" ? "alert" : "status"}
+                className={cn(
+                  "rounded-[var(--radius-md)] border px-3 py-2 text-sm",
+                  actionState.status === "error"
+                    ? "border-destructive/40 bg-destructive/10 text-destructive"
+                    : "border-success/40 bg-success/10 text-success",
+                )}
+              >
+                {actionState.message}
+              </p>
+            ) : null}
+
+            <section className="grid gap-4">
+              <div className="grid gap-1">
+                <h2 className="font-ui text-base font-semibold text-foreground">Central rate</h2>
+                <p className="text-sm leading-6 text-muted-foreground">
+                  This person&apos;s default internal rate. Contractor project overrides can differ
+                  from this value.
+                </p>
+              </div>
+
+              {member.ratePeriods.length === 0 ? (
+                <div className="rounded-[var(--radius-lg)] border border-dashed border-border bg-background/45 px-4 py-6 text-center">
+                  <MinusCircle
+                    className="mx-auto size-7 text-muted-foreground"
+                    aria-hidden="true"
+                  />
+                  <p className="mt-3 font-ui text-sm font-semibold text-foreground">
+                    No central rate set
+                  </p>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    Until a rate exists, internal cost calculations should treat this as missing.
+                  </p>
+                </div>
+              ) : (
+                <RateTimeline periods={member.ratePeriods} />
+              )}
+
+              {centralFormOpen ? (
+                <RatePeriodForm
+                  defaultCurrency={defaultCurrency}
+                  todayDate={todayDate}
+                  currencyOptions={currencyOptions}
+                  actionState={actionState}
+                  pending={pendingCentral}
+                  submitLabel="Add period"
+                  onSubmit={(period) => {
+                    onCreateCentralRate({
+                      memberId: member.memberId,
+                      ...period,
+                    });
+                  }}
+                />
+              ) : (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  icon={Plus}
+                  className="w-fit border border-dashed border-border"
+                  onClick={() => setCentralFormOpen(true)}
+                >
+                  Add period
+                </Button>
+              )}
+            </section>
+
+            {member.memberProfile === "CONTRACTOR" ? (
+              <section className="grid gap-4 border-t border-border pt-5">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                  <div className="grid gap-1">
+                    <h2 className="font-ui text-base font-semibold text-foreground">
+                      Project overrides
+                    </h2>
+                    <p className="text-sm leading-6 text-muted-foreground">
+                      Overrides apply only to the selected project. Other projects use the central
+                      rate.
+                    </p>
+                  </div>
+                  {addableAssignments.length > 0 && !newOverrideOpen ? (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      icon={Plus}
+                      onClick={() => setNewOverrideOpen(true)}
+                    >
+                      Add override
+                    </Button>
+                  ) : null}
+                </div>
+
+                {newOverrideOpen ? (
+                  <div className="rounded-[var(--radius-lg)] border border-dashed border-border bg-background/45 p-4">
+                    <OverrideRateForm
+                      key={addableAssignments
+                        .map((assignment) => assignment.assignmentId)
+                        .join(":")}
+                      assignments={addableAssignments}
+                      defaultCurrency={defaultCurrency}
+                      todayDate={todayDate}
+                      currencyOptions={currencyOptions}
+                      actionState={actionState}
+                      pending={pendingKey?.startsWith("assignment:") ?? false}
+                      onCancel={() => setNewOverrideOpen(false)}
+                      onSubmit={(input) => {
+                        onCreateAssignmentOverride(input);
+                      }}
+                    />
+                  </div>
+                ) : null}
+
+                {existingOverrides.length === 0 && !newOverrideOpen ? (
+                  <p className="text-sm text-muted-foreground">No project override.</p>
+                ) : (
+                  existingOverrides.map((assignment) => {
+                    const formOpen = overrideFormAssignmentId === assignment.assignmentId;
+                    const pending = pendingKey === `assignment:${assignment.assignmentId}`;
+
+                    return (
+                      <div
+                        key={assignment.assignmentId}
+                        className="grid gap-3 border-t border-border pt-4 first:border-t-0 first:pt-0"
+                      >
+                        <div className="flex items-start justify-between gap-3">
+                          <div>
+                            <p className="font-ui text-sm font-semibold text-foreground">
+                              {assignment.projectName}
+                            </p>
+                            {assignment.currentOverrideRate ? (
+                              <p className="text-sm text-muted-foreground">
+                                {formatRateValue(assignment.currentOverrideRate)}
+                              </p>
+                            ) : null}
+                          </div>
+                          {!formOpen ? (
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              icon={Plus}
+                              onClick={() => setOverrideFormAssignmentId(assignment.assignmentId)}
+                            >
+                              Add period
+                            </Button>
+                          ) : null}
+                        </div>
+                        <RateTimeline periods={assignment.overrideRatePeriods} />
+                        {formOpen ? (
+                          <RatePeriodForm
+                            defaultCurrency={
+                              assignment.currentOverrideRate?.currencyCode ?? defaultCurrency
+                            }
+                            todayDate={todayDate}
+                            currencyOptions={currencyOptions}
+                            actionState={actionState}
+                            pending={pending}
+                            submitLabel="Add override period"
+                            onSubmit={(period) => {
+                              onCreateAssignmentOverride({
+                                projectAssignmentId: assignment.assignmentId,
+                                ...period,
+                              });
+                            }}
+                          />
+                        ) : null}
+                      </div>
+                    );
+                  })
+                )}
+              </section>
+            ) : null}
+          </div>
+        </DrawerContent>
+      ) : null}
+    </Drawer>
+  );
+}
+
+function OverrideRateForm({
+  assignments,
+  defaultCurrency,
+  todayDate,
+  currencyOptions,
+  actionState,
+  pending,
+  onCancel,
+  onSubmit,
+}: {
+  assignments: AdminAssignmentRateRow[];
+  defaultCurrency: string;
+  todayDate: string;
+  currencyOptions: readonly SelectOption[];
+  actionState: RateActionState;
+  pending: boolean;
+  onCancel: () => void;
+  onSubmit: (input: CreateAssignmentOverrideRateActionInput) => void;
+}) {
+  const [assignmentId, setAssignmentId] = useState(assignments[0]?.assignmentId ?? "");
+
+  return (
+    <div className="grid gap-4">
+      <Field label="Project" required reserveMessageSpace>
+        {({ id, describedBy, required }) => (
+          <select
+            id={id}
+            value={assignmentId}
+            onChange={(event) => setAssignmentId(event.target.value)}
+            aria-describedby={describedBy}
+            required={required}
+            className={nativeSelectClassName}
+          >
+            {assignments.map((assignment) => (
+              <option key={assignment.assignmentId} value={assignment.assignmentId}>
+                {assignment.projectName}
+              </option>
+            ))}
+          </select>
+        )}
+      </Field>
+      <RatePeriodForm
+        defaultCurrency={defaultCurrency}
+        todayDate={todayDate}
+        currencyOptions={currencyOptions}
+        actionState={actionState}
+        pending={pending}
+        submitLabel="Add override"
+        onCancel={onCancel}
+        onSubmit={(period) =>
+          onSubmit({
+            projectAssignmentId: assignmentId,
+            ...period,
+          })
+        }
+      />
+    </div>
+  );
+}
+
+function RatePeriodForm({
+  defaultCurrency,
+  todayDate,
+  currencyOptions,
+  actionState,
+  pending,
+  submitLabel,
+  onCancel,
+  onSubmit,
+}: {
+  defaultCurrency: string;
+  todayDate: string;
+  currencyOptions: readonly SelectOption[];
+  actionState: RateActionState;
+  pending: boolean;
+  submitLabel: string;
+  onCancel?: () => void;
+  onSubmit: (input: Omit<CreateMemberDefaultRateActionInput, "memberId">) => void;
+}) {
+  return (
+    <form
+      className="grid gap-4 rounded-[var(--radius-lg)] border border-border bg-background/45 p-4"
+      onSubmit={(event) => {
+        event.preventDefault();
+        const formData = new FormData(event.currentTarget);
+
+        onSubmit({
+          validFrom: getRateFormString(formData, "validFrom"),
+          validTo: getRateFormString(formData, "validTo"),
+          hourlyRate: getRateFormString(formData, "hourlyRate"),
+          currencyCode: getRateFormString(formData, "currencyCode"),
+          note: getRateFormString(formData, "note"),
+        });
+      }}
+    >
+      <div className="grid gap-4 sm:grid-cols-2">
+        <Field
+          label="Valid from"
+          required
+          reserveMessageSpace
+          error={actionState.fieldErrors?.validFrom}
+        >
+          {({ id, describedBy, invalid, required }) => (
+            <Input
+              id={id}
+              name="validFrom"
+              type="date"
+              defaultValue={todayDate}
+              aria-describedby={describedBy}
+              invalid={invalid}
+              required={required}
+            />
+          )}
+        </Field>
+        <Field label="Valid to" reserveMessageSpace error={actionState.fieldErrors?.validTo}>
+          {({ id, describedBy, invalid }) => (
+            <Input
+              id={id}
+              name="validTo"
+              type="date"
+              aria-describedby={describedBy}
+              invalid={invalid}
+            />
+          )}
+        </Field>
+      </div>
+      <div className="grid gap-4 sm:grid-cols-2">
+        <Field
+          label="Hourly rate"
+          required
+          reserveMessageSpace
+          error={actionState.fieldErrors?.hourlyRate}
+        >
+          {({ id, describedBy, invalid, required }) => (
+            <Input
+              id={id}
+              name="hourlyRate"
+              type="number"
+              min="0"
+              step="0.01"
+              aria-describedby={describedBy}
+              invalid={invalid}
+              required={required}
+            />
+          )}
+        </Field>
+        <Field
+          label="Currency"
+          required
+          reserveMessageSpace
+          error={actionState.fieldErrors?.currencyCode}
+        >
+          {({ id, describedBy, invalid, required }) => (
+            <select
+              id={id}
+              name="currencyCode"
+              defaultValue={defaultCurrency}
+              aria-describedby={describedBy}
+              aria-invalid={invalid}
+              required={required}
+              className={nativeSelectClassName}
+            >
+              {currencyOptions.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          )}
+        </Field>
+      </div>
+      <Field label="Reason / note" reserveMessageSpace error={actionState.fieldErrors?.note}>
+        {({ id, describedBy, invalid }) => (
+          <Input
+            id={id}
+            name="note"
+            placeholder="Why is this rate changing?"
+            aria-describedby={describedBy}
+            invalid={invalid}
+          />
+        )}
+      </Field>
+      <DrawerFooter className="mt-0">
+        {onCancel ? (
+          <Button type="button" variant="ghost" disabled={pending} onClick={onCancel}>
+            Cancel
+          </Button>
+        ) : null}
+        <Button type="submit" icon={BadgeDollarSign} loading={pending}>
+          {submitLabel}
+        </Button>
+      </DrawerFooter>
+    </form>
+  );
+}
+
+function RateTimeline({ periods }: { periods: AdminRatePeriodRow[] }) {
+  const sortedPeriods = [...periods].sort((left, right) =>
+    left.validFrom.localeCompare(right.validFrom),
+  );
+  const currentPeriod = getCurrentPeriod(sortedPeriods);
+
+  return (
+    <div className="grid gap-1">
+      {sortedPeriods.map((period, index) => {
+        const current = currentPeriod?.id === period.id;
+
+        return (
+          <div key={period.id} className="grid grid-cols-[1.25rem_1fr] gap-3 py-2">
+            <div className="relative flex justify-center">
+              <span
+                className={cn("mt-2 size-2 rounded-full", current ? "bg-accent" : "bg-border")}
+              />
+              {index < sortedPeriods.length - 1 ? (
+                <span className="absolute bottom-[-0.5rem] top-5 w-px bg-border" />
+              ) : null}
+            </div>
+            <div className="grid gap-2 rounded-[var(--radius-md)] border border-border bg-card px-3 py-2">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div>
+                  <p className="font-ui text-sm font-semibold text-foreground">
+                    {formatRateValue(period)}
+                  </p>
+                  <p className="text-xs text-muted-foreground">{formatRateTimeline(period)}</p>
+                </div>
+                {current ? <Badge tone="success">Current</Badge> : null}
+              </div>
+              <div className="grid gap-1 text-xs text-muted-foreground">
+                <span>
+                  Added by {period.createdByName} on {formatTimestamp(period.createdAt)}
+                </span>
+                <span>{period.note ? `Reason: ${period.note}` : "No reason recorded."}</span>
+              </div>
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+function RateAvatar({ name, size = "md" }: { name: string; size?: "md" | "lg" }) {
+  return (
+    <span
+      className={cn(
+        "inline-flex shrink-0 items-center justify-center rounded-full bg-primary font-ui font-semibold text-primary-foreground",
+        size === "lg" ? "size-11 text-sm" : "size-8 text-xs",
+      )}
+      aria-hidden="true"
+    >
+      {getInitials(name)}
+    </span>
+  );
+}
+
+function getMemberOverrideCount(memberId: string, assignmentRates: AdminAssignmentRateRow[]) {
+  return assignmentRates.filter(
+    (assignment) => assignment.memberId === memberId && assignment.overrideRatePeriods.length > 0,
+  ).length;
+}
+
+function getCurrentPeriod(periods: AdminRatePeriodRow[]) {
+  const today = new Date().toISOString().slice(0, 10);
+
+  return (
+    periods.find(
+      (period) => period.validFrom <= today && (!period.validTo || period.validTo > today),
+    ) ?? null
+  );
+}
+
+function formatRateTimeline(rate: AdminRatePeriodRow) {
+  if (rate.validTo) return `${rate.validFrom} to ${rate.validTo}`;
+  return `${rate.validFrom} to open`;
+}
+
+function formatRateValue(rate: AdminRatePeriodRow) {
+  const amount = Number(rate.hourlyRate);
+  const formattedAmount = Number.isFinite(amount)
+    ? new Intl.NumberFormat("en-US", {
+        maximumFractionDigits: amount % 1 === 0 ? 0 : 2,
+      }).format(amount)
+    : rate.hourlyRate;
+
+  return `${formattedAmount} ${rate.currencyCode}/h`;
+}
+
+function formatProfile(profile: RateMemberProfile) {
+  return profile.toLowerCase();
+}
+
+function formatStatus(status: AdminMemberRateRow["memberStatus"]) {
+  return status.toLowerCase();
+}
+
+function formatTimestamp(value: string) {
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) return value;
+
+  return date.toISOString().slice(0, 16).replace("T", " ");
+}
+
+function getInitials(name: string) {
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  const first = parts[0]?.[0] ?? "?";
+  const second = parts.length > 1 ? parts[parts.length - 1]?.[0] : "";
+  return `${first}${second}`.toUpperCase();
+}
+
+function getRateFormString(formData: FormData, name: RateFormField) {
+  const value = formData.get(name);
+  return typeof value === "string" ? value : "";
+}
