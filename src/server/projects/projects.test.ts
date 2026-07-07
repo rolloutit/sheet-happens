@@ -40,9 +40,16 @@ function createProjectDb(
     projects?: Array<
       TestProject & {
         updatedAt: Date;
+        groupProjects: Array<{
+          projectGroup: {
+            id: string;
+            name: string;
+            slug: string;
+            deletedAt: Date | null;
+          };
+        }>;
         _count: {
           assignments: number;
-          groupProjects: number;
         };
       }
     >;
@@ -308,9 +315,26 @@ describe("project management services", () => {
           ...baseProject,
           endsOn: new Date("2026-12-31T00:00:00.000Z"),
           updatedAt: new Date("2026-07-12T10:15:00.000Z"),
+          groupProjects: [
+            {
+              projectGroup: {
+                id: "group-1",
+                name: "Client Work",
+                slug: "client-work",
+                deletedAt: null,
+              },
+            },
+            {
+              projectGroup: {
+                id: "group-archived",
+                name: "Archived Group",
+                slug: "archived-group",
+                deletedAt: new Date("2026-07-10T10:00:00.000Z"),
+              },
+            },
+          ],
           _count: {
             assignments: 3,
-            groupProjects: 2,
           },
         },
       ],
@@ -327,7 +351,14 @@ describe("project management services", () => {
         isInternal: false,
         notes: null,
         assignmentCount: 3,
-        groupCount: 2,
+        groupCount: 1,
+        groups: [
+          {
+            id: "group-1",
+            name: "Client Work",
+            slug: "client-work",
+          },
+        ],
         updatedAt: "2026-07-12T10:15:00.000Z",
       },
     ]);

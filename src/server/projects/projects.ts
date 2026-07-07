@@ -51,7 +51,14 @@ export type AdminProjectRow = {
   notes: string | null;
   assignmentCount: number;
   groupCount: number;
+  groups: AdminProjectGroupSummary[];
   updatedAt: string;
+};
+
+export type AdminProjectGroupSummary = {
+  id: string;
+  name: string;
+  slug: string;
 };
 
 type ProjectManagementDb = {
@@ -143,20 +150,47 @@ type ProjectRecord = {
 
 type ProjectListSelect = ProjectSelect & {
   updatedAt: true;
+  groupProjects: {
+    orderBy: {
+      projectGroup: {
+        name: "asc";
+      };
+    };
+    select: {
+      projectGroup: {
+        select: ProjectGroupSummarySelect;
+      };
+    };
+  };
   _count: {
     select: {
       assignments: true;
-      groupProjects: true;
     };
   };
 };
 
 type ProjectListRecord = ProjectRecord & {
   updatedAt: Date;
+  groupProjects: Array<{
+    projectGroup: ProjectGroupSummaryRecord;
+  }>;
   _count: {
     assignments: number;
-    groupProjects: number;
   };
+};
+
+type ProjectGroupSummarySelect = {
+  id: true;
+  name: true;
+  slug: true;
+  deletedAt: true;
+};
+
+type ProjectGroupSummaryRecord = {
+  id: string;
+  name: string;
+  slug: string;
+  deletedAt: Date | null;
 };
 
 type NormalizedProjectInput = {
@@ -205,10 +239,26 @@ export async function listProjectsForAdmin(
     select: {
       ...projectSelect,
       updatedAt: true,
+      groupProjects: {
+        orderBy: {
+          projectGroup: {
+            name: "asc",
+          },
+        },
+        select: {
+          projectGroup: {
+            select: {
+              id: true,
+              name: true,
+              slug: true,
+              deletedAt: true,
+            },
+          },
+        },
+      },
       _count: {
         select: {
           assignments: true,
-          groupProjects: true,
         },
       },
     },
@@ -535,6 +585,15 @@ function collectProjectChange<K extends keyof NormalizedProjectInput>(
 }
 
 function mapProjectToAdminRow(project: ProjectListRecord): AdminProjectRow {
+  const groups = project.groupProjects
+    .map((groupProject) => groupProject.projectGroup)
+    .filter((group) => !group.deletedAt)
+    .map((group) => ({
+      id: group.id,
+      name: group.name,
+      slug: group.slug,
+    }));
+
   return {
     id: project.id,
     name: project.name,
@@ -545,7 +604,8 @@ function mapProjectToAdminRow(project: ProjectListRecord): AdminProjectRow {
     isInternal: project.isInternal,
     notes: project.notes,
     assignmentCount: project._count.assignments,
-    groupCount: project._count.groupProjects,
+    groupCount: groups.length,
+    groups,
     updatedAt: project.updatedAt.toISOString(),
   };
 }
