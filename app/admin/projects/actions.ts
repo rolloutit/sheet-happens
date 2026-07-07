@@ -8,25 +8,39 @@ import { requireAdminAppMemberForAction } from "@/src/server/auth/app-access";
 import { AuthenticationError, AuthorizationError } from "@/src/server/auth/session";
 import { Prisma } from "@/src/server/db/generated/client";
 import {
+  addProjectToGroup,
+  archiveProjectGroup,
   assignMemberToProject,
   archiveProject,
   changeProjectStatus,
   closeProjectAssignment,
   createProject,
+  createProjectGroup,
   ProjectAssignmentError,
+  ProjectGroupManagementError,
   ProjectManagementError,
+  removeProjectFromGroup,
   updateProjectAssignment,
+  updateProjectGroup,
   updateProject,
   type ProjectRequestMetadata,
 } from "@/src/server/projects";
 import type {
+  AddProjectToGroupActionInput,
   AssignProjectMemberActionInput,
   CloseProjectAssignmentActionInput,
+  CreateProjectGroupActionInput,
   ProjectAssignmentActionState,
   ProjectAssignmentFormField,
   ProjectActionState,
   ProjectFormField,
+  ProjectGroupActionState,
+  ProjectGroupFormField,
+  ProjectGroupProjectActionState,
+  ProjectGroupProjectFormField,
+  RemoveProjectFromGroupActionInput,
   UpdateProjectAssignmentActionInput,
+  UpdateProjectGroupActionInput,
   UpdateProjectActionInput,
 } from "./actions.types";
 
@@ -95,6 +109,18 @@ const closeAssignmentSchema = z.object({
     .trim()
     .min(1, "Assignment end date is required.")
     .refine(isDateInputValue, "Choose a valid end date."),
+});
+
+const projectGroupFormSchema = z.object({
+  name: z.string().trim().min(1, "Group name is required."),
+  slug: z.string().trim().max(80, "Slug must be 80 characters or less."),
+  description: z.string().trim().max(1000, "Description must be 1000 characters or less."),
+  active: z.boolean(),
+});
+
+const projectGroupProjectSchema = z.object({
+  projectGroupId: z.string().trim().min(1, "Project group id is missing."),
+  projectId: z.string().trim().min(1, "Choose a project."),
 });
 
 export async function createProjectAction(
@@ -325,6 +351,165 @@ export async function closeProjectAssignmentAction(
   }
 }
 
+export async function createProjectGroupAction(
+  input: CreateProjectGroupActionInput,
+): Promise<ProjectGroupActionState> {
+  const parsed = projectGroupFormSchema.safeParse(input);
+
+  if (!parsed.success) {
+    return {
+      status: "error",
+      message: "Fix the highlighted group fields and try again.",
+      fieldErrors: getProjectGroupFieldErrors(parsed.error),
+    };
+  }
+
+  try {
+    const { member: admin } = await requireAdminAppMemberForAction();
+    await createProjectGroup({
+      ...parsed.data,
+      actorMemberId: admin.id,
+      requestMetadata: await getProjectRequestMetadata(),
+    });
+
+    revalidatePath("/admin/projects");
+    revalidatePath("/admin/rates");
+
+    return {
+      status: "success",
+      message: "Project group created.",
+    };
+  } catch (error) {
+    return mapProjectGroupActionError(error, "The project group could not be created.");
+  }
+}
+
+export async function updateProjectGroupAction(
+  input: UpdateProjectGroupActionInput,
+): Promise<ProjectGroupActionState> {
+  const parsed = projectGroupFormSchema.safeParse(input);
+
+  if (!parsed.success) {
+    return {
+      status: "error",
+      message: "Fix the highlighted group fields and try again.",
+      fieldErrors: getProjectGroupFieldErrors(parsed.error),
+    };
+  }
+
+  try {
+    const { member: admin } = await requireAdminAppMemberForAction();
+    const result = await updateProjectGroup({
+      ...parsed.data,
+      projectGroupId: input.projectGroupId,
+      actorMemberId: admin.id,
+      requestMetadata: await getProjectRequestMetadata(),
+    });
+
+    revalidatePath("/admin/projects");
+    revalidatePath("/admin/rates");
+
+    return {
+      status: "success",
+      message: result.changed ? "Project group updated." : "No group changes to save.",
+    };
+  } catch (error) {
+    return mapProjectGroupActionError(error, "The project group could not be updated.");
+  }
+}
+
+export async function archiveProjectGroupAction(
+  projectGroupId: string,
+): Promise<ProjectGroupActionState> {
+  try {
+    const { member: admin } = await requireAdminAppMemberForAction();
+    await archiveProjectGroup({
+      projectGroupId,
+      actorMemberId: admin.id,
+      requestMetadata: await getProjectRequestMetadata(),
+    });
+
+    revalidatePath("/admin/projects");
+    revalidatePath("/admin/rates");
+
+    return {
+      status: "success",
+      message: "Project group archived.",
+    };
+  } catch (error) {
+    return mapProjectGroupActionError(error, "The project group could not be archived.");
+  }
+}
+
+export async function addProjectToGroupAction(
+  input: AddProjectToGroupActionInput,
+): Promise<ProjectGroupProjectActionState> {
+  const parsed = projectGroupProjectSchema.safeParse(input);
+
+  if (!parsed.success) {
+    return {
+      status: "error",
+      message: "Fix the highlighted group fields and try again.",
+      fieldErrors: getProjectGroupProjectFieldErrors(parsed.error),
+    };
+  }
+
+  try {
+    const { member: admin } = await requireAdminAppMemberForAction();
+    const result = await addProjectToGroup({
+      ...parsed.data,
+      actorMemberId: admin.id,
+      requestMetadata: await getProjectRequestMetadata(),
+    });
+
+    revalidatePath("/admin/projects");
+    revalidatePath("/admin/rates");
+
+    return {
+      status: "success",
+      message: result.changed ? "Project added to group." : "Project was already in this group.",
+    };
+  } catch (error) {
+    return mapProjectGroupProjectActionError(error, "The project could not be added to the group.");
+  }
+}
+
+export async function removeProjectFromGroupAction(
+  input: RemoveProjectFromGroupActionInput,
+): Promise<ProjectGroupProjectActionState> {
+  const parsed = projectGroupProjectSchema.safeParse(input);
+
+  if (!parsed.success) {
+    return {
+      status: "error",
+      message: "Fix the highlighted group fields and try again.",
+      fieldErrors: getProjectGroupProjectFieldErrors(parsed.error),
+    };
+  }
+
+  try {
+    const { member: admin } = await requireAdminAppMemberForAction();
+    const result = await removeProjectFromGroup({
+      ...parsed.data,
+      actorMemberId: admin.id,
+      requestMetadata: await getProjectRequestMetadata(),
+    });
+
+    revalidatePath("/admin/projects");
+    revalidatePath("/admin/rates");
+
+    return {
+      status: "success",
+      message: result.changed ? "Project removed from group." : "Project was not in this group.",
+    };
+  } catch (error) {
+    return mapProjectGroupProjectActionError(
+      error,
+      "The project could not be removed from the group.",
+    );
+  }
+}
+
 function getFormString(formData: FormData, name: ProjectFormField) {
   const value = formData.get(name);
   return typeof value === "string" ? value : "";
@@ -378,6 +563,36 @@ function getProjectAssignmentFieldErrors(
   return fieldErrors;
 }
 
+function getProjectGroupFieldErrors(error: z.ZodError): ProjectGroupActionState["fieldErrors"] {
+  const fieldErrors: ProjectGroupActionState["fieldErrors"] = {};
+
+  for (const issue of error.issues) {
+    const field = issue.path.at(0);
+
+    if (isProjectGroupFormField(field) && !fieldErrors[field]) {
+      fieldErrors[field] = issue.message;
+    }
+  }
+
+  return fieldErrors;
+}
+
+function getProjectGroupProjectFieldErrors(
+  error: z.ZodError,
+): ProjectGroupProjectActionState["fieldErrors"] {
+  const fieldErrors: ProjectGroupProjectActionState["fieldErrors"] = {};
+
+  for (const issue of error.issues) {
+    const field = issue.path.at(0);
+
+    if (isProjectGroupProjectFormField(field) && !fieldErrors[field]) {
+      fieldErrors[field] = issue.message;
+    }
+  }
+
+  return fieldErrors;
+}
+
 function isProjectFormField(field: unknown): field is ProjectFormField {
   return (
     field === "name" ||
@@ -399,12 +614,41 @@ function isProjectAssignmentFormField(field: unknown): field is ProjectAssignmen
   );
 }
 
+function isProjectGroupFormField(field: unknown): field is ProjectGroupFormField {
+  return field === "name" || field === "slug" || field === "description" || field === "active";
+}
+
+function isProjectGroupProjectFormField(field: unknown): field is ProjectGroupProjectFormField {
+  return field === "projectGroupId" || field === "projectId";
+}
+
 async function getProjectRequestMetadata(): Promise<ProjectRequestMetadata> {
   const requestHeaders = await headers();
 
   return {
     ipAddress: requestHeaders.get("x-forwarded-for"),
     userAgent: requestHeaders.get("user-agent"),
+  };
+}
+
+function mapProjectGroupActionError(error: unknown, fallback: string): ProjectGroupActionState {
+  const result = mapProjectActionError(error, fallback);
+
+  return {
+    status: result.status,
+    message: result.message,
+  };
+}
+
+function mapProjectGroupProjectActionError(
+  error: unknown,
+  fallback: string,
+): ProjectGroupProjectActionState {
+  const result = mapProjectActionError(error, fallback);
+
+  return {
+    status: result.status,
+    message: result.message,
   };
 }
 
@@ -426,6 +670,7 @@ function mapProjectActionError(error: unknown, fallback: string): ProjectActionS
   if (
     error instanceof ProjectManagementError ||
     error instanceof ProjectAssignmentError ||
+    error instanceof ProjectGroupManagementError ||
     error instanceof AuthenticationError ||
     error instanceof AuthorizationError
   ) {
@@ -458,6 +703,9 @@ function mapProjectActionError(error: unknown, fallback: string): ProjectActionS
 function mapKnownPrismaProjectError(error: Prisma.PrismaClientKnownRequestError, fallback: string) {
   switch (error.code) {
     case "P2002":
+      if (fallback.includes("group")) {
+        return "A project group with this slug already exists.";
+      }
       return "A project with this slug already exists.";
     case "P2003":
       return "The project could not be linked to the current admin member. Refresh the page and try again.";

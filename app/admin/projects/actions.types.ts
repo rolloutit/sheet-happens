@@ -2,6 +2,10 @@ export type ProjectFormField = "name" | "slug" | "startsOn" | "endsOn" | "isInte
 
 export type ProjectAssignmentFormField = "memberId" | "validFrom" | "validTo" | "active" | "notes";
 
+export type ProjectGroupFormField = "name" | "slug" | "description" | "active";
+
+export type ProjectGroupProjectFormField = "projectGroupId" | "projectId";
+
 export type ProjectActionState = {
   status: "idle" | "success" | "error";
   message: string;
@@ -12,6 +16,18 @@ export type ProjectAssignmentActionState = {
   status: "idle" | "success" | "error";
   message: string;
   fieldErrors?: Partial<Record<ProjectAssignmentFormField, string>>;
+};
+
+export type ProjectGroupActionState = {
+  status: "idle" | "success" | "error";
+  message: string;
+  fieldErrors?: Partial<Record<ProjectGroupFormField, string>>;
+};
+
+export type ProjectGroupProjectActionState = {
+  status: "idle" | "success" | "error";
+  message: string;
+  fieldErrors?: Partial<Record<ProjectGroupProjectFormField, string>>;
 };
 
 export type UpdateProjectActionInput = {
@@ -45,3 +61,21 @@ export type CloseProjectAssignmentActionInput = {
   assignmentId: string;
   validTo: string;
 };
+
+export type CreateProjectGroupActionInput = {
+  name: string;
+  slug: string;
+  description: string;
+  active: boolean;
+};
+
+export type UpdateProjectGroupActionInput = CreateProjectGroupActionInput & {
+  projectGroupId: string;
+};
+
+export type AddProjectToGroupActionInput = {
+  projectGroupId: string;
+  projectId: string;
+};
+
+export type RemoveProjectFromGroupActionInput = AddProjectToGroupActionInput;
