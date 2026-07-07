@@ -216,6 +216,9 @@ Indexes:
 - `(token_hash)` unique where not null
 - `(expires_at)` for cleanup
 
+Invitation acceptance links are valid for 72 hours. Resending an invitation should rotate
+`token_hash` and set `expires_at` to 72 hours after the resend time.
+
 ## Project Tables
 
 ### projects

@@ -72,6 +72,9 @@ enumeration, but no email is sent.
 Passkey and authenticator-app 2FA setup can be strongly encouraged during onboarding. Admins should
 be required to enable TOTP before using back-office management features.
 
+Invitation acceptance links are valid for 72 hours. Resending an invitation rotates the token and
+starts a new 72-hour validity window.
+
 ## Sign-In Flow
 
 Supported sign-in paths:

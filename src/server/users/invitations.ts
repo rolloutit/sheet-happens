@@ -8,6 +8,7 @@ import {
 } from "@/src/lib/member-preferences";
 import { prisma } from "@/src/server/db/client";
 import { sendInvitationEmail } from "@/src/server/auth/auth-emails";
+import { getDefaultInvitationExpiresAt } from "@/src/server/users/invitation-expiry";
 import { createInvitationToken, hashInvitationToken } from "@/src/server/users/invitation-tokens";
 
 export type InviteMemberInput = {
@@ -147,12 +148,6 @@ export function getDisplayName(firstName: string, lastName: string) {
   return [firstName.trim(), lastName.trim()].filter(Boolean).join(" ");
 }
 
-function addDays(date: Date, days: number) {
-  const next = new Date(date);
-  next.setUTCDate(next.getUTCDate() + days);
-  return next;
-}
-
 function getAppUrl(inputUrl?: string) {
   return (
     inputUrl ??
@@ -183,7 +178,7 @@ export async function inviteMember(input: InviteMemberInput, deps: InviteMemberD
   const timezone = normalizeTimeZone(input.timezone);
   const locale = normalizeLocale(input.locale);
   const validFrom = input.validFrom ?? now;
-  const expiresAt = input.expiresAt ?? addDays(now, 14);
+  const expiresAt = input.expiresAt ?? getDefaultInvitationExpiresAt(now);
   const token = createToken();
   const tokenHash = hashInvitationToken(token);
 

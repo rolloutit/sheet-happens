@@ -51,6 +51,9 @@ Replace placeholder values before sharing a concrete test run:
 
 ## Invitation Activation
 
+Invitation acceptance links are valid for 72 hours. Resending an invitation should rotate the link
+and start a fresh 72-hour window.
+
 ### Pending Invitation Opens Correctly
 
 1. Open `https://{DOMAIN_NAME}/accept-invite?token={ADMIN_INVITE_TOKEN}` or

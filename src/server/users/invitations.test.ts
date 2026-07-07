@@ -86,6 +86,7 @@ describe("inviteMember", () => {
         data: expect.objectContaining({
           email: "contractor@example.com",
           memberId: "member-1",
+          expiresAt: new Date("2026-07-05T00:00:00.000Z"),
           status: "PENDING",
         }),
       }),
@@ -110,6 +111,7 @@ describe("inviteMember", () => {
       invitationId: "invitation-1",
       memberId: "member-1",
       email: "contractor@example.com",
+      expiresAt: new Date("2026-07-05T00:00:00.000Z"),
     });
   });
 

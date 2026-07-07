@@ -1,4 +1,5 @@
 import { mailer } from "@/src/server/email/mailer";
+import { INVITATION_VALIDITY_HOURS } from "@/src/server/users/invitation-expiry";
 
 export type MagicLinkEmailInput = {
   email: string;
@@ -24,7 +25,7 @@ export async function sendInvitationEmail({ email, name, acceptUrl }: Invitation
   await mailer.send({
     to: email,
     subject: "You have been invited to Sheet Happens",
-    text: `Hi ${name},\n\nYou have been invited to Sheet Happens. Open this link to accept the invitation:\n\n${acceptUrl}\n\n`,
-    html: `<p>Hi ${name},</p><p>You have been invited to Sheet Happens.</p><p><a href="${acceptUrl}">Accept invitation</a></p>`,
+    text: `Hi ${name},\n\nYou have been invited to Sheet Happens. Open this link to accept the invitation:\n\n${acceptUrl}\n\nThis invitation link expires in ${INVITATION_VALIDITY_HOURS} hours.\n`,
+    html: `<p>Hi ${name},</p><p>You have been invited to Sheet Happens.</p><p><a href="${acceptUrl}">Accept invitation</a></p><p>This invitation link expires in ${INVITATION_VALIDITY_HOURS} hours.</p>`,
   });
 }

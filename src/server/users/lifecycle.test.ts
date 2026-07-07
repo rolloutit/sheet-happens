@@ -97,6 +97,7 @@ describe("member lifecycle services", () => {
       expect.objectContaining({
         where: { id: "invitation-1" },
         data: expect.objectContaining({
+          expiresAt: new Date("2026-07-08T00:00:00.000Z"),
           tokenHash: expect.any(String),
         }),
       }),

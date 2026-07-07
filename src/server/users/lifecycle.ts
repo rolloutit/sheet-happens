@@ -5,6 +5,7 @@ import {
   getDisplayName,
   normalizeInvitationEmail,
 } from "@/src/server/users/invitations";
+import { getDefaultInvitationExpiresAt } from "@/src/server/users/invitation-expiry";
 import { createInvitationToken, hashInvitationToken } from "@/src/server/users/invitation-tokens";
 
 export type MemberLifecycleRole = "ADMIN" | "MEMBER";
@@ -126,7 +127,7 @@ export async function resendMemberInvitation(
   const sendEmail = deps.sendEmail ?? sendInvitationEmail;
   const createToken = deps.createToken ?? createInvitationToken;
   const now = deps.now?.() ?? new Date();
-  const expiresAt = addDays(now, 14);
+  const expiresAt = getDefaultInvitationExpiresAt(now);
   const token = createToken();
   const tokenHash = hashInvitationToken(token);
 
@@ -594,10 +595,4 @@ async function revokeAuthSessionsForMember(
   });
 
   return result.count;
-}
-
-function addDays(date: Date, days: number) {
-  const next = new Date(date);
-  next.setUTCDate(next.getUTCDate() + days);
-  return next;
 }
