@@ -1,23 +1,29 @@
 model Project {
-  id         String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  name       String
-  slug       String        @unique
-  status     ProjectStatus @default(ACTIVE)
-  startsOn   DateTime?     @map("starts_on") @db.Date
-  endsOn     DateTime?     @map("ends_on") @db.Date
-  isInternal Boolean       @default(false) @map("is_internal")
-  notes      String?
-  deletedAt  DateTime?     @map("deleted_at") @db.Timestamptz(6)
-  createdAt  DateTime      @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt  DateTime      @updatedAt @map("updated_at") @db.Timestamptz(6)
+  id                String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name              String
+  slug              String        @unique
+  status            ProjectStatus @default(ACTIVE)
+  startsOn          DateTime?     @map("starts_on") @db.Date
+  endsOn            DateTime?     @map("ends_on") @db.Date
+  isInternal        Boolean       @default(false) @map("is_internal")
+  notes             String?
+  deletedAt         DateTime?     @map("deleted_at") @db.Timestamptz(6)
+  createdAt         DateTime      @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt         DateTime      @updatedAt @map("updated_at") @db.Timestamptz(6)
+  createdByMemberId String        @map("created_by_member_id") @db.Uuid
+  updatedByMemberId String        @map("updated_by_member_id") @db.Uuid
 
   assignments          ProjectAssignment[]
+  createdBy            Member                  @relation("ProjectCreatedBy", fields: [createdByMemberId], references: [id], onDelete: Restrict)
   groupProjects        ProjectGroupProject[]
   inactiveProjectWeeks InactiveProjectWeek[]
   snapshotLines        TimesheetSnapshotLine[]
   timeEntries          TimeEntry[]
+  updatedBy            Member                  @relation("ProjectUpdatedBy", fields: [updatedByMemberId], references: [id], onDelete: Restrict)
 
   @@index([status])
+  @@index([createdByMemberId])
+  @@index([updatedByMemberId])
   @@index([startsOn, endsOn])
   @@map("projects")
 }

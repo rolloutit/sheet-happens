@@ -34,6 +34,8 @@ model Member {
   notificationDeliveries  NotificationDelivery[]
   notificationPreferences NotificationPreference?
   payslips                Payslip[]                 @relation("PayslipEmployee")
+  projectsCreated         Project[]                 @relation("ProjectCreatedBy")
+  projectsUpdated         Project[]                 @relation("ProjectUpdatedBy")
   profilePeriods          MemberProfilePeriod[]
   projectAssignments      ProjectAssignment[]
   reportExports           ReportExport[]
