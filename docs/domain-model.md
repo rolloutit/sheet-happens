@@ -95,7 +95,8 @@ be used for activation, but the allowlist and intended role/profile belong in th
 Project:
 
 - The required work target for every time entry.
-- Has name, optional code/slug, start date, optional end date, active flag, notes, and internal flag.
+- Has name, optional code/slug, color token, start date, optional end date, active flag, notes, and
+  internal flag.
 - Active flag gates new time entry creation.
 - Internal/collector projects are allowed and should be represented as normal projects, not as a
   separate entity type.

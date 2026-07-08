@@ -228,6 +228,7 @@ Key columns:
 - `id uuid primary key`
 - `name text not null`
 - `slug text not null unique`
+- `color_token text not null default 'teal'`
 - `status project_status not null default 'active'`
 - `starts_on date null`
 - `ends_on date null`
