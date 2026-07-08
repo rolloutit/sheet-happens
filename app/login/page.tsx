@@ -9,6 +9,7 @@ import {
   securitySetupRoute,
   secondFactorRoute,
 } from "@/src/server/auth/app-access";
+import { getGoogleAuthSettings } from "@/src/server/auth/sign-in-methods";
 
 type LoginPageProps = {
   searchParams: Promise<{
@@ -23,6 +24,7 @@ export const dynamic = "force-dynamic";
 export default async function LoginPage({ searchParams }: LoginPageProps) {
   const params = await searchParams;
   const callbackURL = sanitizeCallbackURL(getSingleParam(params.callbackURL));
+  const googleAuthSettings = getGoogleAuthSettings();
   const access = await getAppAccessState();
 
   if (access.status === "active") {
@@ -42,9 +44,10 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
   }
 
   return (
-    <main className="grid min-h-screen place-items-center bg-background px-4 py-10 text-foreground sm:px-6 lg:px-8">
+    <main className="grid min-h-dvh place-items-center bg-background px-4 py-4 text-foreground sm:px-6 lg:px-8 lg:py-6">
       <LoginPanel
         callbackURL={callbackURL}
+        googleEnabled={googleAuthSettings.enabled}
         initialEmail={getSingleParam(params.email)}
         initialError={getSingleParam(params.error)}
       />

@@ -5,7 +5,12 @@ import { nextCookies } from "better-auth/next-js";
 import { magicLink, twoFactor } from "better-auth/plugins";
 
 import { canCreateAuthUser, canSendAuthLink } from "@/src/server/auth/invite-policy";
-import { sendMagicLinkEmail } from "@/src/server/auth/auth-emails";
+import { sendMagicLinkEmail, sendPasswordResetEmail } from "@/src/server/auth/auth-emails";
+import {
+  decodeJwtPayload,
+  getGoogleAuthSettings,
+  isAllowedGoogleWorkspaceProfile,
+} from "@/src/server/auth/sign-in-methods";
 import { prisma } from "@/src/server/db/client";
 
 const appName = "Sheet Happens";
@@ -29,6 +34,7 @@ const passkeyOrigins =
     ? authOrigin
     : Array.from(new Set([authOrigin, ...localDevelopmentOrigins]));
 const passkeyRpID = process.env.NODE_ENV === "production" ? authUrl.hostname : undefined;
+export const googleAuthSettings = getGoogleAuthSettings();
 
 const trustedOrigins = [
   authOrigin,
@@ -76,8 +82,66 @@ export const auth = betterAuth({
       },
     },
   },
+  ...(googleAuthSettings.enabled
+    ? {
+        account: {
+          accountLinking: {
+            trustedProviders: ["google"],
+            allowDifferentEmails: false,
+            updateUserInfoOnLink: false,
+          },
+          encryptOAuthTokens: true,
+        },
+        socialProviders: {
+          google: {
+            clientId: googleAuthSettings.clientId,
+            clientSecret: googleAuthSettings.clientSecret,
+            disableSignUp: true,
+            hd: googleAuthSettings.hostedDomain,
+            prompt: "select_account",
+            getUserInfo: async (tokens) => {
+              const profile = tokens.idToken ? decodeJwtPayload(tokens.idToken) : null;
+
+              if (
+                !profile ||
+                !isAllowedGoogleWorkspaceProfile(profile, googleAuthSettings.allowedDomains)
+              ) {
+                return null;
+              }
+
+              const user = mapGoogleProfile(profile);
+
+              if (!user) {
+                return null;
+              }
+
+              return {
+                user,
+                data: profile,
+              };
+            },
+          },
+        },
+      }
+    : {}),
   emailAndPassword: {
-    enabled: false,
+    enabled: true,
+    disableSignUp: true,
+    requireEmailVerification: true,
+    minPasswordLength: 12,
+    maxPasswordLength: 128,
+    resetPasswordTokenExpiresIn: 30 * 60,
+    revokeSessionsOnPasswordReset: true,
+    sendResetPassword: async ({ user, url }) => {
+      if (!(await canSendAuthLink(user.email))) {
+        return;
+      }
+
+      await sendPasswordResetEmail({ email: user.email, url });
+    },
+    onPasswordReset: async ({ user }, request) => {
+      await auditPasswordReset(user.id, request);
+    },
   },
   plugins: [
     magicLink({
@@ -148,4 +212,52 @@ async function auditPasskeyAdded(passkey: PasskeyAuditRecord) {
       },
     },
   });
+}
+
+async function auditPasswordReset(authUserId: string, request?: Request) {
+  const member = await prisma.member.findUnique({
+    where: {
+      authUserId,
+    },
+    select: {
+      id: true,
+    },
+  });
+
+  if (!member) return;
+
+  await prisma.auditLog.create({
+    data: {
+      actorMemberId: member.id,
+      action: "security.password_reset",
+      targetType: "member",
+      targetId: member.id,
+      after: {
+        authUserId,
+      },
+      ipAddress: request?.headers.get("x-forwarded-for"),
+      userAgent: request?.headers.get("user-agent"),
+    },
+  });
+}
+
+function mapGoogleProfile(profile: Record<string, unknown>) {
+  const email = readOptionalString(profile.email);
+  const id = readOptionalString(profile.sub);
+
+  if (!email || !id) {
+    return null;
+  }
+
+  return {
+    id,
+    name: readOptionalString(profile.name) ?? email,
+    email,
+    image: readOptionalString(profile.picture),
+    emailVerified: profile.email_verified === true,
+  };
+}
+
+function readOptionalString(value: unknown) {
+  return typeof value === "string" && value ? value : undefined;
 }
