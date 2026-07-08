@@ -39,7 +39,7 @@ const navItems = [
     group: "main",
     href: "/dashboard",
   },
-  { id: "time", label: "Időkövetés", icon: Clock3, group: "main", href: "#" },
+  { id: "time", label: "Időkövetés", icon: Clock3, group: "main", href: "/time" },
   { id: "timesheets", label: "Timesheet", icon: CalendarDays, group: "main", href: "#" },
   { id: "review", label: "Jóváhagyás", icon: WalletCards, group: "admin", href: "#" },
   { id: "reports", label: "Riportok", icon: BarChart3, group: "admin", href: "#" },
