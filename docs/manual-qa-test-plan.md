@@ -23,6 +23,11 @@ Replace placeholder values before sharing a concrete test run:
 - `{INVITED_TIMEZONE}`: timezone selected for a new invited member.
 - `{INVITED_LOCALE}`: locale selected for a new invited member.
 - `{UNKNOWN_EMAIL}`: email address that is not a Sheet Happens member or pending invite.
+- `{COMPANY_GOOGLE_DOMAIN}`: allowed Google Workspace domain configured for company Google login.
+- `{COMPANY_GOOGLE_EMAIL}`: activated member email in `{COMPANY_GOOGLE_DOMAIN}`.
+- `{PRIVATE_GOOGLE_EMAIL}`: Google email outside `{COMPANY_GOOGLE_DOMAIN}`.
+- `{PROFILE_TRANSITION_VALID_FROM}`: today or a future date for profile transition testing.
+- `{PROFILE_TRANSITION_REASON}`: reason text for profile transition testing.
 - `{AUTHENTICATOR_APP}`: authenticator app used for TOTP testing.
 - `{PASSKEY_DEVICE}`: passkey-capable test device or browser profile.
 
@@ -53,6 +58,21 @@ Replace placeholder values before sharing a concrete test run:
 
 Invitation acceptance links are valid for 72 hours. Resending an invitation should rotate the link
 and start a fresh 72-hour window.
+
+### Bootstrap Admin Invitation Opens Correctly
+
+Run this test only on a fresh QA environment that was deployed with bootstrap admin enabled.
+
+1. Open the bootstrap admin accept URL provided by the deployment owner.
+2. Confirm the page shows `{ADMIN_EMAIL}`.
+3. Confirm the primary action offers to send an email sign-in link.
+
+Expected result:
+
+- The bootstrap admin invitation page loads.
+- The invited email matches `{ADMIN_EMAIL}`.
+- The page does not activate the account until the admin signs in with `{ADMIN_EMAIL}`.
+- The bootstrap invitation expires after 72 hours.
 
 ### Pending Invitation Opens Correctly
 
@@ -161,7 +181,7 @@ Expected result:
 2. Open `https://{DOMAIN_NAME}/login`.
 3. Enter `{ADMIN_EMAIL}` or `{CONTRACTOR_EMAIL}`.
 4. Enter the password created in the previous test.
-5. Click `Sign in with password`.
+5. Click `Sign in`.
 
 Expected result:
 
@@ -174,7 +194,7 @@ Expected result:
 1. Start signed out.
 2. Open `https://{DOMAIN_NAME}/login`.
 3. Enter `{UNKNOWN_EMAIL}`.
-4. Click `Reset password`.
+4. Click `Forgot password?`.
 
 Expected result:
 
@@ -512,10 +532,12 @@ Expected result:
 
 1. Sign in as `{ADMIN_EMAIL}` or `{CONTRACTOR_EMAIL}`.
 2. Open `https://{DOMAIN_NAME}/settings`.
-3. Click `Set up authenticator`.
-4. Scan the displayed QR code with `{AUTHENTICATOR_APP}`.
-5. Enter the current 6-digit code.
-6. Click `Verify and enable`.
+3. If the account has email/password enabled, enter the current password in the authenticator-app
+   section.
+4. Click `Set up authenticator`.
+5. Scan the displayed QR code with `{AUTHENTICATOR_APP}`.
+6. Enter the current 6-digit code.
+7. Click `Verify and enable`.
 
 Expected result:
 
@@ -598,9 +620,11 @@ Expected result:
 
 1. Sign in as the user who has TOTP enabled.
 2. Open `https://{DOMAIN_NAME}/settings`.
-3. Click `Disable` in the authenticator-app section.
-4. Confirm the browser prompt.
-5. Sign out and sign in again.
+3. If the account has email/password enabled, enter the current password in the authenticator-app
+   section.
+4. Click `Disable` in the authenticator-app section.
+5. Confirm the browser prompt.
+6. Sign out and sign in again.
 
 Expected result:
 
@@ -615,13 +639,15 @@ Expected result:
 
 1. Sign in as the user who has TOTP enabled.
 2. Open `https://{DOMAIN_NAME}/settings`.
-3. Click `New backup codes`.
-4. Confirm the browser prompt.
-5. Store one of the newly displayed backup codes.
-6. Sign out and sign in until `/two-factor` is shown.
-7. Open the `Backup code` tab.
-8. Enter the stored new backup code.
-9. Try one of the older backup codes from before regeneration.
+3. If the account has email/password enabled, enter the current password in the authenticator-app
+   section.
+4. Click `New backup codes`.
+5. Confirm the browser prompt.
+6. Store one of the newly displayed backup codes.
+7. Sign out and sign in until `/two-factor` is shown.
+8. Open the `Backup code` tab.
+9. Enter the stored new backup code.
+10. Try one of the older backup codes from before regeneration.
 
 Expected result:
 
@@ -689,6 +715,10 @@ Expected result:
 
 - Invitation activation works for a new invited user.
 - Magic-link login works for an active user.
+- Password setup, password login, and password reset work for active users.
+- Unknown email password reset does not reveal account state.
+- Company Google login works for configured Workspace users when Google auth is enabled.
+- Private or non-company Google accounts are rejected when Google auth is enabled.
 - Unknown email login does not reveal account state.
 - Signed-out users cannot open protected routes.
 - Non-admin users cannot open admin routes.
