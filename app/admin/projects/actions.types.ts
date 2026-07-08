@@ -1,4 +1,7 @@
-export type ProjectFormField = "name" | "slug" | "startsOn" | "endsOn" | "isInternal" | "notes";
+import type { ProjectColorToken } from "@/src/lib/project-colors";
+
+export type ProjectFormField =
+  "name" | "slug" | "colorToken" | "startsOn" | "endsOn" | "isInternal" | "notes";
 
 export type ProjectAssignmentFormField = "memberId" | "validFrom" | "validTo" | "active" | "notes";
 
@@ -45,6 +48,7 @@ export type UpdateProjectActionInput = {
   projectId: string;
   name: string;
   slug: string;
+  colorToken: ProjectColorToken;
   startsOn: string;
   endsOn: string;
   isInternal: boolean;

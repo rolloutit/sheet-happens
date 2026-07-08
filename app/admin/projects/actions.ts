@@ -7,6 +7,7 @@ import { z } from "zod";
 import { requireAdminAppMemberForAction } from "@/src/server/auth/app-access";
 import { AuthenticationError, AuthorizationError } from "@/src/server/auth/session";
 import { Prisma } from "@/src/server/db/generated/client";
+import { PROJECT_COLOR_TOKENS } from "@/src/lib/project-colors";
 import {
   addProjectToGroup,
   archiveProjectGroup,
@@ -54,6 +55,7 @@ const projectFormSchema = z
   .object({
     name: z.string().trim().min(1, "Project name is required."),
     slug: z.string().trim().max(80, "Slug must be 80 characters or less."),
+    colorToken: z.enum(PROJECT_COLOR_TOKENS, "Choose a supported project color."),
     startsOn: projectDateSchema,
     endsOn: projectDateSchema,
     isInternal: z.boolean(),
@@ -159,6 +161,7 @@ export async function createProjectAction(
   const parsed = projectFormSchema.safeParse({
     name: getFormString(formData, "name"),
     slug: getFormString(formData, "slug"),
+    colorToken: getFormString(formData, "colorToken"),
     startsOn: getFormString(formData, "startsOn"),
     endsOn: getFormString(formData, "endsOn"),
     isInternal: formData.get("isInternal") === "true",
@@ -691,6 +694,7 @@ function isProjectFormField(field: unknown): field is ProjectFormField {
   return (
     field === "name" ||
     field === "slug" ||
+    field === "colorToken" ||
     field === "startsOn" ||
     field === "endsOn" ||
     field === "isInternal" ||

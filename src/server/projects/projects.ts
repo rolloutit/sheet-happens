@@ -1,10 +1,16 @@
 import { prisma } from "@/src/server/db/client";
+import {
+  DEFAULT_PROJECT_COLOR_TOKEN,
+  isProjectColorToken,
+  type ProjectColorToken,
+} from "@/src/lib/project-colors";
 
 export type ProjectLifecycleStatus = "ACTIVE" | "INACTIVE" | "ARCHIVED";
 
 export type ProjectInput = {
   name: string;
   slug?: string;
+  colorToken?: ProjectColorToken;
   startsOn?: Date | null;
   endsOn?: Date | null;
   isInternal?: boolean;
@@ -44,6 +50,7 @@ export type AdminProjectRow = {
   id: string;
   name: string;
   slug: string;
+  colorToken: ProjectColorToken;
   status: ProjectLifecycleStatus;
   startsOn: string | null;
   endsOn: string | null;
@@ -82,6 +89,7 @@ type ProjectManagementTransaction = {
       data: {
         name: string;
         slug: string;
+        colorToken: ProjectColorToken;
         status: ProjectLifecycleStatus;
         startsOn: Date | null;
         endsOn: Date | null;
@@ -97,6 +105,7 @@ type ProjectManagementTransaction = {
       data: Partial<{
         name: string;
         slug: string;
+        colorToken: ProjectColorToken;
         status: ProjectLifecycleStatus;
         startsOn: Date | null;
         endsOn: Date | null;
@@ -128,6 +137,7 @@ type ProjectSelect = {
   id: true;
   name: true;
   slug: true;
+  colorToken: true;
   status: true;
   startsOn: true;
   endsOn: true;
@@ -140,6 +150,7 @@ type ProjectRecord = {
   id: string;
   name: string;
   slug: string;
+  colorToken: ProjectColorToken;
   status: ProjectLifecycleStatus;
   startsOn: Date | null;
   endsOn: Date | null;
@@ -196,6 +207,7 @@ type ProjectGroupSummaryRecord = {
 type NormalizedProjectInput = {
   name: string;
   slug: string;
+  colorToken: ProjectColorToken;
   startsOn: Date | null;
   endsOn: Date | null;
   isInternal: boolean;
@@ -212,6 +224,7 @@ const projectSelect = {
   id: true,
   name: true,
   slug: true,
+  colorToken: true,
   status: true,
   startsOn: true,
   endsOn: true,
@@ -467,6 +480,7 @@ export async function archiveProject(
 function normalizeProjectInput(input: ProjectInput): NormalizedProjectInput {
   const name = input.name.trim();
   const slug = normalizeProjectSlug(input.slug || name);
+  const colorToken = input.colorToken ?? DEFAULT_PROJECT_COLOR_TOKEN;
   const startsOn = input.startsOn ? toDateOnly(input.startsOn) : null;
   const endsOn = input.endsOn ? toDateOnly(input.endsOn) : null;
   const notes = input.notes?.trim() || null;
@@ -479,6 +493,10 @@ function normalizeProjectInput(input: ProjectInput): NormalizedProjectInput {
     throw new ProjectManagementError("Project slug is required.");
   }
 
+  if (!isProjectColorToken(colorToken)) {
+    throw new ProjectManagementError("Project color is not supported.");
+  }
+
   if (startsOn && endsOn && endsOn < startsOn) {
     throw new ProjectManagementError("Project end date cannot be before the start date.");
   }
@@ -486,6 +504,7 @@ function normalizeProjectInput(input: ProjectInput): NormalizedProjectInput {
   return {
     name,
     slug,
+    colorToken,
     startsOn,
     endsOn,
     isInternal: Boolean(input.isInternal),
@@ -598,6 +617,7 @@ function mapProjectToAdminRow(project: ProjectListRecord): AdminProjectRow {
     id: project.id,
     name: project.name,
     slug: project.slug,
+    colorToken: project.colorToken,
     status: project.status,
     startsOn: project.startsOn ? formatDateOnly(project.startsOn) : null,
     endsOn: project.endsOn ? formatDateOnly(project.endsOn) : null,

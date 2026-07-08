@@ -1,4 +1,5 @@
 import { prisma } from "@/src/server/db/client";
+import type { ProjectColorToken } from "@/src/lib/project-colors";
 
 export type ProjectGroupInput = {
   name: string;
@@ -44,6 +45,7 @@ export type AdminProjectGroupProjectRow = {
   id: string;
   name: string;
   slug: string;
+  colorToken: ProjectColorToken;
   status: ProjectGroupProjectStatus;
   isInternal: boolean;
 };
@@ -191,6 +193,7 @@ type ProjectForGroupSelect = {
   id: true;
   name: true;
   slug: true;
+  colorToken: true;
   status: true;
   isInternal: true;
   deletedAt: true;
@@ -200,6 +203,7 @@ type ProjectForGroupRecord = {
   id: string;
   name: string;
   slug: string;
+  colorToken: ProjectColorToken;
   status: ProjectGroupProjectStatus;
   isInternal: boolean;
   deletedAt: Date | null;
@@ -241,6 +245,7 @@ const projectForGroupSelect = {
   id: true,
   name: true,
   slug: true,
+  colorToken: true,
   status: true,
   isInternal: true,
   deletedAt: true,
@@ -668,6 +673,7 @@ function mapProjectGroupToAdminRow(group: ProjectGroupListRecord): AdminProjectG
       id: project.id,
       name: project.name,
       slug: project.slug,
+      colorToken: project.colorToken,
       status: project.status,
       isInternal: project.isInternal,
     }));

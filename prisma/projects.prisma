@@ -2,6 +2,7 @@ model Project {
   id                String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   name              String
   slug              String        @unique
+  colorToken        String        @default("teal") @map("color_token")
   status            ProjectStatus @default(ACTIVE)
   startsOn          DateTime?     @map("starts_on") @db.Date
   endsOn            DateTime?     @map("ends_on") @db.Date

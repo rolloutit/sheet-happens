@@ -13,6 +13,7 @@ type TestProject = {
   id: string;
   name: string;
   slug: string;
+  colorToken: "teal" | "cyan" | "amber";
   status: "ACTIVE" | "INACTIVE" | "ARCHIVED";
   startsOn: Date | null;
   endsOn: Date | null;
@@ -25,6 +26,7 @@ const baseProject: TestProject = {
   id: "project-1",
   name: "Existing Project",
   slug: "existing-project",
+  colorToken: "teal",
   status: "ACTIVE",
   startsOn: new Date("2026-07-01T00:00:00.000Z"),
   endsOn: null,
@@ -89,6 +91,7 @@ describe("project management services", () => {
       {
         name: " Client Portal ",
         slug: "Client Portal",
+        colorToken: "amber",
         startsOn: new Date("2026-08-09T13:45:00.000Z"),
         isInternal: true,
         notes: " Launch work ",
@@ -106,6 +109,7 @@ describe("project management services", () => {
         data: expect.objectContaining({
           name: "Client Portal",
           slug: "client-portal",
+          colorToken: "amber",
           status: "ACTIVE",
           startsOn: new Date("2026-08-09T00:00:00.000Z"),
           endsOn: null,
@@ -127,6 +131,7 @@ describe("project management services", () => {
           userAgent: "vitest",
           after: expect.objectContaining({
             slug: "client-portal",
+            colorToken: "amber",
             startsOn: "2026-08-09",
           }),
         }),
@@ -162,6 +167,7 @@ describe("project management services", () => {
         projectId: "project-1",
         name: "Existing Project Renamed",
         slug: "existing-project-renamed",
+        colorToken: "cyan",
         startsOn: new Date("2026-07-01T12:00:00.000Z"),
         endsOn: null,
         isInternal: true,
@@ -180,6 +186,7 @@ describe("project management services", () => {
         data: expect.objectContaining({
           name: "Existing Project Renamed",
           slug: "existing-project-renamed",
+          colorToken: "cyan",
           isInternal: true,
           notes: "Updated scope",
           updatedByMemberId: "admin-1",
@@ -194,12 +201,14 @@ describe("project management services", () => {
           before: expect.objectContaining({
             name: "Existing Project",
             slug: "existing-project",
+            colorToken: "teal",
             isInternal: false,
             notes: null,
           }),
           after: expect.objectContaining({
             name: "Existing Project Renamed",
             slug: "existing-project-renamed",
+            colorToken: "cyan",
             isInternal: true,
             notes: "Updated scope",
           }),
@@ -216,6 +225,7 @@ describe("project management services", () => {
         projectId: "project-1",
         name: "Existing Project",
         slug: "existing-project",
+        colorToken: "teal",
         startsOn: new Date("2026-07-01T00:00:00.000Z"),
         endsOn: null,
         isInternal: false,
@@ -345,6 +355,7 @@ describe("project management services", () => {
         id: "project-1",
         name: "Existing Project",
         slug: "existing-project",
+        colorToken: "teal",
         status: "ACTIVE",
         startsOn: "2026-07-01",
         endsOn: "2026-12-31",

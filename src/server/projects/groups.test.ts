@@ -23,6 +23,7 @@ type TestProject = {
   id: string;
   name: string;
   slug: string;
+  colorToken: "teal" | "amber";
   status: "ACTIVE" | "INACTIVE" | "ARCHIVED";
   isInternal: boolean;
   deletedAt: Date | null;
@@ -46,6 +47,7 @@ const baseProject: TestProject = {
   id: "project-1",
   name: "Client Portal",
   slug: "client-portal",
+  colorToken: "teal",
   status: "ACTIVE",
   isInternal: false,
   deletedAt: null,
@@ -123,6 +125,7 @@ describe("project group management services", () => {
                 id: "project-archived",
                 name: "Archived Project",
                 slug: "archived-project",
+                colorToken: "amber",
                 deletedAt: new Date("2026-07-11T10:00:00.000Z"),
               },
             },
@@ -144,6 +147,7 @@ describe("project group management services", () => {
             id: "project-1",
             name: "Client Portal",
             slug: "client-portal",
+            colorToken: "teal",
             status: "ACTIVE",
             isInternal: false,
           },
