@@ -3,3 +3,9 @@ export function GET() {
     ok: true,
   });
 }
+
+export function HEAD() {
+  return new Response(null, {
+    status: 204,
+  });
+}
