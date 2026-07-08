@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import {
   assignMemberToProject,
+  bulkAssignMembersToProjects,
   closeProjectAssignment,
   listProjectAssignableMembersForAdmin,
   listProjectAssignmentsForAdmin,
@@ -69,6 +70,7 @@ function createAssignmentDb(
     member?: TestMember | null;
     assignment?: TestAssignment | null;
     overlaps?: Array<Pick<TestAssignment, "id" | "validFrom" | "validTo">>;
+    overlapsByPair?: Record<string, Array<Pick<TestAssignment, "id" | "validFrom" | "validTo">>>;
     members?: TestMember[];
     assignments?: Array<
       TestAssignment & {
@@ -86,7 +88,12 @@ function createAssignmentDb(
     },
     projectAssignment: {
       findUnique: vi.fn().mockResolvedValue(overrides.assignment ?? baseAssignment),
-      findMany: vi.fn().mockResolvedValue(overrides.overlaps ?? []),
+      findMany: vi.fn(
+        async (args: { where: { memberId: string; projectId: string } }) =>
+          overrides.overlapsByPair?.[`${args.where.memberId}:${args.where.projectId}`] ??
+          overrides.overlaps ??
+          [],
+      ),
       create: vi.fn().mockResolvedValue({ id: "assignment-created" }),
       update: vi.fn().mockResolvedValue({ id: "assignment-1" }),
     },
@@ -221,6 +228,74 @@ describe("project assignment services", () => {
           }),
           ipAddress: "127.0.0.1",
           userAgent: "vitest",
+        }),
+      }),
+    );
+  });
+
+  it("bulk assigns non-overlapping pairs and skips duplicates", async () => {
+    const { db, tx } = createAssignmentDb({
+      overlapsByPair: {
+        "member-1:project-1": [
+          {
+            id: "assignment-existing",
+            validFrom: new Date("2026-08-01T00:00:00.000Z"),
+            validTo: null,
+          },
+        ],
+      },
+    });
+
+    const result = await bulkAssignMembersToProjects(
+      {
+        projectIds: ["project-1"],
+        memberIds: ["member-1", "member-2", "member-2"],
+        validFrom: new Date("2026-08-10T15:45:00.000Z"),
+        validTo: null,
+        active: true,
+        notes: "Bulk onboarding",
+        actorMemberId: "admin-1",
+        requestMetadata: {
+          ipAddress: "127.0.0.1",
+          userAgent: "vitest",
+        },
+      },
+      { db },
+    );
+
+    expect(result).toEqual({
+      assignmentIds: ["assignment-created"],
+      createdCount: 1,
+      skippedDuplicateCount: 1,
+      skippedDuplicates: [
+        {
+          memberId: "member-1",
+          projectId: "project-1",
+        },
+      ],
+    });
+    expect(tx.projectAssignment.create).toHaveBeenCalledTimes(1);
+    expect(tx.projectAssignment.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          projectId: "project-1",
+          memberId: "member-2",
+          validFrom: new Date("2026-08-10T00:00:00.000Z"),
+          notes: "Bulk onboarding",
+          createdByMemberId: "admin-1",
+          updatedByMemberId: "admin-1",
+        }),
+      }),
+    );
+    expect(tx.auditLog.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          action: "project_assignment.created",
+          after: expect.objectContaining({
+            bulk: true,
+            projectId: "project-1",
+            memberId: "member-2",
+          }),
         }),
       }),
     );

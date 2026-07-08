@@ -20,6 +20,13 @@ export type AssignMemberToProjectInput = ProjectAssignmentInput & {
   requestMetadata?: ProjectRequestMetadata;
 };
 
+export type BulkAssignMembersToProjectsInput = ProjectAssignmentInput & {
+  projectIds: string[];
+  memberIds: string[];
+  actorMemberId: string;
+  requestMetadata?: ProjectRequestMetadata;
+};
+
 export type UpdateProjectAssignmentInput = ProjectAssignmentInput & {
   assignmentId: string;
   actorMemberId: string;
@@ -53,6 +60,16 @@ export type ProjectAssignableMemberRow = {
   email: string;
   status: Extract<ProjectAssignmentMemberStatus, "INVITED" | "ACTIVE">;
   profile: ProjectAssignmentMemberProfile;
+};
+
+export type BulkAssignMembersToProjectsResult = {
+  assignmentIds: string[];
+  createdCount: number;
+  skippedDuplicateCount: number;
+  skippedDuplicates: Array<{
+    memberId: string;
+    projectId: string;
+  }>;
 };
 
 type ProjectAssignmentDb = {
@@ -380,6 +397,89 @@ export async function assignMemberToProject(
   });
 }
 
+export async function bulkAssignMembersToProjects(
+  input: BulkAssignMembersToProjectsInput,
+  deps: { db?: ProjectAssignmentDb } = {},
+): Promise<BulkAssignMembersToProjectsResult> {
+  const db = deps.db ?? (prisma as unknown as ProjectAssignmentDb);
+  const assignment = normalizeAssignmentInput(input);
+  const memberIds = normalizeIdList(input.memberIds, "Choose at least one member.");
+  const projectIds = normalizeIdList(input.projectIds, "Choose at least one project.");
+
+  if (memberIds.length * projectIds.length > 200) {
+    throw new ProjectAssignmentError("Bulk assignment is limited to 200 member/project pairs.");
+  }
+
+  return db.$transaction(async (tx) => {
+    await Promise.all(projectIds.map((projectId) => findAssignableProject(tx, projectId)));
+    await Promise.all(memberIds.map((memberId) => findAssignableMember(tx, memberId)));
+
+    const assignmentIds: string[] = [];
+    const skippedDuplicates: BulkAssignMembersToProjectsResult["skippedDuplicates"] = [];
+
+    for (const projectId of projectIds) {
+      for (const memberId of memberIds) {
+        const existingAssignments = await tx.projectAssignment.findMany({
+          where: {
+            memberId,
+            projectId,
+          },
+          select: assignmentOverlapSelect,
+        });
+        const overlappingAssignment = existingAssignments.find((existingAssignment) =>
+          assignmentRangesOverlap(assignment, existingAssignment),
+        );
+
+        if (overlappingAssignment) {
+          skippedDuplicates.push({
+            memberId,
+            projectId,
+          });
+          continue;
+        }
+
+        const created = await tx.projectAssignment.create({
+          data: {
+            projectId,
+            memberId,
+            ...assignment,
+            createdByMemberId: input.actorMemberId,
+            updatedByMemberId: input.actorMemberId,
+          },
+          select: {
+            id: true,
+          },
+        });
+
+        assignmentIds.push(created.id);
+
+        await tx.auditLog.create({
+          data: {
+            actorMemberId: input.actorMemberId,
+            action: "project_assignment.created",
+            targetType: "project_assignment",
+            targetId: created.id,
+            after: {
+              projectId,
+              memberId,
+              bulk: true,
+              ...serializeAssignmentInput(assignment),
+            },
+            ...input.requestMetadata,
+          },
+        });
+      }
+    }
+
+    return {
+      assignmentIds,
+      createdCount: assignmentIds.length,
+      skippedDuplicateCount: skippedDuplicates.length,
+      skippedDuplicates,
+    };
+  });
+}
+
 export async function updateProjectAssignment(
   input: UpdateProjectAssignmentInput,
   deps: { db?: ProjectAssignmentDb } = {},
@@ -523,6 +623,16 @@ function normalizeAssignmentInput(input: ProjectAssignmentInput): NormalizedAssi
     active: input.active ?? true,
     notes,
   };
+}
+
+function normalizeIdList(values: string[], message: string) {
+  const ids = Array.from(new Set(values.map((value) => value.trim()).filter(Boolean)));
+
+  if (!ids.length) {
+    throw new ProjectAssignmentError(message);
+  }
+
+  return ids;
 }
 
 async function findAssignableProject(tx: ProjectAssignmentTransaction, projectId: string) {

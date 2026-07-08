@@ -2,6 +2,9 @@ export type ProjectFormField = "name" | "slug" | "startsOn" | "endsOn" | "isInte
 
 export type ProjectAssignmentFormField = "memberId" | "validFrom" | "validTo" | "active" | "notes";
 
+export type ProjectBulkAssignmentFormField =
+  "memberIds" | "projectIds" | "validFrom" | "validTo" | "active" | "notes";
+
 export type ProjectGroupFormField = "name" | "slug" | "description" | "active";
 
 export type ProjectGroupProjectFormField = "projectGroupId" | "projectId";
@@ -16,6 +19,14 @@ export type ProjectAssignmentActionState = {
   status: "idle" | "success" | "error";
   message: string;
   fieldErrors?: Partial<Record<ProjectAssignmentFormField, string>>;
+};
+
+export type ProjectBulkAssignmentActionState = {
+  status: "idle" | "success" | "error";
+  message: string;
+  createdCount?: number;
+  skippedDuplicateCount?: number;
+  fieldErrors?: Partial<Record<ProjectBulkAssignmentFormField, string>>;
 };
 
 export type ProjectGroupActionState = {
@@ -43,6 +54,15 @@ export type UpdateProjectActionInput = {
 export type AssignProjectMemberActionInput = {
   projectId: string;
   memberId: string;
+  validFrom: string;
+  validTo: string;
+  active: boolean;
+  notes: string;
+};
+
+export type BulkAssignProjectMembersActionInput = {
+  projectIds: string[];
+  memberIds: string[];
   validFrom: string;
   validTo: string;
   active: boolean;

@@ -12,6 +12,7 @@ import {
   archiveProjectGroup,
   assignMemberToProject,
   archiveProject,
+  bulkAssignMembersToProjects,
   changeProjectStatus,
   closeProjectAssignment,
   createProject,
@@ -28,11 +29,14 @@ import {
 import type {
   AddProjectToGroupActionInput,
   AssignProjectMemberActionInput,
+  BulkAssignProjectMembersActionInput,
   CloseProjectAssignmentActionInput,
   CreateProjectGroupActionInput,
   ProjectAssignmentActionState,
   ProjectAssignmentFormField,
   ProjectActionState,
+  ProjectBulkAssignmentActionState,
+  ProjectBulkAssignmentFormField,
   ProjectFormField,
   ProjectGroupActionState,
   ProjectGroupFormField,
@@ -110,6 +114,31 @@ const closeAssignmentSchema = z.object({
     .min(1, "Assignment end date is required.")
     .refine(isDateInputValue, "Choose a valid end date."),
 });
+
+const bulkAssignmentFormSchema = z
+  .object({
+    memberIds: z.array(z.string().trim().min(1)).min(1, "Choose at least one member."),
+    projectIds: z.array(z.string().trim().min(1)).min(1, "Choose at least one project."),
+    validFrom: z
+      .string()
+      .trim()
+      .min(1, "Assignment start date is required.")
+      .refine(isDateInputValue, "Choose a valid start date."),
+    validTo: projectDateSchema,
+    active: z.boolean(),
+    notes: z.string().trim().max(1000, "Notes must be 1000 characters or less."),
+  })
+  .superRefine((value, context) => {
+    validateAssignmentDateRange(value, context);
+
+    if (new Set(value.memberIds).size * new Set(value.projectIds).size > 200) {
+      context.addIssue({
+        code: "custom",
+        message: "Bulk assignment is limited to 200 member/project pairs.",
+        path: ["projectIds"],
+      });
+    }
+  });
 
 const projectGroupFormSchema = z.object({
   name: z.string().trim().min(1, "Group name is required."),
@@ -280,6 +309,55 @@ export async function assignProjectMemberAction(
     };
   } catch (error) {
     return mapProjectAssignmentActionError(error, "The project assignment could not be created.");
+  }
+}
+
+export async function bulkAssignProjectMembersAction(
+  input: BulkAssignProjectMembersActionInput,
+): Promise<ProjectBulkAssignmentActionState> {
+  const parsed = bulkAssignmentFormSchema.safeParse(input);
+
+  if (!parsed.success) {
+    return {
+      status: "error",
+      message: "Fix the highlighted bulk assignment fields and try again.",
+      fieldErrors: getProjectBulkAssignmentFieldErrors(parsed.error),
+    };
+  }
+
+  try {
+    const { member: admin } = await requireAdminAppMemberForAction();
+    const result = await bulkAssignMembersToProjects({
+      ...parsed.data,
+      validFrom: parseRequiredDate(parsed.data.validFrom),
+      validTo: parseOptionalDate(parsed.data.validTo),
+      actorMemberId: admin.id,
+      requestMetadata: await getProjectRequestMetadata(),
+    });
+
+    revalidatePath("/admin/projects");
+    revalidatePath("/admin/rates");
+
+    if (result.createdCount === 0) {
+      return {
+        status: "success",
+        message: "No new assignments were created because every selected pair already overlaps.",
+        createdCount: 0,
+        skippedDuplicateCount: result.skippedDuplicateCount,
+      };
+    }
+
+    return {
+      status: "success",
+      message:
+        result.skippedDuplicateCount > 0
+          ? `${result.createdCount} assignments created. ${result.skippedDuplicateCount} duplicates skipped.`
+          : `${result.createdCount} assignments created.`,
+      createdCount: result.createdCount,
+      skippedDuplicateCount: result.skippedDuplicateCount,
+    };
+  } catch (error) {
+    return mapProjectBulkAssignmentActionError(error, "The bulk assignments could not be created.");
   }
 }
 
@@ -563,6 +641,22 @@ function getProjectAssignmentFieldErrors(
   return fieldErrors;
 }
 
+function getProjectBulkAssignmentFieldErrors(
+  error: z.ZodError,
+): ProjectBulkAssignmentActionState["fieldErrors"] {
+  const fieldErrors: ProjectBulkAssignmentActionState["fieldErrors"] = {};
+
+  for (const issue of error.issues) {
+    const field = issue.path.at(0);
+
+    if (isProjectBulkAssignmentFormField(field) && !fieldErrors[field]) {
+      fieldErrors[field] = issue.message;
+    }
+  }
+
+  return fieldErrors;
+}
+
 function getProjectGroupFieldErrors(error: z.ZodError): ProjectGroupActionState["fieldErrors"] {
   const fieldErrors: ProjectGroupActionState["fieldErrors"] = {};
 
@@ -614,6 +708,17 @@ function isProjectAssignmentFormField(field: unknown): field is ProjectAssignmen
   );
 }
 
+function isProjectBulkAssignmentFormField(field: unknown): field is ProjectBulkAssignmentFormField {
+  return (
+    field === "memberIds" ||
+    field === "projectIds" ||
+    field === "validFrom" ||
+    field === "validTo" ||
+    field === "active" ||
+    field === "notes"
+  );
+}
+
 function isProjectGroupFormField(field: unknown): field is ProjectGroupFormField {
   return field === "name" || field === "slug" || field === "description" || field === "active";
 }
@@ -656,6 +761,18 @@ function mapProjectAssignmentActionError(
   error: unknown,
   fallback: string,
 ): ProjectAssignmentActionState {
+  const result = mapProjectActionError(error, fallback);
+
+  return {
+    status: result.status,
+    message: result.message,
+  };
+}
+
+function mapProjectBulkAssignmentActionError(
+  error: unknown,
+  fallback: string,
+): ProjectBulkAssignmentActionState {
   const result = mapProjectActionError(error, fallback);
 
   return {
