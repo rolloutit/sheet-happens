@@ -137,6 +137,83 @@ Expected result:
 - No account existence information is revealed in the browser.
 - No app session is created for `{UNKNOWN_EMAIL}`.
 
+### Password Setup For Active User
+
+1. Sign in as `{ADMIN_EMAIL}` or `{CONTRACTOR_EMAIL}`.
+2. Open `https://{DOMAIN_NAME}/settings`.
+3. In the `Email password` section, click `Send setup link` or `Send reset link`.
+4. Open the email sent to the same account.
+5. Open the password setup link.
+6. Enter a new password with at least 12 characters.
+7. Confirm the password.
+8. Click `Update password`.
+
+Expected result:
+
+- The password is accepted.
+- The page confirms that the password was updated.
+- An audit row is recorded for `security.password_reset`.
+- Existing sessions for that auth account are revoked.
+
+### Password Login For Active User
+
+1. Start signed out.
+2. Open `https://{DOMAIN_NAME}/login`.
+3. Enter `{ADMIN_EMAIL}` or `{CONTRACTOR_EMAIL}`.
+4. Enter the password created in the previous test.
+5. Click `Sign in with password`.
+
+Expected result:
+
+- If 2FA is enabled, the user lands on `https://{DOMAIN_NAME}/two-factor?...`.
+- Otherwise, the user lands on `https://{DOMAIN_NAME}/dashboard`.
+- Public sign-up is not available from the login screen.
+
+### Password Reset For Unknown Email Is Neutral
+
+1. Start signed out.
+2. Open `https://{DOMAIN_NAME}/login`.
+3. Enter `{UNKNOWN_EMAIL}`.
+4. Click `Reset password`.
+
+Expected result:
+
+- The UI shows a neutral success-style message.
+- No account existence information is revealed in the browser.
+- No password reset email is sent to `{UNKNOWN_EMAIL}`.
+
+### Company Google Login
+
+Run this test only when Google auth is configured for `{COMPANY_GOOGLE_DOMAIN}`.
+
+1. Make sure `{COMPANY_GOOGLE_EMAIL}` has already activated its invitation.
+2. Start signed out.
+3. Open `https://{DOMAIN_NAME}/login`.
+4. Click `Continue with company Google`.
+5. Choose `{COMPANY_GOOGLE_EMAIL}` in Google.
+
+Expected result:
+
+- Google sign-in succeeds only for the configured company Workspace domain.
+- If this is the first Google sign-in for the activated account, the Google account is linked
+  automatically.
+- The user is then routed through the normal app gates: `/two-factor`, `/settings`, or `/dashboard`.
+
+### Private Google Login Is Blocked
+
+Run this test only when Google auth is configured.
+
+1. Start signed out.
+2. Open `https://{DOMAIN_NAME}/login`.
+3. Click `Continue with company Google`.
+4. Choose `{PRIVATE_GOOGLE_EMAIL}` or any Google account outside `{COMPANY_GOOGLE_DOMAIN}`.
+
+Expected result:
+
+- Google sign-in is rejected or returns to the login screen.
+- No Sheet Happens auth account is created.
+- No domain member is activated or linked to the private Google account.
+
 ## Protected Routes
 
 ### Signed-Out User Is Redirected To Login
@@ -367,6 +444,8 @@ Expected result:
 
 - The security settings page opens.
 - Magic link is shown as connected.
+- Email password is shown as enabled or available.
+- Company Google is shown when Google auth is configured.
 - Passkey and authenticator-app sections are visible.
 
 ## Passkeys

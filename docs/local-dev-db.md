@@ -39,4 +39,14 @@ The default connection string is:
 postgresql://sheet_happens:sheet_happens@localhost:5432/sheet_happens?schema=public
 ```
 
-Email delivery defaults to console mode. To use SMTP, set `AUTH_EMAIL_DELIVERY_MODE=smtp` and the `SMTP_*` variables before starting the Next.js dev server.
+Email delivery defaults to console mode. Magic links, invitation emails, and password setup/reset
+links are printed by the dev server when `AUTH_EMAIL_DELIVERY_MODE=console`. To use SMTP, set
+`AUTH_EMAIL_DELIVERY_MODE=smtp` and the `SMTP_*` variables before starting the Next.js dev server.
+
+Company Google sign-in stays hidden unless all Google env vars are configured:
+
+```bash
+AUTH_GOOGLE_CLIENT_ID="..."
+AUTH_GOOGLE_CLIENT_SECRET="..."
+AUTH_GOOGLE_ALLOWED_DOMAINS="example.com"
+```

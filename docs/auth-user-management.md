@@ -14,10 +14,14 @@ V1 supports:
 
 - Magic links for first-time invite acceptance and passwordless sign-in.
 - Passkeys for phishing-resistant passwordless sign-in.
+- Email/password as an optional credential method for activated invited members.
+- Company Google sign-in for configured Google Workspace hosted domains only.
 - Two-factor authentication using TOTP and backup codes.
 
-Email/password is not a primary v1 sign-in method. If it is enabled later, it must still respect
-invite-only account creation and 2FA.
+Email/password and Google must still respect invite-only account creation and 2FA. Public
+email/password sign-up is disabled. Google sign-in is not an invitation acceptance path in v1; users
+activate through the invitation/magic-link flow first, then Google can be used if the account email
+belongs to a configured company Workspace hosted domain.
 
 ## Ownership Boundary
 
@@ -44,7 +48,7 @@ is only invited and must be set during activation.
 
 Public self-signup is not allowed.
 
-Magic-link requests must only send mail when the normalized email belongs to:
+Magic-link and password-reset requests must only send mail when the normalized email belongs to:
 
 - A pending, non-expired invitation.
 - An existing active member.
@@ -81,6 +85,12 @@ Supported sign-in paths:
 
 - Magic link.
 - Passkey.
+- Email/password for accounts that have set a credential.
+- Company Google for activated accounts whose Google Workspace `hd` claim and email domain match the
+  configured allowed domain list.
+
+Password reset/setup links are sent through the same configured email transport as magic links.
+Resetting a password revokes existing sessions. Public email/password sign-up stays disabled.
 
 After Better Auth returns a session, every protected page/action must load the linked `members` row
 and enforce domain status:
@@ -94,10 +104,11 @@ and enforce domain status:
 
 - TOTP is the v1 authenticator-app second factor.
 - Backup codes are the v1 fallback for TOTP when the authenticator app is unavailable.
-- Email magic links are the passwordless sign-in method and must not satisfy admin 2FA by
-  themselves.
+- Email magic links, email/password, passkeys, and Google are sign-in methods and must not satisfy
+  admin 2FA by themselves.
 - Backup codes are generated and stored by Better Auth.
-- Passwordless users must be able to enable/manage 2FA, so Better Auth 2FA uses passwordless mode.
+- Users without passwords must be able to enable/manage 2FA, so Better Auth 2FA uses passwordless
+  mode.
 - Trusted devices may be allowed for ordinary members.
 - Admins should not rely only on trusted-device bypass for sensitive management actions; sensitive
   admin actions can later require recent 2FA verification.
@@ -110,6 +121,20 @@ and enforce domain status:
 - Passkey-first onboarding is not required for v1.
 - Users can list, rename, and delete their own passkeys.
 - Admins can revoke sessions and disable a user, but should not directly inspect passkey material.
+
+## Password And Google Rules
+
+- Email/password is enabled only as a credential method on existing Better Auth users.
+- Public email/password sign-up is disabled.
+- Password setup and reset use Better Auth reset tokens and the configured Sheet Happens mailer.
+- Password reset tokens expire after 30 minutes.
+- Password reset revokes existing sessions and writes an audit event.
+- Google OAuth is enabled only when `AUTH_GOOGLE_CLIENT_ID`, `AUTH_GOOGLE_CLIENT_SECRET`, and
+  `AUTH_GOOGLE_ALLOWED_DOMAINS` are configured.
+- Google OAuth is restricted to verified Workspace profiles: the verified email domain and Google
+  `hd` hosted-domain claim must both be in the allowed domain list.
+- Google OAuth sign-up is disabled, so it does not create an auth account for unknown or not-yet
+  activated users.
 
 ## User Management Actions
 
@@ -127,6 +152,7 @@ Member actions:
 
 - View own profile.
 - Manage passkeys.
+- Set/reset password.
 - Enable/disable TOTP.
 - Regenerate backup codes.
 - Update notification preferences.
@@ -155,6 +181,7 @@ Audit at minimum:
 - Role change.
 - Profile transition.
 - Session revocation.
+- Password reset.
 - 2FA enabled/disabled and backup-code regeneration.
 - Passkey added/renamed/deleted.
 
