@@ -2,9 +2,11 @@
 
 import {
   BadgeCheck,
+  Building2,
   Copy,
   ExternalLink,
   KeyRound,
+  LockKeyhole,
   MailCheck,
   Pencil,
   QrCode,
@@ -52,6 +54,9 @@ export type SecuritySettingsClientProps = {
     email: string;
     name: string;
     twoFactorEnabled: boolean;
+    passwordEnabled: boolean;
+    googleLinked: boolean;
+    googleAvailable: boolean;
   };
   passkeys: PasskeyView[];
   twoFactor: {
@@ -92,6 +97,7 @@ type PendingAction =
   | "add-platform-passkey"
   | "add-roaming-passkey"
   | "enable-totp"
+  | "password-reset"
   | "verify-totp"
   | "disable-totp"
   | "regenerate-backup-codes"
@@ -109,6 +115,7 @@ export function SecuritySettingsClient({ user, passkeys, twoFactor }: SecuritySe
   const [passkeyNameEdits, setPasskeyNameEdits] = useState<Record<string, string>>({});
   const [totpSetup, setTotpSetup] = useState<TotpSetupState>({ status: "idle" });
   const [totpCode, setTotpCode] = useState("");
+  const [twoFactorPassword, setTwoFactorPassword] = useState("");
   const [backupCodes, setBackupCodes] = useState<string[]>([]);
   const [totpQrCode, setTotpQrCode] = useState<{ uri: string; dataUrl: string } | null>(null);
   const [totpQrCodeErrorUri, setTotpQrCodeErrorUri] = useState<string | null>(null);
@@ -123,6 +130,31 @@ export function SecuritySettingsClient({ user, passkeys, twoFactor }: SecuritySe
         stateLabel: "Connected",
         icon: MailCheck,
       },
+      {
+        id: "password",
+        label: "Email password",
+        description: user.passwordEnabled
+          ? "Password sign-in is enabled for this account."
+          : "Set a password through an emailed setup link.",
+        state: user.passwordEnabled ? "connected" : "recommended",
+        stateLabel: user.passwordEnabled ? "Enabled" : "Available",
+        icon: LockKeyhole,
+        actionLabel: user.passwordEnabled ? "Reset" : "Set up",
+      },
+      ...(user.googleAvailable
+        ? [
+            {
+              id: "google",
+              label: "Company Google",
+              description: user.googleLinked
+                ? "A company Google account is linked."
+                : "Available for configured Google Workspace domains after activation.",
+              state: user.googleLinked ? "connected" : "not_enabled",
+              stateLabel: user.googleLinked ? "Linked" : "Available",
+              icon: Building2,
+            } satisfies SecurityMethod,
+          ]
+        : []),
       {
         id: "passkeys",
         label: "Passkeys",
@@ -147,7 +179,14 @@ export function SecuritySettingsClient({ user, passkeys, twoFactor }: SecuritySe
         actionLabel: twoFactor.enabled ? "Disable" : "Set up",
       },
     ],
-    [passkeys.length, twoFactor.enabled, user.email],
+    [
+      passkeys.length,
+      twoFactor.enabled,
+      user.email,
+      user.googleAvailable,
+      user.googleLinked,
+      user.passwordEnabled,
+    ],
   );
 
   const totpUri = totpSetup.status === "ready" ? totpSetup.totpURI : "";
@@ -256,7 +295,36 @@ export function SecuritySettingsClient({ user, passkeys, twoFactor }: SecuritySe
     }
   }
 
+  async function requestPasswordReset() {
+    setPendingAction("password-reset");
+    setNotice(null);
+
+    const result = await authClient.requestPasswordReset({
+      email: user.email,
+      redirectTo: "/reset-password?callbackURL=/settings",
+    });
+
+    setPendingAction(null);
+
+    if (result.error) {
+      setNotice({
+        tone: "error",
+        message: getAuthErrorMessage(result.error, "Could not send the password setup email."),
+      });
+      return;
+    }
+
+    setNotice({
+      tone: "success",
+      message: "Password setup link sent if this account is eligible.",
+    });
+  }
+
   async function beginTotpSetup() {
+    if (!validateTwoFactorPassword()) {
+      return;
+    }
+
     setPendingAction("enable-totp");
     setNotice(null);
     setTotpCode("");
@@ -264,6 +332,7 @@ export function SecuritySettingsClient({ user, passkeys, twoFactor }: SecuritySe
 
     const result = await authClient.twoFactor.enable({
       issuer: "Sheet Happens",
+      ...(user.passwordEnabled ? { password: twoFactorPassword } : {}),
     });
 
     setPendingAction(null);
@@ -276,6 +345,7 @@ export function SecuritySettingsClient({ user, passkeys, twoFactor }: SecuritySe
       return;
     }
 
+    setTwoFactorPassword("");
     setTotpSetup({
       status: "ready",
       totpURI: result.data.totpURI,
@@ -317,6 +387,10 @@ export function SecuritySettingsClient({ user, passkeys, twoFactor }: SecuritySe
   }
 
   async function disableTotp() {
+    if (!validateTwoFactorPassword()) {
+      return;
+    }
+
     if (!window.confirm("Disable authenticator-app verification for this account?")) {
       return;
     }
@@ -324,7 +398,9 @@ export function SecuritySettingsClient({ user, passkeys, twoFactor }: SecuritySe
     setPendingAction("disable-totp");
     setNotice(null);
 
-    const result = await authClient.twoFactor.disable({});
+    const result = await authClient.twoFactor.disable({
+      ...(user.passwordEnabled ? { password: twoFactorPassword } : {}),
+    });
 
     setPendingAction(null);
 
@@ -336,6 +412,7 @@ export function SecuritySettingsClient({ user, passkeys, twoFactor }: SecuritySe
       return;
     }
 
+    setTwoFactorPassword("");
     setTotpSetup({ status: "idle" });
     setBackupCodes([]);
     const auditResult = await auditTotpDisabledAction();
@@ -348,6 +425,10 @@ export function SecuritySettingsClient({ user, passkeys, twoFactor }: SecuritySe
   }
 
   async function regenerateBackupCodes() {
+    if (!validateTwoFactorPassword()) {
+      return;
+    }
+
     if (!window.confirm("Generate new backup codes? Existing backup codes will stop working.")) {
       return;
     }
@@ -355,7 +436,9 @@ export function SecuritySettingsClient({ user, passkeys, twoFactor }: SecuritySe
     setPendingAction("regenerate-backup-codes");
     setNotice(null);
 
-    const result = await authClient.twoFactor.generateBackupCodes({});
+    const result = await authClient.twoFactor.generateBackupCodes({
+      ...(user.passwordEnabled ? { password: twoFactorPassword } : {}),
+    });
 
     setPendingAction(null);
 
@@ -367,6 +450,7 @@ export function SecuritySettingsClient({ user, passkeys, twoFactor }: SecuritySe
       return;
     }
 
+    setTwoFactorPassword("");
     setBackupCodes(result.data.backupCodes);
     const auditResult = await auditBackupCodesRegeneratedAction();
     setNotice({
@@ -393,6 +477,18 @@ export function SecuritySettingsClient({ user, passkeys, twoFactor }: SecuritySe
     }
   }
 
+  function validateTwoFactorPassword() {
+    if (!user.passwordEnabled || twoFactorPassword) {
+      return true;
+    }
+
+    setNotice({
+      tone: "error",
+      message: "Enter your current password to manage authenticator-app verification.",
+    });
+    return false;
+  }
+
   const totpSecret = getTotpSecret(totpSetup.status === "ready" ? totpSetup.totpURI : "");
   const busy = pendingAction !== null || isPending;
 
@@ -404,6 +500,13 @@ export function SecuritySettingsClient({ user, passkeys, twoFactor }: SecuritySe
         <SecurityMethodList
           methods={methods}
           onMethodAction={(method) => {
+            if (method.id === "password") {
+              document.getElementById("password-management")?.scrollIntoView({
+                behavior: "smooth",
+                block: "start",
+              });
+            }
+
             if (method.id === "passkeys") {
               document.getElementById("passkey-management")?.scrollIntoView({
                 behavior: "smooth",
@@ -438,6 +541,20 @@ export function SecuritySettingsClient({ user, passkeys, twoFactor }: SecuritySe
                 tone="success"
               />
               <PostureRow
+                icon={LockKeyhole}
+                label="Password sign-in"
+                value={user.passwordEnabled ? "Enabled" : "Not set"}
+                tone={user.passwordEnabled ? "success" : "warning"}
+              />
+              {user.googleAvailable ? (
+                <PostureRow
+                  icon={Building2}
+                  label="Company Google"
+                  value={user.googleLinked ? "Linked" : "Available"}
+                  tone={user.googleLinked ? "success" : "warning"}
+                />
+              ) : null}
+              <PostureRow
                 icon={KeyRound}
                 label="Passkey coverage"
                 value={passkeys.length > 0 ? `${passkeys.length} registered` : "Not set"}
@@ -453,6 +570,61 @@ export function SecuritySettingsClient({ user, passkeys, twoFactor }: SecuritySe
           </CardContent>
         </Card>
       </div>
+
+      <Card id="password-management" density="lg">
+        <CardHeader className="block">
+          <CardTitle>Email password</CardTitle>
+          <CardDescription>
+            Password sign-in is optional and remains bound to the invited member email address.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="gap-4">
+          <div className="flex flex-col gap-3 rounded-[var(--radius-lg)] border border-border bg-secondary/50 p-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-start gap-3">
+              <span
+                className={cn(
+                  "grid size-10 shrink-0 place-items-center rounded-full",
+                  user.passwordEnabled
+                    ? "bg-success/16 text-success"
+                    : "bg-warning/16 text-warning",
+                )}
+              >
+                <LockKeyhole className="size-5" aria-hidden="true" />
+              </span>
+              <div>
+                <p className="font-ui text-sm font-semibold text-foreground">
+                  {user.passwordEnabled ? "Password sign-in is enabled" : "No password is set"}
+                </p>
+                <p className="mt-1 text-sm leading-6 text-muted-foreground">
+                  {user.passwordEnabled
+                    ? "Send a reset link if you need to rotate or recover the password."
+                    : "Send a setup link to create a password for this account."}
+                </p>
+              </div>
+            </div>
+            <Button
+              type="button"
+              variant={user.passwordEnabled ? "soft" : "primary"}
+              icon={MailCheck}
+              loading={pendingAction === "password-reset"}
+              disabled={busy}
+              onClick={() => void requestPasswordReset()}
+            >
+              {user.passwordEnabled ? "Send reset link" : "Send setup link"}
+            </Button>
+          </div>
+          {user.googleAvailable ? (
+            <div className="flex items-start gap-3 rounded-[var(--radius-lg)] border border-border bg-secondary/50 p-4 text-sm text-muted-foreground">
+              <Building2 className="mt-0.5 size-4 shrink-0 text-accent" aria-hidden="true" />
+              <p>
+                Company Google sign-in is enabled for the configured Workspace domain. It links
+                automatically on first successful Google sign-in when the email matches this
+                activated account.
+              </p>
+            </div>
+          ) : null}
+        </CardContent>
+      </Card>
 
       <Card id="passkey-management" density="lg">
         <CardHeader className="block">
@@ -599,6 +771,33 @@ export function SecuritySettingsClient({ user, passkeys, twoFactor }: SecuritySe
             <div className="flex items-start gap-3 rounded-[var(--radius-lg)] border border-warning/40 bg-warning/10 p-4 text-sm text-warning">
               <TriangleAlert className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
               <p>{twoFactor.failedVerificationCount} failed TOTP attempt(s) are recorded.</p>
+            </div>
+          ) : null}
+
+          {user.passwordEnabled ? (
+            <div className="grid gap-3 rounded-[var(--radius-lg)] border border-border bg-secondary/50 p-4">
+              <Field
+                label="Current password"
+                hint="Required because password sign-in is enabled for this account."
+              >
+                {({ id, describedBy }) => (
+                  <Input
+                    id={id}
+                    type="password"
+                    autoComplete="current-password"
+                    aria-describedby={describedBy}
+                    value={twoFactorPassword}
+                    disabled={busy}
+                    onChange={(event) => setTwoFactorPassword(event.target.value)}
+                    onKeyDown={(event) => {
+                      if (event.key === "Enter" && !twoFactor.enabled) {
+                        event.preventDefault();
+                        void beginTotpSetup();
+                      }
+                    }}
+                  />
+                )}
+              </Field>
             </div>
           ) : null}
 
@@ -761,7 +960,8 @@ export function SecuritySettingsClient({ user, passkeys, twoFactor }: SecuritySe
         </CardContent>
         <CardFooter>
           <p className="text-sm text-muted-foreground">
-            TOTP is passwordless here because Sheet Happens uses email magic-link sign-in for v1.
+            TOTP is the v1 admin second factor. Email passwords and passkeys remain sign-in methods,
+            not admin 2FA replacements.
           </p>
         </CardFooter>
       </Card>
@@ -906,5 +1106,9 @@ function getTotpSecret(totpURI: string) {
 
 function getAuthErrorMessage(error: { message?: string; code?: string } | null, fallback: string) {
   if (!error) return fallback;
+  if (error.code === "INVALID_PASSWORD" || error.message === "Invalid password") {
+    return "Current password is required or incorrect.";
+  }
+
   return error.message || error.code || fallback;
 }

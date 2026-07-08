@@ -20,6 +20,7 @@ import {
   requireSecuritySettingsAppMember,
   sanitizeCallbackURL,
 } from "@/src/server/auth/app-access";
+import { getGoogleAuthSettings } from "@/src/server/auth/sign-in-methods";
 import { prisma } from "@/src/server/db/client";
 import { SecuritySettingsClient } from "./SecuritySettingsClient";
 
@@ -41,6 +42,7 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
   const access = await requireSecuritySettingsAppMember("/settings");
   const { member, authUser } = access;
   const securityState = await getSecurityState(authUser.id);
+  const googleAuthSettings = getGoogleAuthSettings();
   const hasSecurityMethod = securityState.twoFactorEnabled || securityState.passkeys.length > 0;
   const adminTotpRequired = member.role === "ADMIN" && !securityState.twoFactorEnabled;
   const showSetupBanner =
@@ -60,7 +62,7 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
         <SectionHead
           eyebrow="Account"
           title="Security settings"
-          subtitle="Manage passkeys and authenticator-app verification for your Sheet Happens account."
+          subtitle="Manage sign-in methods, passkeys, and authenticator-app verification for your Sheet Happens account."
         />
         {showSetupBanner ? (
           <SecuritySetupBanner
@@ -75,6 +77,11 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
             email: authUser.email,
             name: authUser.name,
             twoFactorEnabled: securityState.twoFactorEnabled,
+            passwordEnabled: securityState.accounts.some(
+              (account) => account.providerId === "credential",
+            ),
+            googleLinked: securityState.accounts.some((account) => account.providerId === "google"),
+            googleAvailable: googleAuthSettings.enabled,
           }}
           passkeys={securityState.passkeys.map((passkey) => ({
             id: passkey.id,
@@ -171,6 +178,11 @@ async function getSecurityState(userId: string) {
           backedUp: true,
           transports: true,
           createdAt: true,
+        },
+      },
+      accounts: {
+        select: {
+          providerId: true,
         },
       },
       twoFactors: {
