@@ -12,6 +12,7 @@ import { cn } from "@/src/lib/utils";
 import { createProjectAction } from "./actions";
 import type { ProjectActionState } from "./actions.types";
 import { nativeCheckboxClassName } from "./formStyles";
+import { ProjectColorField } from "./ProjectColorField";
 
 const initialState: ProjectActionState = {
   status: "idle",
@@ -61,6 +62,8 @@ export function ProjectCreateForm() {
           )}
         </Field>
       </div>
+
+      <ProjectColorField error={state.fieldErrors?.colorToken} reserveMessageSpace />
 
       <div className="grid gap-4 md:grid-cols-[minmax(9rem,1fr)_minmax(9rem,1fr)_minmax(14rem,1.25fr)]">
         <Field label="Starts on" reserveMessageSpace error={state.fieldErrors?.startsOn}>

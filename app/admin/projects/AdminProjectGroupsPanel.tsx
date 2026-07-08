@@ -42,6 +42,7 @@ import type {
   UpdateProjectGroupActionInput,
 } from "./actions.types";
 import { nativeCheckboxClassName, nativeSelectClassName } from "./formStyles";
+import { ProjectColorSwatch } from "./ProjectColorField";
 
 export type AdminProjectGroupsPanelProps = {
   groups: AdminProjectGroupRow[];
@@ -364,6 +365,7 @@ function ProjectGroupCard({
                 key={project.id}
                 className="inline-flex min-h-9 items-center gap-2 rounded-full border border-border bg-background px-3 py-1 text-sm text-foreground"
               >
+                <ProjectColorSwatch colorToken={project.colorToken} size="sm" />
                 {project.name}
                 {project.isInternal ? <Badge tone="cta">Internal</Badge> : null}
                 <button

@@ -51,6 +51,11 @@ import { Input } from "@/src/components/ui/Input";
 import { SegmentedControl } from "@/src/components/ui/SegmentedControl";
 import { DataTable } from "@/src/components/ui/Table";
 import { Textarea } from "@/src/components/ui/Textarea";
+import {
+  DEFAULT_PROJECT_COLOR_TOKEN,
+  isProjectColorToken,
+  type ProjectColorToken,
+} from "@/src/lib/project-colors";
 import { cn } from "@/src/lib/utils";
 import type {
   AdminProjectAssignmentRow,
@@ -83,6 +88,7 @@ import type {
   UpdateProjectActionInput,
 } from "./actions.types";
 import { nativeCheckboxClassName, nativeSelectClassName } from "./formStyles";
+import { ProjectColorField, ProjectColorSwatch } from "./ProjectColorField";
 
 export type AdminProjectsTableProps = {
   rows: AdminProjectRow[];
@@ -332,23 +338,26 @@ export function AdminProjectsTable({
             header: "Project",
             mobileLabel: "Project",
             cell: (row) => (
-              <div className="grid gap-1">
-                <p className="font-ui text-sm font-semibold text-foreground">{row.name}</p>
-                <div className="flex flex-wrap items-center gap-2">
-                  <code className="rounded-[var(--radius-sm)] bg-secondary px-1.5 py-0.5 font-mono text-xs text-muted-foreground">
-                    {row.slug}
-                  </code>
-                  {row.isInternal ? <Badge tone="cta">Internal</Badge> : null}
-                  {row.groups.map((group) => (
-                    <Badge key={group.id} tone="info">
-                      <FolderOpen className="size-3" aria-hidden="true" />
-                      {group.name}
-                    </Badge>
-                  ))}
+              <div className="grid grid-cols-[auto_1fr] gap-3">
+                <ProjectColorSwatch colorToken={row.colorToken} size="lg" className="mt-1" />
+                <div className="grid min-w-0 gap-1">
+                  <p className="font-ui text-sm font-semibold text-foreground">{row.name}</p>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <code className="rounded-[var(--radius-sm)] bg-secondary px-1.5 py-0.5 font-mono text-xs text-muted-foreground">
+                      {row.slug}
+                    </code>
+                    {row.isInternal ? <Badge tone="cta">Internal</Badge> : null}
+                    {row.groups.map((group) => (
+                      <Badge key={group.id} tone="info">
+                        <FolderOpen className="size-3" aria-hidden="true" />
+                        {group.name}
+                      </Badge>
+                    ))}
+                  </div>
+                  {row.notes ? (
+                    <p className="max-w-xl text-xs leading-5 text-muted-foreground">{row.notes}</p>
+                  ) : null}
                 </div>
-                {row.notes ? (
-                  <p className="max-w-xl text-xs leading-5 text-muted-foreground">{row.notes}</p>
-                ) : null}
               </div>
             ),
           },
@@ -701,6 +710,7 @@ function BulkAssignmentDialog({
           <BulkSelectionRow
             key={project.id}
             checked={selectedProjectIds.includes(project.id)}
+            colorToken={project.colorToken}
             title={project.name}
             subtitle={formatProjectTimeline(project)}
             badges={[
@@ -929,12 +939,14 @@ function BulkSelectionPanel({
 
 function BulkSelectionRow({
   checked,
+  colorToken,
   title,
   subtitle,
   badges,
   onToggle,
 }: {
   checked: boolean;
+  colorToken?: ProjectColorToken;
   title: string;
   subtitle: string;
   badges: Array<{ label: string; tone: BadgeProps["tone"] } | null>;
@@ -966,8 +978,9 @@ function BulkSelectionRow({
           {checked ? <CheckCircle2 className="size-3.5" aria-hidden="true" /> : null}
         </span>
         <span className="min-w-0">
-          <span className="block truncate font-ui text-sm font-semibold text-foreground">
-            {title}
+          <span className="flex min-w-0 items-center gap-2 font-ui text-sm font-semibold text-foreground">
+            {colorToken ? <ProjectColorSwatch colorToken={colorToken} size="sm" /> : null}
+            <span className="truncate">{title}</span>
           </span>
           <span className="block truncate text-xs text-muted-foreground">{subtitle}</span>
         </span>
@@ -1025,16 +1038,19 @@ function ProjectDetailDrawer({
           <div className="border-b border-border px-5 py-5">
             <DrawerHeader className="p-0">
               <div className="flex flex-col gap-4 pr-8 sm:flex-row sm:items-start sm:justify-between">
-                <div className="grid gap-2">
-                  <p className="font-ui text-xs font-semibold uppercase tracking-[0.18em] text-accent">
-                    Project
-                  </p>
-                  <DrawerTitle className="text-2xl font-semibold text-foreground">
-                    {project.name}
-                  </DrawerTitle>
-                  <DrawerDescription className="text-sm leading-6 text-muted-foreground">
-                    {formatProjectTimeline(project)}
-                  </DrawerDescription>
+                <div className="flex min-w-0 gap-3">
+                  <ProjectColorSwatch colorToken={project.colorToken} size="lg" className="mt-1" />
+                  <div className="grid min-w-0 gap-2">
+                    <p className="font-ui text-xs font-semibold uppercase tracking-[0.18em] text-accent">
+                      Project
+                    </p>
+                    <DrawerTitle className="text-2xl font-semibold text-foreground">
+                      {project.name}
+                    </DrawerTitle>
+                    <DrawerDescription className="text-sm leading-6 text-muted-foreground">
+                      {formatProjectTimeline(project)}
+                    </DrawerDescription>
+                  </div>
                 </div>
                 <div className="flex flex-wrap gap-2 sm:justify-end">
                   <Button
@@ -1491,6 +1507,7 @@ function ProjectEditDialog({
                 projectId: project.id,
                 name: getProjectEditFormString(formData, "name"),
                 slug: getProjectEditFormString(formData, "slug"),
+                colorToken: getProjectEditFormColorToken(formData),
                 startsOn: getProjectEditFormString(formData, "startsOn"),
                 endsOn: getProjectEditFormString(formData, "endsOn"),
                 isInternal: formData.get("isInternal") === "true",
@@ -1530,6 +1547,12 @@ function ProjectEditDialog({
                 )}
               </Field>
             </div>
+
+            <ProjectColorField
+              defaultValue={project.colorToken}
+              error={actionState?.fieldErrors?.colorToken}
+              reserveMessageSpace
+            />
 
             <div className="grid gap-4 md:grid-cols-[minmax(9rem,1fr)_minmax(9rem,1fr)]">
               <Field
@@ -1873,6 +1896,11 @@ function formatTimestamp(value: string) {
 function getProjectEditFormString(formData: FormData, name: keyof UpdateProjectActionInput) {
   const value = formData.get(name);
   return typeof value === "string" ? value : "";
+}
+
+function getProjectEditFormColorToken(formData: FormData) {
+  const value = getProjectEditFormString(formData, "colorToken");
+  return isProjectColorToken(value) ? value : DEFAULT_PROJECT_COLOR_TOKEN;
 }
 
 function getAssignmentFormString(formData: FormData, name: ProjectAssignmentFormField) {
