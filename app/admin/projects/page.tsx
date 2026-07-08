@@ -13,6 +13,7 @@ import {
   listProjectGroupsForAdmin,
   listProjectsForAdmin,
 } from "@/src/server/projects";
+import { listAssignmentRatesForAdmin } from "@/src/server/rates";
 import { AdminProjectGroupsPanel } from "./AdminProjectGroupsPanel";
 import { AdminProjectsTable } from "./AdminProjectsTable";
 import { ProjectCreateForm } from "./ProjectCreateForm";
@@ -21,10 +22,11 @@ export const dynamic = "force-dynamic";
 
 export default async function AdminProjectsPage() {
   const { member: admin } = await requireAdminAppMember("/admin/projects");
-  const [projects, groups, assignments, assignableMembers] = await Promise.all([
+  const [projects, groups, assignments, assignmentRates, assignableMembers] = await Promise.all([
     listProjectsForAdmin(),
     listProjectGroupsForAdmin(),
     listProjectAssignmentsForAdmin(),
+    listAssignmentRatesForAdmin(),
     listProjectAssignableMembersForAdmin(),
   ]);
   const activeProjects = projects.filter((project) => project.status === "ACTIVE").length;
@@ -96,6 +98,7 @@ export default async function AdminProjectsPage() {
                 rows={projects}
                 groups={groups}
                 assignments={assignments}
+                assignmentRates={assignmentRates}
                 assignableMembers={assignableMembers}
                 todayDate={todayDate}
               />

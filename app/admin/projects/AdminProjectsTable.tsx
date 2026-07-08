@@ -11,8 +11,9 @@ import {
   Save,
   Search,
   UserPlus,
-  Users,
+  WalletCards,
 } from "lucide-react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 
@@ -28,6 +29,13 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/src/components/ui/Dialog";
+import {
+  Drawer,
+  DrawerContent,
+  DrawerDescription,
+  DrawerHeader,
+  DrawerTitle,
+} from "@/src/components/ui/Drawer";
 import {
   Dropdown,
   DropdownContent,
@@ -51,6 +59,7 @@ import type {
   ProjectAssignmentMemberStatus,
   ProjectLifecycleStatus,
 } from "@/src/server/projects";
+import type { AdminAssignmentRateRow } from "@/src/server/rates";
 import {
   archiveProjectAction,
   assignProjectMemberAction,
@@ -74,6 +83,7 @@ export type AdminProjectsTableProps = {
   rows: AdminProjectRow[];
   groups: AdminProjectGroupRow[];
   assignments: AdminProjectAssignmentRow[];
+  assignmentRates: AdminAssignmentRateRow[];
   assignableMembers: ProjectAssignableMemberRow[];
   todayDate: string;
 };
@@ -104,6 +114,7 @@ export function AdminProjectsTable({
   rows,
   groups,
   assignments,
+  assignmentRates,
   assignableMembers,
   todayDate,
 }: AdminProjectsTableProps) {
@@ -116,7 +127,7 @@ export function AdminProjectsTable({
   const [editingProject, setEditingProject] = useState<AdminProjectRow | null>(null);
   const [editState, setEditState] = useState<ProjectActionState | null>(null);
   const [archivingProject, setArchivingProject] = useState<AdminProjectRow | null>(null);
-  const [assignmentProject, setAssignmentProject] = useState<AdminProjectRow | null>(null);
+  const [detailProject, setDetailProject] = useState<AdminProjectRow | null>(null);
   const [assignmentMessage, setAssignmentMessage] = useState<ProjectAssignmentActionState | null>(
     null,
   );
@@ -351,8 +362,8 @@ export function AdminProjectsTable({
             <ProjectActionsMenu
               project={project}
               isPending={(action) => isPending(project, action)}
-              onManageAssignments={() => {
-                setAssignmentProject(project);
+              onOpenDetails={() => {
+                setDetailProject(project);
                 setAssignmentMessage(null);
                 setMessage(null);
               }}
@@ -373,27 +384,39 @@ export function AdminProjectsTable({
         }}
       />
 
-      <ProjectAssignmentsDialog
-        project={assignmentProject}
-        assignments={assignments.filter(
-          (assignment) => assignment.projectId === assignmentProject?.id,
-        )}
+      <ProjectDetailDrawer
+        project={detailProject}
+        assignments={assignments.filter((assignment) => assignment.projectId === detailProject?.id)}
+        assignmentRates={assignmentRates.filter((rate) => rate.projectId === detailProject?.id)}
         assignableMembers={assignableMembers}
         todayDate={todayDate}
         actionState={assignmentMessage}
         pendingKey={assignmentPendingKey}
+        projectPendingAction={Boolean(
+          detailProject && pendingKey?.startsWith(`${detailProject.id}:`),
+        )}
         onOpenChange={(open) => {
           if (!open) {
-            setAssignmentProject(null);
+            setDetailProject(null);
             setAssignmentMessage(null);
           }
         }}
-        onAssign={(input) => {
-          if (!assignmentProject) return;
-
-          runAssignmentAction(`${assignmentProject.id}:assign`, () =>
-            assignProjectMemberAction(input),
+        onEditProject={() => {
+          if (!detailProject) return;
+          setEditingProject(detailProject);
+          setEditState(null);
+          setMessage(null);
+        }}
+        onSetProjectActive={(active) => {
+          if (!detailProject) return;
+          runAction(detailProject, "status", () =>
+            setProjectActiveAction(detailProject.id, active),
           );
+        }}
+        onAssign={(input) => {
+          if (!detailProject) return;
+
+          runAssignmentAction(`${detailProject.id}:assign`, () => assignProjectMemberAction(input));
         }}
         onUpdate={(input) => {
           runAssignmentAction(`${input.assignmentId}:update`, () =>
@@ -449,14 +472,14 @@ export function AdminProjectsTable({
 function ProjectActionsMenu({
   project,
   isPending,
-  onManageAssignments,
+  onOpenDetails,
   onEdit,
   onSetActive,
   onArchive,
 }: {
   project: AdminProjectRow;
   isPending: (action: PendingAction) => boolean;
-  onManageAssignments: () => void;
+  onOpenDetails: () => void;
   onEdit: () => void;
   onSetActive: (active: boolean) => void;
   onArchive: () => void;
@@ -475,9 +498,9 @@ function ProjectActionsMenu({
       </DropdownTrigger>
       <DropdownContent align="end">
         <DropdownLabel>Actions</DropdownLabel>
-        <DropdownItem onSelect={onManageAssignments}>
-          <Users className="size-4" aria-hidden="true" />
-          Manage assignments
+        <DropdownItem onSelect={onOpenDetails}>
+          <FolderOpen className="size-4" aria-hidden="true" />
+          Open details
         </DropdownItem>
         <DropdownItem disabled={isPending("edit")} onSelect={onEdit}>
           <Edit3 className="size-4" aria-hidden="true" />
@@ -501,45 +524,107 @@ function ProjectActionsMenu({
   );
 }
 
-function ProjectAssignmentsDialog({
+function ProjectDetailDrawer({
   project,
   assignments,
+  assignmentRates,
   assignableMembers,
   todayDate,
   actionState,
   pendingKey,
+  projectPendingAction,
   onOpenChange,
+  onEditProject,
+  onSetProjectActive,
   onAssign,
   onUpdate,
   onClose,
 }: {
   project: AdminProjectRow | null;
   assignments: AdminProjectAssignmentRow[];
+  assignmentRates: AdminAssignmentRateRow[];
   assignableMembers: ProjectAssignableMemberRow[];
   todayDate: string;
   actionState: ProjectAssignmentActionState | null;
   pendingKey: string | null;
+  projectPendingAction: boolean;
   onOpenChange: (open: boolean) => void;
+  onEditProject: () => void;
+  onSetProjectActive: (active: boolean) => void;
   onAssign: (input: AssignProjectMemberActionInput) => void;
   onUpdate: (input: UpdateProjectAssignmentActionInput) => void;
   onClose: (input: CloseProjectAssignmentActionInput) => void;
 }) {
   const [editingAssignmentId, setEditingAssignmentId] = useState<string | null>(null);
   const assignPending = project ? pendingKey === `${project.id}:assign` : false;
+  const nextActive = project?.status !== "ACTIVE";
 
   return (
-    <Dialog open={Boolean(project)} onOpenChange={onOpenChange}>
+    <Drawer open={Boolean(project)} onOpenChange={onOpenChange}>
       {project ? (
-        <DialogContent className="max-w-4xl">
-          <DialogHeader>
-            <DialogTitle>Assignments for {project.name}</DialogTitle>
-            <DialogDescription>
-              Assign invited or active members to this project and preserve assignment history with
-              effective dates.
-            </DialogDescription>
-          </DialogHeader>
+        <DrawerContent className="w-[min(44rem,100vw)] gap-0 overflow-hidden p-0">
+          <div className="border-b border-border px-5 py-5">
+            <DrawerHeader className="p-0">
+              <div className="flex flex-col gap-4 pr-8 sm:flex-row sm:items-start sm:justify-between">
+                <div className="grid gap-2">
+                  <p className="font-ui text-xs font-semibold uppercase tracking-[0.18em] text-accent">
+                    Project
+                  </p>
+                  <DrawerTitle className="text-2xl font-semibold text-foreground">
+                    {project.name}
+                  </DrawerTitle>
+                  <DrawerDescription className="text-sm leading-6 text-muted-foreground">
+                    {formatProjectTimeline(project)}
+                  </DrawerDescription>
+                </div>
+                <div className="flex flex-wrap gap-2 sm:justify-end">
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="ghost"
+                    icon={Edit3}
+                    onClick={onEditProject}
+                  >
+                    Edit
+                  </Button>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="ghost"
+                    icon={nextActive ? CheckCircle2 : PauseCircle}
+                    loading={projectPendingAction}
+                    onClick={() => onSetProjectActive(nextActive)}
+                  >
+                    {nextActive ? "Activate" : "Deactivate"}
+                  </Button>
+                </div>
+              </div>
+            </DrawerHeader>
 
-          <div className="grid max-h-[70vh] gap-5 overflow-y-auto pr-1">
+            <div className="mt-4 flex flex-wrap items-center gap-2">
+              <Badge tone={statusTone[project.status]}>{formatStatus(project.status)}</Badge>
+              {project.isInternal ? <Badge tone="cta">Internal</Badge> : null}
+              {project.groups.length === 0 ? (
+                <Badge tone="neutral">Ungrouped</Badge>
+              ) : (
+                project.groups.map((group) => (
+                  <Badge key={group.id} tone="info">
+                    <FolderOpen className="size-3" aria-hidden="true" />
+                    {group.name}
+                  </Badge>
+                ))
+              )}
+            </div>
+          </div>
+
+          <div className="grid max-h-[calc(100vh-9rem)] gap-6 overflow-y-auto px-5 py-5">
+            {project.status !== "ACTIVE" ? (
+              <div className="rounded-[var(--radius-lg)] border border-warning/35 bg-warning/12 px-4 py-3 text-sm leading-6 text-warning">
+                This project is not active. It stays visible for admin work, but should not be used
+                for new time-entry choices.
+              </div>
+            ) : null}
+
             {actionState?.message ? (
               <p
                 role={actionState.status === "error" ? "alert" : "status"}
@@ -553,6 +638,20 @@ function ProjectAssignmentsDialog({
                 {actionState.message}
               </p>
             ) : null}
+
+            <section className="grid gap-3">
+              <div className="grid gap-3 sm:grid-cols-3">
+                <ProjectFact label="Assignments" value={String(assignments.length)} />
+                <ProjectFact label="Groups" value={String(project.groupCount)} />
+                <ProjectFact label="Updated" value={formatTimestamp(project.updatedAt)} />
+              </div>
+              <div className="rounded-[var(--radius-lg)] border border-border bg-card p-4">
+                <p className="font-ui text-sm font-semibold text-foreground">Notes</p>
+                <p className="mt-2 text-sm leading-6 text-muted-foreground">
+                  {project.notes || "No project notes have been added."}
+                </p>
+              </div>
+            </section>
 
             <form
               className="grid gap-4 rounded-[var(--radius-lg)] border border-border bg-background/45 p-4"
@@ -570,6 +669,12 @@ function ProjectAssignmentsDialog({
                 });
               }}
             >
+              <div>
+                <h3 className="font-ui text-sm font-semibold text-foreground">Add assignment</h3>
+                <p className="mt-1 text-xs leading-5 text-muted-foreground">
+                  Invited and active members can be assigned before account activation.
+                </p>
+              </div>
               <div className="grid gap-4 lg:grid-cols-[minmax(14rem,1.4fr)_minmax(9rem,0.7fr)_minmax(9rem,0.7fr)]">
                 <Field
                   label="Member"
@@ -671,6 +776,23 @@ function ProjectAssignmentsDialog({
             </form>
 
             <div className="grid gap-3">
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <h3 className="font-ui text-sm font-semibold text-foreground">
+                    Assigned members
+                  </h3>
+                  <p className="mt-1 text-xs leading-5 text-muted-foreground">
+                    Effective dates and rate source are shown per assignment.
+                  </p>
+                </div>
+                <Button type="button" variant="ghost" size="sm" asChild>
+                  <Link href="/admin/rates">
+                    <WalletCards className="size-4" aria-hidden="true" />
+                    Manage rates
+                  </Link>
+                </Button>
+              </div>
+
               {assignments.length === 0 ? (
                 <div className="rounded-[var(--radius-lg)] border border-border bg-card p-6 text-center text-sm text-muted-foreground">
                   No members are assigned to this project yet.
@@ -681,6 +803,7 @@ function ProjectAssignmentsDialog({
                   const updatePending = pendingKey === `${assignment.id}:update`;
                   const closePending = pendingKey === `${assignment.id}:close`;
                   const canEndToday = assignment.active && todayDate >= assignment.validFrom;
+                  const rateSource = getAssignmentRateSource(assignment, assignmentRates);
 
                   return (
                     <div
@@ -707,10 +830,12 @@ function ProjectAssignmentsDialog({
                             <Badge tone={assignment.active ? "success" : "neutral"}>
                               {assignment.active ? "active" : "inactive"}
                             </Badge>
+                            <Badge tone={rateSource.tone}>{rateSource.label}</Badge>
                           </div>
                         </div>
                         <div className="grid gap-2 text-sm text-muted-foreground lg:text-right">
                           <span>{formatAssignmentTimeline(assignment)}</span>
+                          <span>{rateSource.detail}</span>
                           {assignment.notes ? <span>{assignment.notes}</span> : null}
                           <div className="flex flex-wrap justify-start gap-2 lg:justify-end">
                             <Button
@@ -760,9 +885,20 @@ function ProjectAssignmentsDialog({
               )}
             </div>
           </div>
-        </DialogContent>
+        </DrawerContent>
       ) : null}
-    </Dialog>
+    </Drawer>
+  );
+}
+
+function ProjectFact({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-[var(--radius-lg)] border border-border bg-card px-4 py-3">
+      <p className="text-lg font-semibold text-foreground">{value}</p>
+      <p className="font-ui text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+        {label}
+      </p>
+    </div>
   );
 }
 
@@ -1093,6 +1229,62 @@ function formatProjectTimeline(project: AdminProjectRow) {
 function formatAssignmentTimeline(assignment: AdminProjectAssignmentRow) {
   if (assignment.validTo) return `${assignment.validFrom} to ${assignment.validTo}`;
   return `From ${assignment.validFrom}`;
+}
+
+function getAssignmentRateSource(
+  assignment: AdminProjectAssignmentRow,
+  assignmentRates: AdminAssignmentRateRow[],
+): {
+  label: string;
+  detail: string;
+  tone: BadgeProps["tone"];
+} {
+  if (assignment.memberProfile === "EMPLOYEE") {
+    return {
+      label: "Central rate",
+      detail: "Employee assignments use the member central rate.",
+      tone: "neutral",
+    };
+  }
+
+  const rate = assignmentRates.find((candidate) => candidate.assignmentId === assignment.id);
+
+  if (rate?.currentOverrideRate) {
+    return {
+      label: "Project override",
+      detail: `${formatRatePeriodAmount(rate.currentOverrideRate)} current override.`,
+      tone: "info",
+    };
+  }
+
+  if (rate?.overrideRatePeriods.length) {
+    return {
+      label: "Scheduled override",
+      detail: `${rate.overrideRatePeriods.length} override period${
+        rate.overrideRatePeriods.length === 1 ? "" : "s"
+      } scheduled.`,
+      tone: "warning",
+    };
+  }
+
+  return {
+    label: "Central rate",
+    detail: "Contractor assignment currently uses the member central rate.",
+    tone: "neutral",
+  };
+}
+
+function formatRatePeriodAmount(
+  period: NonNullable<AdminAssignmentRateRow["currentOverrideRate"]>,
+) {
+  const numericAmount = Number(period.hourlyRate);
+  const amount = Number.isFinite(numericAmount)
+    ? new Intl.NumberFormat("en-US", {
+        maximumFractionDigits: 2,
+      }).format(numericAmount)
+    : period.hourlyRate;
+
+  return `${amount} ${period.currencyCode}/h`;
 }
 
 function formatTimestamp(value: string) {
