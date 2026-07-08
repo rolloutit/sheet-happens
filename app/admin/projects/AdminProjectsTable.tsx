@@ -10,12 +10,13 @@ import {
   PauseCircle,
   Save,
   Search,
+  SquareStack,
   UserPlus,
   WalletCards,
 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState, useTransition } from "react";
+import { Children, useState, useTransition, type ReactNode } from "react";
 
 import { Badge } from "@/src/components/ui/Badge";
 import type { BadgeProps } from "@/src/components/ui/Badge";
@@ -47,6 +48,7 @@ import {
 import { Field } from "@/src/components/ui/Field";
 import { IconButton } from "@/src/components/ui/IconButton";
 import { Input } from "@/src/components/ui/Input";
+import { SegmentedControl } from "@/src/components/ui/SegmentedControl";
 import { DataTable } from "@/src/components/ui/Table";
 import { Textarea } from "@/src/components/ui/Textarea";
 import { cn } from "@/src/lib/utils";
@@ -63,6 +65,7 @@ import type { AdminAssignmentRateRow } from "@/src/server/rates";
 import {
   archiveProjectAction,
   assignProjectMemberAction,
+  bulkAssignProjectMembersAction,
   closeProjectAssignmentAction,
   setProjectActiveAction,
   updateProjectAction,
@@ -70,10 +73,12 @@ import {
 } from "./actions";
 import type {
   AssignProjectMemberActionInput,
+  BulkAssignProjectMembersActionInput,
   CloseProjectAssignmentActionInput,
   ProjectAssignmentActionState,
   ProjectAssignmentFormField,
   ProjectActionState,
+  ProjectBulkAssignmentActionState,
   UpdateProjectAssignmentActionInput,
   UpdateProjectActionInput,
 } from "./actions.types";
@@ -128,10 +133,13 @@ export function AdminProjectsTable({
   const [editState, setEditState] = useState<ProjectActionState | null>(null);
   const [archivingProject, setArchivingProject] = useState<AdminProjectRow | null>(null);
   const [detailProject, setDetailProject] = useState<AdminProjectRow | null>(null);
+  const [bulkDialogOpen, setBulkDialogOpen] = useState(false);
+  const [bulkMessage, setBulkMessage] = useState<ProjectBulkAssignmentActionState | null>(null);
   const [assignmentMessage, setAssignmentMessage] = useState<ProjectAssignmentActionState | null>(
     null,
   );
   const [assignmentPendingKey, setAssignmentPendingKey] = useState<string | null>(null);
+  const [bulkPending, setBulkPending] = useState(false);
   const [, startTransition] = useTransition();
   const filteredRows = rows.filter((row) => {
     const normalizedQuery = query.trim().toLowerCase();
@@ -213,6 +221,21 @@ export function AdminProjectsTable({
     });
   }
 
+  function runBulkAssignmentAction(input: BulkAssignProjectMembersActionInput) {
+    setBulkPending(true);
+    setBulkMessage(null);
+
+    startTransition(async () => {
+      const result = await bulkAssignProjectMembersAction(input);
+      setBulkMessage(result);
+      setBulkPending(false);
+
+      if (result.status === "success" && result.createdCount && result.createdCount > 0) {
+        router.refresh();
+      }
+    });
+  }
+
   return (
     <div className="grid gap-3">
       {message ? (
@@ -228,6 +251,20 @@ export function AdminProjectsTable({
           {message.message}
         </p>
       ) : null}
+
+      <div className="flex justify-end">
+        <Button
+          type="button"
+          variant="soft"
+          icon={SquareStack}
+          onClick={() => {
+            setBulkDialogOpen(true);
+            setBulkMessage(null);
+          }}
+        >
+          Bulk assign
+        </Button>
+      </div>
 
       <div className="grid gap-3 rounded-[var(--radius-lg)] border border-border bg-background/45 p-3 lg:grid-cols-[minmax(16rem,1fr)_auto_auto]">
         <label className="flex h-10 items-center gap-2 rounded-[var(--radius-md)] border border-border bg-card px-3 shadow-soft">
@@ -430,6 +467,21 @@ export function AdminProjectsTable({
         }}
       />
 
+      <BulkAssignmentDialog
+        open={bulkDialogOpen}
+        projects={rows}
+        members={assignableMembers}
+        assignments={assignments}
+        todayDate={todayDate}
+        actionState={bulkMessage}
+        pending={bulkPending}
+        onOpenChange={(open) => {
+          setBulkDialogOpen(open);
+          if (!open) setBulkMessage(null);
+        }}
+        onSubmit={runBulkAssignmentAction}
+      />
+
       <ProjectEditDialog
         project={editingProject}
         pending={editingProject ? isPending(editingProject, "edit") : false}
@@ -521,6 +573,413 @@ function ProjectActionsMenu({
         </DropdownItem>
       </DropdownContent>
     </Dropdown>
+  );
+}
+
+type BulkAssignmentMode = "people-to-projects" | "projects-to-people";
+
+function BulkAssignmentDialog({
+  open,
+  projects,
+  members,
+  assignments,
+  todayDate,
+  actionState,
+  pending,
+  onOpenChange,
+  onSubmit,
+}: {
+  open: boolean;
+  projects: AdminProjectRow[];
+  members: ProjectAssignableMemberRow[];
+  assignments: AdminProjectAssignmentRow[];
+  todayDate: string;
+  actionState: ProjectBulkAssignmentActionState | null;
+  pending: boolean;
+  onOpenChange: (open: boolean) => void;
+  onSubmit: (input: BulkAssignProjectMembersActionInput) => void;
+}) {
+  const [mode, setMode] = useState<BulkAssignmentMode>("people-to-projects");
+  const [memberQuery, setMemberQuery] = useState("");
+  const [projectQuery, setProjectQuery] = useState("");
+  const [selectedMemberIds, setSelectedMemberIds] = useState<string[]>([]);
+  const [selectedProjectIds, setSelectedProjectIds] = useState<string[]>([]);
+  const [validFrom, setValidFrom] = useState(todayDate);
+  const [validTo, setValidTo] = useState("");
+  const [active, setActive] = useState(true);
+  const [notes, setNotes] = useState("");
+
+  const activeProjects = projects.filter((project) => project.status !== "ARCHIVED");
+  const filteredMembers = filterMembers(members, memberQuery);
+  const filteredProjects = filterProjects(activeProjects, projectQuery);
+  const summary = getBulkAssignmentSummary({
+    assignments,
+    memberIds: selectedMemberIds,
+    projectIds: selectedProjectIds,
+    validFrom,
+    validTo,
+  });
+  const submitDisabled =
+    pending ||
+    selectedMemberIds.length === 0 ||
+    selectedProjectIds.length === 0 ||
+    !validFrom ||
+    summary.newCount === 0;
+
+  function reset() {
+    setMode("people-to-projects");
+    setMemberQuery("");
+    setProjectQuery("");
+    setSelectedMemberIds([]);
+    setSelectedProjectIds([]);
+    setValidFrom(todayDate);
+    setValidTo("");
+    setActive(true);
+    setNotes("");
+  }
+
+  function toggleMember(memberId: string) {
+    setSelectedMemberIds((current) => toggleSelection(current, memberId));
+  }
+
+  function toggleProject(projectId: string) {
+    setSelectedProjectIds((current) => toggleSelection(current, projectId));
+  }
+
+  const peoplePanel = (
+    <BulkSelectionPanel
+      title="People"
+      searchLabel="Search people"
+      searchValue={memberQuery}
+      onSearchChange={setMemberQuery}
+      empty="No members match this search."
+    >
+      {filteredMembers.map((member) => {
+        const duplicateCount = getDuplicateCountForMember(member.id, summary.duplicates);
+
+        return (
+          <BulkSelectionRow
+            key={member.id}
+            checked={selectedMemberIds.includes(member.id)}
+            title={member.name}
+            subtitle={member.email}
+            badges={[
+              {
+                label: formatProfile(member.profile),
+                tone: assignmentProfileTone[member.profile],
+              },
+              {
+                label: formatStatus(member.status),
+                tone: assignmentStatusTone[member.status],
+              },
+              duplicateCount
+                ? {
+                    label: `${duplicateCount} duplicate${duplicateCount === 1 ? "" : "s"}`,
+                    tone: "warning",
+                  }
+                : null,
+            ]}
+            onToggle={() => toggleMember(member.id)}
+          />
+        );
+      })}
+    </BulkSelectionPanel>
+  );
+
+  const projectsPanel = (
+    <BulkSelectionPanel
+      title="Projects"
+      searchLabel="Search projects"
+      searchValue={projectQuery}
+      onSearchChange={setProjectQuery}
+      empty="No projects match this search."
+    >
+      {filteredProjects.map((project) => {
+        const duplicateCount = getDuplicateCountForProject(project.id, summary.duplicates);
+
+        return (
+          <BulkSelectionRow
+            key={project.id}
+            checked={selectedProjectIds.includes(project.id)}
+            title={project.name}
+            subtitle={formatProjectTimeline(project)}
+            badges={[
+              {
+                label: formatStatus(project.status),
+                tone: statusTone[project.status],
+              },
+              project.isInternal
+                ? {
+                    label: "Internal",
+                    tone: "cta",
+                  }
+                : null,
+              duplicateCount
+                ? {
+                    label: `${duplicateCount} duplicate${duplicateCount === 1 ? "" : "s"}`,
+                    tone: "warning",
+                  }
+                : null,
+            ]}
+            onToggle={() => toggleProject(project.id)}
+          />
+        );
+      })}
+    </BulkSelectionPanel>
+  );
+
+  return (
+    <Dialog
+      open={open}
+      onOpenChange={(nextOpen) => {
+        onOpenChange(nextOpen);
+        if (!nextOpen) reset();
+      }}
+    >
+      <DialogContent className="max-w-5xl">
+        <DialogHeader>
+          <DialogTitle>Bulk assign</DialogTitle>
+          <DialogDescription>
+            Create project assignments across multiple people and projects. Existing overlapping
+            assignments are skipped.
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="grid max-h-[74vh] gap-5 overflow-y-auto pr-1">
+          {actionState?.message ? (
+            <p
+              role={actionState.status === "error" ? "alert" : "status"}
+              className={cn(
+                "rounded-[var(--radius-md)] border px-3 py-2 text-sm",
+                actionState.status === "error"
+                  ? "border-destructive/40 bg-destructive/10 text-destructive"
+                  : "border-success/40 bg-success/10 text-success",
+              )}
+            >
+              {actionState.message}
+            </p>
+          ) : null}
+
+          <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+            <SegmentedControl
+              label="Bulk assignment mode"
+              size="sm"
+              value={mode}
+              onValueChange={(value) => setMode(value as BulkAssignmentMode)}
+              items={[
+                { value: "people-to-projects", label: "People to projects" },
+                { value: "projects-to-people", label: "Projects to people" },
+              ]}
+            />
+            <Button type="button" variant="ghost" size="sm" asChild>
+              <Link href="/admin/rates">
+                <WalletCards className="size-4" aria-hidden="true" />
+                Manage rates
+              </Link>
+            </Button>
+          </div>
+
+          <div className="grid gap-4 lg:grid-cols-2">
+            {mode === "people-to-projects" ? peoplePanel : projectsPanel}
+            {mode === "people-to-projects" ? projectsPanel : peoplePanel}
+          </div>
+
+          <div className="grid gap-4 rounded-[var(--radius-lg)] border border-border bg-background/45 p-4 md:grid-cols-[minmax(10rem,1fr)_minmax(10rem,1fr)_auto] md:items-start">
+            <Field
+              label="Valid from"
+              required
+              reserveMessageSpace
+              error={actionState?.fieldErrors?.validFrom}
+            >
+              {({ id, describedBy, invalid, required }) => (
+                <Input
+                  id={id}
+                  type="date"
+                  value={validFrom}
+                  onChange={(event) => setValidFrom(event.target.value)}
+                  aria-describedby={describedBy}
+                  invalid={invalid}
+                  required={required}
+                />
+              )}
+            </Field>
+            <Field label="Valid to" reserveMessageSpace error={actionState?.fieldErrors?.validTo}>
+              {({ id, describedBy, invalid }) => (
+                <Input
+                  id={id}
+                  type="date"
+                  value={validTo}
+                  onChange={(event) => setValidTo(event.target.value)}
+                  aria-describedby={describedBy}
+                  invalid={invalid}
+                />
+              )}
+            </Field>
+            <label className="mt-8 inline-flex items-center gap-2 text-sm text-foreground">
+              <input
+                type="checkbox"
+                checked={active}
+                onChange={(event) => setActive(event.target.checked)}
+                className={nativeCheckboxClassName}
+              />
+              Active
+            </label>
+            <div className="md:col-span-3">
+              <Field label="Notes" reserveMessageSpace error={actionState?.fieldErrors?.notes}>
+                {({ id, describedBy, invalid }) => (
+                  <Input
+                    id={id}
+                    value={notes}
+                    onChange={(event) => setNotes(event.target.value)}
+                    aria-describedby={describedBy}
+                    invalid={invalid}
+                    placeholder="Optional note for all created assignments"
+                  />
+                )}
+              </Field>
+            </div>
+          </div>
+
+          <div className="grid gap-3 rounded-[var(--radius-lg)] border border-border bg-card p-4">
+            <div className="grid gap-3 sm:grid-cols-3">
+              <ProjectFact label="New assignments" value={String(summary.newCount)} />
+              <ProjectFact label="Duplicates" value={String(summary.duplicateCount)} />
+              <ProjectFact label="Selected pairs" value={String(summary.totalCount)} />
+            </div>
+            <p className="text-sm leading-6 text-muted-foreground">
+              Contractors assigned here use their central rate until a project override is added on
+              the Rates screen.
+            </p>
+            {summary.totalCount > 0 && summary.newCount === 0 ? (
+              <p className="rounded-[var(--radius-md)] border border-warning/35 bg-warning/12 px-3 py-2 text-sm text-warning">
+                Every selected pair already overlaps an existing assignment for this date range.
+              </p>
+            ) : null}
+          </div>
+        </div>
+
+        <DialogFooter>
+          <DialogClose asChild>
+            <Button type="button" variant="ghost" disabled={pending}>
+              Cancel
+            </Button>
+          </DialogClose>
+          <Button
+            type="button"
+            icon={UserPlus}
+            loading={pending}
+            disabled={submitDisabled}
+            onClick={() =>
+              onSubmit({
+                memberIds: selectedMemberIds,
+                projectIds: selectedProjectIds,
+                validFrom,
+                validTo,
+                active,
+                notes,
+              })
+            }
+          >
+            Assign {summary.newCount || ""}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function BulkSelectionPanel({
+  title,
+  searchLabel,
+  searchValue,
+  onSearchChange,
+  empty,
+  children,
+}: {
+  title: string;
+  searchLabel: string;
+  searchValue: string;
+  onSearchChange: (value: string) => void;
+  empty: string;
+  children: ReactNode;
+}) {
+  const childCount = Children.count(children);
+
+  return (
+    <section className="grid min-h-80 gap-3 rounded-[var(--radius-lg)] border border-border bg-card p-3">
+      <div className="grid gap-2">
+        <h3 className="font-ui text-sm font-semibold text-foreground">{title}</h3>
+        <label className="flex h-9 items-center gap-2 rounded-[var(--radius-md)] border border-border bg-background px-3">
+          <Search className="size-4 text-muted-foreground" aria-hidden="true" />
+          <span className="sr-only">{searchLabel}</span>
+          <input
+            value={searchValue}
+            onChange={(event) => onSearchChange(event.target.value)}
+            placeholder="Search..."
+            className="min-w-0 flex-1 bg-transparent text-sm text-foreground outline-none placeholder:text-muted-foreground"
+          />
+        </label>
+      </div>
+      <div className="grid max-h-80 content-start gap-2 overflow-y-auto pr-1">
+        {childCount > 0 ? children : <p className="p-3 text-sm text-muted-foreground">{empty}</p>}
+      </div>
+    </section>
+  );
+}
+
+function BulkSelectionRow({
+  checked,
+  title,
+  subtitle,
+  badges,
+  onToggle,
+}: {
+  checked: boolean;
+  title: string;
+  subtitle: string;
+  badges: Array<{ label: string; tone: BadgeProps["tone"] } | null>;
+  onToggle: () => void;
+}) {
+  const visibleBadges = badges.filter(
+    (badge): badge is { label: string; tone: BadgeProps["tone"] } => Boolean(badge),
+  );
+
+  return (
+    <button
+      type="button"
+      onClick={onToggle}
+      className={cn(
+        "grid gap-2 rounded-[var(--radius-md)] border px-3 py-3 text-left transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+        checked
+          ? "border-primary bg-primary/10"
+          : "border-border bg-background hover:bg-secondary/45",
+      )}
+    >
+      <span className="grid grid-cols-[auto_1fr] gap-3">
+        <span
+          className={cn(
+            "mt-0.5 grid size-5 place-items-center rounded border",
+            checked ? "border-primary bg-primary text-primary-foreground" : "border-border",
+          )}
+          aria-hidden="true"
+        >
+          {checked ? <CheckCircle2 className="size-3.5" aria-hidden="true" /> : null}
+        </span>
+        <span className="min-w-0">
+          <span className="block truncate font-ui text-sm font-semibold text-foreground">
+            {title}
+          </span>
+          <span className="block truncate text-xs text-muted-foreground">{subtitle}</span>
+        </span>
+      </span>
+      <span className="flex flex-wrap gap-1.5">
+        {visibleBadges.map((badge) => (
+          <Badge key={`${badge.label}-${badge.tone}`} tone={badge.tone}>
+            {badge.label}
+          </Badge>
+        ))}
+      </span>
+    </button>
   );
 }
 
@@ -1217,6 +1676,122 @@ function formatStatus(status: ProjectLifecycleStatus | ProjectAssignmentMemberSt
 
 function formatProfile(profile: ProjectAssignmentMemberProfile) {
   return profile.toLowerCase();
+}
+
+function filterMembers(members: ProjectAssignableMemberRow[], query: string) {
+  const normalizedQuery = query.trim().toLowerCase();
+
+  if (!normalizedQuery) return members;
+
+  return members.filter((member) =>
+    [member.name, member.email, formatProfile(member.profile), formatStatus(member.status)].some(
+      (value) => value.toLowerCase().includes(normalizedQuery),
+    ),
+  );
+}
+
+function filterProjects(projects: AdminProjectRow[], query: string) {
+  const normalizedQuery = query.trim().toLowerCase();
+
+  if (!normalizedQuery) return projects;
+
+  return projects.filter((project) =>
+    [
+      project.name,
+      project.slug,
+      project.notes ?? "",
+      project.isInternal ? "internal" : "",
+      ...project.groups.map((group) => group.name),
+    ].some((value) => value.toLowerCase().includes(normalizedQuery)),
+  );
+}
+
+function toggleSelection(current: string[], value: string) {
+  return current.includes(value)
+    ? current.filter((candidate) => candidate !== value)
+    : [...current, value];
+}
+
+function getBulkAssignmentSummary({
+  assignments,
+  memberIds,
+  projectIds,
+  validFrom,
+  validTo,
+}: {
+  assignments: AdminProjectAssignmentRow[];
+  memberIds: string[];
+  projectIds: string[];
+  validFrom: string;
+  validTo: string;
+}) {
+  const duplicates: Array<{ memberId: string; projectId: string }> = [];
+  const validRange = isDateOnlyString(validFrom) && (!validTo || isDateOnlyString(validTo));
+
+  for (const memberId of memberIds) {
+    for (const projectId of projectIds) {
+      const duplicate =
+        validRange &&
+        assignments.some(
+          (assignment) =>
+            assignment.memberId === memberId &&
+            assignment.projectId === projectId &&
+            assignmentRangesOverlapStrings(
+              { validFrom, validTo: validTo || null },
+              { validFrom: assignment.validFrom, validTo: assignment.validTo },
+            ),
+        );
+
+      if (duplicate) {
+        duplicates.push({
+          memberId,
+          projectId,
+        });
+      }
+    }
+  }
+
+  const totalCount = memberIds.length * projectIds.length;
+
+  return {
+    totalCount,
+    newCount: validRange ? totalCount - duplicates.length : 0,
+    duplicateCount: duplicates.length,
+    duplicates,
+  };
+}
+
+function getDuplicateCountForMember(
+  memberId: string,
+  duplicates: Array<{ memberId: string; projectId: string }>,
+) {
+  return duplicates.filter((duplicate) => duplicate.memberId === memberId).length;
+}
+
+function getDuplicateCountForProject(
+  projectId: string,
+  duplicates: Array<{ memberId: string; projectId: string }>,
+) {
+  return duplicates.filter((duplicate) => duplicate.projectId === projectId).length;
+}
+
+function assignmentRangesOverlapStrings(
+  left: { validFrom: string; validTo: string | null },
+  right: { validFrom: string; validTo: string | null },
+) {
+  const leftStart = Date.parse(`${left.validFrom}T00:00:00.000Z`);
+  const rightStart = Date.parse(`${right.validFrom}T00:00:00.000Z`);
+  const leftEnd = left.validTo ? Date.parse(`${left.validTo}T00:00:00.000Z`) : Infinity;
+  const rightEnd = right.validTo ? Date.parse(`${right.validTo}T00:00:00.000Z`) : Infinity;
+
+  return leftStart <= rightEnd && rightStart <= leftEnd;
+}
+
+function isDateOnlyString(value: string) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
+  const date = new Date(`${value}T00:00:00.000Z`);
+
+  return !Number.isNaN(date.getTime()) && date.toISOString().slice(0, 10) === value;
 }
 
 function formatProjectTimeline(project: AdminProjectRow) {
