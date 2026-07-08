@@ -120,7 +120,8 @@ async function upsertBootstrapMember(client, input) {
           current_profile,
           default_currency_code,
           timezone,
-          locale
+          locale,
+          updated_at
         )
         VALUES (
           $1::citext,
@@ -132,7 +133,8 @@ async function upsertBootstrapMember(client, input) {
           $5::member_profile_type,
           $6,
           $7,
-          $8
+          $8,
+          now()
         )
         RETURNING id, status
       `,
@@ -188,7 +190,8 @@ async function upsertBootstrapMember(client, input) {
         default_currency_code = $6,
         timezone = $7,
         locale = $8,
-        inactivated_at = NULL
+        inactivated_at = NULL,
+        updated_at = now()
       WHERE id = $1::uuid
       RETURNING id, status
     `,
