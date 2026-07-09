@@ -27,6 +27,7 @@ import type { Route } from "next";
 import { useRouter } from "next/navigation";
 import {
   useEffect,
+  useRef,
   useMemo,
   useState,
   useSyncExternalStore,
@@ -1372,6 +1373,7 @@ function EntryModal({ state, week, projects, onClose, onDone }: EntryModalProps)
   const [description, setDescription] = useState(
     state.mode === "edit" ? state.entry.description : (state.description ?? ""),
   );
+  const [draftStatus, setDraftStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
   const [fieldErrors, setFieldErrors] = useState<TimeTrackingActionState["fieldErrors"]>();
   const project = projects.find((item) => item.projectId === projectId) ?? projects[0];
   const parsedMinutes = parseDurationToMinutes(durationText);
@@ -1390,6 +1392,7 @@ function EntryModal({ state, week, projects, onClose, onDone }: EntryModalProps)
   useEffect(() => {
     if (!createDraftKey || !createDraftSource || !description.trim()) return;
 
+    let cancelled = false;
     const timerId = window.setTimeout(() => {
       void saveTimeEntryDraftAction({
         draftKey: createDraftKey,
@@ -1406,10 +1409,16 @@ function EntryModal({ state, week, projects, onClose, onDone }: EntryModalProps)
           description,
           prefill: createDraftPrefill,
         },
+      }).then((result) => {
+        if (cancelled) return;
+        setDraftStatus(result.status === "success" ? "saved" : "error");
       });
     }, 700);
 
-    return () => window.clearTimeout(timerId);
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timerId);
+    };
   }, [
     createDraftKey,
     createDraftPrefill,
@@ -1422,6 +1431,11 @@ function EntryModal({ state, week, projects, onClose, onDone }: EntryModalProps)
     startTime,
     timingMode,
   ]);
+
+  function markDraftDirty(nextDescription = description) {
+    if (!createDraftKey) return;
+    setDraftStatus(nextDescription.trim() ? "saving" : "idle");
+  }
 
   function saveCurrentDraft() {
     if (!createDraftKey || !createDraftSource || !description.trim()) return;
@@ -1448,6 +1462,8 @@ function EntryModal({ state, week, projects, onClose, onDone }: EntryModalProps)
     saveCurrentDraft();
     onClose();
   }
+
+  const dialogRef = useModalFocusTrap<HTMLDivElement>(closeModal);
 
   function submit() {
     const durationMinutes = parseDurationToMinutes(durationText);
@@ -1510,11 +1526,16 @@ function EntryModal({ state, week, projects, onClose, onDone }: EntryModalProps)
       onMouseDown={closeModal}
     >
       <div
+        ref={dialogRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="time-entry-dialog-title"
+        tabIndex={-1}
         className="max-h-[92vh] w-full max-w-[540px] overflow-y-auto rounded-[var(--radius-xl)] border border-border bg-card shadow-panel"
         onMouseDown={(event) => event.stopPropagation()}
       >
         <div className="flex items-center justify-between border-b border-border px-6 py-5">
-          <h2 className="text-xl font-semibold">
+          <h2 id="time-entry-dialog-title" className="text-xl font-semibold">
             {state.mode === "edit" ? "Edit time entry" : "New time entry"}
           </h2>
           <button
@@ -1563,7 +1584,10 @@ function EntryModal({ state, week, projects, onClose, onDone }: EntryModalProps)
               value={description}
               placeholder="What did you work on?"
               className={inputClassName(Boolean(fieldErrors?.description))}
-              onChange={(event) => setDescription(event.target.value)}
+              onChange={(event) => {
+                setDescription(event.target.value);
+                markDraftDirty(event.target.value);
+              }}
             />
           </Field>
 
@@ -1571,7 +1595,10 @@ function EntryModal({ state, week, projects, onClose, onDone }: EntryModalProps)
             <select
               value={projectId}
               className={inputClassName(Boolean(fieldErrors?.projectId))}
-              onChange={(event) => setProjectId(event.target.value)}
+              onChange={(event) => {
+                setProjectId(event.target.value);
+                markDraftDirty();
+              }}
             >
               {projects.map((option) => (
                 <option key={option.projectId} value={option.projectId}>
@@ -1589,7 +1616,10 @@ function EntryModal({ state, week, projects, onClose, onDone }: EntryModalProps)
                 min={week.weekStart}
                 max={week.weekEnd}
                 className={inputClassName(Boolean(fieldErrors?.localDate))}
-                onChange={(event) => setLocalDate(event.target.value)}
+                onChange={(event) => {
+                  setLocalDate(event.target.value);
+                  markDraftDirty();
+                }}
               />
             </Field>
             <Field label="Mode" required>
@@ -1602,7 +1632,10 @@ function EntryModal({ state, week, projects, onClose, onDone }: EntryModalProps)
                       ? "bg-accent text-accent-foreground"
                       : "text-muted-foreground",
                   )}
-                  onClick={() => setTimingMode("DURATION")}
+                  onClick={() => {
+                    setTimingMode("DURATION");
+                    markDraftDirty();
+                  }}
                 >
                   Duration
                 </button>
@@ -1614,7 +1647,10 @@ function EntryModal({ state, week, projects, onClose, onDone }: EntryModalProps)
                       ? "bg-accent text-accent-foreground"
                       : "text-muted-foreground",
                   )}
-                  onClick={() => setTimingMode("INTERVAL")}
+                  onClick={() => {
+                    setTimingMode("INTERVAL");
+                    markDraftDirty();
+                  }}
                 >
                   Interval
                 </button>
@@ -1629,7 +1665,10 @@ function EntryModal({ state, week, projects, onClose, onDone }: EntryModalProps)
                 value={durationText}
                 placeholder="3h 20m"
                 className={inputClassName(Boolean(fieldErrors?.durationMinutes))}
-                onChange={(event) => setDurationText(event.target.value)}
+                onChange={(event) => {
+                  setDurationText(event.target.value);
+                  markDraftDirty();
+                }}
               />
             </Field>
           ) : (
@@ -1639,7 +1678,10 @@ function EntryModal({ state, week, projects, onClose, onDone }: EntryModalProps)
                   type="time"
                   value={startTime}
                   className={inputClassName(Boolean(fieldErrors?.startTime))}
-                  onChange={(event) => setStartTime(event.target.value)}
+                  onChange={(event) => {
+                    setStartTime(event.target.value);
+                    markDraftDirty();
+                  }}
                 />
               </Field>
               <Field label="End" required error={fieldErrors?.endTime}>
@@ -1647,7 +1689,10 @@ function EntryModal({ state, week, projects, onClose, onDone }: EntryModalProps)
                   type="time"
                   value={endTime}
                   className={inputClassName(Boolean(fieldErrors?.endTime))}
-                  onChange={(event) => setEndTime(event.target.value)}
+                  onChange={(event) => {
+                    setEndTime(event.target.value);
+                    markDraftDirty();
+                  }}
                 />
               </Field>
               <div className="pb-2 text-xl font-semibold text-accent">
@@ -1674,6 +1719,22 @@ function EntryModal({ state, week, projects, onClose, onDone }: EntryModalProps)
             <Info className="size-4" aria-hidden="true" />
             Project and description are required. Future dates and long days save with warnings.
           </div>
+
+          {createDraftKey && description.trim() && draftStatus !== "idle" ? (
+            <div
+              className={cn(
+                "font-ui text-[11px] font-semibold uppercase tracking-[0.08em]",
+                draftStatus === "error" ? "text-destructive" : "text-muted-foreground",
+              )}
+              aria-live="polite"
+            >
+              {draftStatus === "saving"
+                ? "Saving draft..."
+                : draftStatus === "saved"
+                  ? "Draft saved"
+                  : "Draft not saved"}
+            </div>
+          ) : null}
         </div>
 
         <div className="flex justify-end gap-3 border-t border-border px-6 py-4">
@@ -1721,6 +1782,7 @@ function BreakdownDialog({
   onEdit,
 }: BreakdownDialogProps) {
   const total = entries.reduce((sum, entry) => sum + entry.durationMinutes, 0);
+  const dialogRef = useModalFocusTrap<HTMLDivElement>(onClose);
 
   return (
     <div
@@ -1728,6 +1790,11 @@ function BreakdownDialog({
       onMouseDown={onClose}
     >
       <div
+        ref={dialogRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="time-entry-breakdown-title"
+        tabIndex={-1}
         className="max-h-[88vh] w-full max-w-[520px] overflow-y-auto rounded-[var(--radius-xl)] border border-border bg-card shadow-panel"
         onMouseDown={(event) => event.stopPropagation()}
       >
@@ -1741,7 +1808,9 @@ function BreakdownDialog({
               />
               {project.name} · {day.shortLabel} {day.dayNumber}
             </div>
-            <h2 className="mt-1 text-lg font-semibold">Entries · {formatMinutesAsHours(total)}h</h2>
+            <h2 id="time-entry-breakdown-title" className="mt-1 text-lg font-semibold">
+              Entries · {formatMinutesAsHours(total)}h
+            </h2>
           </div>
           <button
             type="button"
@@ -2006,6 +2075,73 @@ function parseTimeToMinutes(value: string) {
   }
 
   return hour * 60 + minute;
+}
+
+function useModalFocusTrap<T extends HTMLElement>(onClose: () => void) {
+  const containerRef = useRef<T>(null);
+  const onCloseRef = useRef(onClose);
+
+  useEffect(() => {
+    onCloseRef.current = onClose;
+  }, [onClose]);
+
+  useEffect(() => {
+    const previouslyFocused =
+      document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    const container = containerRef.current;
+    const focusableElements = getFocusableElements(container);
+
+    (focusableElements[0] ?? container)?.focus();
+
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        onCloseRef.current();
+        return;
+      }
+
+      if (event.key !== "Tab" || focusableElements.length === 0) return;
+
+      const firstElement = focusableElements[0];
+      const lastElement = focusableElements[focusableElements.length - 1];
+
+      if (!event.shiftKey && document.activeElement === lastElement) {
+        event.preventDefault();
+        firstElement.focus();
+      }
+
+      if (event.shiftKey && document.activeElement === firstElement) {
+        event.preventDefault();
+        lastElement.focus();
+      }
+    }
+
+    document.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      document.removeEventListener("keydown", handleKeyDown);
+      previouslyFocused?.focus();
+    };
+  }, []);
+
+  return containerRef;
+}
+
+function getFocusableElements(container: HTMLElement | null) {
+  if (!container) return [];
+
+  return Array.from(
+    container.querySelectorAll<HTMLElement>(
+      [
+        "a[href]",
+        "button:not([disabled])",
+        "input:not([disabled])",
+        "select:not([disabled])",
+        "textarea:not([disabled])",
+        "[tabindex]:not([tabindex='-1'])",
+      ].join(","),
+    ),
+  ).filter((element) => element.offsetParent !== null);
 }
 
 function useElapsedLabel(startedAt: string | null) {
