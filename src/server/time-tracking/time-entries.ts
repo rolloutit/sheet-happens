@@ -206,6 +206,10 @@ export type DeleteTimeEntryDraftInput = {
   draftKey: string;
 };
 
+type TimeTrackingDeps = {
+  db?: typeof prisma;
+};
+
 type AssignmentForTimeGrid = {
   id: string;
   validFrom: Date;
@@ -893,6 +897,7 @@ export async function stopRunningTimer(input: RunningTimerStopInput) {
 
 export async function copyPreviousDayEntries(
   input: CopyPreviousDayEntriesInput,
+  deps: TimeTrackingDeps = {},
 ): Promise<CopyTimeEntriesResult> {
   const targetDate = normalizeDateOnly(input.targetDate);
   const sourceDate = addDays(targetDate, -1);
@@ -905,11 +910,13 @@ export async function copyPreviousDayEntries(
     dayShift: 1,
     auditAction: "time_entries.copy_previous_day",
     requestMetadata: input.requestMetadata,
+    db: deps.db,
   });
 }
 
 export async function duplicatePreviousWeek(
   input: DuplicatePreviousWeekInput,
+  deps: TimeTrackingDeps = {},
 ): Promise<CopyTimeEntriesResult> {
   const weekStartDate = getMonday(input.weekStartDate);
 
@@ -921,13 +928,18 @@ export async function duplicatePreviousWeek(
     dayShift: 7,
     auditAction: "time_entries.duplicate_previous_week",
     requestMetadata: input.requestMetadata,
+    db: deps.db,
   });
 }
 
-export async function saveTimeEntryDraft(input: SaveTimeEntryDraftInput) {
+export async function saveTimeEntryDraft(
+  input: SaveTimeEntryDraftInput,
+  deps: TimeTrackingDeps = {},
+) {
+  const db = deps.db ?? prisma;
   const draftKey = normalizeDraftKey(input.draftKey);
 
-  return prisma.timeEntryDraft.upsert({
+  return db.timeEntryDraft.upsert({
     where: {
       memberId_draftKey: {
         memberId: input.memberId,
@@ -948,10 +960,14 @@ export async function saveTimeEntryDraft(input: SaveTimeEntryDraftInput) {
   });
 }
 
-export async function deleteTimeEntryDraft(input: DeleteTimeEntryDraftInput) {
+export async function deleteTimeEntryDraft(
+  input: DeleteTimeEntryDraftInput,
+  deps: TimeTrackingDeps = {},
+) {
+  const db = deps.db ?? prisma;
   const draftKey = normalizeDraftKey(input.draftKey);
 
-  return prisma.timeEntryDraft.deleteMany({
+  return db.timeEntryDraft.deleteMany({
     where: {
       memberId: input.memberId,
       draftKey,
@@ -1079,11 +1095,13 @@ async function copyEntriesByDateShift(input: {
   dayShift: number;
   auditAction: string;
   requestMetadata?: TimeTrackingRequestMetadata;
+  db?: typeof prisma;
 }): Promise<CopyTimeEntriesResult> {
+  const db = input.db ?? prisma;
   const sourceStartDate = normalizeDateOnly(input.sourceStartDate);
   const sourceEndDate = normalizeDateOnly(input.sourceEndDate);
 
-  return prisma.$transaction(async (tx) => {
+  return db.$transaction(async (tx) => {
     const sourceEntries = await tx.timeEntry.findMany({
       where: {
         memberId: input.memberId,
@@ -1119,6 +1137,24 @@ async function copyEntriesByDateShift(input: {
     const targetDates = unique(
       sourceEntries.map((entry) => formatDateOnly(addDays(entry.localDate, input.dayShift))),
     );
+    const existingTargetEntries = await tx.timeEntry.findMany({
+      where: {
+        memberId: input.memberId,
+        deletedAt: null,
+        localDate: {
+          in: targetDates.map((targetDate) => parseDateOnly(targetDate)),
+        },
+      },
+      select: {
+        projectId: true,
+        localDate: true,
+      },
+    });
+    const occupiedTargetCells = new Set(
+      existingTargetEntries.map((entry) =>
+        copiedEntryCellKey(entry.projectId, formatDateOnly(entry.localDate)),
+      ),
+    );
 
     for (const targetDate of targetDates) {
       await assertDateOpen(tx, input.memberId, parseDateOnly(targetDate));
@@ -1130,6 +1166,13 @@ async function copyEntriesByDateShift(input: {
 
     for (const sourceEntry of sourceEntries) {
       const targetDate = addDays(sourceEntry.localDate, input.dayShift);
+      const targetDateIso = formatDateOnly(targetDate);
+
+      if (occupiedTargetCells.has(copiedEntryCellKey(sourceEntry.projectId, targetDateIso))) {
+        skippedCount += 1;
+        continue;
+      }
+
       const assignment = await findOptionalAssignmentForDate(tx, {
         memberId: input.memberId,
         projectId: sourceEntry.projectId,
@@ -1307,6 +1350,10 @@ function getCopiedEntryTiming(entry: EntryForCopy, targetDate: Date, timezone: s
     startedAt: null,
     endedAt: null,
   };
+}
+
+function copiedEntryCellKey(projectId: string, localDate: string) {
+  return `${projectId}:${localDate}`;
 }
 
 async function assertDateOpen(tx: TimeTrackingTransaction, memberId: string, localDate: Date) {
