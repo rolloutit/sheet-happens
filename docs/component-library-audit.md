@@ -12,7 +12,7 @@ Date: 2026-06-24
 
 ## Summary
 
-The component library has broad visual coverage now: 35 UI primitive folders, 50 Sheet Happens product component folders, 8 layout folders, 92 Storybook story files, 253 Storybook interaction-rendered tests, 25 Playwright Storybook visual baselines, one colocated unit test, and route-level Playwright coverage for the internal `/component-library` audit route. This is a strong visual and API-contract baseline.
+The component library has broad visual coverage now: 35 UI primitive folders, 50 Sheet Happens product component folders, 8 layout folders, 92 Storybook story files, 253 Storybook interaction-rendered tests, 25 Playwright Storybook visual baselines, and one colocated unit test. This is a strong visual and API-contract baseline.
 
 It is not yet a complete production app foundation. The main remaining gaps are real backend query/mutation contracts, route-specific form submission paths, and deeper edge-case behavior coverage once production screens exist.
 
@@ -33,7 +33,6 @@ Current explicit behavior coverage:
 
 - Storybook play tests: AppShell mobile navigation, BulkBar, Button, Checkbox, ChipButton, Combobox, CommandPill, DashboardCards, DatePicker, Dialog, DocumentPreview, Drawer, Dropdown, Dropzone, Field, FlaggedUserList, InvoiceUploadPanel, LanguageToggle, ListRow, MobileBottomBar, MonthRow, NotificationButton, NotificationPreferences, Pager, PayslipAdminTable, PayslipMonthList, Payslips, PayslipSummaryCard, PayslipUploadPanel, PayslipViewer, PeopleTable, Popover, PreferenceControls, ProfileSettingsPanel, ProjectDrawer, RateDrawer, ReportExportDialog, ReportFilterBar, Reports, RejectDialog, ReviewActionBar, ReviewDiffList, ReviewQueueTable, SecurityMethodList, SegmentedControl, Select, SettingsPanels, StatCard, StatusOverview, SubmitTimesheetDialog, Switch, Table, Tabs, TimeGridTimer, TimesheetStepper, TimesheetSummaryCard, Toast, Tooltip, TotpSetupDialog, TweaksPanel, UserMenu, WeeklyTimeGrid.
 - Playwright visual baselines: Button variants, Field error, WeeklyTimeGrid cell states, Dashboard admin cards, AppShell desktop, AppShell mobile drawer, CommandPill, CommandPalette, LanguageToggle, NotificationButton menu, UserMenu, MobileBottomBar, TimeEntryForm, DayDetailPanel, TimeBreakdownDialog, PdfViewer, ChartPrimitives, and InfoPageEditor across scoped desktop/mobile viewports.
-- Route-level Playwright smoke tests: `/component-library` renders inside the Next app shell, switches composed product surfaces through route controls, switches surfaces through the command palette, and observes weekly-grid callback wiring through an app route.
 - Unit tests: StatusPill only.
 
 No item from the original high-priority behavior list is completely untested anymore. Remaining behavior work is deeper coverage:
@@ -57,7 +56,7 @@ Recommendation: treat these as the first hardening batch.
 
 ### 3. Product Components Are Mostly Static Showcase Surfaces
 
-The `src/components/sheet` components are now useful Storybook compositions and typed app-route contracts. The internal `/component-library` route composes the large product surfaces with typed fixture props inside `AppShell`, including command-palette surface switching. Examples:
+The `src/components/sheet` components are now useful Storybook compositions and typed app-route contracts. Storybook is the component-library inspection surface for the large product compositions. Examples:
 
 - `DashboardCards` has been decomposed into data-driven `StatCard`, `FlaggedUserList`, and `StatusOverview` pieces while preserving the visual fixture defaults.
 - `WeeklyTimeGrid` now models week navigation, selected project, day metadata, cell state, editing, keyboard movement, mobile day cards, totals, timer state, and save callbacks.
@@ -93,7 +92,7 @@ Missing or folded into larger components:
 
 - `Icon` wrapper: not needed if Lucide components are passed directly, but this should be an explicit decision.
 - `LinkButton`: covered by `Button` with `variant="link"` and `asChild`; link usage is now documented in Storybook.
-- Route-level command palette wiring is now covered by the internal `/component-library` audit route.
+- Route-level command palette wiring should be covered through production workflows instead of a component-library app route.
 
 Recommendation: do not implement all immediately. Add them only when real screens need them, except form primitives and behavior primitives, which are foundational.
 
@@ -311,13 +310,12 @@ Done: Storybook is now protected with a local Playwright visual baseline:
 
 ### Batch 4: Route-Level API Audit
 
-Done: the internal `/component-library` route now composes the larger product surfaces inside the Next app shell:
+Retired: the internal `/component-library` route has been removed. Storybook remains the component-library surface, and route-level Playwright coverage should target real backend-backed workflows:
 
-- `src/components/routes/ComponentLibraryAudit` owns route-specific fixture data, active-surface state, and callback observability.
-- The route covers DashboardCards, WeeklyTimeGrid, TimeEntryForm, DayDetailPanel, TimeBreakdownDialog, TimesheetComponents, AdminReview, PdfViewer, ManagementViews, Reports, SettingsPanels, TweaksPanel, Payslips, and InfoPageEditor.
-- `CommandPalette` is wired to switch active route surfaces, proving the shell command flow outside Storybook.
-- `e2e/component-library.spec.ts` covers route render, surface switching, command-palette switching, and weekly-grid callback wiring.
+- Storybook covers DashboardCards, WeeklyTimeGrid, TimeEntryForm, DayDetailPanel, TimeBreakdownDialog, TimesheetComponents, AdminReview, PdfViewer, ManagementViews, Reports, SettingsPanels, TweaksPanel, Payslips, and InfoPageEditor.
+- `visual/storybook.spec.ts` protects the visual baseline for key primitive and product compositions.
+- Production routes should add E2E coverage when they wire these components to real data and actions.
 
 ## Bottom Line
 
-The component library is visually useful, structurally organized, and now proven inside an app route. The next quality jump is production screen implementation: backend-backed data contracts, Server Actions, auth/RBAC paths, real query/export flows, and route-level E2E for each workflow.
+The component library is visually useful, structurally organized, and covered through Storybook. The next quality jump is production screen implementation: backend-backed data contracts, Server Actions, auth/RBAC paths, real query/export flows, and route-level E2E for each workflow.
