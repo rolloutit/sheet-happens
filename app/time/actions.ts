@@ -7,23 +7,32 @@ import { z } from "zod";
 import { requireActiveAppMemberForAction } from "@/src/server/auth/app-access";
 import { AuthenticationError, AuthorizationError } from "@/src/server/auth/session";
 import {
+  copyPreviousDayEntries,
   createTimeEntry,
   deleteTimeEntry,
+  deleteTimeEntryDraft,
+  duplicatePreviousWeek,
   markInactiveProjectWeek,
   parseDateOnly,
+  saveTimeEntryDraft,
   startRunningTimer,
   stopRunningTimer,
   TimeTrackingDateError,
   TimeTrackingError,
   unmarkInactiveProjectWeek,
   updateTimeEntry,
+  type CopyTimeEntriesResult,
   type TimeTrackingRequestMetadata,
 } from "@/src/server/time-tracking";
 
 import type {
+  ClearTimeEntryDraftActionInput,
+  CopyPreviousDayEntriesActionInput,
   CreateTimeEntryActionInput,
   DeleteTimeEntryActionInput,
+  DuplicatePreviousWeekActionInput,
   InactiveProjectWeekActionInput,
+  SaveTimeEntryDraftActionInput,
   StartRunningTimerActionInput,
   TimeEntryFormField,
   TimeTrackingActionState,
@@ -93,6 +102,37 @@ const startRunningTimerSchema = z.object({
     .trim()
     .min(1, "Description is required.")
     .max(1000, "Description must be 1000 characters or less."),
+});
+
+const copyPreviousDayEntriesSchema = z.object({
+  targetDate: z.string().trim().refine(isDateInputValue, "Choose a valid target date."),
+});
+
+const duplicatePreviousWeekSchema = z.object({
+  weekStartDate: z.string().trim().refine(isDateInputValue, "Choose a valid week."),
+});
+
+const timeEntryDraftPayloadSchema = z.object({
+  kind: z.literal("time-entry-form"),
+  version: z.literal(1),
+  source: z.enum(["GRID", "FORM"]),
+  projectId: z.string().trim().min(1, "Choose a project."),
+  localDate: z.string().trim().refine(isDateInputValue, "Choose a valid date."),
+  timingMode: z.enum(["DURATION", "INTERVAL"]),
+  durationText: z.string().trim().max(64, "Duration is too long."),
+  startTime: z.string().trim().refine(isTimeInputValue, "Choose a valid start time."),
+  endTime: z.string().trim().refine(isTimeInputValue, "Choose a valid end time."),
+  description: z.string().trim().max(1000, "Description must be 1000 characters or less."),
+  prefill: z.boolean().optional(),
+});
+
+const timeEntryDraftSchema = z.object({
+  draftKey: z.string().trim().min(1).max(80),
+  payload: timeEntryDraftPayloadSchema,
+});
+
+const clearTimeEntryDraftSchema = z.object({
+  draftKey: z.string().trim().min(1).max(80),
 });
 
 export async function createTimeEntryAction(
@@ -248,6 +288,129 @@ export async function stopRunningTimerAction(): Promise<TimeTrackingActionState>
   }
 }
 
+export async function copyPreviousDayEntriesAction(
+  input: CopyPreviousDayEntriesActionInput,
+): Promise<TimeTrackingActionState> {
+  const parsed = copyPreviousDayEntriesSchema.safeParse(input);
+
+  if (!parsed.success) {
+    return {
+      status: "error",
+      message: "Choose a valid target date.",
+    };
+  }
+
+  try {
+    const { member } = await requireActiveAppMemberForAction();
+    const result = await copyPreviousDayEntries({
+      targetDate: parseDateOnly(parsed.data.targetDate),
+      memberId: member.id,
+      actorMemberId: member.id,
+      requestMetadata: await getTimeTrackingRequestMetadata(),
+    });
+
+    revalidatePath("/time");
+
+    return {
+      status: "success",
+      message: formatCopyResultMessage(result, "previous day"),
+    };
+  } catch (error) {
+    return mapTimeTrackingActionError(error, "The previous day could not be copied.");
+  }
+}
+
+export async function duplicatePreviousWeekAction(
+  input: DuplicatePreviousWeekActionInput,
+): Promise<TimeTrackingActionState> {
+  const parsed = duplicatePreviousWeekSchema.safeParse(input);
+
+  if (!parsed.success) {
+    return {
+      status: "error",
+      message: "Choose a valid week.",
+    };
+  }
+
+  try {
+    const { member } = await requireActiveAppMemberForAction();
+    const result = await duplicatePreviousWeek({
+      weekStartDate: parseDateOnly(parsed.data.weekStartDate),
+      memberId: member.id,
+      actorMemberId: member.id,
+      requestMetadata: await getTimeTrackingRequestMetadata(),
+    });
+
+    revalidatePath("/time");
+
+    return {
+      status: "success",
+      message: formatCopyResultMessage(result, "previous week"),
+    };
+  } catch (error) {
+    return mapTimeTrackingActionError(error, "The previous week could not be duplicated.");
+  }
+}
+
+export async function saveTimeEntryDraftAction(
+  input: SaveTimeEntryDraftActionInput,
+): Promise<TimeTrackingActionState> {
+  const parsed = timeEntryDraftSchema.safeParse(input);
+
+  if (!parsed.success) {
+    return {
+      status: "error",
+      message: "The draft could not be saved.",
+    };
+  }
+
+  try {
+    const { member } = await requireActiveAppMemberForAction();
+    await saveTimeEntryDraft({
+      draftKey: parsed.data.draftKey,
+      payload: parsed.data.payload,
+      memberId: member.id,
+    });
+
+    return {
+      status: "success",
+      message: "Draft saved.",
+    };
+  } catch (error) {
+    return mapTimeTrackingActionError(error, "The draft could not be saved.");
+  }
+}
+
+export async function clearTimeEntryDraftAction(
+  input: ClearTimeEntryDraftActionInput,
+): Promise<TimeTrackingActionState> {
+  const parsed = clearTimeEntryDraftSchema.safeParse(input);
+
+  if (!parsed.success) {
+    return {
+      status: "error",
+      message: "The draft could not be cleared.",
+    };
+  }
+
+  try {
+    const { member } = await requireActiveAppMemberForAction();
+    await deleteTimeEntryDraft({
+      draftKey: parsed.data.draftKey,
+      memberId: member.id,
+    });
+
+    revalidatePath("/time");
+
+    return {
+      status: "success",
+      message: "Draft discarded.",
+    };
+  } catch (error) {
+    return mapTimeTrackingActionError(error, "The draft could not be cleared.");
+  }
+}
+
 export async function markInactiveProjectWeekAction(
   input: InactiveProjectWeekActionInput,
 ): Promise<TimeTrackingActionState> {
@@ -361,6 +524,22 @@ function validateTimeEntryTiming(
       message: "Duration must be greater than zero.",
     });
   }
+}
+
+function formatCopyResultMessage(result: CopyTimeEntriesResult, sourceLabel: string) {
+  if (result.sourceCount === 0) {
+    return `No entries found on the ${sourceLabel}.`;
+  }
+
+  if (result.createdCount === 0) {
+    return `No entries could be copied from the ${sourceLabel}.`;
+  }
+
+  if (result.skippedCount > 0) {
+    return `Copied ${result.createdCount} entr${result.createdCount === 1 ? "y" : "ies"} from the ${sourceLabel}; ${result.skippedCount} skipped.`;
+  }
+
+  return `Copied ${result.createdCount} entr${result.createdCount === 1 ? "y" : "ies"} from the ${sourceLabel}.`;
 }
 
 function getEntryFieldErrors(error: z.ZodError): Partial<Record<TimeEntryFormField, string>> {

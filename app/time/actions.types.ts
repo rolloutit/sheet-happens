@@ -6,6 +6,8 @@ export type TimeTrackingActionState = {
   fieldErrors?: Partial<Record<TimeEntryFormField, string>>;
 };
 
+export const TIME_ENTRY_FORM_DRAFT_KEY = "time-entry-form";
+
 export type TimeEntryFormField =
   "projectId" | "localDate" | "durationMinutes" | "description" | "startTime" | "endTime";
 
@@ -46,4 +48,33 @@ export type InactiveProjectWeekActionInput = {
 export type StartRunningTimerActionInput = {
   projectId: string;
   description: string;
+};
+
+export type CopyPreviousDayEntriesActionInput = {
+  targetDate: string;
+};
+
+export type DuplicatePreviousWeekActionInput = {
+  weekStartDate: string;
+};
+
+export type SaveTimeEntryDraftActionInput = {
+  draftKey: string;
+  payload: {
+    kind: "time-entry-form";
+    version: 1;
+    source: "GRID" | "FORM";
+    projectId: string;
+    localDate: string;
+    timingMode: TimeEntryTimingMode;
+    durationText: string;
+    startTime: string;
+    endTime: string;
+    description: string;
+    prefill?: boolean;
+  };
+};
+
+export type ClearTimeEntryDraftActionInput = {
+  draftKey: string;
 };
