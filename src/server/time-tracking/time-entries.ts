@@ -6,18 +6,21 @@ import {
   addDays,
   buildWeekDays,
   formatDateOnly,
+  formatTimeInTimezone,
   formatWeekRange,
   getMonday,
   getMonthStart,
   getMonthStartsInRange,
   getTodayIsoInTimezone,
   getWeekEnd,
+  localIntervalToUtc,
   normalizeDateOnly,
   parseDateOnly,
 } from "./dates";
 import type { TimeGridDay } from "./dates";
 
 export type TimeEntrySource = "GRID" | "FORM" | "TIMER";
+export type TimeEntryTimingMode = "DURATION" | "INTERVAL";
 
 export type TimeTrackingRequestMetadata = {
   ipAddress?: string | null;
@@ -46,8 +49,20 @@ export type TimeGridEntry = {
   source: TimeEntrySource;
   startedAt: string | null;
   endedAt: string | null;
+  startTime: string | null;
+  endTime: string | null;
   locked: boolean;
   updatedAt: string;
+};
+
+export type RunningTimerView = {
+  id: string;
+  projectId: string;
+  projectAssignmentId: string;
+  projectName: string;
+  projectColor: string;
+  description: string;
+  startedAt: string;
 };
 
 export type InactiveProjectWeekRow = {
@@ -70,6 +85,7 @@ export type TimeGridWeek = {
   days: TimeGridDay[];
   projects: TimeGridAssignedProject[];
   entries: TimeGridEntry[];
+  runningTimer: RunningTimerView | null;
   inactiveWeeks: InactiveProjectWeekRow[];
 };
 
@@ -78,14 +94,26 @@ export type TimeEntryMutationInput = {
   actorMemberId: string;
   projectId: string;
   localDate: Date;
-  durationMinutes: number;
+  timingMode?: TimeEntryTimingMode;
+  durationMinutes?: number;
+  startTime?: string | null;
+  endTime?: string | null;
   description: string;
   source?: Extract<TimeEntrySource, "GRID" | "FORM">;
   requestMetadata?: TimeTrackingRequestMetadata;
 };
 
 export type TimeEntryUpdateInput = Partial<
-  Pick<TimeEntryMutationInput, "projectId" | "localDate" | "durationMinutes" | "description">
+  Pick<
+    TimeEntryMutationInput,
+    | "projectId"
+    | "localDate"
+    | "timingMode"
+    | "durationMinutes"
+    | "startTime"
+    | "endTime"
+    | "description"
+  >
 > & {
   memberId: string;
   actorMemberId: string;
@@ -97,6 +125,22 @@ export type TimeEntryDeleteInput = {
   memberId: string;
   actorMemberId: string;
   timeEntryId: string;
+  requestMetadata?: TimeTrackingRequestMetadata;
+};
+
+export type RunningTimerStartInput = {
+  memberId: string;
+  actorMemberId: string;
+  projectId: string;
+  description: string;
+  now?: Date;
+  requestMetadata?: TimeTrackingRequestMetadata;
+};
+
+export type RunningTimerStopInput = {
+  memberId: string;
+  actorMemberId: string;
+  now?: Date;
   requestMetadata?: TimeTrackingRequestMetadata;
 };
 
@@ -141,8 +185,23 @@ type EntryRecord = {
   source: TimeEntrySource;
   startedAt: Date | null;
   endedAt: Date | null;
+  timezone: string;
   lockedByTimesheetRevisionId: string | null;
   updatedAt: Date;
+};
+
+type RunningTimerRecord = {
+  id: string;
+  projectId: string;
+  projectAssignmentId: string;
+  description: string;
+  startedAt: Date;
+  projectAssignment: {
+    project: {
+      name: string;
+      colorToken: string;
+    };
+  };
 };
 
 export class TimeTrackingError extends Error {
@@ -178,7 +237,7 @@ export async function getMemberWeeklyTimeGrid(input: {
   const weekEnd = getWeekEnd(weekStart);
   const monthStarts = getMonthStartsInRange(weekStart, weekEnd);
 
-  const [periodLocks, projects, entries, inactiveWeeks] = await Promise.all([
+  const [periodLocks, projects, entries, runningTimer, inactiveWeeks] = await Promise.all([
     prisma.periodLock.findMany({
       where: {
         memberId: member.id,
@@ -245,8 +304,31 @@ export async function getMemberWeeklyTimeGrid(input: {
         source: true,
         startedAt: true,
         endedAt: true,
+        timezone: true,
         lockedByTimesheetRevisionId: true,
         updatedAt: true,
+      },
+    }),
+    prisma.runningTimer.findUnique({
+      where: {
+        memberId: member.id,
+      },
+      select: {
+        id: true,
+        projectId: true,
+        projectAssignmentId: true,
+        description: true,
+        startedAt: true,
+        projectAssignment: {
+          select: {
+            project: {
+              select: {
+                name: true,
+                colorToken: true,
+              },
+            },
+          },
+        },
       },
     }),
     prisma.inactiveProjectWeek.findMany({
@@ -282,6 +364,7 @@ export async function getMemberWeeklyTimeGrid(input: {
     }),
     projects: projects.map(mapAssignmentToProjectRow),
     entries: entries.map(mapTimeEntry),
+    runningTimer: runningTimer ? mapRunningTimer(runningTimer) : null,
     inactiveWeeks: inactiveWeeks.map((inactiveWeek) => ({
       projectId: inactiveWeek.projectId,
       weekStartDate: formatDateOnly(inactiveWeek.weekStartDate),
@@ -291,7 +374,7 @@ export async function getMemberWeeklyTimeGrid(input: {
 }
 
 export async function createTimeEntry(input: TimeEntryMutationInput) {
-  const normalized = normalizeTimeEntryMutation(input);
+  const normalized = normalizeTimeEntryMutationBase(input);
 
   return prisma.$transaction(async (tx) => {
     await assertDateOpen(tx, input.memberId, normalized.localDate);
@@ -301,6 +384,14 @@ export async function createTimeEntry(input: TimeEntryMutationInput) {
       localDate: normalized.localDate,
     });
     const timezone = await getMemberTimezone(tx, input.memberId);
+    const timing = normalizeTimeEntryTiming({
+      localDate: normalized.localDate,
+      timezone,
+      timingMode: input.timingMode,
+      durationMinutes: input.durationMinutes,
+      startTime: input.startTime,
+      endTime: input.endTime,
+    });
 
     const created = await tx.timeEntry.create({
       data: {
@@ -309,7 +400,9 @@ export async function createTimeEntry(input: TimeEntryMutationInput) {
         projectAssignmentId: assignment.id,
         localDate: normalized.localDate,
         timezone,
-        durationMinutes: normalized.durationMinutes,
+        durationMinutes: timing.durationMinutes,
+        startedAt: timing.startedAt,
+        endedAt: timing.endedAt,
         description: normalized.description,
         source: input.source ?? "GRID",
         createdByMemberId: input.actorMemberId,
@@ -330,7 +423,9 @@ export async function createTimeEntry(input: TimeEntryMutationInput) {
           projectId: assignment.projectId,
           projectAssignmentId: assignment.id,
           localDate: formatDateOnly(normalized.localDate),
-          durationMinutes: normalized.durationMinutes,
+          durationMinutes: timing.durationMinutes,
+          startedAt: timing.startedAt?.toISOString() ?? null,
+          endedAt: timing.endedAt?.toISOString() ?? null,
           source: input.source ?? "GRID",
         },
         ...input.requestMetadata,
@@ -357,6 +452,9 @@ export async function updateTimeEntry(input: TimeEntryUpdateInput) {
         localDate: true,
         durationMinutes: true,
         description: true,
+        timezone: true,
+        startedAt: true,
+        endedAt: true,
         lockedByTimesheetRevisionId: true,
         deletedAt: true,
       },
@@ -374,14 +472,29 @@ export async function updateTimeEntry(input: TimeEntryUpdateInput) {
       ? normalizeDateOnly(input.localDate)
       : normalizeDateOnly(current.localDate);
     const nextProjectId = input.projectId?.trim() || current.projectId;
-    const nextDurationMinutes =
-      input.durationMinutes === undefined
-        ? current.durationMinutes
-        : normalizeDurationMinutes(input.durationMinutes);
     const nextDescription =
       input.description === undefined
         ? current.description
         : normalizeDescription(input.description);
+    const timingChanged =
+      input.timingMode !== undefined ||
+      input.durationMinutes !== undefined ||
+      input.startTime !== undefined ||
+      input.endTime !== undefined;
+    const nextTiming = timingChanged
+      ? normalizeTimeEntryTiming({
+          localDate: nextLocalDate,
+          timezone: current.timezone,
+          timingMode: input.timingMode,
+          durationMinutes: input.durationMinutes,
+          startTime: input.startTime,
+          endTime: input.endTime,
+        })
+      : {
+          durationMinutes: current.durationMinutes,
+          startedAt: current.startedAt,
+          endedAt: current.endedAt,
+        };
 
     await assertDateOpen(tx, input.memberId, nextLocalDate);
 
@@ -401,8 +514,10 @@ export async function updateTimeEntry(input: TimeEntryUpdateInput) {
       projectId: nextProjectId,
       projectAssignmentId: assignment?.id ?? current.projectAssignmentId,
       localDate: formatDateOnly(nextLocalDate),
-      durationMinutes: nextDurationMinutes,
+      durationMinutes: nextTiming.durationMinutes,
       description: nextDescription,
+      startedAt: nextTiming.startedAt?.toISOString() ?? null,
+      endedAt: nextTiming.endedAt?.toISOString() ?? null,
     };
 
     await tx.timeEntry.update({
@@ -413,7 +528,9 @@ export async function updateTimeEntry(input: TimeEntryUpdateInput) {
         projectId: nextProjectId,
         projectAssignmentId: assignment?.id ?? current.projectAssignmentId,
         localDate: nextLocalDate,
-        durationMinutes: nextDurationMinutes,
+        durationMinutes: nextTiming.durationMinutes,
+        startedAt: nextTiming.startedAt,
+        endedAt: nextTiming.endedAt,
         description: nextDescription,
         updatedByMemberId: input.actorMemberId,
       },
@@ -502,6 +619,165 @@ export async function deleteTimeEntry(input: TimeEntryDeleteInput) {
   });
 }
 
+export async function startRunningTimer(input: RunningTimerStartInput) {
+  const description = normalizeDescription(input.description);
+  const now = input.now ?? new Date();
+
+  return prisma.$transaction(async (tx) => {
+    const timezone = await getMemberTimezone(tx, input.memberId);
+    const localDate = parseDateOnly(getTodayIsoInTimezone(timezone, now));
+
+    await assertDateOpen(tx, input.memberId, localDate);
+
+    const assignment = await findAssignmentForDate(tx, {
+      memberId: input.memberId,
+      projectId: input.projectId,
+      localDate,
+    });
+
+    const existing = await tx.runningTimer.findUnique({
+      where: {
+        memberId: input.memberId,
+      },
+      select: {
+        id: true,
+      },
+    });
+
+    if (existing) {
+      throw new TimeTrackingError("Stop the running timer before starting another one.");
+    }
+
+    const timer = await tx.runningTimer.create({
+      data: {
+        memberId: input.memberId,
+        projectId: assignment.projectId,
+        projectAssignmentId: assignment.id,
+        description,
+        startedAt: now,
+        timezone,
+      },
+      select: {
+        id: true,
+      },
+    });
+
+    await tx.auditLog.create({
+      data: {
+        actorMemberId: input.actorMemberId,
+        action: "running_timer.started",
+        targetType: "running_timer",
+        targetId: timer.id,
+        after: {
+          projectId: assignment.projectId,
+          projectAssignmentId: assignment.id,
+          description,
+          startedAt: now.toISOString(),
+          timezone,
+        },
+        ...input.requestMetadata,
+      },
+    });
+
+    return {
+      id: timer.id,
+    };
+  });
+}
+
+export async function stopRunningTimer(input: RunningTimerStopInput) {
+  const endedAt = input.now ?? new Date();
+
+  return prisma.$transaction(async (tx) => {
+    const timer = await tx.runningTimer.findUnique({
+      where: {
+        memberId: input.memberId,
+      },
+      select: {
+        id: true,
+        memberId: true,
+        projectId: true,
+        projectAssignmentId: true,
+        description: true,
+        startedAt: true,
+        timezone: true,
+      },
+    });
+
+    if (!timer || timer.memberId !== input.memberId) {
+      throw new TimeTrackingError("No timer is running.");
+    }
+
+    if (endedAt <= timer.startedAt) {
+      throw new TimeTrackingError("Timer end time must be after start time.");
+    }
+
+    const localDate = parseDateOnly(getTodayIsoInTimezone(timer.timezone, timer.startedAt));
+    await assertDateOpen(tx, input.memberId, localDate);
+
+    const durationMinutes = Math.max(
+      1,
+      Math.ceil((endedAt.getTime() - timer.startedAt.getTime()) / 60_000),
+    );
+    const description = timer.description.trim() || "Tracked with timer";
+
+    const entry = await tx.timeEntry.create({
+      data: {
+        memberId: input.memberId,
+        projectId: timer.projectId,
+        projectAssignmentId: timer.projectAssignmentId,
+        localDate,
+        timezone: timer.timezone,
+        startedAt: timer.startedAt,
+        endedAt,
+        durationMinutes,
+        description,
+        source: "TIMER",
+        createdByMemberId: input.actorMemberId,
+        updatedByMemberId: input.actorMemberId,
+      },
+      select: {
+        id: true,
+      },
+    });
+
+    await tx.runningTimer.delete({
+      where: {
+        id: timer.id,
+      },
+      select: {
+        id: true,
+      },
+    });
+
+    await tx.auditLog.create({
+      data: {
+        actorMemberId: input.actorMemberId,
+        action: "running_timer.stopped",
+        targetType: "time_entry",
+        targetId: entry.id,
+        before: {
+          runningTimerId: timer.id,
+          projectId: timer.projectId,
+          projectAssignmentId: timer.projectAssignmentId,
+          startedAt: timer.startedAt.toISOString(),
+        },
+        after: {
+          localDate: formatDateOnly(localDate),
+          durationMinutes,
+          endedAt: endedAt.toISOString(),
+          source: "TIMER",
+        },
+        ...input.requestMetadata,
+      },
+    });
+
+    return {
+      id: entry.id,
+    };
+  });
+}
+
 export async function markInactiveProjectWeek(input: InactiveProjectWeekInput) {
   const weekStartDate = getMonday(input.weekStartDate);
   const weekEndDate = getWeekEnd(weekStartDate);
@@ -529,7 +805,9 @@ export async function markInactiveProjectWeek(input: InactiveProjectWeekInput) {
     });
 
     if (entryCount > 0) {
-      throw new TimeTrackingError("Remove this week's entries before marking the project inactive.");
+      throw new TimeTrackingError(
+        "Remove this week's entries before marking the project inactive.",
+      );
     }
 
     const inactiveWeek = await tx.inactiveProjectWeek.upsert({
@@ -612,12 +890,51 @@ export async function unmarkInactiveProjectWeek(input: InactiveProjectWeekInput)
   });
 }
 
-function normalizeTimeEntryMutation(input: TimeEntryMutationInput) {
+function normalizeTimeEntryMutationBase(input: TimeEntryMutationInput) {
   return {
     projectId: normalizeId(input.projectId, "Choose a project."),
     localDate: normalizeDateOnly(input.localDate),
-    durationMinutes: normalizeDurationMinutes(input.durationMinutes),
     description: normalizeDescription(input.description),
+  };
+}
+
+function normalizeTimeEntryTiming(input: {
+  localDate: Date;
+  timezone: string;
+  timingMode?: TimeEntryTimingMode;
+  durationMinutes?: number;
+  startTime?: string | null;
+  endTime?: string | null;
+}) {
+  if (input.timingMode === "INTERVAL" || input.startTime || input.endTime) {
+    if (!input.startTime || !input.endTime) {
+      throw new TimeTrackingError("Start and end time are required.");
+    }
+
+    try {
+      return localIntervalToUtc({
+        localDate: input.localDate,
+        startTime: input.startTime,
+        endTime: input.endTime,
+        timezone: input.timezone,
+      });
+    } catch (error) {
+      if (error instanceof Error) {
+        throw new TimeTrackingError(error.message);
+      }
+
+      throw error;
+    }
+  }
+
+  if (input.durationMinutes === undefined) {
+    throw new TimeTrackingError("Duration must be greater than zero.");
+  }
+
+  return {
+    durationMinutes: normalizeDurationMinutes(input.durationMinutes),
+    startedAt: null,
+    endedAt: null,
   };
 }
 
@@ -653,11 +970,7 @@ function normalizeDescription(value: string) {
   return normalized;
 }
 
-async function assertDateOpen(
-  tx: TimeTrackingTransaction,
-  memberId: string,
-  localDate: Date,
-) {
+async function assertDateOpen(tx: TimeTrackingTransaction, memberId: string, localDate: Date) {
   const lockedPeriod = await tx.periodLock.findFirst({
     where: {
       memberId,
@@ -806,7 +1119,9 @@ function mapAssignmentToProjectRow(assignment: AssignmentForTimeGrid): TimeGridA
     isInternal: assignment.project.isInternal,
     validFrom: formatDateOnly(assignment.validFrom),
     validTo: assignment.validTo ? formatDateOnly(assignment.validTo) : null,
-    projectStartsOn: assignment.project.startsOn ? formatDateOnly(assignment.project.startsOn) : null,
+    projectStartsOn: assignment.project.startsOn
+      ? formatDateOnly(assignment.project.startsOn)
+      : null,
     projectEndsOn: assignment.project.endsOn ? formatDateOnly(assignment.project.endsOn) : null,
   };
 }
@@ -822,8 +1137,26 @@ function mapTimeEntry(entry: EntryRecord): TimeGridEntry {
     source: entry.source,
     startedAt: entry.startedAt?.toISOString() ?? null,
     endedAt: entry.endedAt?.toISOString() ?? null,
+    startTime: entry.startedAt ? formatTimeInTimezone(entry.startedAt, entry.timezone) : null,
+    endTime: entry.endedAt ? formatTimeInTimezone(entry.endedAt, entry.timezone) : null,
     locked: Boolean(entry.lockedByTimesheetRevisionId),
     updatedAt: entry.updatedAt.toISOString(),
+  };
+}
+
+function mapRunningTimer(timer: RunningTimerRecord): RunningTimerView {
+  const colorToken = isProjectColorToken(timer.projectAssignment.project.colorToken)
+    ? timer.projectAssignment.project.colorToken
+    : "teal";
+
+  return {
+    id: timer.id,
+    projectId: timer.projectId,
+    projectAssignmentId: timer.projectAssignmentId,
+    projectName: timer.projectAssignment.project.name,
+    projectColor: projectColorValues[colorToken],
+    description: timer.description,
+    startedAt: timer.startedAt.toISOString(),
   };
 }
 
@@ -833,6 +1166,8 @@ function serializeTimeEntryForAudit(entry: {
   localDate: Date;
   durationMinutes: number;
   description: string;
+  startedAt?: Date | null;
+  endedAt?: Date | null;
 }) {
   return {
     projectId: entry.projectId,
@@ -840,6 +1175,8 @@ function serializeTimeEntryForAudit(entry: {
     localDate: formatDateOnly(entry.localDate),
     durationMinutes: entry.durationMinutes,
     description: entry.description,
+    startedAt: entry.startedAt?.toISOString() ?? null,
+    endedAt: entry.endedAt?.toISOString() ?? null,
   };
 }
 

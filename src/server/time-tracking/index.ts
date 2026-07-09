@@ -3,6 +3,8 @@ export {
   deleteTimeEntry,
   getMemberWeeklyTimeGrid,
   markInactiveProjectWeek,
+  startRunningTimer,
+  stopRunningTimer,
   TimeTrackingError,
   unmarkInactiveProjectWeek,
   updateTimeEntry,

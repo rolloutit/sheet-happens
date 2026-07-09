@@ -98,6 +98,101 @@ export function getTodayIsoInTimezone(timezone: string, now = new Date()) {
   return `${year}-${month}-${day}`;
 }
 
+export function parseTimeInput(value: string, message = "Choose a valid time.") {
+  if (!/^\d{2}:\d{2}$/.test(value)) {
+    throw new TimeTrackingDateError(message);
+  }
+
+  const [hourValue, minuteValue] = value.split(":");
+  const hour = Number.parseInt(hourValue ?? "", 10);
+  const minute = Number.parseInt(minuteValue ?? "", 10);
+
+  if (
+    Number.isNaN(hour) ||
+    Number.isNaN(minute) ||
+    hour < 0 ||
+    hour > 23 ||
+    minute < 0 ||
+    minute > 59
+  ) {
+    throw new TimeTrackingDateError(message);
+  }
+
+  return {
+    hour,
+    minute,
+  };
+}
+
+export function localDateTimeToUtc(input: {
+  localDate: Date;
+  localTime: string;
+  timezone: string;
+}) {
+  const date = normalizeDateOnly(input.localDate);
+  const dateParts = formatDateOnly(date).split("-").map(Number);
+  const [year, month, day] = dateParts;
+
+  if (!year || !month || !day) {
+    throw new TimeTrackingDateError("Choose a valid date.");
+  }
+
+  const time = parseTimeInput(input.localTime);
+
+  let guess = new Date(Date.UTC(year, month - 1, day, time.hour, time.minute));
+  const targetWallTime = Date.UTC(year, month - 1, day, time.hour, time.minute);
+
+  for (let pass = 0; pass < 3; pass += 1) {
+    const wall = getZonedDateTimeParts(guess, input.timezone);
+    const actualWallTime = Date.UTC(wall.year, wall.month - 1, wall.day, wall.hour, wall.minute);
+    const offset = targetWallTime - actualWallTime;
+
+    if (offset === 0) break;
+    guess = new Date(guess.getTime() + offset);
+  }
+
+  return guess;
+}
+
+export function localIntervalToUtc(input: {
+  localDate: Date;
+  startTime: string;
+  endTime: string;
+  timezone: string;
+}) {
+  const startedAt = localDateTimeToUtc({
+    localDate: input.localDate,
+    localTime: input.startTime,
+    timezone: input.timezone,
+  });
+  const start = parseTimeInput(input.startTime, "Choose a valid start time.");
+  const end = parseTimeInput(input.endTime, "Choose a valid end time.");
+  const startMinutes = start.hour * 60 + start.minute;
+  const endMinutes = end.hour * 60 + end.minute;
+  const endLocalDate = endMinutes <= startMinutes ? addDays(input.localDate, 1) : input.localDate;
+  const endedAt = localDateTimeToUtc({
+    localDate: endLocalDate,
+    localTime: input.endTime,
+    timezone: input.timezone,
+  });
+  const durationMinutes = Math.round((endedAt.getTime() - startedAt.getTime()) / 60_000);
+
+  if (durationMinutes <= 0) {
+    throw new TimeTrackingDateError("End time must be after start time.");
+  }
+
+  return {
+    startedAt,
+    endedAt,
+    durationMinutes,
+  };
+}
+
+export function formatTimeInTimezone(date: Date, timezone: string) {
+  const parts = getZonedDateTimeParts(date, timezone);
+  return `${String(parts.hour).padStart(2, "0")}:${String(parts.minute).padStart(2, "0")}`;
+}
+
 export function buildWeekDays(input: {
   weekStart: Date;
   todayIso: string;
@@ -135,4 +230,30 @@ export class TimeTrackingDateError extends Error {
     super(message);
     this.name = "TimeTrackingDateError";
   }
+}
+
+function getZonedDateTimeParts(date: Date, timezone: string) {
+  const parts = new Intl.DateTimeFormat("en", {
+    timeZone: timezone,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    hourCycle: "h23",
+  }).formatToParts(date);
+
+  const get = (type: Intl.DateTimeFormatPartTypes) => {
+    const value = parts.find((part) => part.type === type)?.value;
+    if (!value) throw new TimeTrackingDateError("Could not format date in timezone.");
+    return Number.parseInt(value, 10);
+  };
+
+  return {
+    year: get("year"),
+    month: get("month"),
+    day: get("day"),
+    hour: get("hour"),
+    minute: get("minute"),
+  };
 }

@@ -8,6 +8,7 @@ import {
   getMonthStartsInRange,
   getTodayIsoInTimezone,
   getWeekEnd,
+  localIntervalToUtc,
   parseDateOnly,
 } from "./dates";
 
@@ -50,5 +51,31 @@ describe("time tracking date helpers", () => {
 
     expect(getTodayIsoInTimezone("Europe/Budapest", now)).toBe("2026-07-09");
     expect(getTodayIsoInTimezone("America/Los_Angeles", now)).toBe("2026-07-08");
+  });
+
+  it("converts local intervals to UTC using the member timezone", () => {
+    const interval = localIntervalToUtc({
+      localDate: parseDateOnly("2026-07-09"),
+      startTime: "09:15",
+      endTime: "10:45",
+      timezone: "Europe/Budapest",
+    });
+
+    expect(interval.startedAt.toISOString()).toBe("2026-07-09T07:15:00.000Z");
+    expect(interval.endedAt.toISOString()).toBe("2026-07-09T08:45:00.000Z");
+    expect(interval.durationMinutes).toBe(90);
+  });
+
+  it("allows overnight local intervals", () => {
+    const interval = localIntervalToUtc({
+      localDate: parseDateOnly("2026-07-09"),
+      startTime: "23:30",
+      endTime: "00:15",
+      timezone: "Europe/Budapest",
+    });
+
+    expect(interval.startedAt.toISOString()).toBe("2026-07-09T21:30:00.000Z");
+    expect(interval.endedAt.toISOString()).toBe("2026-07-09T22:15:00.000Z");
+    expect(interval.durationMinutes).toBe(45);
   });
 });
