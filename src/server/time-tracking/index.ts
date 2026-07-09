@@ -1,8 +1,12 @@
 export {
+  copyPreviousDayEntries,
   createTimeEntry,
   deleteTimeEntry,
+  deleteTimeEntryDraft,
+  duplicatePreviousWeek,
   getMemberWeeklyTimeGrid,
   markInactiveProjectWeek,
+  saveTimeEntryDraft,
   startRunningTimer,
   stopRunningTimer,
   TimeTrackingError,
@@ -10,8 +14,15 @@ export {
   updateTimeEntry,
 } from "./time-entries";
 export type {
+  CopyPreviousDayEntriesInput,
+  CopyTimeEntriesResult,
+  DeleteTimeEntryDraftInput,
+  DuplicatePreviousWeekInput,
   InactiveProjectWeekInput,
   InactiveProjectWeekRow,
+  SaveTimeEntryDraftInput,
+  TimeEntryDraftPayload,
+  TimeEntryDraftView,
   TimeEntryDeleteInput,
   TimeEntryMutationInput,
   TimeEntrySource,
