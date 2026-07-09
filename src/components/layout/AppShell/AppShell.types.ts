@@ -13,6 +13,8 @@ export type AppShellProps = {
   user?: UserMenuUser;
   userActions?: UserMenuAction[];
   notifications?: ShellNotification[];
+  timer?: AppShellTimer | null;
+  onStopTimer?: () => Promise<AppShellTimerActionResult>;
   onNavigate?: (itemId: string) => void;
   onCommand?: () => void;
   onLanguageChange?: (language: string) => void;
@@ -20,4 +22,17 @@ export type AppShellProps = {
   onMarkAllRead?: () => void;
   onViewNotifications?: () => void;
   onUserAction?: (actionId: string) => void;
+};
+
+export type AppShellTimer = {
+  description: string;
+  projectName: string;
+  projectColor: string;
+  startedAt: string;
+  href?: string;
+};
+
+export type AppShellTimerActionResult = {
+  status: "idle" | "success" | "error";
+  message: string;
 };

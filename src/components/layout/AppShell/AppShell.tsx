@@ -10,10 +10,12 @@ import {
   LayoutDashboard,
   Menu,
   PanelLeftClose,
+  Square,
   Users,
   WalletCards,
 } from "lucide-react";
-import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { useState, useSyncExternalStore, useTransition } from "react";
 
 import {
   Drawer,
@@ -29,7 +31,7 @@ import { LanguageToggle } from "../LanguageToggle";
 import { MobileBottomBar } from "../MobileBottomBar";
 import { NotificationButton } from "../NotificationButton";
 import { UserMenu } from "../UserMenu";
-import type { AppShellProps } from "./AppShell.types";
+import type { AppShellProps, AppShellTimer } from "./AppShell.types";
 
 const navItems = [
   {
@@ -90,6 +92,8 @@ export function AppShell({
   user = defaultUser,
   userActions,
   notifications = defaultNotifications,
+  timer,
+  onStopTimer,
   onNavigate,
   onCommand,
   onLanguageChange,
@@ -98,9 +102,12 @@ export function AppShell({
   onViewNotifications,
   onUserAction,
 }: AppShellProps) {
+  const router = useRouter();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [localLanguage, setLocalLanguage] = useState(language ?? "hu");
+  const [timerNotice, setTimerNotice] = useState<string | null>(null);
   const selectedLanguage = language ?? localLanguage;
+  const [isStoppingTimer, startStoppingTimerTransition] = useTransition();
 
   function handleLanguageChange(nextLanguage: string) {
     if (language === undefined) setLocalLanguage(nextLanguage);
@@ -135,6 +142,22 @@ export function AppShell({
     if (actionId === "settings" || actionId === "profile") {
       window.location.href = "/settings";
     }
+  }
+
+  function handleStopTimer() {
+    if (!onStopTimer) return;
+
+    startStoppingTimerTransition(async () => {
+      const result = await onStopTimer();
+
+      if (result.status === "error") {
+        setTimerNotice(result.message);
+        return;
+      }
+
+      setTimerNotice(null);
+      router.refresh();
+    });
   }
 
   return (
@@ -254,6 +277,17 @@ export function AppShell({
               </div>
             </div>
             <div className="hidden items-center gap-3 md:flex">
+              {timer ? (
+                <HeaderTimerPill
+                  timer={timer}
+                  disabled={!onStopTimer || isStoppingTimer}
+                  error={timerNotice}
+                  onOpen={() => {
+                    window.location.href = timer.href ?? "/time";
+                  }}
+                  onStop={handleStopTimer}
+                />
+              ) : null}
               <CommandPill
                 label="Ugrás bárhová..."
                 shortcut="Cmd+K"
@@ -282,6 +316,100 @@ export function AppShell({
       />
     </div>
   );
+}
+
+function HeaderTimerPill({
+  timer,
+  disabled,
+  error,
+  onOpen,
+  onStop,
+}: {
+  timer: AppShellTimer;
+  disabled: boolean;
+  error: string | null;
+  onOpen: () => void;
+  onStop: () => void;
+}) {
+  const elapsed = useElapsedLabel(timer.startedAt);
+
+  return (
+    <div className="relative">
+      <button
+        type="button"
+        className="inline-flex max-w-[15rem] items-center gap-2 rounded-[var(--radius-pill)] border border-accent/35 bg-accent/12 px-3 py-1.5 text-sm text-foreground shadow-soft transition hover:bg-accent/18"
+        title={timer.description || timer.projectName}
+        onClick={onOpen}
+      >
+        <span className="relative flex size-2.5">
+          <span className="absolute inline-flex size-full animate-ping rounded-full bg-accent opacity-45" />
+          <span className="relative inline-flex size-2.5 rounded-full bg-accent" />
+        </span>
+        <span className="font-ui text-[12px] font-bold text-accent">{elapsed}</span>
+        <span
+          className="size-2 shrink-0 rounded-full"
+          style={{ backgroundColor: timer.projectColor }}
+          aria-hidden="true"
+        />
+        <span className="truncate text-xs font-medium">{timer.projectName}</span>
+      </button>
+      <button
+        type="button"
+        className="absolute -right-1 -top-1 grid size-5 place-items-center rounded-full border border-destructive/40 bg-card text-destructive shadow-soft transition hover:bg-destructive/12 disabled:cursor-not-allowed disabled:opacity-50"
+        aria-label="Stop timer"
+        disabled={disabled}
+        onClick={(event) => {
+          event.stopPropagation();
+          onStop();
+        }}
+      >
+        <Square className="size-2.5 fill-current" aria-hidden="true" />
+      </button>
+      {error ? (
+        <span className="absolute right-0 top-[calc(100%+0.35rem)] w-56 rounded-[var(--radius-sm)] border border-destructive/35 bg-card px-2 py-1 text-xs font-medium text-destructive shadow-panel">
+          {error}
+        </span>
+      ) : null}
+    </div>
+  );
+}
+
+function useElapsedLabel(startedAt: string) {
+  const nowSeconds = useClientClock();
+
+  if (nowSeconds === null) return "0:00";
+
+  return formatElapsed(Math.max(0, nowSeconds * 1000 - Date.parse(startedAt)));
+}
+
+function useClientClock() {
+  return useSyncExternalStore(subscribeToClock, getClockSnapshot, getServerClockSnapshot);
+}
+
+function subscribeToClock(onStoreChange: () => void) {
+  const timerId = window.setInterval(onStoreChange, 1000);
+  return () => window.clearInterval(timerId);
+}
+
+function getClockSnapshot() {
+  return Math.floor(Date.now() / 1000);
+}
+
+function getServerClockSnapshot() {
+  return null;
+}
+
+function formatElapsed(milliseconds: number) {
+  const totalSeconds = Math.floor(milliseconds / 1000);
+  const hours = Math.floor(totalSeconds / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  const seconds = totalSeconds % 60;
+
+  if (hours > 0) {
+    return `${hours}:${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
+  }
+
+  return `${minutes}:${String(seconds).padStart(2, "0")}`;
 }
 
 function NavGroup({
