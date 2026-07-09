@@ -11,6 +11,8 @@ import {
   deleteTimeEntry,
   markInactiveProjectWeek,
   parseDateOnly,
+  startRunningTimer,
+  stopRunningTimer,
   TimeTrackingDateError,
   TimeTrackingError,
   unmarkInactiveProjectWeek,
@@ -22,35 +24,57 @@ import type {
   CreateTimeEntryActionInput,
   DeleteTimeEntryActionInput,
   InactiveProjectWeekActionInput,
+  StartRunningTimerActionInput,
   TimeEntryFormField,
   TimeTrackingActionState,
   UpdateTimeEntryActionInput,
 } from "./actions.types";
 
-const createTimeEntrySchema = z.object({
-  projectId: z.string().trim().min(1, "Choose a project."),
-  localDate: z.string().trim().refine(isDateInputValue, "Choose a valid date."),
-  durationMinutes: z.number().int().positive("Duration must be greater than zero."),
-  description: z
-    .string()
-    .trim()
-    .min(1, "Description is required.")
-    .max(1000, "Description must be 1000 characters or less."),
-  source: z.enum(["GRID", "FORM"]).optional(),
-});
-
-const updateTimeEntrySchema = z.object({
-  timeEntryId: z.string().trim().min(1, "Time entry id is missing."),
-  projectId: z.string().trim().min(1, "Choose a project.").optional(),
-  localDate: z.string().trim().refine(isDateInputValue, "Choose a valid date.").optional(),
+const timingSchema = {
+  timingMode: z.enum(["DURATION", "INTERVAL"]).optional(),
   durationMinutes: z.number().int().positive("Duration must be greater than zero.").optional(),
-  description: z
+  startTime: z
     .string()
     .trim()
-    .min(1, "Description is required.")
-    .max(1000, "Description must be 1000 characters or less.")
+    .refine(isTimeInputValue, "Choose a valid start time.")
+    .nullable()
     .optional(),
-});
+  endTime: z
+    .string()
+    .trim()
+    .refine(isTimeInputValue, "Choose a valid end time.")
+    .nullable()
+    .optional(),
+};
+
+const createTimeEntrySchema = z
+  .object({
+    projectId: z.string().trim().min(1, "Choose a project."),
+    localDate: z.string().trim().refine(isDateInputValue, "Choose a valid date."),
+    description: z
+      .string()
+      .trim()
+      .min(1, "Description is required.")
+      .max(1000, "Description must be 1000 characters or less."),
+    source: z.enum(["GRID", "FORM"]).optional(),
+    ...timingSchema,
+  })
+  .superRefine((value, context) => validateTimeEntryTiming(value, context, true));
+
+const updateTimeEntrySchema = z
+  .object({
+    timeEntryId: z.string().trim().min(1, "Time entry id is missing."),
+    projectId: z.string().trim().min(1, "Choose a project.").optional(),
+    localDate: z.string().trim().refine(isDateInputValue, "Choose a valid date.").optional(),
+    description: z
+      .string()
+      .trim()
+      .min(1, "Description is required.")
+      .max(1000, "Description must be 1000 characters or less.")
+      .optional(),
+    ...timingSchema,
+  })
+  .superRefine((value, context) => validateTimeEntryTiming(value, context, false));
 
 const deleteTimeEntrySchema = z.object({
   timeEntryId: z.string().trim().min(1, "Time entry id is missing."),
@@ -60,6 +84,15 @@ const inactiveWeekSchema = z.object({
   projectId: z.string().trim().min(1, "Choose a project."),
   weekStartDate: z.string().trim().refine(isDateInputValue, "Choose a valid week."),
   note: z.string().trim().max(500, "Note must be 500 characters or less.").optional(),
+});
+
+const startRunningTimerSchema = z.object({
+  projectId: z.string().trim().min(1, "Choose a project."),
+  description: z
+    .string()
+    .trim()
+    .min(1, "Description is required.")
+    .max(1000, "Description must be 1000 characters or less."),
 });
 
 export async function createTimeEntryAction(
@@ -162,6 +195,59 @@ export async function deleteTimeEntryAction(
   }
 }
 
+export async function startRunningTimerAction(
+  input: StartRunningTimerActionInput,
+): Promise<TimeTrackingActionState> {
+  const parsed = startRunningTimerSchema.safeParse(input);
+
+  if (!parsed.success) {
+    return {
+      status: "error",
+      message: "Fix the highlighted fields and try again.",
+      fieldErrors: getEntryFieldErrors(parsed.error),
+    };
+  }
+
+  try {
+    const { member } = await requireActiveAppMemberForAction();
+    await startRunningTimer({
+      ...parsed.data,
+      memberId: member.id,
+      actorMemberId: member.id,
+      requestMetadata: await getTimeTrackingRequestMetadata(),
+    });
+
+    revalidatePath("/time");
+
+    return {
+      status: "success",
+      message: "Timer started.",
+    };
+  } catch (error) {
+    return mapTimeTrackingActionError(error, "The timer could not be started.");
+  }
+}
+
+export async function stopRunningTimerAction(): Promise<TimeTrackingActionState> {
+  try {
+    const { member } = await requireActiveAppMemberForAction();
+    await stopRunningTimer({
+      memberId: member.id,
+      actorMemberId: member.id,
+      requestMetadata: await getTimeTrackingRequestMetadata(),
+    });
+
+    revalidatePath("/time");
+
+    return {
+      status: "success",
+      message: "Timer stopped and saved.",
+    };
+  } catch (error) {
+    return mapTimeTrackingActionError(error, "The timer could not be stopped.");
+  }
+}
+
 export async function markInactiveProjectWeekAction(
   input: InactiveProjectWeekActionInput,
 ): Promise<TimeTrackingActionState> {
@@ -228,6 +314,55 @@ export async function unmarkInactiveProjectWeekAction(
   }
 }
 
+function validateTimeEntryTiming(
+  value: {
+    timingMode?: "DURATION" | "INTERVAL";
+    durationMinutes?: number;
+    startTime?: string | null;
+    endTime?: string | null;
+  },
+  context: z.RefinementCtx,
+  required: boolean,
+) {
+  const hasTiming =
+    value.timingMode !== undefined ||
+    value.durationMinutes !== undefined ||
+    value.startTime !== undefined ||
+    value.endTime !== undefined;
+
+  if (!required && !hasTiming) return;
+
+  const mode = value.timingMode ?? (value.startTime || value.endTime ? "INTERVAL" : "DURATION");
+
+  if (mode === "INTERVAL") {
+    if (!value.startTime) {
+      context.addIssue({
+        code: "custom",
+        path: ["startTime"],
+        message: "Start time is required.",
+      });
+    }
+
+    if (!value.endTime) {
+      context.addIssue({
+        code: "custom",
+        path: ["endTime"],
+        message: "End time is required.",
+      });
+    }
+
+    return;
+  }
+
+  if (!value.durationMinutes) {
+    context.addIssue({
+      code: "custom",
+      path: ["durationMinutes"],
+      message: "Duration must be greater than zero.",
+    });
+  }
+}
+
 function getEntryFieldErrors(error: z.ZodError): Partial<Record<TimeEntryFormField, string>> {
   const fieldErrors: Partial<Record<TimeEntryFormField, string>> = {};
 
@@ -247,14 +382,13 @@ function isTimeEntryFormField(field: unknown): field is TimeEntryFormField {
     field === "projectId" ||
     field === "localDate" ||
     field === "durationMinutes" ||
-    field === "description"
+    field === "description" ||
+    field === "startTime" ||
+    field === "endTime"
   );
 }
 
-function mapTimeTrackingActionError(
-  error: unknown,
-  fallback: string,
-): TimeTrackingActionState {
+function mapTimeTrackingActionError(error: unknown, fallback: string): TimeTrackingActionState {
   if (error instanceof AuthenticationError || error instanceof AuthorizationError) {
     return {
       status: "error",
@@ -279,6 +413,24 @@ function isDateInputValue(value: string) {
   if (!value) return false;
   const date = new Date(`${value}T00:00:00.000Z`);
   return !Number.isNaN(date.getTime()) && date.toISOString().slice(0, 10) === value;
+}
+
+function isTimeInputValue(value: string) {
+  if (!value) return false;
+  if (!/^\d{2}:\d{2}$/.test(value)) return false;
+
+  const [hourValue, minuteValue] = value.split(":");
+  const hour = Number.parseInt(hourValue ?? "", 10);
+  const minute = Number.parseInt(minuteValue ?? "", 10);
+
+  return (
+    !Number.isNaN(hour) &&
+    !Number.isNaN(minute) &&
+    hour >= 0 &&
+    hour <= 23 &&
+    minute >= 0 &&
+    minute <= 59
+  );
 }
 
 async function getTimeTrackingRequestMetadata(): Promise<TimeTrackingRequestMetadata> {
