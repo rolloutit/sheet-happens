@@ -25,7 +25,14 @@ import {
 } from "lucide-react";
 import type { Route } from "next";
 import { useRouter } from "next/navigation";
-import { useMemo, useState, useSyncExternalStore, useTransition, type ReactNode } from "react";
+import {
+  useEffect,
+  useMemo,
+  useState,
+  useSyncExternalStore,
+  useTransition,
+  type ReactNode,
+} from "react";
 
 import { parseDurationToMinutes } from "@/src/lib/duration";
 import { cn } from "@/src/lib/utils";
@@ -37,15 +44,23 @@ import type {
 } from "@/src/server/time-tracking";
 
 import {
+  clearTimeEntryDraftAction,
+  copyPreviousDayEntriesAction,
   createTimeEntryAction,
   deleteTimeEntryAction,
+  duplicatePreviousWeekAction,
   markInactiveProjectWeekAction,
+  saveTimeEntryDraftAction,
   startRunningTimerAction,
   stopRunningTimerAction,
   unmarkInactiveProjectWeekAction,
   updateTimeEntryAction,
 } from "./actions";
-import type { TimeEntryTimingMode, TimeTrackingActionState } from "./actions.types";
+import {
+  TIME_ENTRY_FORM_DRAFT_KEY,
+  type TimeEntryTimingMode,
+  type TimeTrackingActionState,
+} from "./actions.types";
 
 type Notice = {
   tone: "success" | "error";
@@ -61,9 +76,11 @@ type EntryModalState =
       durationMinutes: number;
       description?: string;
       timingMode?: TimeEntryTimingMode;
+      durationText?: string;
       startTime?: string | null;
       endTime?: string | null;
       prefill?: boolean;
+      draftKey?: string;
     }
   | {
       mode: "edit";
@@ -116,6 +133,10 @@ export function TimeGridClient({ week }: TimeGridClientProps) {
   const selectedDay =
     week.days.find((day) => day.isoDate === selectedDayIso) ?? week.days[0] ?? null;
   const selectedDayEntries = selectedDay ? (entriesByDay.get(selectedDay.isoDate) ?? []) : [];
+  const targetDate = selectedDay?.isoDate ?? week.weekStart;
+  const recentProjects = week.recentProjects.filter((project) =>
+    projectsById.has(project.projectId),
+  );
 
   function navigateToWeek(weekStart: string) {
     router.push(`/time?week=${weekStart}` as Route);
@@ -197,6 +218,39 @@ export function TimeGridClient({ week }: TimeGridClientProps) {
             weekStartDate: week.weekStart,
           }),
     );
+  }
+
+  function restoreEntryDraft() {
+    const draft = week.entryDraft;
+    const fallbackProject = projectRows[0];
+    if (!draft || !fallbackProject) return;
+
+    const projectId = projectsById.has(draft.payload.projectId)
+      ? draft.payload.projectId
+      : fallbackProject.projectId;
+    const durationMinutes = parseDurationToMinutes(draft.payload.durationText) ?? 60;
+
+    setEntryModal({
+      mode: "create",
+      source: draft.payload.source,
+      projectId,
+      localDate: draft.payload.localDate,
+      durationMinutes,
+      durationText: draft.payload.durationText,
+      description: draft.payload.description,
+      timingMode: draft.payload.timingMode,
+      startTime: draft.payload.startTime,
+      endTime: draft.payload.endTime,
+      prefill: draft.payload.prefill,
+      draftKey: draft.draftKey,
+    });
+  }
+
+  function discardEntryDraft() {
+    const draft = week.entryDraft;
+    if (!draft) return;
+
+    runAction(() => clearTimeEntryDraftAction({ draftKey: draft.draftKey }));
   }
 
   const breakdownProject = breakdown
@@ -321,18 +375,24 @@ export function TimeGridClient({ week }: TimeGridClientProps) {
       <div className="flex flex-wrap items-center gap-2">
         <button
           type="button"
-          disabled
-          className="inline-flex cursor-not-allowed items-center gap-2 rounded-[var(--radius-pill)] border border-border bg-card px-3 py-2 text-sm font-medium text-muted-foreground opacity-60"
-          title="Copy actions will be wired when draft/prefill behavior is expanded."
+          disabled={isPending || !selectedDay || selectedDay.locked}
+          className="inline-flex items-center gap-2 rounded-[var(--radius-pill)] border border-border bg-card px-3 py-2 text-sm font-medium text-foreground transition hover:bg-secondary disabled:cursor-not-allowed disabled:text-muted-foreground disabled:opacity-50"
+          title={
+            selectedDay ? `Copy entries from the day before ${selectedDay.isoDate}.` : undefined
+          }
+          onClick={() => runAction(() => copyPreviousDayEntriesAction({ targetDate }))}
         >
           <Copy className="size-4" aria-hidden="true" />
           Same as yesterday
         </button>
         <button
           type="button"
-          disabled
-          className="inline-flex cursor-not-allowed items-center gap-2 rounded-[var(--radius-pill)] border border-border bg-card px-3 py-2 text-sm font-medium text-muted-foreground opacity-60"
-          title="Copy actions will be wired when draft/prefill behavior is expanded."
+          disabled={isPending || weekHasLockedPeriod}
+          className="inline-flex items-center gap-2 rounded-[var(--radius-pill)] border border-border bg-card px-3 py-2 text-sm font-medium text-foreground transition hover:bg-secondary disabled:cursor-not-allowed disabled:text-muted-foreground disabled:opacity-50"
+          title="Copy entries from the previous week into this week."
+          onClick={() =>
+            runAction(() => duplicatePreviousWeekAction({ weekStartDate: week.weekStart }))
+          }
         >
           <Copy className="size-4" aria-hidden="true" />
           Duplicate last week
@@ -353,6 +413,36 @@ export function TimeGridClient({ week }: TimeGridClientProps) {
             {project.name}
           </span>
         ))}
+        {recentProjects.length ? (
+          <>
+            <span className="font-ui text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
+              Recent
+            </span>
+            {recentProjects.slice(0, 3).map((project) => (
+              <button
+                key={project.projectId}
+                type="button"
+                className="inline-flex items-center gap-2 rounded-[var(--radius-pill)] border border-border bg-card px-3 py-2 text-sm font-medium text-foreground transition hover:border-accent/35 hover:bg-accent/10"
+                onClick={() =>
+                  setEntryModal({
+                    mode: "create",
+                    source: "FORM",
+                    projectId: project.projectId,
+                    localDate: targetDate,
+                    durationMinutes: 60,
+                  })
+                }
+              >
+                <span
+                  className="size-2 rounded-full"
+                  style={{ backgroundColor: project.color }}
+                  aria-hidden="true"
+                />
+                {project.name}
+              </button>
+            ))}
+          </>
+        ) : null}
       </div>
 
       {notice ? (
@@ -383,6 +473,14 @@ export function TimeGridClient({ week }: TimeGridClientProps) {
         </div>
       ) : null}
 
+      {week.entryDraft && !entryModal && projectRows.length ? (
+        <DraftRestoreBanner
+          updatedAt={week.entryDraft.updatedAt}
+          onDiscard={discardEntryDraft}
+          onRestore={restoreEntryDraft}
+        />
+      ) : null}
+
       {projectRows.length ? (
         view === "day" && selectedDay ? (
           <DayView
@@ -394,6 +492,7 @@ export function TimeGridClient({ week }: TimeGridClientProps) {
             isPending={isPending}
             projects={projectRows}
             projectsById={projectsById}
+            recentProjects={recentProjects}
             runningTimer={week.runningTimer}
             onAddEntry={(localDate) => {
               const project = projectRows[0];
@@ -854,6 +953,48 @@ function InactiveProjectRow({ onUndo }: { onUndo: () => void }) {
   );
 }
 
+function DraftRestoreBanner({
+  updatedAt,
+  onDiscard,
+  onRestore,
+}: {
+  updatedAt: string;
+  onDiscard: () => void;
+  onRestore: () => void;
+}) {
+  return (
+    <div className="flex flex-col gap-3 rounded-[var(--radius-md)] border border-accent/30 bg-accent/10 px-4 py-3 text-sm text-foreground sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex items-start gap-3">
+        <span className="grid size-8 shrink-0 place-items-center rounded-full bg-card text-accent">
+          <Info className="size-4" aria-hidden="true" />
+        </span>
+        <div>
+          <p className="font-semibold">Unsaved time entry draft</p>
+          <p className="text-muted-foreground">Last saved {formatDraftTimestamp(updatedAt)}.</p>
+        </div>
+      </div>
+      <div className="flex flex-wrap gap-2 sm:justify-end">
+        <button
+          type="button"
+          className="inline-flex items-center gap-2 rounded-[var(--radius-pill)] border border-border bg-card px-3 py-2 text-sm font-semibold text-muted-foreground transition hover:bg-secondary hover:text-foreground"
+          onClick={onDiscard}
+        >
+          <Trash2 className="size-4" aria-hidden="true" />
+          Discard
+        </button>
+        <button
+          type="button"
+          className="inline-flex items-center gap-2 rounded-[var(--radius-pill)] bg-accent px-3 py-2 text-sm font-semibold text-accent-foreground transition hover:bg-[color-mix(in_srgb,var(--accent)_88%,black)]"
+          onClick={onRestore}
+        >
+          <RotateCcw className="size-4" aria-hidden="true" />
+          Restore draft
+        </button>
+      </div>
+    </div>
+  );
+}
+
 type DayViewProps = {
   day: TimeGridDay;
   days: TimeGridDay[];
@@ -863,6 +1004,7 @@ type DayViewProps = {
   isPending: boolean;
   projects: TimeGridAssignedProject[];
   projectsById: Map<string, TimeGridAssignedProject>;
+  recentProjects: TimeGridAssignedProject[];
   runningTimer: TimeGridWeek["runningTimer"];
   onAddEntry: (localDate: string) => void;
   onDeleteEntry: (entry: TimeGridEntry) => void;
@@ -881,6 +1023,7 @@ function DayView({
   isPending,
   projects,
   projectsById,
+  recentProjects,
   runningTimer,
   onAddEntry,
   onDeleteEntry,
@@ -900,6 +1043,7 @@ function DayView({
       <TimerComposer
         disabled={isPending || !projects.length}
         projects={projects}
+        recentProjects={recentProjects}
         runningTimer={runningTimer}
         onStart={onStartTimer}
         onStop={onStopTimer}
@@ -1073,12 +1217,14 @@ function DayView({
 function TimerComposer({
   disabled,
   projects,
+  recentProjects,
   runningTimer,
   onStart,
   onStop,
 }: {
   disabled: boolean;
   projects: TimeGridAssignedProject[];
+  recentProjects: TimeGridAssignedProject[];
   runningTimer: TimeGridWeek["runningTimer"];
   onStart: (projectId: string, description: string) => void;
   onStop: () => void;
@@ -1124,37 +1270,67 @@ function TimerComposer({
   }
 
   return (
-    <div className="grid gap-3 rounded-[var(--radius-lg)] border border-border bg-card p-4 lg:grid-cols-[auto_1fr_16rem_auto] lg:items-center">
-      <PlayCircle className="hidden size-5 text-muted-foreground lg:block" aria-hidden="true" />
-      <input
-        value={description}
-        placeholder="What are you working on?"
-        className={inputClassName(false)}
-        onChange={(event) => setDescription(event.target.value)}
-      />
-      <select
-        value={selectedProjectId}
-        className={inputClassName(false)}
-        onChange={(event) => setProjectId(event.target.value)}
-      >
-        {projects.map((project) => (
-          <option key={project.projectId} value={project.projectId}>
-            {project.name}
-          </option>
-        ))}
-      </select>
-      <button
-        type="button"
-        disabled={disabled || !ready}
-        className="inline-flex items-center justify-center gap-2 rounded-[var(--radius-md)] bg-gradient-to-br from-primary to-accent px-4 py-2.5 text-sm font-semibold text-accent-foreground transition disabled:cursor-not-allowed disabled:opacity-50"
-        onClick={() => {
-          onStart(selectedProjectId, description);
-          setDescription("");
-        }}
-      >
-        <Play className="size-4 fill-current" aria-hidden="true" />
-        Start
-      </button>
+    <div className="grid gap-3 rounded-[var(--radius-lg)] border border-border bg-card p-4">
+      <div className="grid gap-3 lg:grid-cols-[auto_1fr_16rem_auto] lg:items-center">
+        <PlayCircle className="hidden size-5 text-muted-foreground lg:block" aria-hidden="true" />
+        <input
+          value={description}
+          placeholder="What are you working on?"
+          className={inputClassName(false)}
+          onChange={(event) => setDescription(event.target.value)}
+        />
+        <select
+          value={selectedProjectId}
+          className={inputClassName(false)}
+          onChange={(event) => setProjectId(event.target.value)}
+        >
+          {projects.map((project) => (
+            <option key={project.projectId} value={project.projectId}>
+              {project.name}
+            </option>
+          ))}
+        </select>
+        <button
+          type="button"
+          disabled={disabled || !ready}
+          className="inline-flex items-center justify-center gap-2 rounded-[var(--radius-md)] bg-gradient-to-br from-primary to-accent px-4 py-2.5 text-sm font-semibold text-accent-foreground transition disabled:cursor-not-allowed disabled:opacity-50"
+          onClick={() => {
+            onStart(selectedProjectId, description);
+            setDescription("");
+          }}
+        >
+          <Play className="size-4 fill-current" aria-hidden="true" />
+          Start
+        </button>
+      </div>
+
+      {recentProjects.length ? (
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="font-ui text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
+            Recent
+          </span>
+          {recentProjects.slice(0, 4).map((project) => (
+            <button
+              key={project.projectId}
+              type="button"
+              className={cn(
+                "inline-flex items-center gap-2 rounded-[var(--radius-pill)] border px-3 py-1.5 text-sm font-medium transition",
+                selectedProjectId === project.projectId
+                  ? "border-accent bg-accent/12 text-accent"
+                  : "border-border bg-background text-foreground hover:border-accent/35 hover:bg-accent/10",
+              )}
+              onClick={() => setProjectId(project.projectId)}
+            >
+              <span
+                className="size-2 rounded-full"
+                style={{ backgroundColor: project.color }}
+                aria-hidden="true"
+              />
+              {project.name}
+            </button>
+          ))}
+        </div>
+      ) : null}
     </div>
   );
 }
@@ -1179,10 +1355,14 @@ function EntryModal({ state, week, projects, onClose, onDone }: EntryModalProps)
       : state.mode === "create" && state.timingMode
         ? state.timingMode
         : "DURATION";
+  const initialDurationText =
+    state.mode === "create" && state.durationText
+      ? state.durationText
+      : formatMinutesAsHours(initialDuration) || "1";
   const [projectId, setProjectId] = useState(initialProjectId);
   const [localDate, setLocalDate] = useState(initialLocalDate);
   const [timingMode, setTimingMode] = useState<TimeEntryTimingMode>(initialTimingMode);
-  const [durationText, setDurationText] = useState(formatMinutesAsHours(initialDuration) || "1");
+  const [durationText, setDurationText] = useState(initialDurationText);
   const [startTime, setStartTime] = useState(
     state.mode === "edit" ? (state.entry.startTime ?? "09:00") : (state.startTime ?? "09:00"),
   );
@@ -1196,12 +1376,78 @@ function EntryModal({ state, week, projects, onClose, onDone }: EntryModalProps)
   const project = projects.find((item) => item.projectId === projectId) ?? projects[0];
   const parsedMinutes = parseDurationToMinutes(durationText);
   const intervalMinutes = calculateIntervalMinutes(startTime, endTime);
+  const createDraftKey =
+    state.mode === "create" ? (state.draftKey ?? TIME_ENTRY_FORM_DRAFT_KEY) : null;
+  const createDraftSource = state.mode === "create" ? state.source : null;
+  const createDraftPrefill = state.mode === "create" ? state.prefill : undefined;
   const ready = Boolean(
     projectId &&
     localDate &&
     description.trim() &&
     (timingMode === "INTERVAL" ? intervalMinutes > 0 : parsedMinutes && parsedMinutes > 0),
   );
+
+  useEffect(() => {
+    if (!createDraftKey || !createDraftSource || !description.trim()) return;
+
+    const timerId = window.setTimeout(() => {
+      void saveTimeEntryDraftAction({
+        draftKey: createDraftKey,
+        payload: {
+          kind: "time-entry-form",
+          version: 1,
+          source: createDraftSource,
+          projectId,
+          localDate,
+          timingMode,
+          durationText,
+          startTime,
+          endTime,
+          description,
+          prefill: createDraftPrefill,
+        },
+      });
+    }, 700);
+
+    return () => window.clearTimeout(timerId);
+  }, [
+    createDraftKey,
+    createDraftPrefill,
+    createDraftSource,
+    description,
+    durationText,
+    endTime,
+    localDate,
+    projectId,
+    startTime,
+    timingMode,
+  ]);
+
+  function saveCurrentDraft() {
+    if (!createDraftKey || !createDraftSource || !description.trim()) return;
+
+    void saveTimeEntryDraftAction({
+      draftKey: createDraftKey,
+      payload: {
+        kind: "time-entry-form",
+        version: 1,
+        source: createDraftSource,
+        projectId,
+        localDate,
+        timingMode,
+        durationText,
+        startTime,
+        endTime,
+        description,
+        prefill: createDraftPrefill,
+      },
+    });
+  }
+
+  function closeModal() {
+    saveCurrentDraft();
+    onClose();
+  }
 
   function submit() {
     const durationMinutes = parseDurationToMinutes(durationText);
@@ -1249,6 +1495,11 @@ function EntryModal({ state, week, projects, onClose, onDone }: EntryModalProps)
             });
 
       setFieldErrors(result.fieldErrors);
+
+      if (result.status === "success" && createDraftKey) {
+        await clearTimeEntryDraftAction({ draftKey: createDraftKey });
+      }
+
       onDone(result);
     });
   }
@@ -1256,7 +1507,7 @@ function EntryModal({ state, week, projects, onClose, onDone }: EntryModalProps)
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm"
-      onMouseDown={onClose}
+      onMouseDown={closeModal}
     >
       <div
         className="max-h-[92vh] w-full max-w-[540px] overflow-y-auto rounded-[var(--radius-xl)] border border-border bg-card shadow-panel"
@@ -1269,7 +1520,7 @@ function EntryModal({ state, week, projects, onClose, onDone }: EntryModalProps)
           <button
             type="button"
             className="grid size-8 place-items-center rounded-full text-muted-foreground hover:bg-secondary hover:text-foreground"
-            onClick={onClose}
+            onClick={closeModal}
             aria-label="Close"
           >
             <X className="size-5" aria-hidden="true" />
@@ -1429,7 +1680,7 @@ function EntryModal({ state, week, projects, onClose, onDone }: EntryModalProps)
           <button
             type="button"
             className="rounded-[var(--radius-md)] border border-border px-4 py-2 text-sm font-semibold hover:bg-secondary"
-            onClick={onClose}
+            onClick={closeModal}
           >
             Cancel
           </button>
@@ -1793,6 +2044,10 @@ function formatElapsed(milliseconds: number) {
   }
 
   return `${minutes}:${String(seconds).padStart(2, "0")}`;
+}
+
+function formatDraftTimestamp(value: string) {
+  return value.replace("T", " ").slice(0, 16);
 }
 
 function formatMinutesAsHours(minutes: number) {
