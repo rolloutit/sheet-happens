@@ -30,6 +30,12 @@ Replace placeholder values before sharing a concrete test run:
 - `{PROFILE_TRANSITION_REASON}`: reason text for profile transition testing.
 - `{AUTHENTICATOR_APP}`: authenticator app used for TOTP testing.
 - `{PASSKEY_DEVICE}`: passkey-capable test device or browser profile.
+- `{TIME_TRACKING_WEEK_START}`: Monday date of a test week, formatted as `YYYY-MM-DD`.
+- `{TIME_TRACKING_PREVIOUS_WEEK_START}`: Monday date one week before `{TIME_TRACKING_WEEK_START}`.
+- `{TIME_TRACKING_PROJECT_A}`: active project assigned to the time-tracking test user.
+- `{TIME_TRACKING_PROJECT_B}`: second active project assigned to the time-tracking test user.
+- `{TIME_ENTRY_DESCRIPTION}`: description text used for test time entries.
+- `{TIME_ENTRY_UPDATED_DESCRIPTION}`: edited description text used for test time entries.
 
 ## General Rules
 
@@ -270,6 +276,158 @@ Expected result:
 
 - The app shows an `Admin access required` account status page.
 - The people table is not visible.
+
+## Time Tracking
+
+Run these tests as `{CONTRACTOR_EMAIL}` or `{EMPLOYEE_EMAIL}`. The user must be active and assigned
+to `{TIME_TRACKING_PROJECT_A}` and `{TIME_TRACKING_PROJECT_B}` for `{TIME_TRACKING_WEEK_START}`.
+
+### Weekly Grid Loads Assigned Projects
+
+1. Open `https://{DOMAIN_NAME}/time?week={TIME_TRACKING_WEEK_START}`.
+2. Confirm the weekly grid is visible.
+3. Confirm `{TIME_TRACKING_PROJECT_A}` and `{TIME_TRACKING_PROJECT_B}` are listed.
+4. Use the previous-week and next-week controls.
+5. Return to `{TIME_TRACKING_WEEK_START}`.
+
+Expected result:
+
+- Only active assigned projects are listed.
+- Week navigation keeps the user on `/time`.
+- The week total and daily totals are visible.
+
+### Create, Edit, And Delete Duration Entry
+
+1. Open `https://{DOMAIN_NAME}/time?week={TIME_TRACKING_WEEK_START}`.
+2. Click an empty cell for `{TIME_TRACKING_PROJECT_A}` on a non-future day.
+3. Enter `{TIME_ENTRY_DESCRIPTION}`.
+4. Enter duration `3h 20m`.
+5. Save.
+6. Open the same cell's entry details.
+7. Edit the entry description to `{TIME_ENTRY_UPDATED_DESCRIPTION}` and duration to `200m`.
+8. Save.
+9. Open the entry details again and delete the entry.
+
+Expected result:
+
+- The empty cell opens the entry form because descriptions are required.
+- `3h 20m` and `200m` are accepted as equivalent duration formats.
+- The cell, day total, and week total update after create, edit, and delete.
+- Deleted entries disappear from the grid.
+
+### Create Interval Entry And Check Warnings
+
+1. Open `https://{DOMAIN_NAME}/time?week={TIME_TRACKING_WEEK_START}`.
+2. Click `New entry`.
+3. Choose `{TIME_TRACKING_PROJECT_A}`.
+4. Choose a date in the selected week.
+5. Switch the mode to `Interval`.
+6. Enter start `09:00`, end `10:30`, and `{TIME_ENTRY_DESCRIPTION}`.
+7. Save.
+8. Create another interval on the same day that overlaps the first interval.
+9. Create or edit entries so the day total exceeds 24 hours.
+
+Expected result:
+
+- Interval entries save with the correct calculated duration.
+- Overlaps show a warning but do not block saving.
+- More than 24 hours in one day shows a warning but does not block saving.
+
+### Timer Start And Stop
+
+1. Open `https://{DOMAIN_NAME}/time?week={TIME_TRACKING_WEEK_START}`.
+2. Switch to `Day` view.
+3. Enter `{TIME_ENTRY_DESCRIPTION}` in the timer description field.
+4. Choose `{TIME_TRACKING_PROJECT_A}`.
+5. Click `Start`.
+6. Confirm the running timer appears in the day view and app header.
+7. Stop the timer from the header or day view.
+
+Expected result:
+
+- Only one timer can run for the user.
+- The elapsed timer label changes while running without hydration errors.
+- Stopping the timer creates a time entry on the timer start date.
+
+### Same As Yesterday Does Not Duplicate Existing Cells
+
+1. Open `https://{DOMAIN_NAME}/time?week={TIME_TRACKING_WEEK_START}`.
+2. Create one entry for `{TIME_TRACKING_PROJECT_A}` on a test day.
+3. Select the next day.
+4. Click `Same as yesterday`.
+5. Confirm the copied entry appears on the selected day.
+6. Click `Same as yesterday` again for the same selected day.
+
+Expected result:
+
+- The first copy creates entries from the previous day.
+- The second copy does not create duplicate entries in project/date cells that already contain time.
+- The success message reports skipped entries when applicable.
+
+### Duplicate Last Week Does Not Duplicate Existing Cells
+
+1. Open `https://{DOMAIN_NAME}/time?week={TIME_TRACKING_PREVIOUS_WEEK_START}`.
+2. Create entries for `{TIME_TRACKING_PROJECT_A}` and `{TIME_TRACKING_PROJECT_B}`.
+3. Open `https://{DOMAIN_NAME}/time?week={TIME_TRACKING_WEEK_START}`.
+4. Click `Duplicate last week`.
+5. Confirm the previous week's entries appear in the matching days of the current week.
+6. Click `Duplicate last week` again.
+
+Expected result:
+
+- Entries are copied from the previous week into matching current-week days.
+- Repeating the action skips project/date cells that already contain entries.
+- Existing current-week entries are not overwritten.
+
+### Draft Restore And Discard
+
+1. Open `https://{DOMAIN_NAME}/time?week={TIME_TRACKING_WEEK_START}`.
+2. Click `New entry`.
+3. Choose `{TIME_TRACKING_PROJECT_A}`.
+4. Enter `{TIME_ENTRY_DESCRIPTION}` but do not save.
+5. Wait until the form shows that the draft is saved.
+6. Close the dialog.
+7. Refresh the page.
+8. Click `Restore draft`.
+9. Confirm the form restores the project, date, duration mode, duration or interval values, and
+   description.
+10. Close the dialog again and click `Discard`.
+11. Refresh the page.
+
+Expected result:
+
+- Drafts are restored after refresh.
+- Discard removes the draft banner.
+- Drafts never change the grid totals until saved as a real entry.
+
+### Inactive Project Week
+
+1. Open `https://{DOMAIN_NAME}/time?week={TIME_TRACKING_WEEK_START}`.
+2. Choose an assigned project row with no entries in the week.
+3. Mark the project as inactive for the week.
+4. Undo the inactive mark.
+5. Create an entry for the same project.
+6. Try to mark the project inactive again.
+
+Expected result:
+
+- Empty project weeks can be marked inactive and restored.
+- Project weeks with entries cannot be marked inactive until entries are removed.
+- Inactive rows do not contribute missing-work signals.
+
+### Time Entry Dialog Keyboard Behavior
+
+1. Open a new time entry dialog.
+2. Use `Tab` repeatedly.
+3. Use `Shift+Tab` repeatedly.
+4. Press `Escape`.
+5. Open an existing entry details dialog and repeat the same keyboard checks.
+
+Expected result:
+
+- Keyboard focus stays inside the open dialog.
+- `Escape` closes the dialog.
+- Focus returns to the control that opened the dialog.
 
 ## Admin People
 
