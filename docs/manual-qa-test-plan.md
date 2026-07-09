@@ -36,6 +36,23 @@ Replace placeholder values before sharing a concrete test run:
 - `{TIME_TRACKING_PROJECT_B}`: second active project assigned to the time-tracking test user.
 - `{TIME_ENTRY_DESCRIPTION}`: description text used for test time entries.
 - `{TIME_ENTRY_UPDATED_DESCRIPTION}`: edited description text used for test time entries.
+- `{PROJECT_NAME}`: name for a newly created project.
+- `{PROJECT_UPDATED_NAME}`: updated project name.
+- `{PROJECT_SLUG}`: URL-safe or code-like project slug.
+- `{PROJECT_UPDATED_SLUG}`: updated project slug.
+- `{PROJECT_GROUP_NAME}`: name for a project group.
+- `{PROJECT_GROUP_UPDATED_NAME}`: updated project group name.
+- `{PROJECT_ASSIGNMENT_START}`: assignment start date formatted as `YYYY-MM-DD`.
+- `{PROJECT_ASSIGNMENT_END}`: assignment end date formatted as `YYYY-MM-DD`.
+- `{PROJECT_ASSIGNMENT_NOTE}`: note text for project assignment testing.
+- `{BULK_ASSIGNMENT_START}`: bulk assignment start date formatted as `YYYY-MM-DD`.
+- `{RATE_VALID_FROM}`: rate start date formatted as `YYYY-MM-DD`.
+- `{RATE_FUTURE_MONTH_START}`: first day of a future month, formatted as `YYYY-MM-DD`.
+- `{RATE_AMOUNT}`: hourly rate amount, for example `16000`.
+- `{RATE_UPDATED_AMOUNT}`: second hourly rate amount, for example `18000`.
+- `{RATE_CURRENCY}`: initial rate currency, for example `HUF`.
+- `{RATE_UPDATED_CURRENCY}`: second rate currency, for example `EUR`.
+- `{RATE_NOTE}`: reason or note text for rate testing.
 
 ## General Rules
 
@@ -428,6 +445,309 @@ Expected result:
 - Keyboard focus stays inside the open dialog.
 - `Escape` closes the dialog.
 - Focus returns to the control that opened the dialog.
+
+## Admin Projects
+
+Run these tests as `{ADMIN_EMAIL}` with TOTP enabled and verified.
+
+### Admin Can Open Projects Page
+
+1. Open `https://{DOMAIN_NAME}/admin/projects`.
+2. Confirm the page header and project counters load.
+3. Confirm the create project form is visible.
+4. Confirm the project directory and project groups sections are visible.
+
+Expected result:
+
+- The Projects admin page opens without errors.
+- Existing projects, assignments, and groups load in the app shell.
+- The page remains usable on laptop width without horizontal page overflow.
+
+### Create Project
+
+1. Open `https://{DOMAIN_NAME}/admin/projects`.
+2. Fill the create project form:
+   - Name: `{PROJECT_NAME}`
+   - Slug/code: `{PROJECT_SLUG}`
+   - Color: choose any non-default color.
+   - Start date: today or a future date.
+   - End date: leave empty.
+   - Internal: test both checked and unchecked in separate runs.
+   - Notes: optional.
+3. Click `Create project`.
+4. Refresh the page.
+
+Expected result:
+
+- A success message confirms the project was created.
+- The project appears in the project directory after saving and after refresh.
+- The selected color swatch is visible and is not white or blank.
+- Internal projects show the internal marker.
+- An audit row is recorded for `project.created`.
+
+### Create Project Validation
+
+1. Open `https://{DOMAIN_NAME}/admin/projects`.
+2. Try to create a project with an empty name.
+3. Try to create a project using an existing slug.
+4. Try to create a project where the end date is before the start date.
+
+Expected result:
+
+- The form shows field-level validation errors.
+- Duplicate slugs are rejected.
+- Invalid date ranges are rejected.
+- No invalid project appears in the project directory.
+
+### Edit Project
+
+1. Open `https://{DOMAIN_NAME}/admin/projects`.
+2. Open `{PROJECT_NAME}` from the project directory.
+3. Click the edit action.
+4. Change:
+   - Name: `{PROJECT_UPDATED_NAME}`
+   - Slug/code: `{PROJECT_UPDATED_SLUG}`
+   - Color: choose a different supported color.
+   - Notes: update the note text.
+5. Save changes.
+6. Refresh the page.
+
+Expected result:
+
+- The project drawer opens with the current project values.
+- The updated name, slug, color, and notes are visible after saving and after refresh.
+- An audit row is recorded for `project.updated`.
+
+### Activate And Deactivate Project
+
+1. Open `https://{DOMAIN_NAME}/admin/projects`.
+2. Open `{PROJECT_UPDATED_NAME}` from the project directory.
+3. Deactivate the project.
+4. Confirm the status changes to inactive.
+5. Activate the project again.
+6. Confirm the status changes back to active.
+
+Expected result:
+
+- Inactive projects are not available for new future time entry.
+- Reactivated projects become available again when the assignment/date rules allow it.
+- Audit rows are recorded for project status changes.
+
+### Archive Project
+
+1. Open `https://{DOMAIN_NAME}/admin/projects`.
+2. Open an active or inactive test project.
+3. Click `Archive`.
+4. Confirm the archive dialog.
+5. Refresh the page.
+
+Expected result:
+
+- A success message confirms the project was archived.
+- Archived projects are removed from active working lists.
+- Historical assignments and time entries remain available for reporting/audit purposes.
+- An audit row is recorded for `project.archived`.
+
+### Project Groups
+
+1. Open `https://{DOMAIN_NAME}/admin/projects`.
+2. In the project groups section, create a group named `{PROJECT_GROUP_NAME}`.
+3. Add `{PROJECT_UPDATED_NAME}` to the group.
+4. Remove `{PROJECT_UPDATED_NAME}` from the group.
+5. Edit the group name to `{PROJECT_GROUP_UPDATED_NAME}`.
+6. Archive the group.
+
+Expected result:
+
+- Created groups appear in the project groups section.
+- Projects can be added to and removed from groups.
+- Group changes affect organization and filters only; they do not change assignments or time entry.
+- Archived groups disappear from active grouping helpers.
+- Audit rows are recorded for group create/update/archive and project link changes.
+
+### Project Directory Filters
+
+1. Open `https://{DOMAIN_NAME}/admin/projects`.
+2. Search by project name.
+3. Filter by project status.
+4. Filter by internal/non-internal project type.
+5. Filter by project group.
+6. Clear filters.
+
+Expected result:
+
+- The directory updates to match each filter.
+- Clearing filters restores the full active directory.
+- The layout remains responsive on laptop width.
+
+### Assign Member To Project
+
+1. Open `https://{DOMAIN_NAME}/admin/projects`.
+2. Open an active project.
+3. In the assignment section, choose `{CONTRACTOR_EMAIL}` or `{EMPLOYEE_EMAIL}`.
+4. Set start date `{PROJECT_ASSIGNMENT_START}`.
+5. Leave end date empty.
+6. Add note `{PROJECT_ASSIGNMENT_NOTE}`.
+7. Click `Assign member`.
+8. Refresh the page.
+
+Expected result:
+
+- Invited and active members can be assigned.
+- The assignment appears after saving and after refresh.
+- The assignment timeline and note are visible.
+- Contractor assignments show whether they use the central rate or a project override.
+- An audit row is recorded for `project_assignment.created`.
+
+### Edit And Close Assignment
+
+1. Open `https://{DOMAIN_NAME}/admin/projects`.
+2. Open a project with an existing assignment.
+3. Edit the assignment note and end date to `{PROJECT_ASSIGNMENT_END}`.
+4. Save the assignment.
+5. Close or end the assignment using the close action.
+
+Expected result:
+
+- Assignment edits are saved and visible after refresh.
+- Closed assignments become inactive for future time entry outside their valid date range.
+- Invalid date ranges are rejected.
+- Audit rows are recorded for assignment update/close actions.
+
+### Bulk Assignment
+
+1. Open `https://{DOMAIN_NAME}/admin/projects`.
+2. Open the bulk assignment dialog.
+3. Select multiple members and multiple active projects.
+4. Set start date `{BULK_ASSIGNMENT_START}`.
+5. Add note `{PROJECT_ASSIGNMENT_NOTE}`.
+6. Submit the bulk assignment.
+7. Run the same bulk assignment again.
+
+Expected result:
+
+- New member/project assignment pairs are created.
+- Existing overlapping assignment pairs are skipped, not duplicated.
+- The summary shows created and skipped counts.
+- Bulk assignment is limited to the configured maximum number of selected pairs.
+- Audit rows are recorded for created assignments.
+
+## Admin Rates
+
+Run these tests as `{ADMIN_EMAIL}` with TOTP enabled and verified.
+
+### Admin Can Open Rates Page
+
+1. Open `https://{DOMAIN_NAME}/admin/rates`.
+2. Confirm the rate list loads.
+3. Search or scan for `{CONTRACTOR_EMAIL}` and `{EMPLOYEE_EMAIL}`.
+
+Expected result:
+
+- The Rates admin page opens without errors.
+- Members are listed with profile, status, current central rate, and override count.
+- The page remains usable on laptop width without horizontal page overflow.
+
+### Add Central Member Rate
+
+1. Open `https://{DOMAIN_NAME}/admin/rates`.
+2. Open the rate drawer for `{CONTRACTOR_EMAIL}` or `{EMPLOYEE_EMAIL}`.
+3. In the central rate section, add a period:
+   - Start date: `{RATE_VALID_FROM}`
+   - End date: leave empty.
+   - Hourly rate: `{RATE_AMOUNT}`
+   - Currency: `{RATE_CURRENCY}`
+   - Note: `{RATE_NOTE}`
+4. Save the rate.
+5. Refresh the page.
+
+Expected result:
+
+- A success message confirms the central rate was created.
+- The rate appears in the member's central rate timeline.
+- The current rate shown in the list updates when the period is current.
+- The actor and reason/note are visible in the rate timeline.
+- An audit row is recorded for the rate creation.
+
+### Add Future Central Rate With Currency Change
+
+1. Open `https://{DOMAIN_NAME}/admin/rates`.
+2. Open the rate drawer for a member who already has a central rate.
+3. Add a second rate period:
+   - Start date: `{RATE_FUTURE_MONTH_START}`
+   - Hourly rate: `{RATE_UPDATED_AMOUNT}`
+   - Currency: `{RATE_UPDATED_CURRENCY}`
+   - Note: `{RATE_NOTE}`
+4. Save the rate.
+
+Expected result:
+
+- Currency changes are accepted only when the new period starts on the first day of a future month,
+  or today if today is the first day of the month.
+- The previous open-ended period is closed at the new period start.
+- The future rate appears as scheduled until it becomes current.
+
+### Rate Validation
+
+1. Open `https://{DOMAIN_NAME}/admin/rates`.
+2. Try to create a rate with an empty start date.
+3. Try to create a rate with zero or negative hourly amount.
+4. Try to create a rate with an unsupported currency.
+5. Try to create overlapping central rate periods.
+6. Try to set a currency change starting mid-month.
+
+Expected result:
+
+- Invalid fields show validation errors.
+- Unsupported currencies are rejected.
+- Overlapping rate periods are rejected.
+- Currency changes that violate month-boundary rules are rejected.
+- No invalid rate period is saved.
+
+### Contractor Project Override Rate
+
+1. Open `https://{DOMAIN_NAME}/admin/rates`.
+2. Open the rate drawer for `{CONTRACTOR_EMAIL}`.
+3. In project overrides, choose an assigned project.
+4. Add an override period:
+   - Start date: `{RATE_VALID_FROM}`
+   - Hourly rate: `{RATE_AMOUNT}`
+   - Currency: `{RATE_CURRENCY}`
+   - Note: `{RATE_NOTE}`
+5. Save the override.
+6. Refresh `https://{DOMAIN_NAME}/admin/projects` and open the same project assignment.
+
+Expected result:
+
+- The override appears under the selected contractor/project assignment.
+- The project assignment indicates that a project override exists.
+- Other projects for the same contractor continue to use the central rate.
+- An audit row is recorded for the override creation.
+
+### Multiple Project Overrides
+
+1. Open `https://{DOMAIN_NAME}/admin/rates`.
+2. Open the rate drawer for `{CONTRACTOR_EMAIL}`.
+3. Add an override for one assigned project.
+4. Add an override for a different assigned project.
+5. Add another future period to one existing project override.
+
+Expected result:
+
+- Overrides can exist for multiple projects for the same contractor.
+- Adding a future period to one project does not hide the option to add another project override.
+- The drawer groups override timelines by project.
+
+### Employee Override Guard
+
+1. Open `https://{DOMAIN_NAME}/admin/rates`.
+2. Open the rate drawer for `{EMPLOYEE_EMAIL}`.
+3. Look for project override controls.
+
+Expected result:
+
+- Employees have central internal rates only.
+- Project-specific override controls are not available for employees.
 
 ## Admin People
 
