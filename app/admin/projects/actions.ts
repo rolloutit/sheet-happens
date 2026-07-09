@@ -811,7 +811,7 @@ function mapProjectActionError(error: unknown, fallback: string): ProjectActionS
   if (error instanceof Prisma.PrismaClientInitializationError) {
     return {
       status: "error",
-      message: "The database is not reachable. Start the dev database and try again.",
+      message: "The database is not reachable. Try again later or contact support.",
     };
   }
 
@@ -832,7 +832,7 @@ function mapKnownPrismaProjectError(error: Prisma.PrismaClientKnownRequestError,
       return "The project could not be linked to the current admin member. Refresh the page and try again.";
     case "P2021":
     case "P2022":
-      return "The project database schema is out of sync. Apply the latest database schema, then try again.";
+      return "Projects are temporarily unavailable. Try again later or contact support.";
     case "P2025":
       return "This project no longer exists or was already archived.";
     default:

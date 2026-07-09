@@ -133,10 +133,10 @@ function SecuritySetupBanner({
         </CardTitle>
         <CardDescription>
           {complete
-            ? "Security setup is complete. You can continue to the protected app."
+            ? "Security setup is complete. You can continue to the app."
             : adminTotpRequired
-              ? "Admin tools require authenticator-app 2FA. Enable TOTP before returning to management screens."
-              : "Add a passkey or enable an authenticator app before continuing to the protected app."}
+              ? "Admin tools require authenticator-app verification. Enable an authenticator app before returning to management screens."
+              : "Add a passkey or enable an authenticator app before continuing."}
         </CardDescription>
       </CardHeader>
       {complete && callbackURL !== "/settings" ? (

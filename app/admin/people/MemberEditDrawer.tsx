@@ -55,8 +55,7 @@ export function MemberEditDrawer({
         <DrawerHeader>
           <DrawerTitle className="text-2xl font-semibold text-foreground">Edit member</DrawerTitle>
           <DrawerDescription className="text-sm leading-6 text-muted-foreground">
-            Update domain member details and schedule effective-dated profile transitions. Auth
-            account data and role changes are managed separately.
+            Update profile details and schedule profile changes for future work periods.
           </DrawerDescription>
         </DrawerHeader>
 
@@ -384,7 +383,7 @@ function ProfileTransitionForm({
       <Field
         label="Reason"
         reserveMessageSpace
-        hint="Stored in profile history and audit metadata."
+        hint="Add a reason for this profile change."
         error={fieldErrors?.reason}
       >
         {({ id, describedBy, invalid }) => (

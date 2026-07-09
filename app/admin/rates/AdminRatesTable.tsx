@@ -523,7 +523,7 @@ function RateManagementDrawer({
                     No central rate set
                   </p>
                   <p className="mt-1 text-sm text-muted-foreground">
-                    Until a rate exists, internal cost calculations should treat this as missing.
+                    Add a rate before using this person in internal cost reports.
                   </p>
                 </div>
               ) : (

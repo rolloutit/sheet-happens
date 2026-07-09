@@ -1491,8 +1491,8 @@ function ProjectEditDialog({
           <DialogHeader>
             <DialogTitle>Edit {project.name}</DialogTitle>
             <DialogDescription>
-              Project changes are audited. Deactivate a project to prevent future time entry while
-              keeping historical records intact.
+              Deactivate a project to prevent future time entry while keeping historical records
+              intact.
             </DialogDescription>
           </DialogHeader>
 

@@ -200,7 +200,7 @@ function mapRateActionError(error: unknown, fallback: string): RateActionState {
   if (error instanceof Prisma.PrismaClientInitializationError) {
     return {
       status: "error",
-      message: "The database is not reachable. Start the dev database and try again.",
+      message: "The database is not reachable. Try again later or contact support.",
     };
   }
 
@@ -216,7 +216,7 @@ function mapKnownPrismaRateError(error: Prisma.PrismaClientKnownRequestError, fa
       return "The rate could not be linked to the selected member or assignment. Refresh and try again.";
     case "P2021":
     case "P2022":
-      return "The rate database schema is out of sync. Apply the latest database schema, then try again.";
+      return "Rates are temporarily unavailable. Try again later or contact support.";
     default:
       return fallback;
   }

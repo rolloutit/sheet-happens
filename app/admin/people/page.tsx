@@ -31,8 +31,8 @@ export default async function AdminPeoplePage() {
             <div>
               <h1 className="text-3xl font-bold text-foreground">People</h1>
               <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">
-                Invite contractors and employees, track activation state, and keep the member
-                profile layer separate from Better Auth accounts.
+                Invite contractors and employees, manage access, and keep profile details ready for
+                time tracking.
               </p>
             </div>
             <div className="grid min-w-48 grid-cols-2 gap-2 rounded-[var(--radius-lg)] border border-border bg-card/70 p-3 text-center">
@@ -59,8 +59,7 @@ export default async function AdminPeoplePage() {
             <CardHeader className="block">
               <CardTitle>Invite member</CardTitle>
               <CardDescription>
-                Creates an invited member profile, stores the invitation audit event, and sends the
-                acceptance link through the configured SMTP transport.
+                Send an invitation link and create the member profile used across the app.
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -72,7 +71,7 @@ export default async function AdminPeoplePage() {
             <CardHeader className="block">
               <CardTitle>Member directory</CardTitle>
               <CardDescription>
-                This table is backed by the domain member profile, not raw Better Auth users.
+                Manage invited, active, inactive, and archived members.
               </CardDescription>
             </CardHeader>
             <CardContent>

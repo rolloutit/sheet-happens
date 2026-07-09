@@ -26,8 +26,7 @@ export default async function AdminRatesPage() {
           </p>
           <h1 className="text-4xl font-semibold tracking-normal text-foreground">Rates</h1>
           <p className="max-w-2xl text-base leading-7 text-muted-foreground">
-            Internal rates by person and effective period. Contractor project overrides are managed
-            in the drawer. Every change is audit-logged.
+            Manage internal hourly rates by person, period, and contractor project override.
           </p>
         </div>
 

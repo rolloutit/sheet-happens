@@ -76,8 +76,7 @@ export default async function AdminProjectsPage() {
             <CardHeader className="block">
               <CardTitle>Create project</CardTitle>
               <CardDescription>
-                Projects are the primary work targets for assignments, time entries, and future
-                timesheet validation.
+                Projects are the work targets used for assignments and time entries.
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -89,8 +88,8 @@ export default async function AdminProjectsPage() {
             <CardHeader className="block">
               <CardTitle>Project directory</CardTitle>
               <CardDescription>
-                Active projects are available for future assignment and time tracking. Archived
-                projects stay out of the working list but remain in historical data.
+                Active projects are available for assignment and time tracking. Archived projects
+                stay out of working lists while historical records remain available.
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -109,7 +108,7 @@ export default async function AdminProjectsPage() {
             <CardHeader className="block">
               <CardTitle>Project groups</CardTitle>
               <CardDescription>
-                Organize projects into helper groups for filters and admin workflows.
+                Organize projects into groups for filtering and reporting.
               </CardDescription>
             </CardHeader>
             <CardContent>

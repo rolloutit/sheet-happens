@@ -148,7 +148,7 @@ export function SecuritySettingsClient({ user, passkeys, twoFactor }: SecuritySe
               label: "Company Google",
               description: user.googleLinked
                 ? "A company Google account is linked."
-                : "Available for configured Google Workspace domains after activation.",
+                : "Available for eligible company Google accounts after activation.",
               state: user.googleLinked ? "connected" : "not_enabled",
               stateLabel: user.googleLinked ? "Linked" : "Available",
               icon: Building2,
@@ -528,8 +528,7 @@ export function SecuritySettingsClient({ user, passkeys, twoFactor }: SecuritySe
           <CardHeader className="block">
             <CardTitle>Security posture</CardTitle>
             <CardDescription>
-              Account-level controls backed by Better Auth. Magic links stay available as the
-              recovery path.
+              Manage the sign-in methods and recovery options for this account.
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -617,9 +616,7 @@ export function SecuritySettingsClient({ user, passkeys, twoFactor }: SecuritySe
             <div className="flex items-start gap-3 rounded-[var(--radius-lg)] border border-border bg-secondary/50 p-4 text-sm text-muted-foreground">
               <Building2 className="mt-0.5 size-4 shrink-0 text-accent" aria-hidden="true" />
               <p>
-                Company Google sign-in is enabled for the configured Workspace domain. It links
-                automatically on first successful Google sign-in when the email matches this
-                activated account.
+                Company Google sign-in is available for eligible work accounts after activation.
               </p>
             </div>
           ) : null}
