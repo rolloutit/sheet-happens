@@ -3,6 +3,7 @@
 import {
   Archive,
   Ban,
+  KeyRound,
   LogOut,
   Mail,
   MoreHorizontal,
@@ -41,6 +42,7 @@ import {
   changeMemberRoleAction,
   deactivateMemberAction,
   reactivateMemberAction,
+  resetMemberTotpAction,
   resendMemberInviteAction,
   revokeMemberSessionsAction,
   revokeMemberInviteAction,
@@ -57,7 +59,7 @@ export type AdminPeopleTableProps = {
 };
 
 type PendingAction =
-  "resend" | "revoke" | "sessions" | "deactivate" | "reactivate" | "role" | "archive";
+  "resend" | "revoke" | "sessions" | "totp" | "deactivate" | "reactivate" | "role" | "archive";
 
 export function AdminPeopleTable({
   rows,
@@ -70,6 +72,7 @@ export function AdminPeopleTable({
   const [pendingKey, setPendingKey] = useState<string | null>(null);
   const [editingMember, setEditingMember] = useState<AdminPersonRow | null>(null);
   const [archivingMember, setArchivingMember] = useState<AdminPersonRow | null>(null);
+  const [resettingTotpMember, setResettingTotpMember] = useState<AdminPersonRow | null>(null);
   const [, startTransition] = useTransition();
 
   function runAction(
@@ -137,6 +140,10 @@ export function AdminPeopleTable({
               onRevokeSessions={() =>
                 runAction(row, "sessions", () => revokeMemberSessionsAction(row.id))
               }
+              onResetTotp={() => {
+                setResettingTotpMember(getAdminPersonRow(rows, row));
+                setMessage(null);
+              }}
               onDeactivate={() =>
                 runAction(row, "deactivate", () => deactivateMemberAction(row.id))
               }
@@ -160,6 +167,18 @@ export function AdminPeopleTable({
         onConfirm={(row) => {
           runAction(row, "archive", () => softDeleteMemberAction(row.id), {
             onSuccess: () => setArchivingMember(null),
+          });
+        }}
+      />
+      <ResetTotpDialog
+        member={resettingTotpMember}
+        pending={resettingTotpMember ? isPending(resettingTotpMember, "totp") : false}
+        onOpenChange={(open) => {
+          if (!open) setResettingTotpMember(null);
+        }}
+        onConfirm={(row) => {
+          runAction(row, "totp", () => resetMemberTotpAction(row.id), {
+            onSuccess: () => setResettingTotpMember(null),
           });
         }}
       />
@@ -190,6 +209,7 @@ function PersonActionsMenu({
   onResend,
   onRevokeInvite,
   onRevokeSessions,
+  onResetTotp,
   onDeactivate,
   onReactivate,
   onArchive,
@@ -201,6 +221,7 @@ function PersonActionsMenu({
   onResend: () => void;
   onRevokeInvite: () => void;
   onRevokeSessions: () => void;
+  onResetTotp: () => void;
   onDeactivate: () => void;
   onReactivate: () => void;
   onArchive: () => void;
@@ -243,10 +264,16 @@ function PersonActionsMenu({
           </>
         ) : null}
         {row.hasAuthUser && !isSelf ? (
-          <DropdownItem disabled={isPending("sessions")} onSelect={onRevokeSessions}>
-            <LogOut className="size-4" aria-hidden="true" />
-            Revoke sessions
-          </DropdownItem>
+          <>
+            <DropdownItem disabled={isPending("sessions")} onSelect={onRevokeSessions}>
+              <LogOut className="size-4" aria-hidden="true" />
+              Revoke sessions
+            </DropdownItem>
+            <DropdownItem disabled={isPending("totp")} onSelect={onResetTotp}>
+              <KeyRound className="size-4" aria-hidden="true" />
+              Reset authenticator
+            </DropdownItem>
+          </>
         ) : null}
         {row.state === "active" && !isSelf ? (
           <DropdownItem disabled={isPending("deactivate")} onSelect={onDeactivate}>
@@ -314,6 +341,57 @@ function ArchiveMemberDialog({
             }}
           >
             Archive member
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function ResetTotpDialog({
+  member,
+  pending,
+  onOpenChange,
+  onConfirm,
+}: {
+  member: AdminPersonRow | null;
+  pending: boolean;
+  onOpenChange: (open: boolean) => void;
+  onConfirm: (member: AdminPersonRow) => void;
+}) {
+  return (
+    <Dialog open={Boolean(member)} onOpenChange={onOpenChange}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>
+            {member ? `Reset authenticator for ${member.name}?` : "Reset authenticator?"}
+          </DialogTitle>
+          <DialogDescription>
+            This removes authenticator-app verification and backup codes for the selected member,
+            then revokes active sessions. They can sign in again with another allowed method and set
+            up an authenticator app again from security settings.
+          </DialogDescription>
+        </DialogHeader>
+        <div className="rounded-[var(--radius-md)] border border-warning/40 bg-warning/10 px-3 py-2 text-sm text-warning">
+          Use this only when the member has lost authenticator access and their backup codes are not
+          available.
+        </div>
+        <DialogFooter>
+          <DialogClose asChild>
+            <Button type="button" variant="ghost" disabled={pending}>
+              Cancel
+            </Button>
+          </DialogClose>
+          <Button
+            type="button"
+            variant="danger"
+            icon={KeyRound}
+            loading={pending}
+            onClick={() => {
+              if (member) onConfirm(member);
+            }}
+          >
+            Reset authenticator
           </Button>
         </DialogFooter>
       </DialogContent>

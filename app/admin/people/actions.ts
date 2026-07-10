@@ -22,6 +22,7 @@ import {
   MemberLifecycleError,
   MemberProfileTransitionError,
   reactivateMember,
+  resetMemberTotp,
   revokeMemberSessions,
   scheduleMemberProfileTransition,
   resendMemberInvitation,
@@ -309,6 +310,21 @@ export async function revokeMemberSessionsAction(
     });
 
     return `${formatSessionCount(result.revokedSessionCount)} revoked.`;
+  });
+}
+
+export async function resetMemberTotpAction(memberId: string): Promise<AdminPeopleActionState> {
+  return runAdminPeopleAction(async (adminId) => {
+    const result = await resetMemberTotp({
+      memberId,
+      actorMemberId: adminId,
+    });
+
+    const resetMessage = result.hadTotp
+      ? "Authenticator app reset."
+      : "No authenticator app was set.";
+
+    return `${resetMessage} ${formatSessionCount(result.revokedSessionCount)} revoked.`;
   });
 }
 
