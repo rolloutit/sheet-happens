@@ -12,8 +12,7 @@ Replace placeholder values before sharing a concrete test run:
 - `{ADMIN_INVITE_TOKEN}`: pending admin invitation token.
 - `{CONTRACTOR_INVITE_TOKEN}`: pending contractor invitation token.
 - `{INVALID_INVITE_TOKEN}`: deliberately invalid invitation token for negative testing.
-- `{AUDIT_LOG_VIEW}`: audit-log viewer, admin export, or database access path for checking audit
-  rows.
+- `{AUDIT_LOG_VIEW}`: audit-log viewer path, default `https://{DOMAIN_NAME}/admin/audit`.
 - `{INVITED_EMAIL}`: email address that owns the tested invitation.
 - `{INVITED_FIRST_NAME}`: first name used when creating a new invited member.
 - `{INVITED_LAST_NAME}`: last name used when creating a new invited member.
@@ -1196,6 +1195,50 @@ Expected result:
 - Dashboard content is not visible.
 - Reusing an old invitation link for that member does not reactivate the archived account.
 
+## Audit Log
+
+### Open Audit Watcher
+
+1. Sign in as `{ADMIN_EMAIL}` with TOTP enabled and verified.
+2. Open `{AUDIT_LOG_VIEW}`.
+3. Click `Refresh`.
+4. Enable `Watch`, wait at least 15 seconds, then disable it.
+
+Expected result:
+
+- The audit log opens for admins.
+- The page shows matching event count, pagination, filters, and event rows.
+- Refresh and Watch update the event list without signing the admin out.
+- Non-admin users cannot open `{AUDIT_LOG_VIEW}`.
+
+### Search And Filter Audit Rows
+
+1. Sign in as `{ADMIN_EMAIL}` with TOTP enabled and verified.
+2. Open `{AUDIT_LOG_VIEW}`.
+3. Search for a known event action, for example `member.updated` or `security.totp_reset`.
+4. Filter by event, target type, actor, and a date range.
+5. Clear the filters.
+
+Expected result:
+
+- Search and filters update the URL query string.
+- Rows match the selected criteria.
+- Clearing filters returns to the unfiltered first page.
+- Pagination keeps the selected filters.
+
+### Audit Details Redaction
+
+1. Sign in as `{ADMIN_EMAIL}` with TOTP enabled and verified.
+2. Open `{AUDIT_LOG_VIEW}`.
+3. Open `Details` for a security or member lifecycle event.
+
+Expected result:
+
+- The details dialog shows actor, target, request metadata, and before/after JSON.
+- Sensitive-looking keys such as password, token, secret, backup code, and credential values are
+  displayed as `[redacted]`.
+- Closing the dialog returns to the same filtered audit list.
+
 ## Navigation
 
 ### Sidebar Real Routes
@@ -1204,11 +1247,13 @@ Expected result:
 2. Open `https://{DOMAIN_NAME}/dashboard`.
 3. Click `Irányítópult` in the sidebar.
 4. Click `Emberek` in the sidebar.
+5. Click `Napló` in the sidebar.
 
 Expected result:
 
 - `Irányítópult` opens `/dashboard`.
 - `Emberek` opens `/admin/people`.
+- `Napló` opens `/admin/audit`.
 - The current sidebar item is highlighted.
 
 ## Regression Checklist For Every Release
@@ -1230,5 +1275,5 @@ Expected result:
 - TOTP setup, challenge, invalid-code handling, trusted device, backup-code fallback, and disable
   still work.
 - TOTP disablement and backup-code regeneration create audit rows without storing secrets.
-- `/dashboard`, `/settings`, `/admin/people`, `/two-factor`, and `/account-status` render without
-  layout breakage on desktop and mobile widths.
+- `/dashboard`, `/settings`, `/admin/people`, `/admin/audit`, `/two-factor`, and `/account-status`
+  render without layout breakage on desktop and mobile widths.
