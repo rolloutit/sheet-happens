@@ -5,6 +5,7 @@ import {
   deactivateMember,
   MemberLifecycleError,
   reactivateMember,
+  resetMemberTotp,
   revokeMemberSessions,
   resendMemberInvitation,
   revokeMemberInvitation,
@@ -39,7 +40,9 @@ function createLifecycleDb(
   overrides: {
     member?: TestMember | null;
     invitation?: { id: string } | null;
+    authUser?: { id: string; twoFactorEnabled: boolean } | null;
     activeAdminCount?: number;
+    deletedTotpCount?: number;
     revokedInvitationCount?: number;
   } = {},
 ) {
@@ -59,6 +62,18 @@ function createLifecycleDb(
     },
     session: {
       deleteMany: vi.fn().mockResolvedValue({ count: 2 }),
+    },
+    twoFactor: {
+      deleteMany: vi.fn().mockResolvedValue({ count: overrides.deletedTotpCount ?? 1 }),
+    },
+    user: {
+      findUnique: vi.fn().mockResolvedValue(
+        overrides.authUser ?? {
+          id: "auth-user-1",
+          twoFactorEnabled: true,
+        },
+      ),
+      update: vi.fn().mockResolvedValue({ id: "auth-user-1" }),
     },
   };
 
@@ -362,6 +377,128 @@ describe("member lifecycle services", () => {
       memberId: "member-1",
       revokedSessionCount: 2,
     });
+  });
+
+  it("resets linked member TOTP, revokes sessions, and audits without secrets", async () => {
+    const { db, tx } = createLifecycleDb();
+
+    const result = await resetMemberTotp(
+      {
+        memberId: "member-1",
+        actorMemberId: "admin-1",
+      },
+      { db },
+    );
+
+    expect(tx.user.findUnique).toHaveBeenCalledWith({
+      where: {
+        id: "auth-user-1",
+      },
+      select: {
+        id: true,
+        twoFactorEnabled: true,
+      },
+    });
+    expect(tx.twoFactor.deleteMany).toHaveBeenCalledWith({
+      where: {
+        userId: "auth-user-1",
+      },
+    });
+    expect(tx.user.update).toHaveBeenCalledWith({
+      where: {
+        id: "auth-user-1",
+      },
+      data: {
+        twoFactorEnabled: false,
+      },
+      select: {
+        id: true,
+      },
+    });
+    expect(tx.session.deleteMany).toHaveBeenCalledWith({
+      where: {
+        userId: "auth-user-1",
+      },
+    });
+    expect(tx.auditLog.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          action: "security.totp_reset",
+          targetId: "member-1",
+          before: {
+            twoFactorEnabled: true,
+            twoFactorRecordCount: 1,
+          },
+          after: {
+            twoFactorEnabled: false,
+            revokedSessionCount: 2,
+          },
+        }),
+      }),
+    );
+    expect(result).toEqual({
+      memberId: "member-1",
+      hadTotp: true,
+      revokedSessionCount: 2,
+    });
+  });
+
+  it("resets stale TOTP flags even when the TOTP row is already missing", async () => {
+    const { db, tx } = createLifecycleDb({
+      deletedTotpCount: 0,
+      authUser: {
+        id: "auth-user-1",
+        twoFactorEnabled: true,
+      },
+    });
+
+    const result = await resetMemberTotp(
+      {
+        memberId: "member-1",
+        actorMemberId: "admin-1",
+      },
+      { db },
+    );
+
+    expect(tx.user.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: {
+          twoFactorEnabled: false,
+        },
+      }),
+    );
+    expect(result.hadTotp).toBe(true);
+  });
+
+  it("rejects self TOTP reset and members without linked auth users", async () => {
+    const { db } = createLifecycleDb();
+
+    await expect(
+      resetMemberTotp(
+        {
+          memberId: "member-1",
+          actorMemberId: "member-1",
+        },
+        { db },
+      ),
+    ).rejects.toThrow("You cannot reset your own authenticator app here.");
+
+    const { db: unlinkedDb } = createLifecycleDb({
+      member: {
+        ...baseMember,
+        authUserId: null,
+      },
+    });
+
+    await expect(
+      resetMemberTotp(
+        {
+          memberId: "member-1",
+          actorMemberId: "admin-1",
+        },
+        { db: unlinkedDb },
+      ),
+    ).rejects.toThrow("This member has no linked auth account.");
   });
 
   it("changes roles but rejects self role changes", async () => {

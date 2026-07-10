@@ -103,6 +103,28 @@ type MemberLifecycleTransaction = {
   session: {
     deleteMany(args: { where: { userId: string } }): Promise<{ count: number }>;
   };
+  twoFactor: {
+    deleteMany(args: { where: { userId: string } }): Promise<{ count: number }>;
+  };
+  user: {
+    findUnique(args: {
+      where: { id: string };
+      select: {
+        id: true;
+        twoFactorEnabled: true;
+      };
+    }): Promise<{
+      id: string;
+      twoFactorEnabled: boolean;
+    } | null>;
+    update(args: {
+      where: { id: string };
+      data: {
+        twoFactorEnabled: boolean;
+      };
+      select: { id: true };
+    }): Promise<{ id: string }>;
+  };
 };
 
 export type MemberLifecycleDeps = {
@@ -445,6 +467,87 @@ export async function revokeMemberSessions(
 
     return {
       memberId: member.id,
+      revokedSessionCount,
+    };
+  });
+}
+
+export async function resetMemberTotp(input: MemberLifecycleInput, deps: MemberLifecycleDeps = {}) {
+  const db: MemberLifecycleDb = deps.db ?? (prisma as unknown as MemberLifecycleDb);
+
+  return db.$transaction(async (tx) => {
+    const member = await findMember(tx, input.memberId);
+
+    if (member.id === input.actorMemberId) {
+      throw new MemberLifecycleError("You cannot reset your own authenticator app here.");
+    }
+
+    if (member.deletedAt) {
+      throw new MemberLifecycleError("Deleted members cannot be changed.");
+    }
+
+    if (!member.authUserId) {
+      throw new MemberLifecycleError("This member has no linked auth account.");
+    }
+
+    const authUser = await tx.user.findUnique({
+      where: { id: member.authUserId },
+      select: {
+        id: true,
+        twoFactorEnabled: true,
+      },
+    });
+
+    if (!authUser) {
+      throw new MemberLifecycleError("The linked auth account was not found.");
+    }
+
+    const deletedTotp = await tx.twoFactor.deleteMany({
+      where: {
+        userId: authUser.id,
+      },
+    });
+
+    await tx.user.update({
+      where: {
+        id: authUser.id,
+      },
+      data: {
+        twoFactorEnabled: false,
+      },
+      select: {
+        id: true,
+      },
+    });
+
+    const revokedSessionCount = await revokeAuthSessionsForMember(tx, {
+      member,
+      actorMemberId: input.actorMemberId,
+      reason: "admin_revoke",
+    });
+
+    const hadTotp = authUser.twoFactorEnabled || deletedTotp.count > 0;
+
+    await tx.auditLog.create({
+      data: {
+        actorMemberId: input.actorMemberId,
+        action: "security.totp_reset",
+        targetType: "member",
+        targetId: member.id,
+        before: {
+          twoFactorEnabled: authUser.twoFactorEnabled,
+          twoFactorRecordCount: deletedTotp.count,
+        },
+        after: {
+          twoFactorEnabled: false,
+          revokedSessionCount,
+        },
+      },
+    });
+
+    return {
+      memberId: member.id,
+      hadTotp,
       revokedSessionCount,
     };
   });
