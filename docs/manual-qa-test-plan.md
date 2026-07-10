@@ -906,6 +906,28 @@ Expected result:
 - The admin cannot revoke their own sessions from this table.
 - An audit row is recorded for `member.session_revoked` with reason `admin_revoke`.
 
+### Admin Reset Member Authenticator
+
+1. Sign in as `{ADMIN_EMAIL}` with TOTP enabled and verified in one browser profile.
+2. Use a second browser profile to sign in as `{CONTRACTOR_EMAIL}` or `{EMPLOYEE_EMAIL}` with TOTP
+   enabled.
+3. In the admin browser, open `https://{DOMAIN_NAME}/admin/people`.
+4. Find the contractor or employee row.
+5. Open the row actions menu and click `Reset authenticator`.
+6. Confirm `Reset authenticator`.
+7. In the contractor or employee browser, refresh `https://{DOMAIN_NAME}/dashboard`.
+8. Sign in again as the contractor or employee.
+
+Expected result:
+
+- The admin sees a success message that the authenticator app was reset.
+- The contractor or employee is signed out because active sessions were revoked.
+- The next sign-in no longer asks for the old TOTP code or old backup codes.
+- The user can open `/settings` and set up a new authenticator app.
+- The admin cannot reset their own authenticator from this table.
+- Audit rows are recorded for `security.totp_reset` and `member.session_revoked` without TOTP
+  secrets or backup-code values.
+
 ## Security Settings
 
 ### Security Setup Gate
