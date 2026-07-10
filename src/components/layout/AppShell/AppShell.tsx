@@ -10,6 +10,7 @@ import {
   LayoutDashboard,
   Menu,
   PanelLeftClose,
+  ScrollText,
   Square,
   Users,
   WalletCards,
@@ -54,6 +55,7 @@ const navItems = [
   },
   { id: "people", label: "Emberek", icon: Users, group: "admin", href: "/admin/people" },
   { id: "rates", label: "Óradíjak", icon: WalletCards, group: "admin", href: "/admin/rates" },
+  { id: "audit", label: "Napló", icon: ScrollText, group: "admin", href: "/admin/audit" },
   { id: "info", label: "Információs oldal", icon: BookOpen, group: "admin", href: "#" },
 ] as const;
 
