@@ -1,6 +1,7 @@
 "use client";
 
 import { BadgeDollarSign, ChevronRight, MinusCircle, Plus, Search } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { useMemo, useState, useTransition } from "react";
 
@@ -26,6 +27,7 @@ import type {
   AdminMemberRateRow,
   AdminRatePeriodRow,
   RateMemberProfile,
+  RateMemberStatus,
 } from "@/src/server/rates";
 import { createAssignmentOverrideRateAction, createMemberDefaultRateAction } from "./actions";
 import type {
@@ -64,7 +66,18 @@ export function AdminRatesTable({
   currencyOptions,
   todayDate,
 }: AdminRatesTableProps) {
+  const t = useTranslations("AdminRates");
   const router = useRouter();
+  const profileLabels: Record<RateMemberProfile, string> = {
+    CONTRACTOR: t("profiles.contractor"),
+    EMPLOYEE: t("profiles.employee"),
+  };
+  const statusLabels: Record<RateMemberStatus, string> = {
+    INVITED: t("statuses.invited"),
+    ACTIVE: t("statuses.active"),
+    INACTIVE: t("statuses.inactive"),
+    DELETED: t("statuses.deleted"),
+  };
   const [query, setQuery] = useState("");
   const [profileFilter, setProfileFilter] = useState<ProfileFilter>("all");
   const [rateFilter, setRateFilter] = useState<RateFilter>("all");
@@ -175,65 +188,65 @@ export function AdminRatesTable({
   return (
     <div className="grid gap-4">
       <div className="grid gap-3 md:grid-cols-3">
-        <RateStat value={stats.withRate} label="With rate" />
+        <RateStat value={stats.withRate} label={t("stats.withRate")} />
         <RateStat
           value={stats.missing}
-          label="Missing rate"
+          label={t("stats.missingRate")}
           tone={stats.missing ? "warning" : undefined}
         />
-        <RateStat value={stats.overrides} label="Project overrides" />
+        <RateStat value={stats.overrides} label={t("stats.projectOverrides")} />
       </div>
 
       <div className="grid gap-3">
         <div className="flex flex-wrap items-center gap-3">
           <label className="flex h-10 min-w-[min(16rem,100%)] flex-[1_1_18rem] items-center gap-2 rounded-[var(--radius-md)] border border-border bg-card px-3 shadow-soft">
             <Search className="size-4 text-muted-foreground" aria-hidden="true" />
-            <span className="sr-only">Search rates</span>
+            <span className="sr-only">{t("filters.search")}</span>
             <input
               value={query}
               onChange={(event) => setQuery(event.target.value)}
-              placeholder="Search..."
+              placeholder={t("filters.searchPlaceholder")}
               className="min-w-0 flex-1 bg-transparent text-sm text-foreground outline-none placeholder:text-muted-foreground"
             />
           </label>
           <div className="min-w-0 max-w-full overflow-x-auto">
             <SegmentedControl
-              label="Profile filter"
+              label={t("filters.profile")}
               size="sm"
               value={profileFilter}
               onValueChange={(value) => setProfileFilter(value as ProfileFilter)}
               className="whitespace-nowrap"
               items={[
-                { value: "all", label: "All" },
-                { value: "CONTRACTOR", label: "Contractor" },
-                { value: "EMPLOYEE", label: "Employee" },
+                { value: "all", label: t("filters.all") },
+                { value: "CONTRACTOR", label: profileLabels.CONTRACTOR },
+                { value: "EMPLOYEE", label: profileLabels.EMPLOYEE },
               ]}
             />
           </div>
           <div className="min-w-0 max-w-full overflow-x-auto">
             <SegmentedControl
-              label="Rate filter"
+              label={t("filters.rate")}
               size="sm"
               value={rateFilter}
               onValueChange={(value) => setRateFilter(value as RateFilter)}
               className="whitespace-nowrap"
               items={[
-                { value: "all", label: "All" },
-                { value: "has", label: "Has rate" },
-                { value: "none", label: "Missing" },
+                { value: "all", label: t("filters.all") },
+                { value: "has", label: t("filters.hasRate") },
+                { value: "none", label: t("filters.missing") },
               ]}
             />
           </div>
           <label className="grid h-10 min-w-[min(14rem,100%)] flex-[1_1_14rem] grid-cols-[auto_minmax(0,1fr)] items-center gap-2 rounded-[var(--radius-md)] border border-border bg-card px-3 shadow-soft sm:max-w-72">
             <span className="font-ui text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
-              Project
+              {t("filters.project")}
             </span>
             <select
               value={projectFilter}
               onChange={(event) => setProjectFilter(event.target.value)}
               className="min-w-0 bg-transparent text-sm font-semibold text-foreground outline-none"
             >
-              <option value="all">All</option>
+              <option value="all">{t("filters.all")}</option>
               {projects.map((project) => (
                 <option key={project.id} value={project.id}>
                   {project.name}
@@ -243,15 +256,15 @@ export function AdminRatesTable({
           </label>
           <label className="grid h-10 min-w-[min(14rem,100%)] flex-[1_1_14rem] grid-cols-[auto_minmax(0,1fr)] items-center gap-2 rounded-[var(--radius-md)] border border-border bg-card px-3 shadow-soft sm:max-w-72">
             <span className="font-ui text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
-              Group
+              {t("filters.group")}
             </span>
             <select
               value={groupFilter}
               onChange={(event) => setGroupFilter(event.target.value)}
               className="min-w-0 bg-transparent text-sm font-semibold text-foreground outline-none"
             >
-              <option value="all">All</option>
-              <option value="ungrouped">Ungrouped</option>
+              <option value="all">{t("filters.all")}</option>
+              <option value="ungrouped">{t("filters.ungrouped")}</option>
               {groupOptions.map((group) => (
                 <option key={group.id} value={group.id}>
                   {group.name}
@@ -264,15 +277,17 @@ export function AdminRatesTable({
 
       <div className="overflow-hidden rounded-[var(--radius-lg)] border border-border bg-card shadow-soft">
         <table className="w-full border-collapse">
-          <caption className="sr-only">Rate roster</caption>
+          <caption className="sr-only">{t("table.caption")}</caption>
           <thead>
             <tr className="border-b border-border bg-background/45">
-              <RateHead>Name</RateHead>
-              <RateHead className="hidden md:table-cell">Profile</RateHead>
-              <RateHead>Current rate</RateHead>
-              <RateHead className="hidden md:table-cell">Project overrides</RateHead>
+              <RateHead>{t("table.columns.name")}</RateHead>
+              <RateHead className="hidden md:table-cell">{t("table.columns.profile")}</RateHead>
+              <RateHead>{t("table.columns.currentRate")}</RateHead>
+              <RateHead className="hidden md:table-cell">
+                {t("table.columns.projectOverrides")}
+              </RateHead>
               <RateHead>
-                <span className="sr-only">Open</span>
+                <span className="sr-only">{t("table.open")}</span>
               </RateHead>
             </tr>
           </thead>
@@ -280,7 +295,7 @@ export function AdminRatesTable({
             {filteredRows.length === 0 ? (
               <tr>
                 <td colSpan={5} className="px-6 py-12 text-center text-sm text-muted-foreground">
-                  No rates match the current filters.
+                  {t("table.empty")}
                 </td>
               </tr>
             ) : (
@@ -292,7 +307,7 @@ export function AdminRatesTable({
                     key={row.memberId}
                     tabIndex={0}
                     role="button"
-                    aria-label={`Open rate drawer for ${row.memberName}`}
+                    aria-label={t("table.openDrawer", { name: row.memberName })}
                     onClick={() => {
                       setSelectedMemberId(row.memberId);
                       setActionState(initialActionState);
@@ -314,14 +329,14 @@ export function AdminRatesTable({
                             {row.memberName}
                           </p>
                           <p className="text-xs text-muted-foreground">
-                            {formatStatus(row.memberStatus)}
+                            {statusLabels[row.memberStatus]}
                           </p>
                         </div>
                       </div>
                     </td>
                     <td className="hidden px-4 py-3 md:table-cell">
                       <Badge tone={profileTone[row.memberProfile]}>
-                        {formatProfile(row.memberProfile)}
+                        {profileLabels[row.memberProfile]}
                       </Badge>
                     </td>
                     <td className="px-4 py-3">
@@ -332,7 +347,7 @@ export function AdminRatesTable({
                       ) : (
                         <span className="inline-flex items-center gap-1 rounded-[var(--radius-pill)] bg-warning/12 px-2.5 py-1 text-xs font-semibold text-warning">
                           <MinusCircle className="size-3" aria-hidden="true" />
-                          Missing
+                          {t("labels.missing")}
                         </span>
                       )}
                     </td>
@@ -342,7 +357,7 @@ export function AdminRatesTable({
                           <span className="rounded-[var(--radius-pill)] bg-primary/12 px-2 py-0.5 font-ui text-xs font-semibold text-accent">
                             {overrideCount}
                           </span>
-                          override{overrideCount === 1 ? "" : "s"}
+                          {t("table.overrideCount", { count: overrideCount })}
                         </span>
                       ) : (
                         <span className="text-sm text-muted-foreground">-</span>
@@ -436,6 +451,17 @@ function RateManagementDrawer({
   onCreateCentralRate: (input: CreateMemberDefaultRateActionInput) => void;
   onCreateAssignmentOverride: (input: CreateAssignmentOverrideRateActionInput) => void;
 }) {
+  const t = useTranslations("AdminRates");
+  const profileLabels: Record<RateMemberProfile, string> = {
+    CONTRACTOR: t("profiles.contractor"),
+    EMPLOYEE: t("profiles.employee"),
+  };
+  const statusLabels: Record<RateMemberStatus, string> = {
+    INVITED: t("statuses.invited"),
+    ACTIVE: t("statuses.active"),
+    INACTIVE: t("statuses.inactive"),
+    DELETED: t("statuses.deleted"),
+  };
   const [centralFormOpen, setCentralFormOpen] = useState(false);
   const [newOverrideOpen, setNewOverrideOpen] = useState(false);
   const [newOverrideAssignmentId, setNewOverrideAssignmentId] = useState<string | null>(null);
@@ -463,10 +489,10 @@ function RateManagementDrawer({
                 <DrawerDescription asChild>
                   <div className="flex flex-wrap items-center gap-2">
                     <Badge tone={profileTone[member.memberProfile]}>
-                      {formatProfile(member.memberProfile)}
+                      {profileLabels[member.memberProfile]}
                     </Badge>
                     <span className="text-xs text-muted-foreground">
-                      {formatStatus(member.memberStatus)}
+                      {statusLabels[member.memberStatus]}
                     </span>
                   </div>
                 </DrawerDescription>
@@ -478,12 +504,12 @@ function RateManagementDrawer({
                   <p className="font-ui text-lg font-semibold text-foreground">
                     {formatRateValue(member.currentRate)}
                   </p>
-                  <p className="text-xs text-muted-foreground">Current rate</p>
+                  <p className="text-xs text-muted-foreground">{t("labels.currentRate")}</p>
                 </>
               ) : (
                 <span className="inline-flex items-center gap-1 rounded-[var(--radius-pill)] bg-warning/12 px-2.5 py-1 text-xs font-semibold text-warning">
                   <MinusCircle className="size-3" aria-hidden="true" />
-                  Missing
+                  {t("labels.missing")}
                 </span>
               )}
             </div>
@@ -506,10 +532,11 @@ function RateManagementDrawer({
 
             <section className="grid gap-4">
               <div className="grid gap-1">
-                <h2 className="font-ui text-base font-semibold text-foreground">Central rate</h2>
+                <h2 className="font-ui text-base font-semibold text-foreground">
+                  {t("drawer.centralRate")}
+                </h2>
                 <p className="text-sm leading-6 text-muted-foreground">
-                  This person&apos;s default internal rate. Contractor project overrides can differ
-                  from this value.
+                  {t("drawer.centralRateDescription")}
                 </p>
               </div>
 
@@ -520,10 +547,10 @@ function RateManagementDrawer({
                     aria-hidden="true"
                   />
                   <p className="mt-3 font-ui text-sm font-semibold text-foreground">
-                    No central rate set
+                    {t("drawer.noCentralRate")}
                   </p>
                   <p className="mt-1 text-sm text-muted-foreground">
-                    Add a rate before using this person in internal cost reports.
+                    {t("drawer.noCentralRateDescription")}
                   </p>
                 </div>
               ) : (
@@ -537,7 +564,7 @@ function RateManagementDrawer({
                   currencyOptions={currencyOptions}
                   actionState={actionState}
                   pending={pendingCentral}
-                  submitLabel="Add period"
+                  submitLabel={t("actions.addPeriod")}
                   onSubmit={(period) => {
                     onCreateCentralRate({
                       memberId: member.memberId,
@@ -554,7 +581,7 @@ function RateManagementDrawer({
                   className="w-fit border border-dashed border-border"
                   onClick={() => setCentralFormOpen(true)}
                 >
-                  Add period
+                  {t("actions.addPeriod")}
                 </Button>
               )}
             </section>
@@ -564,11 +591,10 @@ function RateManagementDrawer({
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                   <div className="grid gap-1">
                     <h2 className="font-ui text-base font-semibold text-foreground">
-                      Project overrides
+                      {t("drawer.projectOverrides")}
                     </h2>
                     <p className="text-sm leading-6 text-muted-foreground">
-                      Overrides apply only to the selected project. Other projects use the central
-                      rate.
+                      {t("drawer.projectOverridesDescription")}
                     </p>
                   </div>
                   {addableAssignments.length > 0 && !newOverrideOpen ? (
@@ -582,7 +608,7 @@ function RateManagementDrawer({
                         setNewOverrideOpen(true);
                       }}
                     >
-                      Add override
+                      {t("actions.addOverride")}
                     </Button>
                   ) : null}
                 </div>
@@ -612,7 +638,7 @@ function RateManagementDrawer({
                 {existingOverrides.length === 0 &&
                 addableAssignments.length > 0 &&
                 !newOverrideOpen ? (
-                  <p className="text-sm text-muted-foreground">No project override.</p>
+                  <p className="text-sm text-muted-foreground">{t("drawer.noProjectOverride")}</p>
                 ) : (
                   existingOverrides.map((assignment) => {
                     const formOpen = overrideFormAssignmentId === assignment.assignmentId;
@@ -642,7 +668,7 @@ function RateManagementDrawer({
                               icon={Plus}
                               onClick={() => setOverrideFormAssignmentId(assignment.assignmentId)}
                             >
-                              Add period
+                              {t("actions.addPeriod")}
                             </Button>
                           ) : null}
                         </div>
@@ -656,7 +682,7 @@ function RateManagementDrawer({
                             currencyOptions={currencyOptions}
                             actionState={actionState}
                             pending={pending}
-                            submitLabel="Add override period"
+                            submitLabel={t("actions.addOverridePeriod")}
                             onSubmit={(period) => {
                               onCreateAssignmentOverride({
                                 projectAssignmentId: assignment.assignmentId,
@@ -716,13 +742,14 @@ function OverrideRateForm({
   onCancel: () => void;
   onSubmit: (input: CreateAssignmentOverrideRateActionInput) => void;
 }) {
+  const t = useTranslations("AdminRates");
   const [assignmentId, setAssignmentId] = useState(
     initialAssignmentId ?? assignments[0]?.assignmentId ?? "",
   );
 
   return (
     <div className="grid gap-4">
-      <Field label="Project" required reserveMessageSpace>
+      <Field label={t("fields.project")} required reserveMessageSpace>
         {({ id, describedBy, required }) => (
           <select
             id={id}
@@ -746,7 +773,7 @@ function OverrideRateForm({
         currencyOptions={currencyOptions}
         actionState={actionState}
         pending={pending}
-        submitLabel="Add override"
+        submitLabel={t("actions.addOverride")}
         onCancel={onCancel}
         onSubmit={(period) =>
           onSubmit({
@@ -766,12 +793,16 @@ function AvailableOverrideProjects({
   assignments: AdminAssignmentRateRow[];
   onAddOverride: (assignmentId: string) => void;
 }) {
+  const t = useTranslations("AdminRates");
+
   return (
     <div className="grid gap-2 rounded-[var(--radius-lg)] border border-border bg-background/45 p-3">
       <div>
-        <p className="font-ui text-sm font-semibold text-foreground">Projects using central rate</p>
+        <p className="font-ui text-sm font-semibold text-foreground">
+          {t("drawer.projectsUsingCentralRate")}
+        </p>
         <p className="mt-1 text-xs text-muted-foreground">
-          Add an override for any other assigned project.
+          {t("drawer.projectsUsingCentralRateDescription")}
         </p>
       </div>
       <div className="grid gap-2">
@@ -784,7 +815,7 @@ function AvailableOverrideProjects({
               <p className="font-ui text-sm font-semibold text-foreground">
                 {assignment.projectName}
               </p>
-              <p className="text-xs text-muted-foreground">Currently follows central rate.</p>
+              <p className="text-xs text-muted-foreground">{t("drawer.followsCentralRate")}</p>
             </div>
             <Button
               type="button"
@@ -793,7 +824,7 @@ function AvailableOverrideProjects({
               icon={Plus}
               onClick={() => onAddOverride(assignment.assignmentId)}
             >
-              Add override
+              {t("actions.addOverride")}
             </Button>
           </div>
         ))}
@@ -809,11 +840,12 @@ function UnavailableOverrideProjects({
   hasAssignments: boolean;
   hasExistingOverrides: boolean;
 }) {
+  const t = useTranslations("AdminRates");
   const message = !hasAssignments
-    ? "This contractor is not assigned to any project yet. Assign them to a project before adding an override."
+    ? t("drawer.noAssignmentsForOverride")
     : hasExistingOverrides
-      ? "All assigned projects already have overrides. Use Add period on a project to schedule the next override period."
-      : "No assigned projects are available for overrides.";
+      ? t("drawer.allProjectsHaveOverrides")
+      : t("drawer.noProjectsForOverride");
 
   return (
     <div className="rounded-[var(--radius-lg)] border border-dashed border-border bg-background/45 px-3 py-3 text-sm text-muted-foreground">
@@ -841,6 +873,8 @@ function RatePeriodForm({
   onCancel?: () => void;
   onSubmit: (input: Omit<CreateMemberDefaultRateActionInput, "memberId">) => void;
 }) {
+  const t = useTranslations("AdminRates");
+
   return (
     <form
       className="grid gap-4 rounded-[var(--radius-lg)] border border-border bg-background/45 p-4"
@@ -859,7 +893,7 @@ function RatePeriodForm({
     >
       <div className="grid gap-4 sm:grid-cols-2">
         <Field
-          label="Valid from"
+          label={t("fields.validFrom")}
           required
           reserveMessageSpace
           error={actionState.fieldErrors?.validFrom}
@@ -876,7 +910,11 @@ function RatePeriodForm({
             />
           )}
         </Field>
-        <Field label="Valid to" reserveMessageSpace error={actionState.fieldErrors?.validTo}>
+        <Field
+          label={t("fields.validTo")}
+          reserveMessageSpace
+          error={actionState.fieldErrors?.validTo}
+        >
           {({ id, describedBy, invalid }) => (
             <Input
               id={id}
@@ -890,7 +928,7 @@ function RatePeriodForm({
       </div>
       <div className="grid gap-4 sm:grid-cols-2">
         <Field
-          label="Hourly rate"
+          label={t("fields.hourlyRate")}
           required
           reserveMessageSpace
           error={actionState.fieldErrors?.hourlyRate}
@@ -909,7 +947,7 @@ function RatePeriodForm({
           )}
         </Field>
         <Field
-          label="Currency"
+          label={t("fields.currency")}
           required
           reserveMessageSpace
           error={actionState.fieldErrors?.currencyCode}
@@ -933,12 +971,12 @@ function RatePeriodForm({
           )}
         </Field>
       </div>
-      <Field label="Reason / note" reserveMessageSpace error={actionState.fieldErrors?.note}>
+      <Field label={t("fields.reason")} reserveMessageSpace error={actionState.fieldErrors?.note}>
         {({ id, describedBy, invalid }) => (
           <Input
             id={id}
             name="note"
-            placeholder="Why is this rate changing?"
+            placeholder={t("fields.reasonPlaceholder")}
             aria-describedby={describedBy}
             invalid={invalid}
           />
@@ -947,7 +985,7 @@ function RatePeriodForm({
       <DrawerFooter className="mt-0">
         {onCancel ? (
           <Button type="button" variant="ghost" disabled={pending} onClick={onCancel}>
-            Cancel
+            {t("actions.cancel")}
           </Button>
         ) : null}
         <Button type="submit" icon={BadgeDollarSign} loading={pending}>
@@ -959,6 +997,7 @@ function RatePeriodForm({
 }
 
 function RateTimeline({ periods }: { periods: AdminRatePeriodRow[] }) {
+  const t = useTranslations("AdminRates");
   const sortedPeriods = [...periods].sort((left, right) =>
     left.validFrom.localeCompare(right.validFrom),
   );
@@ -985,15 +1024,26 @@ function RateTimeline({ periods }: { periods: AdminRatePeriodRow[] }) {
                   <p className="font-ui text-sm font-semibold text-foreground">
                     {formatRateValue(period)}
                   </p>
-                  <p className="text-xs text-muted-foreground">{formatRateTimeline(period)}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {period.validTo
+                      ? t("timeline.range", { from: period.validFrom, to: period.validTo })
+                      : t("timeline.openEnded", { from: period.validFrom })}
+                  </p>
                 </div>
-                {current ? <Badge tone="success">Current</Badge> : null}
+                {current ? <Badge tone="success">{t("labels.current")}</Badge> : null}
               </div>
               <div className="grid gap-1 text-xs text-muted-foreground">
                 <span>
-                  Added by {period.createdByName} on {formatTimestamp(period.createdAt)}
+                  {t("timeline.addedBy", {
+                    name: period.createdByName,
+                    date: formatTimestamp(period.createdAt),
+                  })}
                 </span>
-                <span>{period.note ? `Reason: ${period.note}` : "No reason recorded."}</span>
+                <span>
+                  {period.note
+                    ? t("timeline.reason", { reason: period.note })
+                    : t("timeline.noReason")}
+                </span>
               </div>
             </div>
           </div>
@@ -1033,11 +1083,6 @@ function getCurrentPeriod(periods: AdminRatePeriodRow[]) {
   );
 }
 
-function formatRateTimeline(rate: AdminRatePeriodRow) {
-  if (rate.validTo) return `${rate.validFrom} to ${rate.validTo}`;
-  return `${rate.validFrom} to open`;
-}
-
 function formatRateValue(rate: AdminRatePeriodRow) {
   const amount = Number(rate.hourlyRate);
   const formattedAmount = Number.isFinite(amount)
@@ -1047,14 +1092,6 @@ function formatRateValue(rate: AdminRatePeriodRow) {
     : rate.hourlyRate;
 
   return `${formattedAmount} ${rate.currencyCode}/h`;
-}
-
-function formatProfile(profile: RateMemberProfile) {
-  return profile.toLowerCase();
-}
-
-function formatStatus(status: AdminMemberRateRow["memberStatus"]) {
-  return status.toLowerCase();
 }
 
 function formatTimestamp(value: string) {

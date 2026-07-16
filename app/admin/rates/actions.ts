@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
+import { getTranslations } from "next-intl/server";
 import { z } from "zod";
 
 import { isSupportedCurrencyCode, normalizeCurrencyCode } from "@/src/lib/member-preferences";
@@ -21,48 +22,55 @@ import type {
   RateFormField,
 } from "./actions.types";
 
-const rateDateSchema = z.string().trim().refine(isDateInputValue, "Choose a valid date.");
+type AdminRatesActionsTranslator = Awaited<ReturnType<typeof getTranslations>>;
 
-const rateFormSchema = z
-  .object({
-    validFrom: z
-      .string()
-      .trim()
-      .min(1, "Rate start date is required.")
-      .refine(isDateInputValue, "Choose a valid start date."),
-    validTo: rateDateSchema,
-    hourlyRate: z
-      .string()
-      .trim()
-      .min(1, "Hourly rate is required.")
-      .regex(/^\d+(\.\d{1,2})?$/, "Enter a non-negative amount with up to 2 decimals."),
-    currencyCode: z
-      .string()
-      .transform(normalizeCurrencyCode)
-      .refine(isSupportedCurrencyCode, "Choose a supported currency."),
-    note: z.string().trim().max(1000, "Note must be 1000 characters or less."),
-  })
-  .superRefine((value, context) => {
-    if (!value.validTo) return;
+function createRateDateSchema(t: AdminRatesActionsTranslator) {
+  return z.string().trim().refine(isDateInputValue, t("validation.validDate"));
+}
 
-    if (value.validTo <= value.validFrom) {
-      context.addIssue({
-        code: "custom",
-        message: "Rate end date must be after the start date.",
-        path: ["validTo"],
-      });
-    }
-  });
+function createRateFormSchema(t: AdminRatesActionsTranslator) {
+  return z
+    .object({
+      validFrom: z
+        .string()
+        .trim()
+        .min(1, t("validation.rateStartRequired"))
+        .refine(isDateInputValue, t("validation.validStartDate")),
+      validTo: createRateDateSchema(t),
+      hourlyRate: z
+        .string()
+        .trim()
+        .min(1, t("validation.hourlyRateRequired"))
+        .regex(/^\d+(\.\d{1,2})?$/, t("validation.hourlyRateFormat")),
+      currencyCode: z
+        .string()
+        .transform(normalizeCurrencyCode)
+        .refine(isSupportedCurrencyCode, t("validation.supportedCurrency")),
+      note: z.string().trim().max(1000, t("validation.noteMax")),
+    })
+    .superRefine((value, context) => {
+      if (!value.validTo) return;
+
+      if (value.validTo <= value.validFrom) {
+        context.addIssue({
+          code: "custom",
+          message: t("validation.rateEndAfterStart"),
+          path: ["validTo"],
+        });
+      }
+    });
+}
 
 export async function createMemberDefaultRateAction(
   input: CreateMemberDefaultRateActionInput,
 ): Promise<RateActionState> {
-  const parsed = rateFormSchema.safeParse(input);
+  const t = await getTranslations("AdminRatesActions");
+  const parsed = createRateFormSchema(t).safeParse(input);
 
   if (!parsed.success) {
     return {
       status: "error",
-      message: "Fix the highlighted rate fields and try again.",
+      message: t("errors.fixFields"),
       fieldErrors: getRateFieldErrors(parsed.error),
     };
   }
@@ -82,22 +90,23 @@ export async function createMemberDefaultRateAction(
 
     return {
       status: "success",
-      message: "Member rate period created.",
+      message: t("success.memberRateCreated"),
     };
   } catch (error) {
-    return mapRateActionError(error, "The member rate could not be created.");
+    return mapRateActionError(error, t("errors.memberRateFailed"), t);
   }
 }
 
 export async function createAssignmentOverrideRateAction(
   input: CreateAssignmentOverrideRateActionInput,
 ): Promise<RateActionState> {
-  const parsed = rateFormSchema.safeParse(input);
+  const t = await getTranslations("AdminRatesActions");
+  const parsed = createRateFormSchema(t).safeParse(input);
 
   if (!parsed.success) {
     return {
       status: "error",
-      message: "Fix the highlighted rate fields and try again.",
+      message: t("errors.fixFields"),
       fieldErrors: getRateFieldErrors(parsed.error),
     };
   }
@@ -118,10 +127,10 @@ export async function createAssignmentOverrideRateAction(
 
     return {
       status: "success",
-      message: "Assignment override rate period created.",
+      message: t("success.assignmentOverrideCreated"),
     };
   } catch (error) {
-    return mapRateActionError(error, "The assignment override rate could not be created.");
+    return mapRateActionError(error, t("errors.assignmentOverrideFailed"), t);
   }
 }
 
@@ -176,7 +185,11 @@ async function getRateRequestMetadata(): Promise<RateRequestMetadata> {
   };
 }
 
-function mapRateActionError(error: unknown, fallback: string): RateActionState {
+function mapRateActionError(
+  error: unknown,
+  fallback: string,
+  t: AdminRatesActionsTranslator,
+): RateActionState {
   console.error("[admin/rates] action failed", error);
 
   if (
@@ -193,14 +206,14 @@ function mapRateActionError(error: unknown, fallback: string): RateActionState {
   if (error instanceof Prisma.PrismaClientKnownRequestError) {
     return {
       status: "error",
-      message: mapKnownPrismaRateError(error, fallback),
+      message: mapKnownPrismaRateError(error, fallback, t),
     };
   }
 
   if (error instanceof Prisma.PrismaClientInitializationError) {
     return {
       status: "error",
-      message: "The database is not reachable. Try again later or contact support.",
+      message: t("errors.databaseUnavailable"),
     };
   }
 
@@ -210,13 +223,17 @@ function mapRateActionError(error: unknown, fallback: string): RateActionState {
   };
 }
 
-function mapKnownPrismaRateError(error: Prisma.PrismaClientKnownRequestError, fallback: string) {
+function mapKnownPrismaRateError(
+  error: Prisma.PrismaClientKnownRequestError,
+  fallback: string,
+  t: AdminRatesActionsTranslator,
+) {
   switch (error.code) {
     case "P2003":
-      return "The rate could not be linked to the selected member or assignment. Refresh and try again.";
+      return t("errors.rateLinkFailed");
     case "P2021":
     case "P2022":
-      return "Rates are temporarily unavailable. Try again later or contact support.";
+      return t("errors.ratesUnavailable");
     default:
       return fallback;
   }

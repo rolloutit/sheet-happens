@@ -1,3 +1,5 @@
+import { getTranslations } from "next-intl/server";
+
 import { AppShell } from "@/src/components/layout/AppShell";
 import { getMemberPreferenceOptions } from "@/src/lib/member-preferences";
 import { mapMemberToShellUser, requireAdminAppMember } from "@/src/server/auth/app-access";
@@ -9,6 +11,7 @@ export const dynamic = "force-dynamic";
 
 export default async function AdminRatesPage() {
   const { member: admin } = await requireAdminAppMember("/admin/rates");
+  const t = await getTranslations("AdminRates");
   const [rates, assignmentRates, projects] = await Promise.all([
     listMemberRatesForAdmin(),
     listAssignmentRatesForAdmin(),
@@ -22,12 +25,10 @@ export default async function AdminRatesPage() {
       <section className="mx-auto grid w-full max-w-[58.5rem] gap-6 px-4 py-8 sm:px-6 lg:px-8">
         <div className="flex flex-col gap-2">
           <p className="font-ui text-sm font-medium uppercase tracking-[0.18em] text-accent">
-            Admin
+            {t("eyebrow")}
           </p>
-          <h1 className="text-4xl font-semibold tracking-normal text-foreground">Rates</h1>
-          <p className="max-w-2xl text-base leading-7 text-muted-foreground">
-            Manage internal hourly rates by person, period, and contractor project override.
-          </p>
+          <h1 className="text-4xl font-semibold tracking-normal text-foreground">{t("title")}</h1>
+          <p className="max-w-2xl text-base leading-7 text-muted-foreground">{t("subtitle")}</p>
         </div>
 
         <AdminRatesTable
