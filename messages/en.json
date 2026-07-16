@@ -2,5 +2,1257 @@
   "app": {
     "name": "Sheet Happens",
     "company": "Rollout IT"
+  },
+  "AppShell": {
+    "brand": {
+      "subtitle": "Rollout IT · internal"
+    },
+    "primaryNavigation": "Primary navigation",
+    "mobileNavigation": "Mobile navigation",
+    "openNavigation": "Open navigation",
+    "help": "Help",
+    "collapseSidebar": "Collapse sidebar",
+    "language": "Language",
+    "soon": "Soon",
+    "command": {
+      "label": "Jump anywhere..."
+    },
+    "scope": {
+      "all": "Everyone"
+    },
+    "roles": {
+      "employee": "Employee",
+      "contractor": "Contractor",
+      "admin": "Admin"
+    },
+    "userRoles": {
+      "admin": "Admin",
+      "member": "Member"
+    },
+    "nav": {
+      "dashboard": "Dashboard",
+      "time": "Time tracking",
+      "timesheets": "Timesheets",
+      "review": "Approvals",
+      "reports": "Reports",
+      "projects": "Projects",
+      "people": "People",
+      "rates": "Rates",
+      "audit": "Audit log",
+      "info": "Information page",
+      "settings": "Settings"
+    },
+    "notifications": {
+      "trigger": "Notifications",
+      "menu": "Notifications",
+      "markAllRead": "Mark read",
+      "empty": "No notifications",
+      "viewAll": "View all",
+      "missingHours": {
+        "title": "Missing Friday hours",
+        "body": "A contractor timesheet is still incomplete.",
+        "time": "2 min"
+      },
+      "invoiceReview": {
+        "title": "New invoice for approval",
+        "body": "Apollo Migration invoice is waiting for review.",
+        "time": "1 hour"
+      }
+    },
+    "userMenu": {
+      "label": "User menu",
+      "profile": "Profile",
+      "settings": "Settings",
+      "signOut": "Sign out"
+    },
+    "timer": {
+      "stop": "Stop timer"
+    }
+  },
+  "Login": {
+    "brandSubtitle": "Rollout IT · internal",
+    "badge": "Welcome back",
+    "title": "Sign in to Sheet Happens",
+    "description": "Use a registered method for an already activated Sheet Happens account.",
+    "side": {
+      "timeTracking": "Time tracking",
+      "timesheets": "Timesheets",
+      "invoices": "Invoices",
+      "protected": "Protected workflow access"
+    },
+    "fields": {
+      "email": "Email",
+      "emailPlaceholder": "you@company.com",
+      "password": "Password"
+    },
+    "actions": {
+      "passkey": "Continue with passkey",
+      "google": "Continue with company Google",
+      "forgotPassword": "Forgot password?",
+      "passwordSignIn": "Sign in",
+      "emailLink": "Email sign-in link"
+    },
+    "passwordlessHint": "Passwordless email sign-in remains available for activated accounts.",
+    "inviteActivationHint": "Invited users must activate their invitation link once before normal sign-in works.",
+    "status": {
+      "magicLinkSent": "If {email} belongs to an active Sheet Happens member, a sign-in link is on its way.",
+      "passwordSetupSent": "If {email} belongs to an active Sheet Happens member, a password setup link is on its way."
+    },
+    "errors": {
+      "magicLinkSendFailed": "Could not send the sign-in email.",
+      "passkeyIncomplete": "Passkey sign-in was not completed.",
+      "passwordRequired": "Password is required.",
+      "emailPasswordIncorrect": "Email or password is incorrect.",
+      "passwordResetSendFailed": "Could not send the password reset email.",
+      "googleStartFailed": "Google sign-in could not be started.",
+      "emailRequired": "Email is required.",
+      "invalidLink": "This sign-in link is invalid or expired. Request a new one.",
+      "genericSignIn": "Sign-in could not be completed. Request a new sign-in link."
+    }
+  },
+  "AcceptInvite": {
+    "title": "Accept invitation",
+    "description": "You have been invited to Sheet Happens as {email}.",
+    "descriptionNamed": "{name}, you have been invited to Sheet Happens as {email}.",
+    "signedInAs": "Signed in as <strong>{email}</strong>",
+    "wrongEmail": "This invitation belongs to {email}. Sign in with that email before activating it.",
+    "fields": {
+      "invitedEmail": "Invited email",
+      "invitedEmailHint": "A magic sign-in link will be sent here."
+    },
+    "actions": {
+      "emailLink": "Email sign-in link",
+      "activate": "Activate account",
+      "continue": "Continue"
+    },
+    "status": {
+      "magicLinkSent": "Sign-in email sent to {email}."
+    },
+    "result": {
+      "activatedTitle": "Account activated",
+      "activatedMessage": "Your Sheet Happens account is active. You can continue to the app.",
+      "acceptedTitle": "Invitation already accepted",
+      "acceptedMessage": "This invitation has already been used. Continue to the app if you are signed in with this account."
+    },
+    "error": {
+      "expiredTitle": "Invitation expired",
+      "unavailableTitle": "Invitation unavailable",
+      "invalidTitle": "Invitation link is invalid",
+      "expiredMessage": "Ask an admin to send a new invitation.",
+      "unavailableMessage": "This invitation is currently {status}.",
+      "invalidMessage": "Ask an admin to send a new invitation from the people page."
+    },
+    "errors": {
+      "magicLinkSendFailed": "Could not send the sign-in email."
+    }
+  },
+  "AcceptInviteActions": {
+    "success": {
+      "active": "Your Sheet Happens account is active."
+    },
+    "errors": {
+      "tokenMissing": "Invitation token is missing.",
+      "activationFailed": "The invitation could not be activated. Try again later.",
+      "invalidToken": "Invitation token is invalid.",
+      "notPending": "Invitation is no longer pending.",
+      "expired": "Invitation has expired.",
+      "memberMissing": "Invitation member does not exist.",
+      "emailMismatch": "Sign in with the invited email address before accepting this invitation."
+    }
+  },
+  "ResetPassword": {
+    "badge": "Account access",
+    "titleSet": "Set a new password",
+    "titleRequest": "Request a password setup link",
+    "descriptionSet": "Choose a password for your activated Sheet Happens account.",
+    "descriptionRequest": "Password setup links are only sent for active Sheet Happens members.",
+    "fields": {
+      "email": "Email",
+      "emailPlaceholder": "you@company.com",
+      "newPassword": "New password",
+      "newPasswordHint": "Use at least 12 characters.",
+      "confirmPassword": "Confirm password"
+    },
+    "actions": {
+      "updatePassword": "Update password",
+      "sendSetupLink": "Send password setup link",
+      "returnToSignIn": "Return to sign-in"
+    },
+    "footer": {
+      "activationSeparate": "Invitation activation is still separate."
+    },
+    "status": {
+      "setupSent": "If {email} belongs to an active Sheet Happens member, a password setup link is on its way.",
+      "passwordUpdated": "Password updated. You can sign in with email and password now."
+    },
+    "errors": {
+      "emailRequired": "Email is required.",
+      "sendFailed": "Could not send the password reset email.",
+      "passwordTooShort": "Password must be at least 12 characters.",
+      "passwordMismatch": "Passwords do not match.",
+      "resetFailed": "Could not reset the password.",
+      "invalidLink": "This password reset link is invalid or expired. Request a new one.",
+      "genericReset": "Password reset could not be completed. Request a new link."
+    }
+  },
+  "TwoFactor": {
+    "badge": "Second factor",
+    "title": "Verify your sign-in",
+    "description": "Enter an authenticator-app code or one of your saved backup codes.",
+    "tabs": {
+      "authenticator": "Authenticator",
+      "backupCode": "Backup code"
+    },
+    "fields": {
+      "totp": "6 digit code",
+      "totpHint": "Use the current code from your authenticator app.",
+      "totpInputLabel": "Authenticator code",
+      "backupCode": "Backup code",
+      "backupCodeHint": "Backup codes can only be used once."
+    },
+    "trust": {
+      "ariaLabel": "Trust this device for 30 days",
+      "title": "Trust this device",
+      "description": "Skip this challenge here for 30 days."
+    },
+    "actions": {
+      "useAnotherSignIn": "Use another sign-in",
+      "verify": "Verify"
+    }
+  },
+  "AccountStatus": {
+    "adminRequired": {
+      "title": "Admin access required",
+      "message": "Your account is active, but it does not have permission to open this admin area."
+    },
+    "invited": {
+      "title": "Account not activated",
+      "message": "Use your invitation link once to activate this member profile."
+    },
+    "inactive": {
+      "title": "Account inactive",
+      "message": "This member profile is inactive. Ask an admin to reactivate it."
+    },
+    "deleted": {
+      "title": "Account unavailable",
+      "message": "This member profile is deleted and cannot access Sheet Happens."
+    },
+    "unlinked": {
+      "title": "No member profile linked",
+      "message": "This auth account is not linked to a Sheet Happens member profile."
+    },
+    "actions": {
+      "signOut": "Sign out"
+    }
+  },
+  "Dashboard": {
+    "eyebrow": "Home",
+    "title": "Dashboard",
+    "subtitle": "Track work, review assignments, and continue from the workflows available to you.",
+    "greeting": "Welcome, {name}",
+    "summary": {
+      "admin": "Admin workflows are available from the sidebar.",
+      "member": "Your time tracking workspace is ready."
+    }
+  },
+  "DashboardCards": {
+    "greeting": "Good morning, {name}",
+    "summary": {
+      "admin": "12 submissions are waiting for approval before the monthly close.",
+      "member": "This month's timesheet is 82 percent complete."
+    },
+    "stats": {
+      "loggedHours": "Logged hours",
+      "billableValue": "Billable value",
+      "submitted": "Submitted",
+      "missingDays": "Missing days",
+      "needsAttention": "Needs attention"
+    },
+    "checklist": {
+      "title": "Priority",
+      "description": "Month-close checklist",
+      "badge": "Soon",
+      "missingDescriptions": "Review missing descriptions",
+      "uploadInvoice": "Upload invoice",
+      "confirmBank": "Confirm bank details"
+    },
+    "flagged": {
+      "missingDays": "2 missing days",
+      "noInvoice": "no invoice",
+      "waitingReview": "waiting for review",
+      "selectAll": "Select all",
+      "remind": "Send reminder",
+      "sent": "Reminder sent",
+      "selected": "{count} selected"
+    },
+    "status": {
+      "title": "Status overview",
+      "submitted": "Submitted",
+      "approved": "Approved",
+      "rejected": "Rejected",
+      "missing": "Missing"
+    },
+    "actions": {
+      "reviewQueue": "Review queue",
+      "submitTimesheet": "Submit timesheet",
+      "openReport": "Open report",
+      "open": "Open"
+    }
+  },
+  "AdminPeople": {
+    "eyebrow": "Admin",
+    "title": "People",
+    "subtitle": "Invite contractors and employees, manage access, and keep profile details ready for time tracking.",
+    "stats": {
+      "members": "Members",
+      "invited": "Invited"
+    },
+    "invite": {
+      "title": "Invite member",
+      "description": "Send an invitation link and create the member profile used across the app."
+    },
+    "directory": {
+      "title": "Member directory",
+      "description": "Manage invited, active, inactive, and archived members."
+    },
+    "form": {
+      "firstName": "First name",
+      "lastName": "Last name",
+      "email": "Email",
+      "profile": "Profile",
+      "role": "Role",
+      "currency": "Currency",
+      "currencyHint": "Default billing/reporting currency.",
+      "timezone": "Timezone",
+      "locale": "Locale",
+      "displayName": "Display name",
+      "displayNameHint": "Leave empty to use first and last name."
+    },
+    "profiles": {
+      "contractor": "Contractor",
+      "employee": "Employee"
+    },
+    "roles": {
+      "admin": "Admin",
+      "member": "Member"
+    },
+    "states": {
+      "active": "active",
+      "inactive": "inactive",
+      "invited": "invited",
+      "locked": "archived"
+    },
+    "table": {
+      "caption": "People management table",
+      "ariaLabel": "People management table",
+      "rowActions": "Member actions",
+      "emptyInvited": "No members have been invited yet.",
+      "scheduledProfile": "Scheduled: {profile} on {validFrom}",
+      "editMember": "Edit {name}",
+      "columns": {
+        "person": "Person",
+        "profile": "Profile",
+        "role": "Role",
+        "state": "State",
+        "currency": "Currency"
+      }
+    },
+    "actions": {
+      "sendInvitation": "Send invitation",
+      "openFor": "Open actions for {name}",
+      "menuLabel": "Actions",
+      "makeAdmin": "Make admin",
+      "makeMember": "Make member",
+      "resendInvitation": "Resend invitation",
+      "revokeInvitation": "Revoke invitation",
+      "revokeSessions": "Revoke sessions",
+      "resetAuthenticator": "Reset authenticator",
+      "deactivate": "Deactivate",
+      "reactivate": "Reactivate",
+      "archive": "Archive",
+      "cancel": "Cancel",
+      "archiveMember": "Archive member",
+      "saveChanges": "Save changes",
+      "scheduleTransition": "Schedule transition"
+    },
+    "archiveDialog": {
+      "title": "Archive member?",
+      "titleNamed": "Archive {name}?",
+      "description": "This blocks future app access and revokes active sessions, but keeps historical records for reporting, invoices, payslips, and audit history.",
+      "warning": "This is not GDPR erasure. Personal data anonymization is a separate controlled workflow."
+    },
+    "resetTotpDialog": {
+      "title": "Reset authenticator?",
+      "titleNamed": "Reset authenticator for {name}?",
+      "description": "This removes authenticator-app verification and backup codes for the selected member, then revokes active sessions. They can sign in again with another allowed method and set up an authenticator app again from security settings.",
+      "warning": "Use this only when the member has lost authenticator access and their backup codes are not available."
+    },
+    "editDrawer": {
+      "title": "Edit member",
+      "description": "Update profile details and schedule profile changes for future work periods.",
+      "currentProfile": "Current profile: <strong>{profile}</strong>",
+      "scheduledProfile": "scheduled: {profile} on {validFrom}"
+    },
+    "profileTransition": {
+      "title": "Profile transition",
+      "description": "Schedule employee/contractor profile changes with an effective date.",
+      "newProfile": "New profile",
+      "effectiveDate": "Effective date",
+      "reason": "Reason",
+      "reasonHint": "Add a reason for this profile change."
+    }
+  },
+  "AdminPeopleActions": {
+    "roles": {
+      "admin": "Admin",
+      "member": "Member"
+    },
+    "counts": {
+      "sessions": "{count, plural, one {# session} other {# sessions}}",
+      "invitations": "{count, plural, one {# pending invitation} other {# pending invitations}}"
+    },
+    "success": {
+      "invitationSent": "Invitation sent to {email}.",
+      "memberUpdated": "Member details updated.",
+      "noChanges": "No changes to save.",
+      "profileChanged": "Profile changed.",
+      "profileTransitionScheduled": "Profile transition scheduled for {validFrom}.",
+      "invitationResent": "Invitation resent to {email}.",
+      "invitationRevoked": "Invitation revoked.",
+      "memberDeactivated": "Member deactivated. {sessions} revoked.",
+      "memberReactivated": "Member reactivated.",
+      "memberArchived": "Member archived. {sessions} revoked. {invitations} revoked.",
+      "sessionsRevoked": "{sessions} revoked.",
+      "authenticatorReset": "Authenticator app reset.",
+      "noAuthenticator": "No authenticator app was set.",
+      "authenticatorResetResult": "{resetMessage} {sessions} revoked.",
+      "roleChanged": "Role changed to {role}."
+    },
+    "errors": {
+      "fixFields": "Fix the highlighted fields and try again.",
+      "invitationFailed": "The invitation could not be sent. Try again later.",
+      "memberUpdateFailed": "The member details could not be updated. Try again later.",
+      "profileTransitionFailed": "The profile transition could not be scheduled. Try again later.",
+      "memberActionFailed": "The member action could not be completed. Try again later."
+    },
+    "validation": {
+      "validEmail": "Enter a valid email address.",
+      "firstNameRequired": "First name is required.",
+      "lastNameRequired": "Last name is required.",
+      "validProfile": "Choose a valid profile.",
+      "validRole": "Choose a valid role.",
+      "supportedCurrency": "Choose a supported currency.",
+      "supportedTimezone": "Choose a supported timezone.",
+      "supportedLanguage": "Choose a supported language.",
+      "memberIdMissing": "Member id is missing.",
+      "displayNameMax": "Display name must be 120 characters or less.",
+      "validEffectiveDate": "Choose a valid effective date.",
+      "reasonMax": "Reason must be 500 characters or less."
+    }
+  },
+  "AdminProjects": {
+    "eyebrow": "Admin",
+    "title": "Projects",
+    "subtitle": "Create work targets, control their active state, and keep archived projects available for historical reporting.",
+    "stats": {
+      "projects": "Projects",
+      "active": "Active",
+      "internal": "Internal"
+    },
+    "create": {
+      "title": "Create project",
+      "description": "Projects are the work targets used for assignments and time entries."
+    },
+    "directory": {
+      "title": "Project directory",
+      "description": "Active projects are available for assignment and time tracking. Archived projects stay out of working lists while historical records remain available."
+    },
+    "groups": {
+      "title": "Project groups",
+      "description": "Organize projects into groups for filtering and reporting."
+    },
+    "profiles": {
+      "contractor": "Contractor",
+      "employee": "Employee"
+    },
+    "states": {
+      "active": "Active",
+      "inactive": "Inactive",
+      "archived": "Archived",
+      "internal": "Internal",
+      "ungrouped": "Ungrouped",
+      "invited": "Invited",
+      "deleted": "Deleted"
+    },
+    "form": {
+      "projectName": "Project name",
+      "slug": "Slug",
+      "slugHint": "Leave empty to generate it from the name.",
+      "projectColor": "Project color",
+      "startsOn": "Starts on",
+      "endsOn": "Ends on",
+      "internalProject": "Internal project",
+      "internalProjectDescription": "Use for internal or collector work such as team building, communication, or operational tasks.",
+      "notes": "Notes",
+      "notesPlaceholder": "Optional admin notes"
+    },
+    "filters": {
+      "search": "Search projects",
+      "searchPlaceholder": "Search projects...",
+      "state": "State",
+      "group": "Group",
+      "all": "All"
+    },
+    "table": {
+      "caption": "Project management table",
+      "ariaLabel": "Project management table",
+      "empty": "No projects have been created yet.",
+      "emptyFiltered": "No projects match the current filters.",
+      "assignmentCount": "{count, plural, one {# assignment} other {# assignments}}",
+      "groupCount": "{count, plural, one {# group} other {# groups}}",
+      "columns": {
+        "project": "Project",
+        "state": "State",
+        "timeline": "Timeline",
+        "usage": "Usage",
+        "updated": "Updated"
+      }
+    },
+    "groupsPanel": {
+      "groupName": "Group name",
+      "generatedSlug": "Generated from name",
+      "description": "Description",
+      "descriptionPlaceholder": "Optional grouping note",
+      "empty": "No project groups have been created yet.",
+      "projectCount": "{count, plural, one {# project} other {# projects}}",
+      "noProjects": "No projects in this group.",
+      "removeProjectLabel": "Remove {project} from {group}",
+      "chooseProject": "Choose project",
+      "allProjectsLinked": "All projects are in this group",
+      "editTitle": "Edit {name}",
+      "editDescription": "Group changes affect filtering and project organization. They do not change project assignment or billing rules.",
+      "archiveTitle": "Archive project group?",
+      "archiveTitleNamed": "Archive {name}?",
+      "archiveDescription": "Archived groups are removed from filters and organization helpers. The projects stay unchanged.",
+      "archiveWarning": "This is a soft delete for the group only."
+    },
+    "actions": {
+      "createProject": "Create project",
+      "createGroup": "Create group",
+      "addProject": "Add project",
+      "cancel": "Cancel",
+      "saveGroup": "Save group",
+      "archiveGroup": "Archive group",
+      "bulkAssign": "Bulk assign",
+      "openFor": "Open actions for {name}",
+      "menuLabel": "Actions",
+      "openDetails": "Open details",
+      "editProject": "Edit project",
+      "activate": "Activate",
+      "deactivate": "Deactivate",
+      "archive": "Archive",
+      "manageRates": "Manage rates",
+      "assignCount": "Assign {count}",
+      "edit": "Edit",
+      "assignMember": "Assign member",
+      "endToday": "End today",
+      "saveAssignment": "Save assignment",
+      "saveChanges": "Save changes",
+      "archiveProject": "Archive project"
+    },
+    "bulk": {
+      "title": "Bulk assign",
+      "description": "Create project assignments across multiple people and projects. Existing overlapping assignments are skipped.",
+      "mode": "Bulk assignment mode",
+      "people": "People",
+      "projects": "Projects",
+      "searchPeople": "Search people",
+      "searchProjects": "Search projects",
+      "noMembers": "No members match this search.",
+      "noProjects": "No projects match this search.",
+      "peopleToProjects": "People to projects",
+      "projectsToPeople": "Projects to people",
+      "duplicateCount": "{count, plural, one {# duplicate} other {# duplicates}}",
+      "notesPlaceholder": "Optional note for all created assignments",
+      "newAssignments": "New assignments",
+      "duplicates": "Duplicates",
+      "selectedPairs": "Selected pairs",
+      "rateHint": "Contractors assigned here use their central rate until a project override is added on the Rates screen.",
+      "allDuplicates": "Every selected pair already overlaps an existing assignment for this date range."
+    },
+    "detail": {
+      "eyebrow": "Project",
+      "inactiveWarning": "This project is not active. It stays visible for admin work, but should not be used for new time-entry choices.",
+      "assignments": "Assignments",
+      "groups": "Groups",
+      "updated": "Updated",
+      "noNotes": "No project notes have been added."
+    },
+    "assignment": {
+      "addTitle": "Add assignment",
+      "addDescription": "Invited and active members can be assigned before account activation.",
+      "member": "Member",
+      "chooseMember": "Choose member",
+      "validFrom": "Valid from",
+      "validTo": "Valid to",
+      "notesPlaceholder": "Optional assignment notes",
+      "assignedMembers": "Assigned members",
+      "assignedMembersDescription": "Effective dates and rate source are shown per assignment.",
+      "empty": "No members are assigned to this project yet."
+    },
+    "editDialog": {
+      "title": "Edit {name}",
+      "description": "Deactivate a project to prevent future time entry while keeping historical records intact."
+    },
+    "archiveDialog": {
+      "title": "Archive project?",
+      "titleNamed": "Archive {name}?",
+      "description": "Archived projects disappear from working admin lists and future assignment/time-entry flows, but historical records remain linked for reporting.",
+      "warning": "This is a soft delete. Use it only when the project should no longer be selectable."
+    },
+    "timeline": {
+      "range": "{from} to {to}",
+      "from": "From {from}",
+      "until": "Until {to}",
+      "openEnded": "Open-ended"
+    },
+    "rateSource": {
+      "centralRate": "Central rate",
+      "employeeCentralRate": "Employee assignments use the member central rate.",
+      "projectOverride": "Project override",
+      "currentOverride": "{rate} current override.",
+      "scheduledOverride": "Scheduled override",
+      "scheduledOverrideDetail": "{count, plural, one {# override period scheduled.} other {# override periods scheduled.}}",
+      "contractorCentralRate": "Contractor assignment currently uses the member central rate."
+    }
+  },
+  "AdminProjectsActions": {
+    "success": {
+      "projectCreated": "Project created.",
+      "projectUpdated": "Project updated.",
+      "noChanges": "No changes to save.",
+      "projectActivated": "Project activated.",
+      "projectDeactivated": "Project deactivated.",
+      "projectStatusUnchanged": "Project status was already up to date.",
+      "projectArchived": "Project archived.",
+      "memberAssigned": "Member assigned to project.",
+      "noBulkAssignmentsCreated": "No new assignments were created because every selected pair already overlaps.",
+      "bulkAssignmentsCreated": "{count, plural, one {# assignment created.} other {# assignments created.}}",
+      "bulkAssignmentsCreatedWithSkipped": "{created, plural, one {# assignment created} other {# assignments created}}. {skipped, plural, one {# duplicate skipped} other {# duplicates skipped}}.",
+      "assignmentUpdated": "Project assignment updated.",
+      "noAssignmentChanges": "No assignment changes to save.",
+      "assignmentEnded": "Project assignment ended.",
+      "groupCreated": "Project group created.",
+      "groupUpdated": "Project group updated.",
+      "noGroupChanges": "No group changes to save.",
+      "groupArchived": "Project group archived.",
+      "projectAddedToGroup": "Project added to group.",
+      "projectAlreadyInGroup": "Project was already in this group.",
+      "projectRemovedFromGroup": "Project removed from group.",
+      "projectNotInGroup": "Project was not in this group."
+    },
+    "errors": {
+      "fixFields": "Fix the highlighted fields and try again.",
+      "fixAssignmentFields": "Fix the highlighted assignment fields and try again.",
+      "fixBulkAssignmentFields": "Fix the highlighted bulk assignment fields and try again.",
+      "fixGroupFields": "Fix the highlighted group fields and try again.",
+      "projectCreateFailed": "The project could not be created.",
+      "projectUpdateFailed": "The project could not be updated.",
+      "projectStatusFailed": "The project status could not be changed.",
+      "projectArchiveFailed": "The project could not be archived.",
+      "assignmentCreateFailed": "The project assignment could not be created.",
+      "bulkAssignmentCreateFailed": "The bulk assignments could not be created.",
+      "assignmentUpdateFailed": "The project assignment could not be updated.",
+      "assignmentEndFailed": "The project assignment could not be ended.",
+      "groupCreateFailed": "The project group could not be created.",
+      "groupUpdateFailed": "The project group could not be updated.",
+      "groupArchiveFailed": "The project group could not be archived.",
+      "addProjectToGroupFailed": "The project could not be added to the group.",
+      "removeProjectFromGroupFailed": "The project could not be removed from the group.",
+      "databaseUnavailable": "The database is not reachable. Try again later or contact support.",
+      "groupSlugExists": "A project group with this slug already exists.",
+      "projectSlugExists": "A project with this slug already exists.",
+      "projectLinkFailed": "The project could not be linked to the current admin member. Refresh the page and try again.",
+      "projectsUnavailable": "Projects are temporarily unavailable. Try again later or contact support.",
+      "projectMissing": "This project no longer exists or was already archived."
+    },
+    "validation": {
+      "validDate": "Choose a valid date.",
+      "projectNameRequired": "Project name is required.",
+      "slugMax": "Slug must be 80 characters or less.",
+      "supportedProjectColor": "Choose a supported project color.",
+      "notesMax": "Notes must be 1000 characters or less.",
+      "projectEndBeforeStart": "Project end date cannot be before the start date.",
+      "chooseMember": "Choose a member.",
+      "assignmentStartRequired": "Assignment start date is required.",
+      "validStartDate": "Choose a valid start date.",
+      "assignmentEndBeforeStart": "Assignment end date cannot be before the start date.",
+      "assignmentIdMissing": "Assignment id is missing.",
+      "assignmentEndRequired": "Assignment end date is required.",
+      "validEndDate": "Choose a valid end date.",
+      "chooseAtLeastOneMember": "Choose at least one member.",
+      "chooseAtLeastOneProject": "Choose at least one project.",
+      "bulkAssignmentLimit": "Bulk assignment is limited to 200 member/project pairs.",
+      "groupNameRequired": "Group name is required.",
+      "descriptionMax": "Description must be 1000 characters or less.",
+      "projectGroupIdMissing": "Project group id is missing.",
+      "chooseProject": "Choose a project."
+    }
+  },
+  "AdminRates": {
+    "eyebrow": "Admin",
+    "title": "Rates",
+    "subtitle": "Manage internal hourly rates by person, period, and contractor project override.",
+    "stats": {
+      "withRate": "With rate",
+      "missingRate": "Missing rate",
+      "projectOverrides": "Project overrides"
+    },
+    "filters": {
+      "search": "Search rates",
+      "searchPlaceholder": "Search...",
+      "profile": "Profile filter",
+      "rate": "Rate filter",
+      "all": "All",
+      "hasRate": "Has rate",
+      "missing": "Missing",
+      "project": "Project",
+      "group": "Group",
+      "ungrouped": "Ungrouped"
+    },
+    "table": {
+      "caption": "Rate roster",
+      "open": "Open",
+      "empty": "No rates match the current filters.",
+      "openDrawer": "Open rate drawer for {name}",
+      "overrideCount": "{count, plural, one {override} other {overrides}}",
+      "columns": {
+        "name": "Name",
+        "profile": "Profile",
+        "currentRate": "Current rate",
+        "projectOverrides": "Project overrides"
+      }
+    },
+    "profiles": {
+      "contractor": "Contractor",
+      "employee": "Employee"
+    },
+    "statuses": {
+      "invited": "invited",
+      "active": "active",
+      "inactive": "inactive",
+      "deleted": "deleted"
+    },
+    "labels": {
+      "missing": "Missing",
+      "currentRate": "Current rate",
+      "current": "Current"
+    },
+    "drawer": {
+      "centralRate": "Central rate",
+      "centralRateDescription": "This person's default internal rate. Contractor project overrides can differ from this value.",
+      "noCentralRate": "No central rate set",
+      "noCentralRateDescription": "Add a rate before using this person in internal cost reports.",
+      "projectOverrides": "Project overrides",
+      "projectOverridesDescription": "Overrides apply only to the selected project. Other projects use the central rate.",
+      "noProjectOverride": "No project override.",
+      "projectsUsingCentralRate": "Projects using central rate",
+      "projectsUsingCentralRateDescription": "Add an override for any other assigned project.",
+      "followsCentralRate": "Currently follows central rate.",
+      "noAssignmentsForOverride": "This contractor is not assigned to any project yet. Assign them to a project before adding an override.",
+      "allProjectsHaveOverrides": "All assigned projects already have overrides. Use Add period on a project to schedule the next override period.",
+      "noProjectsForOverride": "No assigned projects are available for overrides."
+    },
+    "actions": {
+      "addPeriod": "Add period",
+      "addOverride": "Add override",
+      "addOverridePeriod": "Add override period",
+      "cancel": "Cancel"
+    },
+    "fields": {
+      "project": "Project",
+      "validFrom": "Valid from",
+      "validTo": "Valid to",
+      "hourlyRate": "Hourly rate",
+      "currency": "Currency",
+      "reason": "Reason / note",
+      "reasonPlaceholder": "Why is this rate changing?"
+    },
+    "timeline": {
+      "range": "{from} to {to}",
+      "openEnded": "{from} to open",
+      "addedBy": "Added by {name} on {date}",
+      "reason": "Reason: {reason}",
+      "noReason": "No reason recorded."
+    }
+  },
+  "AdminRatesActions": {
+    "success": {
+      "memberRateCreated": "Member rate period created.",
+      "assignmentOverrideCreated": "Assignment override rate period created."
+    },
+    "errors": {
+      "fixFields": "Fix the highlighted rate fields and try again.",
+      "memberRateFailed": "The member rate could not be created.",
+      "assignmentOverrideFailed": "The assignment override rate could not be created.",
+      "databaseUnavailable": "The database is not reachable. Try again later or contact support.",
+      "rateLinkFailed": "The rate could not be linked to the selected member or assignment. Refresh and try again.",
+      "ratesUnavailable": "Rates are temporarily unavailable. Try again later or contact support."
+    },
+    "validation": {
+      "validDate": "Choose a valid date.",
+      "rateStartRequired": "Rate start date is required.",
+      "validStartDate": "Choose a valid start date.",
+      "hourlyRateRequired": "Hourly rate is required.",
+      "hourlyRateFormat": "Enter a non-negative amount with up to 2 decimals.",
+      "supportedCurrency": "Choose a supported currency.",
+      "noteMax": "Note must be 1000 characters or less.",
+      "rateEndAfterStart": "Rate end date must be after the start date."
+    }
+  },
+  "AdminAudit": {
+    "eyebrow": "Admin",
+    "title": "Audit log",
+    "subtitle": "Review security, member, project, rate, and time-tracking changes from the append-only audit trail.",
+    "stats": {
+      "matching": "Matching",
+      "pages": "Pages"
+    },
+    "watcher": {
+      "title": "Event watcher",
+      "description": "Security, member, project, rate, and time-tracking events with actor, target, and request context."
+    },
+    "client": {
+      "showing": "Showing {start}-{end} of {total} events",
+      "lastRefreshed": "Last refreshed {time}",
+      "watch": "Watch",
+      "refresh": "Refresh",
+      "search": "Search",
+      "searchPlaceholder": "Action, actor, target, request, IP",
+      "event": "Event",
+      "allEvents": "All events",
+      "target": "Target",
+      "allTargets": "All targets",
+      "actor": "Actor",
+      "allActors": "All actors",
+      "from": "From",
+      "to": "To",
+      "apply": "Apply",
+      "clear": "Clear",
+      "empty": "No audit events match the current filters.",
+      "ariaLabel": "Audit log events",
+      "details": "Details",
+      "time": "Time",
+      "request": "Request",
+      "noIp": "No IP",
+      "auditEvent": "Audit event",
+      "dialogDescription": "Append-only event details. Sensitive-looking keys are redacted before display.",
+      "noRequestId": "No request id",
+      "ipAddress": "IP address",
+      "userAgent": "User agent",
+      "noUserAgent": "No user agent",
+      "before": "Before",
+      "after": "After",
+      "noData": "No data"
+    }
+  },
+  "TimeTracking": {
+    "view": {
+      "weeklyGrid": "Weekly grid",
+      "day": "Day"
+    },
+    "labels": {
+      "thisWeek": "This week",
+      "weekTotal": "Week total",
+      "dayTotal": "Day total",
+      "assigned": "Assigned",
+      "recent": "Recent",
+      "archivedProject": "Archived project",
+      "noDescription": "No description"
+    },
+    "actions": {
+      "newEntry": "New entry",
+      "previousWeek": "Previous week",
+      "nextWeek": "Next week",
+      "sameAsYesterday": "Same as yesterday",
+      "duplicateLastWeek": "Duplicate last week",
+      "undo": "Undo",
+      "discard": "Discard",
+      "restoreDraft": "Restore draft",
+      "addEntry": "Add entry",
+      "editEntry": "Edit entry",
+      "deleteEntry": "Delete entry",
+      "edit": "Edit",
+      "close": "Close",
+      "cancel": "Cancel",
+      "save": "Save"
+    },
+    "tooltips": {
+      "copyPreviousDay": "Copy entries from the day before {date}.",
+      "duplicatePreviousWeek": "Copy entries from the previous week into this week."
+    },
+    "locked": {
+      "title": "Locked period.",
+      "description": "Some days in this week belong to a submitted timesheet and are read-only."
+    },
+    "grid": {
+      "projects": "Projects",
+      "total": "Total",
+      "dailyTotal": "Daily total"
+    },
+    "inactive": {
+      "title": "Inactive week",
+      "description": "No work on this project this week.",
+      "undo": "Undo inactive week",
+      "mark": "Mark as inactive week",
+      "removeEntriesFirst": "Remove entries first"
+    },
+    "help": {
+      "durationFormats": "Type time like 3.5, 3:30, 3h 20m, or 200m. Empty cells open the entry form because descriptions are required."
+    },
+    "empty": {
+      "title": "No active assigned projects",
+      "description": "Time can be logged after an admin assigns you to an active project for this week."
+    },
+    "draft": {
+      "title": "Unsaved time entry draft",
+      "lastSaved": "Last saved {time}.",
+      "saving": "Saving draft...",
+      "saved": "Draft saved",
+      "notSaved": "Draft not saved"
+    },
+    "day": {
+      "emptyTitle": "No entries on this day",
+      "emptyDescription": "Start a timer or add an entry for the selected project and day."
+    },
+    "timer": {
+      "trackedWithTimer": "Tracked with timer",
+      "placeholder": "What are you working on?",
+      "start": "Start",
+      "stop": "Stop"
+    },
+    "entryModal": {
+      "newTitle": "New time entry",
+      "editTitle": "Edit time entry",
+      "prefillHint": "Add a short description and save.",
+      "requiredHint": "Project and description are required. Future dates and long days save with warnings."
+    },
+    "fields": {
+      "description": "Description",
+      "descriptionPlaceholder": "What did you work on?",
+      "project": "Project",
+      "date": "Date",
+      "mode": "Mode",
+      "duration": "Duration",
+      "start": "Start",
+      "end": "End"
+    },
+    "mode": {
+      "duration": "Duration",
+      "interval": "Interval"
+    },
+    "warnings": {
+      "descriptionNeeded": "Description needed",
+      "descriptionNeededSentence": "Description needed.",
+      "descriptionSaved": "Description saved",
+      "futureDay": "Future day.",
+      "futureDate": "Future date",
+      "futureDateAllowed": "This is a future date. Entries are allowed, but they stay flagged.",
+      "dailyTotalOver24": "Daily total is over 24h.",
+      "dailyTotalExact": "That is {hours}h in one day.",
+      "dayHasOverlaps": "Day has overlapping entries.",
+      "dayOver24": "The selected day has more than 24 logged hours.",
+      "longContinuousSession": "Long continuous session",
+      "overlapsAnotherEntry": "Overlaps another entry",
+      "moreThan24NotBlocked": "That is more than 24h. This is a warning, not a blocker.",
+      "longSessionNotBlocked": "This is a long continuous session. This is a warning, not a blocker."
+    },
+    "source": {
+      "grid": "Grid",
+      "form": "Form",
+      "timer": "Timer",
+      "timed": "Timed",
+      "hours": "Hours"
+    },
+    "fieldErrors": {
+      "durationPositive": "Duration must be greater than zero.",
+      "endAfterStart": "End time must be after start time."
+    },
+    "breakdown": {
+      "entries": "Entries",
+      "noEntries": "No entries yet.",
+      "descriptionRequired": "A description is required per entry."
+    },
+    "errors": {
+      "invalidDurationFormat": "Use time like 3.5, 3:30, 3h 20m, or 200m."
+    }
+  },
+  "TimeTrackingActions": {
+    "success": {
+      "timeEntrySaved": "Time entry saved.",
+      "timeEntryUpdated": "Time entry updated.",
+      "timeEntryDeleted": "Time entry deleted.",
+      "timerStarted": "Timer started.",
+      "timerStopped": "Timer stopped and saved.",
+      "draftSaved": "Draft saved.",
+      "draftDiscarded": "Draft discarded.",
+      "inactiveWeekSaved": "Project marked inactive for this week.",
+      "inactiveWeekRemoved": "Inactive week removed."
+    },
+    "errors": {
+      "generic": "Something went wrong.",
+      "fixFields": "Fix the highlighted fields and try again.",
+      "timeEntrySaveFailed": "The time entry could not be saved.",
+      "timeEntryUpdateFailed": "The time entry could not be updated.",
+      "timeEntryDeleteFailed": "The time entry could not be deleted.",
+      "timerStartFailed": "The timer could not be started.",
+      "timerStopFailed": "The timer could not be stopped.",
+      "previousDayCopyFailed": "The previous day could not be copied.",
+      "previousWeekDuplicateFailed": "The previous week could not be duplicated.",
+      "draftSaveFailed": "The draft could not be saved.",
+      "draftClearFailed": "The draft could not be cleared.",
+      "inactiveWeekSaveFailed": "The inactive week could not be saved.",
+      "inactiveWeekRemoveFailed": "The inactive week could not be removed.",
+      "memberNotFound": "Member not found.",
+      "timeEntryNotFound": "Time entry not found.",
+      "entryLocked": "This entry is locked by a submitted timesheet.",
+      "periodLocked": "This period is locked by a submitted timesheet.",
+      "weekTouchesLockedPeriod": "This week touches a locked period.",
+      "stopTimerFirst": "Stop the running timer before starting another one.",
+      "noTimerRunning": "No timer is running.",
+      "projectNotActiveForDate": "This project is not active for the selected date.",
+      "projectNotAssignedForWeek": "This project is not assigned for the selected week.",
+      "dateTimezoneFormatFailed": "Could not format date in timezone."
+    },
+    "fields": {
+      "chooseProject": "Choose a project.",
+      "validDate": "Choose a valid date.",
+      "validTargetDate": "Choose a valid target date.",
+      "validWeek": "Choose a valid week.",
+      "validStartTime": "Choose a valid start time.",
+      "validEndTime": "Choose a valid end time.",
+      "startRequired": "Start time is required.",
+      "endRequired": "End time is required.",
+      "endAfterStart": "End time must be after start time.",
+      "startEndRequired": "Start and end time are required.",
+      "durationPositive": "Duration must be greater than zero.",
+      "durationTooLong": "Duration is too long.",
+      "durationTooLarge": "Duration is too large.",
+      "descriptionRequired": "Description is required.",
+      "descriptionMax": "Description must be 1000 characters or less.",
+      "timeEntryMissing": "Time entry id is missing.",
+      "noteMax": "Note must be 500 characters or less.",
+      "draftKeyInvalid": "Draft key is invalid."
+    },
+    "copy": {
+      "previousDay": {
+        "noneFound": "No entries found on the previous day.",
+        "noneCopied": "No entries could be copied from the previous day.",
+        "copied": "Copied {created, plural, one {# entry} other {# entries}} from the previous day.",
+        "copiedWithSkipped": "Copied {created, plural, one {# entry} other {# entries}} from the previous day; {skipped} skipped."
+      },
+      "previousWeek": {
+        "noneFound": "No entries found on the previous week.",
+        "noneCopied": "No entries could be copied from the previous week.",
+        "copied": "Copied {created, plural, one {# entry} other {# entries}} from the previous week.",
+        "copiedWithSkipped": "Copied {created, plural, one {# entry} other {# entries}} from the previous week; {skipped} skipped."
+      }
+    }
+  },
+  "Settings": {
+    "page": {
+      "eyebrow": "Account",
+      "title": "Security settings",
+      "subtitle": "Manage sign-in methods, passkeys, and authenticator-app verification for your Sheet Happens account."
+    },
+    "setupBanner": {
+      "securityReady": "Security ready",
+      "actionRequired": "Action required",
+      "title": "Complete account security",
+      "completeDescription": "Security setup is complete. You can continue to the app.",
+      "adminTotpDescription": "Admin tools require authenticator-app verification. Enable an authenticator app before returning to management screens.",
+      "memberDescription": "Add a passkey or enable an authenticator app before continuing.",
+      "noFurtherAction": "No further security action is required right now.",
+      "adminTotpHint": "Use the authenticator-app controls below to satisfy the admin 2FA requirement. Passkeys remain available for sign-in, but they do not replace admin TOTP in v1.",
+      "memberHint": "Use the passkey or authenticator-app controls below to satisfy this requirement."
+    },
+    "states": {
+      "connected": "Connected",
+      "enabled": "Enabled",
+      "available": "Available",
+      "linked": "Linked",
+      "recommended": "Recommended",
+      "notSet": "Not set",
+      "notEnabled": "Not enabled"
+    },
+    "actions": {
+      "add": "Add",
+      "setUp": "Set up",
+      "reset": "Reset",
+      "disable": "Disable",
+      "remove": "Remove",
+      "save": "Save",
+      "continue": "Continue"
+    },
+    "methods": {
+      "magicLink": {
+        "label": "Email magic link",
+        "description": "Primary passwordless sign-in for {email}."
+      },
+      "password": {
+        "label": "Email password",
+        "enabledDescription": "Password sign-in is enabled for this account.",
+        "setupDescription": "Set a password through an emailed setup link."
+      },
+      "google": {
+        "label": "Company Google",
+        "linkedDescription": "A company Google account is linked.",
+        "availableDescription": "Available for eligible company Google accounts after activation."
+      },
+      "passkeys": {
+        "label": "Passkeys",
+        "registeredDescription": "{count, plural, one {# passkey registered.} other {# passkeys registered.}}",
+        "emptyDescription": "Use Touch ID, Face ID, Windows Hello, or a hardware security key.",
+        "countSet": "{count} set"
+      },
+      "totp": {
+        "label": "Authenticator app",
+        "enabledDescription": "A time-based one-time code is required during supported sign-in challenges.",
+        "setupDescription": "Add app-based one-time codes as a second factor."
+      }
+    },
+    "posture": {
+      "title": "Security posture",
+      "description": "Manage the sign-in methods and recovery options for this account.",
+      "primarySignIn": "Primary sign-in",
+      "magicLink": "Magic link",
+      "passwordSignIn": "Password sign-in",
+      "passkeyCoverage": "Passkey coverage",
+      "passkeysRegistered": "{count} registered"
+    },
+    "password": {
+      "title": "Email password",
+      "description": "Password sign-in is optional and remains bound to the invited member email address.",
+      "enabledTitle": "Password sign-in is enabled",
+      "notSetTitle": "No password is set",
+      "enabledDescription": "Send a reset link if you need to rotate or recover the password.",
+      "notSetDescription": "Send a setup link to create a password for this account.",
+      "sendResetLink": "Send reset link",
+      "sendSetupLink": "Send setup link",
+      "googleHint": "Company Google sign-in is available for eligible work accounts after activation."
+    },
+    "passkeys": {
+      "defaultName": "Sheet Happens passkey",
+      "title": "Passkeys",
+      "description": "Register device biometrics or hardware security keys for phishing-resistant sign-in.",
+      "addTitle": "Add a passkey",
+      "addDescription": "Use a clear name so you can identify the device later.",
+      "nameField": "Passkey name",
+      "addDevice": "Add device passkey",
+      "addSecurityKey": "Add security key",
+      "registeredTitle": "Registered passkeys",
+      "registeredDescription": "Remove passkeys you no longer recognize. Magic-link sign-in remains available.",
+      "emptyRegistered": "No passkeys have been registered for this account yet.",
+      "nameColumn": "Name",
+      "synced": "Synced",
+      "deviceType": {
+        "passkey": "Passkey",
+        "platform": "Device passkey",
+        "crossPlatform": "Security key"
+      }
+    },
+    "totp": {
+      "title": "Authenticator app",
+      "description": "Set up TOTP with an authenticator app and keep backup codes somewhere safe.",
+      "lockedUntil": "TOTP verification is temporarily locked until {time}.",
+      "failedAttempts": "{count, plural, one {# failed TOTP attempt is recorded.} other {# failed TOTP attempts are recorded.}}",
+      "currentPassword": "Current password",
+      "currentPasswordHint": "Required because password sign-in is enabled for this account.",
+      "enabledTitle": "Authenticator app is enabled",
+      "enabledDescription": "Sign-in challenges can require a 6 digit code from your authenticator app.",
+      "newBackupCodes": "New backup codes",
+      "notEnabledTitle": "Authenticator app is not enabled",
+      "notEnabledDescription": "Generate a secret, add it to your authenticator app, and verify the first code.",
+      "setUp": "Set up authenticator",
+      "qrAlt": "Authenticator app setup QR code",
+      "qrUnavailable": "QR unavailable",
+      "generatingQr": "Generating QR",
+      "scanQr": "Scan QR code",
+      "scanTitle": "Scan with your authenticator app",
+      "scanDescription": "Open {email} in your authenticator app, scan the QR code, then enter the current 6-digit code below.",
+      "manualKeyTitle": "Manual key fallback",
+      "manualKeyLabel": "Manual key",
+      "copyKey": "Copy key",
+      "openInAuthenticator": "Open in authenticator",
+      "codeField": "6-digit code",
+      "codeHint": "Enter the current code from your authenticator app.",
+      "codeInputLabel": "Authenticator code",
+      "verifyAndEnable": "Verify and enable",
+      "footer": "TOTP is the v1 admin second factor. Email passwords and passkeys remain sign-in methods, not admin 2FA replacements."
+    },
+    "backupCodes": {
+      "title": "Backup codes",
+      "description": "Store these now. Each code can be used once if your authenticator app is unavailable.",
+      "copyAll": "Copy all",
+      "copyLabel": "Backup codes"
+    },
+    "confirm": {
+      "removePasskey": "Remove {name}?",
+      "disableTotp": "Disable authenticator-app verification for this account?",
+      "regenerateBackupCodes": "Generate new backup codes? Existing backup codes will stop working."
+    },
+    "notices": {
+      "passkeyAdded": "Passkey added.",
+      "passwordLinkSent": "Password setup link sent if this account is eligible.",
+      "totpSecretGenerated": "Authenticator secret generated. Verify a code to finish setup.",
+      "totpEnabled": "Authenticator app enabled.",
+      "totpDisabled": "Authenticator app disabled.",
+      "backupCodesGenerated": "New backup codes generated. Store them now.",
+      "copied": "{label} copied."
+    },
+    "errors": {
+      "addPasskeyFailed": "Could not add the passkey.",
+      "passwordEmailFailed": "Could not send the password setup email.",
+      "totpSetupFailed": "Could not start authenticator setup.",
+      "totpDisableFailed": "Could not disable authenticator app.",
+      "backupCodesFailed": "Could not generate backup codes.",
+      "copyFailed": "Could not copy {label}.",
+      "currentPasswordRequired": "Enter your current password to manage authenticator-app verification.",
+      "invalidPassword": "Current password is required or incorrect."
+    }
+  },
+  "SettingsActions": {
+    "success": {
+      "passkeyRenamed": "Passkey renamed.",
+      "passkeyRemoved": "Passkey removed.",
+      "totpDisabledAudited": "Authenticator app disablement audited.",
+      "backupCodesRegeneratedAudited": "Backup-code regeneration audited."
+    },
+    "errors": {
+      "passkeyIdMissing": "Passkey id is missing.",
+      "passkeyNameRequired": "Passkey name is required.",
+      "passkeyNotFound": "Passkey not found.",
+      "passkeyRenameFailed": "Could not rename the passkey.",
+      "passkeyRemoveFailed": "Could not remove the passkey.",
+      "totpDisableAuditFailed": "Authenticator app was disabled, but the audit event could not be recorded.",
+      "backupCodesAuditFailed": "Backup codes were regenerated, but the audit event could not be recorded.",
+      "noAuthAccount": "No auth account is linked to this member."
+    }
+  },
+  "TwoFactorActions": {
+    "success": {
+      "verified": "Second factor verified.",
+      "cleared": "Second-factor state cleared."
+    },
+    "errors": {
+      "enterTotp": "Enter the 6 digit authenticator code.",
+      "enterBackupCode": "Enter a backup code.",
+      "missingUser": "Second-factor verification did not return an authenticated user.",
+      "missingSession": "Second-factor verification did not return an active session.",
+      "invalidCode": "The code is invalid. Try again.",
+      "tooManyAttempts": "Too many failed attempts. Try again later.",
+      "expiredChallenge": "This second-factor challenge expired. Start sign-in again.",
+      "verifyFailed": "Could not verify the second factor."
+    }
   }
 }

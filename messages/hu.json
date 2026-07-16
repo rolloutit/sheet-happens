@@ -2,5 +2,1257 @@
   "app": {
     "name": "Sheet Happens",
     "company": "Rollout IT"
+  },
+  "AppShell": {
+    "brand": {
+      "subtitle": "Rollout IT · belső"
+    },
+    "primaryNavigation": "Elsődleges navigáció",
+    "mobileNavigation": "Mobil navigáció",
+    "openNavigation": "Navigáció megnyitása",
+    "help": "Súgó",
+    "collapseSidebar": "Oldalsáv összecsukása",
+    "language": "Nyelv",
+    "soon": "Hamarosan",
+    "command": {
+      "label": "Ugrás bárhová..."
+    },
+    "scope": {
+      "all": "Mindenki"
+    },
+    "roles": {
+      "employee": "Alkalmazott",
+      "contractor": "Kontraktor",
+      "admin": "Admin"
+    },
+    "userRoles": {
+      "admin": "Admin",
+      "member": "Tag"
+    },
+    "nav": {
+      "dashboard": "Irányítópult",
+      "time": "Időkövetés",
+      "timesheets": "Timesheet",
+      "review": "Jóváhagyás",
+      "reports": "Riportok",
+      "projects": "Projektek",
+      "people": "Emberek",
+      "rates": "Óradíjak",
+      "audit": "Napló",
+      "info": "Információs oldal",
+      "settings": "Beállítások"
+    },
+    "notifications": {
+      "trigger": "Értesítések",
+      "menu": "Értesítések",
+      "markAllRead": "Olvasottnak jelölés",
+      "empty": "Nincs értesítés",
+      "viewAll": "Összes megtekintése",
+      "missingHours": {
+        "title": "Hiányzó pénteki órák",
+        "body": "Egy kontraktor timesheetje még nem teljes.",
+        "time": "2 perc"
+      },
+      "invoiceReview": {
+        "title": "Új számla jóváhagyásra",
+        "body": "Apollo Migration számla vár ellenőrzésre.",
+        "time": "1 óra"
+      }
+    },
+    "userMenu": {
+      "label": "Felhasználói menü",
+      "profile": "Profil",
+      "settings": "Beállítások",
+      "signOut": "Kijelentkezés"
+    },
+    "timer": {
+      "stop": "Időmérő leállítása"
+    }
+  },
+  "Login": {
+    "brandSubtitle": "Rollout IT · belső",
+    "badge": "Üdv újra",
+    "title": "Bejelentkezés a Sheet Happensbe",
+    "description": "Használj egy regisztrált bejelentkezési módot egy már aktivált Sheet Happens fiókhoz.",
+    "side": {
+      "timeTracking": "Időkövetés",
+      "timesheets": "Timesheet",
+      "invoices": "Számlák",
+      "protected": "Védett munkafolyamat-hozzáférés"
+    },
+    "fields": {
+      "email": "Email",
+      "emailPlaceholder": "nev@ceg.hu",
+      "password": "Jelszó"
+    },
+    "actions": {
+      "passkey": "Folytatás passkey-jel",
+      "google": "Folytatás céges Google-fiókkal",
+      "forgotPassword": "Elfelejtett jelszó?",
+      "passwordSignIn": "Bejelentkezés",
+      "emailLink": "Emailes bejelentkezési link"
+    },
+    "passwordlessHint": "Az emailes jelszó nélküli bejelentkezés továbbra is elérhető az aktivált fiókoknál.",
+    "inviteActivationHint": "A meghívott felhasználóknak egyszer aktiválniuk kell a meghívólinket, mielőtt a normál bejelentkezés működik.",
+    "status": {
+      "magicLinkSent": "Ha a(z) {email} egy aktív Sheet Happens taghoz tartozik, a bejelentkezési link úton van.",
+      "passwordSetupSent": "Ha a(z) {email} egy aktív Sheet Happens taghoz tartozik, a jelszóbeállító link úton van."
+    },
+    "errors": {
+      "magicLinkSendFailed": "Nem sikerült elküldeni a bejelentkezési emailt.",
+      "passkeyIncomplete": "A passkey bejelentkezés nem fejeződött be.",
+      "passwordRequired": "A jelszó megadása kötelező.",
+      "emailPasswordIncorrect": "Az email vagy a jelszó hibás.",
+      "passwordResetSendFailed": "Nem sikerült elküldeni a jelszó-visszaállító emailt.",
+      "googleStartFailed": "Nem sikerült elindítani a Google bejelentkezést.",
+      "emailRequired": "Az email megadása kötelező.",
+      "invalidLink": "Ez a bejelentkezési link érvénytelen vagy lejárt. Kérj újat.",
+      "genericSignIn": "A bejelentkezést nem sikerült befejezni. Kérj új bejelentkezési linket."
+    }
+  },
+  "AcceptInvite": {
+    "title": "Meghívó elfogadása",
+    "description": "Meghívást kaptál a Sheet Happensbe ezzel az email címmel: {email}.",
+    "descriptionNamed": "{name}, meghívást kaptál a Sheet Happensbe ezzel az email címmel: {email}.",
+    "signedInAs": "Bejelentkezve mint <strong>{email}</strong>",
+    "wrongEmail": "Ez a meghívó a(z) {email} címhez tartozik. Aktiválás előtt ezzel az email címmel jelentkezz be.",
+    "fields": {
+      "invitedEmail": "Meghívott email",
+      "invitedEmailHint": "Ide küldjük a mágikus bejelentkezési linket."
+    },
+    "actions": {
+      "emailLink": "Emailes bejelentkezési link",
+      "activate": "Fiók aktiválása",
+      "continue": "Folytatás"
+    },
+    "status": {
+      "magicLinkSent": "A bejelentkezési email elküldve ide: {email}."
+    },
+    "result": {
+      "activatedTitle": "Fiók aktiválva",
+      "activatedMessage": "A Sheet Happens fiókod aktív. Továbbmehetsz az alkalmazásba.",
+      "acceptedTitle": "A meghívót már elfogadták",
+      "acceptedMessage": "Ezt a meghívót már felhasználták. Ha ezzel a fiókkal vagy bejelentkezve, folytathatod az alkalmazásban."
+    },
+    "error": {
+      "expiredTitle": "A meghívó lejárt",
+      "unavailableTitle": "A meghívó nem elérhető",
+      "invalidTitle": "A meghívólink érvénytelen",
+      "expiredMessage": "Kérj új meghívót egy admintól.",
+      "unavailableMessage": "A meghívó jelenlegi állapota: {status}.",
+      "invalidMessage": "Kérj új meghívót egy admintól az Emberek oldalon."
+    },
+    "errors": {
+      "magicLinkSendFailed": "Nem sikerült elküldeni a bejelentkezési emailt."
+    }
+  },
+  "AcceptInviteActions": {
+    "success": {
+      "active": "A Sheet Happens fiókod aktív."
+    },
+    "errors": {
+      "tokenMissing": "Hiányzik a meghívó token.",
+      "activationFailed": "A meghívót nem sikerült aktiválni. Próbáld újra később.",
+      "invalidToken": "A meghívó token érvénytelen.",
+      "notPending": "A meghívó már nincs függőben.",
+      "expired": "A meghívó lejárt.",
+      "memberMissing": "A meghívóhoz tartozó tag nem létezik.",
+      "emailMismatch": "A meghívó elfogadása előtt a meghívott email címmel jelentkezz be."
+    }
+  },
+  "ResetPassword": {
+    "badge": "Fiókhozzáférés",
+    "titleSet": "Új jelszó beállítása",
+    "titleRequest": "Jelszóbeállító link kérése",
+    "descriptionSet": "Válassz jelszót az aktivált Sheet Happens fiókodhoz.",
+    "descriptionRequest": "Jelszóbeállító linket csak aktív Sheet Happens tagoknak küldünk.",
+    "fields": {
+      "email": "Email",
+      "emailPlaceholder": "nev@ceg.hu",
+      "newPassword": "Új jelszó",
+      "newPasswordHint": "Legalább 12 karaktert használj.",
+      "confirmPassword": "Jelszó megerősítése"
+    },
+    "actions": {
+      "updatePassword": "Jelszó frissítése",
+      "sendSetupLink": "Jelszóbeállító link küldése",
+      "returnToSignIn": "Vissza a bejelentkezéshez"
+    },
+    "footer": {
+      "activationSeparate": "A meghívó aktiválása ettől külön lépés."
+    },
+    "status": {
+      "setupSent": "Ha a(z) {email} egy aktív Sheet Happens taghoz tartozik, a jelszóbeállító link úton van.",
+      "passwordUpdated": "A jelszó frissítve. Most már bejelentkezhetsz emaillel és jelszóval."
+    },
+    "errors": {
+      "emailRequired": "Az email megadása kötelező.",
+      "sendFailed": "Nem sikerült elküldeni a jelszó-visszaállító emailt.",
+      "passwordTooShort": "A jelszónak legalább 12 karakter hosszúnak kell lennie.",
+      "passwordMismatch": "A jelszavak nem egyeznek.",
+      "resetFailed": "Nem sikerült visszaállítani a jelszót.",
+      "invalidLink": "Ez a jelszó-visszaállító link érvénytelen vagy lejárt. Kérj újat.",
+      "genericReset": "A jelszó-visszaállítást nem sikerült befejezni. Kérj új linket."
+    }
+  },
+  "TwoFactor": {
+    "badge": "Második faktor",
+    "title": "Bejelentkezés ellenőrzése",
+    "description": "Add meg az authenticator alkalmazás kódját vagy az egyik mentett tartalék kódodat.",
+    "tabs": {
+      "authenticator": "Authenticator",
+      "backupCode": "Tartalék kód"
+    },
+    "fields": {
+      "totp": "6 jegyű kód",
+      "totpHint": "Az authenticator alkalmazás aktuális kódját használd.",
+      "totpInputLabel": "Authenticator kód",
+      "backupCode": "Tartalék kód",
+      "backupCodeHint": "A tartalék kódok csak egyszer használhatók."
+    },
+    "trust": {
+      "ariaLabel": "Eszköz megbízhatónak jelölése 30 napra",
+      "title": "Eszköz megbízhatónak jelölése",
+      "description": "Ezen az eszközön 30 napig ne kérje ezt az ellenőrzést."
+    },
+    "actions": {
+      "useAnotherSignIn": "Másik bejelentkezési mód",
+      "verify": "Ellenőrzés"
+    }
+  },
+  "AccountStatus": {
+    "adminRequired": {
+      "title": "Admin jogosultság szükséges",
+      "message": "A fiókod aktív, de nincs jogosultságod megnyitni ezt az admin területet."
+    },
+    "invited": {
+      "title": "A fiók nincs aktiválva",
+      "message": "Használd egyszer a meghívólinkedet a tagprofil aktiválásához."
+    },
+    "inactive": {
+      "title": "Inaktív fiók",
+      "message": "Ez a tagprofil inaktív. Kérj újraaktiválást egy admintól."
+    },
+    "deleted": {
+      "title": "A fiók nem elérhető",
+      "message": "Ez a tagprofil törölt állapotú, ezért nem férhet hozzá a Sheet Happenshez."
+    },
+    "unlinked": {
+      "title": "Nincs kapcsolt tagprofil",
+      "message": "Ez az auth fiók nincs Sheet Happens tagprofilhoz kapcsolva."
+    },
+    "actions": {
+      "signOut": "Kijelentkezés"
+    }
+  },
+  "Dashboard": {
+    "eyebrow": "Kezdőlap",
+    "title": "Irányítópult",
+    "subtitle": "Kövesd a munkát, nézd át a hozzárendeléseket, és folytasd a számodra elérhető munkafolyamatokat.",
+    "greeting": "Üdv, {name}",
+    "summary": {
+      "admin": "Az admin munkafolyamatok az oldalsávból érhetők el.",
+      "member": "Az időkövetési munkaterületed készen áll."
+    }
+  },
+  "DashboardCards": {
+    "greeting": "Jó reggelt, {name}",
+    "summary": {
+      "admin": "12 beküldés vár jóváhagyásra a havi zárás előtt.",
+      "member": "Az aktuális havi timesheet 82 százalékban kész."
+    },
+    "stats": {
+      "loggedHours": "Rögzített órák",
+      "billableValue": "Billable érték",
+      "submitted": "Beküldve",
+      "missingDays": "Hiányzó napok",
+      "needsAttention": "Figyelmet igényel"
+    },
+    "checklist": {
+      "title": "Prioritás",
+      "description": "Hózárási ellenőrzőlista",
+      "badge": "Hamarosan",
+      "missingDescriptions": "Hiányzó leírások ellenőrzése",
+      "uploadInvoice": "Számla feltöltése",
+      "confirmBank": "Bankadatok megerősítése"
+    },
+    "flagged": {
+      "missingDays": "2 hiányzó nap",
+      "noInvoice": "számla nélkül",
+      "waitingReview": "jóváhagyásra vár",
+      "selectAll": "Összes kijelölése",
+      "remind": "Emlékeztető küldése",
+      "sent": "Emlékeztető elküldve",
+      "selected": "{count} kijelölve"
+    },
+    "status": {
+      "title": "Státusz áttekintés",
+      "submitted": "Beküldve",
+      "approved": "Jóváhagyva",
+      "rejected": "Elutasítva",
+      "missing": "Hiányzik"
+    },
+    "actions": {
+      "reviewQueue": "Jóváhagyási sor",
+      "submitTimesheet": "Timesheet beküldése",
+      "openReport": "Riport megnyitása",
+      "open": "Megnyitás"
+    }
+  },
+  "AdminPeople": {
+    "eyebrow": "Admin",
+    "title": "Emberek",
+    "subtitle": "Hívj meg kontraktorokat és alkalmazottakat, kezeld a hozzáférést, és tartsd karban az időkövetéshez szükséges profildataikat.",
+    "stats": {
+      "members": "Tagok",
+      "invited": "Meghívva"
+    },
+    "invite": {
+      "title": "Tag meghívása",
+      "description": "Küldj meghívólinket, és hozd létre az alkalmazásban használt tagprofilt."
+    },
+    "directory": {
+      "title": "Taglista",
+      "description": "Kezeld a meghívott, aktív, inaktív és archivált tagokat."
+    },
+    "form": {
+      "firstName": "Keresztnév",
+      "lastName": "Vezetéknév",
+      "email": "Email",
+      "profile": "Profil",
+      "role": "Szerepkör",
+      "currency": "Pénznem",
+      "currencyHint": "Alapértelmezett számlázási/riportolási pénznem.",
+      "timezone": "Időzóna",
+      "locale": "Nyelv",
+      "displayName": "Megjelenített név",
+      "displayNameHint": "Hagyd üresen a vezetéknév és keresztnév használatához."
+    },
+    "profiles": {
+      "contractor": "Kontraktor",
+      "employee": "Alkalmazott"
+    },
+    "roles": {
+      "admin": "Admin",
+      "member": "Tag"
+    },
+    "states": {
+      "active": "aktív",
+      "inactive": "inaktív",
+      "invited": "meghívva",
+      "locked": "archivált"
+    },
+    "table": {
+      "caption": "Tagkezelési táblázat",
+      "ariaLabel": "Tagkezelési táblázat",
+      "rowActions": "Tagműveletek",
+      "emptyInvited": "Még nincs meghívott tag.",
+      "scheduledProfile": "Ütemezve: {profile}, dátum: {validFrom}",
+      "editMember": "{name} szerkesztése",
+      "columns": {
+        "person": "Személy",
+        "profile": "Profil",
+        "role": "Szerepkör",
+        "state": "Állapot",
+        "currency": "Pénznem"
+      }
+    },
+    "actions": {
+      "sendInvitation": "Meghívó küldése",
+      "openFor": "{name} műveleteinek megnyitása",
+      "menuLabel": "Műveletek",
+      "makeAdmin": "Adminná tétel",
+      "makeMember": "Taggá tétel",
+      "resendInvitation": "Meghívó újraküldése",
+      "revokeInvitation": "Meghívó visszavonása",
+      "revokeSessions": "Munkamenetek visszavonása",
+      "resetAuthenticator": "Authenticator visszaállítása",
+      "deactivate": "Deaktiválás",
+      "reactivate": "Újraaktiválás",
+      "archive": "Archiválás",
+      "cancel": "Mégse",
+      "archiveMember": "Tag archiválása",
+      "saveChanges": "Módosítások mentése",
+      "scheduleTransition": "Átállás ütemezése"
+    },
+    "archiveDialog": {
+      "title": "Tag archiválása?",
+      "titleNamed": "{name} archiválása?",
+      "description": "Ez letiltja a későbbi alkalmazáshozzáférést és visszavonja az aktív munkameneteket, de megtartja a történeti adatokat riportokhoz, számlákhoz, bérjegyzékekhez és audit naplóhoz.",
+      "warning": "Ez nem GDPR törlés. A személyes adatok anonimizálása külön, kontrollált folyamat."
+    },
+    "resetTotpDialog": {
+      "title": "Authenticator visszaállítása?",
+      "titleNamed": "{name} authenticatorának visszaállítása?",
+      "description": "Ez eltávolítja az authenticator-app ellenőrzést és a tartalék kódokat a kiválasztott tagnál, majd visszavonja az aktív munkameneteket. Ezután más engedélyezett móddal újra be tud jelentkezni, és újra beállíthat authenticator alkalmazást a biztonsági beállításokban.",
+      "warning": "Csak akkor használd, ha a tag elvesztette az authenticator hozzáférést, és a tartalék kódjai sem elérhetők."
+    },
+    "editDrawer": {
+      "title": "Tag szerkesztése",
+      "description": "Frissítsd a profildatokat, és ütemezz profilváltásokat későbbi munkaidőszakokra.",
+      "currentProfile": "Aktuális profil: <strong>{profile}</strong>",
+      "scheduledProfile": "ütemezve: {profile}, dátum: {validFrom}"
+    },
+    "profileTransition": {
+      "title": "Profilváltás",
+      "description": "Alkalmazott/kontraktor profilváltás ütemezése hatálybalépési dátummal.",
+      "newProfile": "Új profil",
+      "effectiveDate": "Hatálybalépés dátuma",
+      "reason": "Indoklás",
+      "reasonHint": "Adj meg indoklást ehhez a profilváltáshoz."
+    }
+  },
+  "AdminPeopleActions": {
+    "roles": {
+      "admin": "Admin",
+      "member": "Tag"
+    },
+    "counts": {
+      "sessions": "{count, plural, one {# munkamenet} other {# munkamenet}}",
+      "invitations": "{count, plural, one {# függő meghívó} other {# függő meghívó}}"
+    },
+    "success": {
+      "invitationSent": "Meghívó elküldve ide: {email}.",
+      "memberUpdated": "A tag adatai frissítve.",
+      "noChanges": "Nincs mentendő változás.",
+      "profileChanged": "A profil módosítva.",
+      "profileTransitionScheduled": "Profilváltás ütemezve erre a dátumra: {validFrom}.",
+      "invitationResent": "Meghívó újraküldve ide: {email}.",
+      "invitationRevoked": "Meghívó visszavonva.",
+      "memberDeactivated": "Tag deaktiválva. Visszavonva: {sessions}.",
+      "memberReactivated": "Tag újraaktiválva.",
+      "memberArchived": "Tag archiválva. Visszavonva: {sessions}. Visszavonva: {invitations}.",
+      "sessionsRevoked": "Visszavonva: {sessions}.",
+      "authenticatorReset": "Authenticator app visszaállítva.",
+      "noAuthenticator": "Nem volt beállított authenticator app.",
+      "authenticatorResetResult": "{resetMessage} Visszavonva: {sessions}.",
+      "roleChanged": "Szerepkör módosítva erre: {role}."
+    },
+    "errors": {
+      "fixFields": "Javítsd a kiemelt mezőket, majd próbáld újra.",
+      "invitationFailed": "A meghívót nem sikerült elküldeni. Próbáld újra később.",
+      "memberUpdateFailed": "A tag adatait nem sikerült frissíteni. Próbáld újra később.",
+      "profileTransitionFailed": "A profilváltást nem sikerült ütemezni. Próbáld újra később.",
+      "memberActionFailed": "A tagműveletet nem sikerült végrehajtani. Próbáld újra később."
+    },
+    "validation": {
+      "validEmail": "Adj meg érvényes email címet.",
+      "firstNameRequired": "A keresztnév megadása kötelező.",
+      "lastNameRequired": "A vezetéknév megadása kötelező.",
+      "validProfile": "Válassz érvényes profilt.",
+      "validRole": "Válassz érvényes szerepkört.",
+      "supportedCurrency": "Válassz támogatott pénznemet.",
+      "supportedTimezone": "Válassz támogatott időzónát.",
+      "supportedLanguage": "Válassz támogatott nyelvet.",
+      "memberIdMissing": "Hiányzik a tag azonosítója.",
+      "displayNameMax": "A megjelenített név legfeljebb 120 karakter lehet.",
+      "validEffectiveDate": "Válassz érvényes hatálybalépési dátumot.",
+      "reasonMax": "Az indoklás legfeljebb 500 karakter lehet."
+    }
+  },
+  "AdminProjects": {
+    "eyebrow": "Admin",
+    "title": "Projektek",
+    "subtitle": "Hozz létre munkacélokat, kezeld az aktív állapotukat, és őrizd meg az archivált projekteket a történeti riportokhoz.",
+    "stats": {
+      "projects": "Projektek",
+      "active": "Aktív",
+      "internal": "Belső"
+    },
+    "create": {
+      "title": "Projekt létrehozása",
+      "description": "A projektek a hozzárendelések és időbejegyzések munkacéljai."
+    },
+    "directory": {
+      "title": "Projektlista",
+      "description": "Az aktív projektek hozzárendelhetők és használhatók időkövetésben. Az archivált projektek nem jelennek meg a munkalistákban, de a történeti adatok elérhetők maradnak."
+    },
+    "groups": {
+      "title": "Projektcsoportok",
+      "description": "Szervezd csoportokba a projekteket szűréshez és riportoláshoz."
+    },
+    "profiles": {
+      "contractor": "Kontraktor",
+      "employee": "Alkalmazott"
+    },
+    "states": {
+      "active": "Aktív",
+      "inactive": "Inaktív",
+      "archived": "Archivált",
+      "internal": "Belső",
+      "ungrouped": "Csoport nélkül",
+      "invited": "Meghívva",
+      "deleted": "Törölt"
+    },
+    "form": {
+      "projectName": "Projekt neve",
+      "slug": "Slug",
+      "slugHint": "Hagyd üresen, ha a névből generáljuk.",
+      "projectColor": "Projekt színe",
+      "startsOn": "Kezdés",
+      "endsOn": "Befejezés",
+      "internalProject": "Belső projekt",
+      "internalProjectDescription": "Belső vagy gyűjtőmunkákhoz, például csapatépítéshez, kommunikációhoz vagy operatív feladatokhoz.",
+      "notes": "Megjegyzések",
+      "notesPlaceholder": "Opcionális admin megjegyzések"
+    },
+    "filters": {
+      "search": "Projektek keresése",
+      "searchPlaceholder": "Projektek keresése...",
+      "state": "Állapot",
+      "group": "Csoport",
+      "all": "Mind"
+    },
+    "table": {
+      "caption": "Projektkezelési táblázat",
+      "ariaLabel": "Projektkezelési táblázat",
+      "empty": "Még nincs létrehozott projekt.",
+      "emptyFiltered": "Nincs a jelenlegi szűrőknek megfelelő projekt.",
+      "assignmentCount": "{count, plural, one {# hozzárendelés} other {# hozzárendelés}}",
+      "groupCount": "{count, plural, one {# csoport} other {# csoport}}",
+      "columns": {
+        "project": "Projekt",
+        "state": "Állapot",
+        "timeline": "Időszak",
+        "usage": "Használat",
+        "updated": "Frissítve"
+      }
+    },
+    "groupsPanel": {
+      "groupName": "Csoport neve",
+      "generatedSlug": "Névből generálva",
+      "description": "Leírás",
+      "descriptionPlaceholder": "Opcionális csoportosítási megjegyzés",
+      "empty": "Még nincs létrehozott projektcsoport.",
+      "projectCount": "{count, plural, one {# projekt} other {# projekt}}",
+      "noProjects": "Nincs projekt ebben a csoportban.",
+      "removeProjectLabel": "{project} eltávolítása innen: {group}",
+      "chooseProject": "Projekt kiválasztása",
+      "allProjectsLinked": "Minden projekt ebben a csoportban van",
+      "editTitle": "{name} szerkesztése",
+      "editDescription": "A csoportmódosítások a szűrést és a projektek szervezését érintik. Nem módosítják a projekthozzárendeléseket vagy számlázási szabályokat.",
+      "archiveTitle": "Projektcsoport archiválása?",
+      "archiveTitleNamed": "{name} archiválása?",
+      "archiveDescription": "Az archivált csoportok eltűnnek a szűrőkből és szervezési segédekből. A projektek változatlanok maradnak.",
+      "archiveWarning": "Ez csak a csoport soft delete művelete."
+    },
+    "actions": {
+      "createProject": "Projekt létrehozása",
+      "createGroup": "Csoport létrehozása",
+      "addProject": "Projekt hozzáadása",
+      "cancel": "Mégse",
+      "saveGroup": "Csoport mentése",
+      "archiveGroup": "Csoport archiválása",
+      "bulkAssign": "Tömeges hozzárendelés",
+      "openFor": "{name} műveleteinek megnyitása",
+      "menuLabel": "Műveletek",
+      "openDetails": "Részletek megnyitása",
+      "editProject": "Projekt szerkesztése",
+      "activate": "Aktiválás",
+      "deactivate": "Deaktiválás",
+      "archive": "Archiválás",
+      "manageRates": "Óradíjak kezelése",
+      "assignCount": "Hozzárendelés: {count}",
+      "edit": "Szerkesztés",
+      "assignMember": "Tag hozzárendelése",
+      "endToday": "Lezárás ma",
+      "saveAssignment": "Hozzárendelés mentése",
+      "saveChanges": "Módosítások mentése",
+      "archiveProject": "Projekt archiválása"
+    },
+    "bulk": {
+      "title": "Tömeges hozzárendelés",
+      "description": "Projekt-hozzárendelések létrehozása több személy és projekt között. A meglévő átfedő hozzárendeléseket kihagyjuk.",
+      "mode": "Tömeges hozzárendelés módja",
+      "people": "Személyek",
+      "projects": "Projektek",
+      "searchPeople": "Személyek keresése",
+      "searchProjects": "Projektek keresése",
+      "noMembers": "Nincs a keresésnek megfelelő tag.",
+      "noProjects": "Nincs a keresésnek megfelelő projekt.",
+      "peopleToProjects": "Személyek projektekhez",
+      "projectsToPeople": "Projektek személyekhez",
+      "duplicateCount": "{count, plural, one {# duplikáció} other {# duplikáció}}",
+      "notesPlaceholder": "Opcionális megjegyzés minden létrehozott hozzárendeléshez",
+      "newAssignments": "Új hozzárendelések",
+      "duplicates": "Duplikációk",
+      "selectedPairs": "Kiválasztott párok",
+      "rateHint": "Az itt hozzárendelt kontraktorok a központi óradíjukat használják, amíg nincs projektfelülírás az Óradíjak képernyőn.",
+      "allDuplicates": "Minden kiválasztott pár átfed egy meglévő hozzárendeléssel ebben a dátumtartományban."
+    },
+    "detail": {
+      "eyebrow": "Projekt",
+      "inactiveWarning": "Ez a projekt nem aktív. Admin munkához látható marad, de új időbejegyzési választásokhoz nem használható.",
+      "assignments": "Hozzárendelések",
+      "groups": "Csoportok",
+      "updated": "Frissítve",
+      "noNotes": "Nincs hozzáadott projektmegjegyzés."
+    },
+    "assignment": {
+      "addTitle": "Hozzárendelés hozzáadása",
+      "addDescription": "Meghívott és aktív tagok a fiókaktiválás előtt is hozzárendelhetők.",
+      "member": "Tag",
+      "chooseMember": "Tag kiválasztása",
+      "validFrom": "Érvényes ettől",
+      "validTo": "Érvényes eddig",
+      "notesPlaceholder": "Opcionális hozzárendelési megjegyzés",
+      "assignedMembers": "Hozzárendelt tagok",
+      "assignedMembersDescription": "A hatályos dátumok és az óradíjforrás hozzárendelésenként jelenik meg.",
+      "empty": "Még nincs tag hozzárendelve ehhez a projekthez."
+    },
+    "editDialog": {
+      "title": "{name} szerkesztése",
+      "description": "Deaktiváld a projektet az új időbejegyzések megakadályozásához, miközben a történeti adatok megmaradnak."
+    },
+    "archiveDialog": {
+      "title": "Projekt archiválása?",
+      "titleNamed": "{name} archiválása?",
+      "description": "Az archivált projektek eltűnnek a munkalistákból és a jövőbeli hozzárendelési/időbejegyzési folyamatokból, de a történeti adatok riportoláshoz kapcsolva maradnak.",
+      "warning": "Ez soft delete. Csak akkor használd, ha a projekt többé nem választható."
+    },
+    "timeline": {
+      "range": "{from} - {to}",
+      "from": "{from}-tól",
+      "until": "{to}-ig",
+      "openEnded": "Nyitott"
+    },
+    "rateSource": {
+      "centralRate": "Központi óradíj",
+      "employeeCentralRate": "Az alkalmazotti hozzárendelések a tag központi óradíját használják.",
+      "projectOverride": "Projektfelülírás",
+      "currentOverride": "{rate} aktuális felülírás.",
+      "scheduledOverride": "Ütemezett felülírás",
+      "scheduledOverrideDetail": "{count, plural, one {# felülírási időszak ütemezve.} other {# felülírási időszak ütemezve.}}",
+      "contractorCentralRate": "A kontraktor-hozzárendelés jelenleg a tag központi óradíját használja."
+    }
+  },
+  "AdminProjectsActions": {
+    "success": {
+      "projectCreated": "Projekt létrehozva.",
+      "projectUpdated": "Projekt frissítve.",
+      "noChanges": "Nincs mentendő változás.",
+      "projectActivated": "Projekt aktiválva.",
+      "projectDeactivated": "Projekt deaktiválva.",
+      "projectStatusUnchanged": "A projekt állapota már naprakész volt.",
+      "projectArchived": "Projekt archiválva.",
+      "memberAssigned": "Tag hozzárendelve a projekthez.",
+      "noBulkAssignmentsCreated": "Nem jött létre új hozzárendelés, mert minden kiválasztott pár átfed egy meglévővel.",
+      "bulkAssignmentsCreated": "{count, plural, one {# hozzárendelés létrehozva.} other {# hozzárendelés létrehozva.}}",
+      "bulkAssignmentsCreatedWithSkipped": "{created, plural, one {# hozzárendelés létrehozva} other {# hozzárendelés létrehozva}}. {skipped, plural, one {# duplikáció kihagyva} other {# duplikáció kihagyva}}.",
+      "assignmentUpdated": "Projekt-hozzárendelés frissítve.",
+      "noAssignmentChanges": "Nincs mentendő hozzárendelési változás.",
+      "assignmentEnded": "Projekt-hozzárendelés lezárva.",
+      "groupCreated": "Projektcsoport létrehozva.",
+      "groupUpdated": "Projektcsoport frissítve.",
+      "noGroupChanges": "Nincs mentendő csoportváltozás.",
+      "groupArchived": "Projektcsoport archiválva.",
+      "projectAddedToGroup": "Projekt hozzáadva a csoporthoz.",
+      "projectAlreadyInGroup": "A projekt már ebben a csoportban volt.",
+      "projectRemovedFromGroup": "Projekt eltávolítva a csoportból.",
+      "projectNotInGroup": "A projekt nem volt ebben a csoportban."
+    },
+    "errors": {
+      "fixFields": "Javítsd a kiemelt mezőket, majd próbáld újra.",
+      "fixAssignmentFields": "Javítsd a kiemelt hozzárendelési mezőket, majd próbáld újra.",
+      "fixBulkAssignmentFields": "Javítsd a kiemelt tömeges hozzárendelési mezőket, majd próbáld újra.",
+      "fixGroupFields": "Javítsd a kiemelt csoportmezőket, majd próbáld újra.",
+      "projectCreateFailed": "A projektet nem sikerült létrehozni.",
+      "projectUpdateFailed": "A projektet nem sikerült frissíteni.",
+      "projectStatusFailed": "A projekt állapotát nem sikerült módosítani.",
+      "projectArchiveFailed": "A projektet nem sikerült archiválni.",
+      "assignmentCreateFailed": "A projekt-hozzárendelést nem sikerült létrehozni.",
+      "bulkAssignmentCreateFailed": "A tömeges hozzárendeléseket nem sikerült létrehozni.",
+      "assignmentUpdateFailed": "A projekt-hozzárendelést nem sikerült frissíteni.",
+      "assignmentEndFailed": "A projekt-hozzárendelést nem sikerült lezárni.",
+      "groupCreateFailed": "A projektcsoportot nem sikerült létrehozni.",
+      "groupUpdateFailed": "A projektcsoportot nem sikerült frissíteni.",
+      "groupArchiveFailed": "A projektcsoportot nem sikerült archiválni.",
+      "addProjectToGroupFailed": "A projektet nem sikerült hozzáadni a csoporthoz.",
+      "removeProjectFromGroupFailed": "A projektet nem sikerült eltávolítani a csoportból.",
+      "databaseUnavailable": "Az adatbázis nem érhető el. Próbáld újra később, vagy keresd a supportot.",
+      "groupSlugExists": "Már létezik projektcsoport ezzel a sluggal.",
+      "projectSlugExists": "Már létezik projekt ezzel a sluggal.",
+      "projectLinkFailed": "A projektet nem sikerült a jelenlegi admin taghoz kapcsolni. Frissítsd az oldalt és próbáld újra.",
+      "projectsUnavailable": "A projektek átmenetileg nem érhetők el. Próbáld újra később, vagy keresd a supportot.",
+      "projectMissing": "Ez a projekt már nem létezik, vagy már archiválták."
+    },
+    "validation": {
+      "validDate": "Válassz érvényes dátumot.",
+      "projectNameRequired": "A projekt nevének megadása kötelező.",
+      "slugMax": "A slug legfeljebb 80 karakter lehet.",
+      "supportedProjectColor": "Válassz támogatott projektszínt.",
+      "notesMax": "A megjegyzés legfeljebb 1000 karakter lehet.",
+      "projectEndBeforeStart": "A projekt befejezési dátuma nem lehet a kezdési dátum előtt.",
+      "chooseMember": "Válassz tagot.",
+      "assignmentStartRequired": "A hozzárendelés kezdési dátuma kötelező.",
+      "validStartDate": "Válassz érvényes kezdési dátumot.",
+      "assignmentEndBeforeStart": "A hozzárendelés befejezési dátuma nem lehet a kezdési dátum előtt.",
+      "assignmentIdMissing": "Hiányzik a hozzárendelés azonosítója.",
+      "assignmentEndRequired": "A hozzárendelés befejezési dátuma kötelező.",
+      "validEndDate": "Válassz érvényes befejezési dátumot.",
+      "chooseAtLeastOneMember": "Válassz legalább egy tagot.",
+      "chooseAtLeastOneProject": "Válassz legalább egy projektet.",
+      "bulkAssignmentLimit": "A tömeges hozzárendelés legfeljebb 200 tag/projekt párra korlátozott.",
+      "groupNameRequired": "A csoport nevének megadása kötelező.",
+      "descriptionMax": "A leírás legfeljebb 1000 karakter lehet.",
+      "projectGroupIdMissing": "Hiányzik a projektcsoport azonosítója.",
+      "chooseProject": "Válassz projektet."
+    }
+  },
+  "AdminRates": {
+    "eyebrow": "Admin",
+    "title": "Óradíjak",
+    "subtitle": "Kezeld a belső óradíjakat személyenként, időszakonként és kontraktor projektfelülírásként.",
+    "stats": {
+      "withRate": "Van díja",
+      "missingRate": "Nincs díja",
+      "projectOverrides": "Projektfelülírások"
+    },
+    "filters": {
+      "search": "Óradíjak keresése",
+      "searchPlaceholder": "Keresés...",
+      "profile": "Profil szűrő",
+      "rate": "Óradíj szűrő",
+      "all": "Mind",
+      "hasRate": "Van díja",
+      "missing": "Hiányzik",
+      "project": "Projekt",
+      "group": "Csoport",
+      "ungrouped": "Csoport nélkül"
+    },
+    "table": {
+      "caption": "Óradíjlista",
+      "open": "Megnyitás",
+      "empty": "Nincs a jelenlegi szűrőknek megfelelő óradíj.",
+      "openDrawer": "{name} óradíj paneljének megnyitása",
+      "overrideCount": "{count, plural, one {felülírás} other {felülírás}}",
+      "columns": {
+        "name": "Név",
+        "profile": "Profil",
+        "currentRate": "Aktuális óradíj",
+        "projectOverrides": "Projektfelülírások"
+      }
+    },
+    "profiles": {
+      "contractor": "Kontraktor",
+      "employee": "Alkalmazott"
+    },
+    "statuses": {
+      "invited": "meghívva",
+      "active": "aktív",
+      "inactive": "inaktív",
+      "deleted": "törölt"
+    },
+    "labels": {
+      "missing": "Hiányzik",
+      "currentRate": "Aktuális óradíj",
+      "current": "Aktuális"
+    },
+    "drawer": {
+      "centralRate": "Központi óradíj",
+      "centralRateDescription": "A személy alapértelmezett belső óradíja. A kontraktor projektfelülírások eltérhetnek ettől az értéktől.",
+      "noCentralRate": "Nincs központi óradíj",
+      "noCentralRateDescription": "Adj hozzá óradíjat, mielőtt belső költségriportokban használod ezt a személyt.",
+      "projectOverrides": "Projektfelülírások",
+      "projectOverridesDescription": "A felülírás csak a kiválasztott projektre vonatkozik. A többi projekt a központi óradíjat használja.",
+      "noProjectOverride": "Nincs projektfelülírás.",
+      "projectsUsingCentralRate": "Központi óradíjat használó projektek",
+      "projectsUsingCentralRateDescription": "Adj felülírást bármely más hozzárendelt projekthez.",
+      "followsCentralRate": "Jelenleg a központi óradíjat követi.",
+      "noAssignmentsForOverride": "Ez a kontraktor még nincs projekthez rendelve. Felülírás hozzáadása előtt rendeld projekthez.",
+      "allProjectsHaveOverrides": "Minden hozzárendelt projekthez már van felülírás. Használd az Időszak hozzáadása műveletet egy projekten a következő felülírási időszak ütemezéséhez.",
+      "noProjectsForOverride": "Nincs felülírásra elérhető hozzárendelt projekt."
+    },
+    "actions": {
+      "addPeriod": "Időszak hozzáadása",
+      "addOverride": "Felülírás hozzáadása",
+      "addOverridePeriod": "Felülírási időszak hozzáadása",
+      "cancel": "Mégse"
+    },
+    "fields": {
+      "project": "Projekt",
+      "validFrom": "Érvényes ettől",
+      "validTo": "Érvényes eddig",
+      "hourlyRate": "Óradíj",
+      "currency": "Pénznem",
+      "reason": "Indok / megjegyzés",
+      "reasonPlaceholder": "Miért változik ez az óradíj?"
+    },
+    "timeline": {
+      "range": "{from} - {to}",
+      "openEnded": "{from} - nyitott",
+      "addedBy": "Hozzáadta: {name}, dátum: {date}",
+      "reason": "Indok: {reason}",
+      "noReason": "Nincs rögzített indok."
+    }
+  },
+  "AdminRatesActions": {
+    "success": {
+      "memberRateCreated": "Tag óradíj-időszak létrehozva.",
+      "assignmentOverrideCreated": "Hozzárendelési felülírási óradíj-időszak létrehozva."
+    },
+    "errors": {
+      "fixFields": "Javítsd a kiemelt óradíjmezőket, majd próbáld újra.",
+      "memberRateFailed": "A tag óradíját nem sikerült létrehozni.",
+      "assignmentOverrideFailed": "A hozzárendelési óradíj-felülírást nem sikerült létrehozni.",
+      "databaseUnavailable": "Az adatbázis nem érhető el. Próbáld újra később, vagy keresd a supportot.",
+      "rateLinkFailed": "Az óradíjat nem sikerült a kiválasztott taghoz vagy hozzárendeléshez kapcsolni. Frissítsd az oldalt és próbáld újra.",
+      "ratesUnavailable": "Az óradíjak átmenetileg nem érhetők el. Próbáld újra később, vagy keresd a supportot."
+    },
+    "validation": {
+      "validDate": "Válassz érvényes dátumot.",
+      "rateStartRequired": "Az óradíj kezdési dátuma kötelező.",
+      "validStartDate": "Válassz érvényes kezdési dátumot.",
+      "hourlyRateRequired": "Az óradíj megadása kötelező.",
+      "hourlyRateFormat": "Nem negatív összeget adj meg, legfeljebb 2 tizedesjeggyel.",
+      "supportedCurrency": "Válassz támogatott pénznemet.",
+      "noteMax": "A megjegyzés legfeljebb 1000 karakter lehet.",
+      "rateEndAfterStart": "Az óradíj befejezési dátuma későbbi kell legyen a kezdési dátumnál."
+    }
+  },
+  "AdminAudit": {
+    "eyebrow": "Admin",
+    "title": "Napló",
+    "subtitle": "Tekintsd át a biztonsági, tag-, projekt-, óradíj- és időkövetési változásokat az append-only audit naplóból.",
+    "stats": {
+      "matching": "Találat",
+      "pages": "Oldal"
+    },
+    "watcher": {
+      "title": "Eseményfigyelő",
+      "description": "Biztonsági, tag-, projekt-, óradíj- és időkövetési események szereplővel, célponttal és request kontextussal."
+    },
+    "client": {
+      "showing": "{start}-{end} / {total} esemény megjelenítve",
+      "lastRefreshed": "Utolsó frissítés: {time}",
+      "watch": "Figyelés",
+      "refresh": "Frissítés",
+      "search": "Keresés",
+      "searchPlaceholder": "Esemény, szereplő, célpont, request, IP",
+      "event": "Esemény",
+      "allEvents": "Összes esemény",
+      "target": "Célpont",
+      "allTargets": "Összes célpont",
+      "actor": "Szereplő",
+      "allActors": "Összes szereplő",
+      "from": "Ettől",
+      "to": "Eddig",
+      "apply": "Alkalmaz",
+      "clear": "Törlés",
+      "empty": "Nincs a szűrőknek megfelelő naplóesemény.",
+      "ariaLabel": "Audit napló események",
+      "details": "Részletek",
+      "time": "Idő",
+      "request": "Request",
+      "noIp": "Nincs IP",
+      "auditEvent": "Audit esemény",
+      "dialogDescription": "Append-only eseményrészletek. Az érzékenynek tűnő kulcsok megjelenítés előtt maszkolva vannak.",
+      "noRequestId": "Nincs request id",
+      "ipAddress": "IP cím",
+      "userAgent": "User agent",
+      "noUserAgent": "Nincs user agent",
+      "before": "Előtte",
+      "after": "Utána",
+      "noData": "Nincs adat"
+    }
+  },
+  "TimeTracking": {
+    "view": {
+      "weeklyGrid": "Heti rács",
+      "day": "Nap"
+    },
+    "labels": {
+      "thisWeek": "Ez a hét",
+      "weekTotal": "Heti összesen",
+      "dayTotal": "Napi összesen",
+      "assigned": "Hozzárendelve",
+      "recent": "Legutóbbi",
+      "archivedProject": "Archivált projekt",
+      "noDescription": "Nincs leírás"
+    },
+    "actions": {
+      "newEntry": "Új bejegyzés",
+      "previousWeek": "Előző hét",
+      "nextWeek": "Következő hét",
+      "sameAsYesterday": "Ugyanaz, mint tegnap",
+      "duplicateLastWeek": "Előző hét másolása",
+      "undo": "Visszavonás",
+      "discard": "Eldobás",
+      "restoreDraft": "Piszkozat visszaállítása",
+      "addEntry": "Bejegyzés hozzáadása",
+      "editEntry": "Bejegyzés szerkesztése",
+      "deleteEntry": "Bejegyzés törlése",
+      "edit": "Szerkesztés",
+      "close": "Bezárás",
+      "cancel": "Mégse",
+      "save": "Mentés"
+    },
+    "tooltips": {
+      "copyPreviousDay": "Bejegyzések másolása a(z) {date} előtti napról.",
+      "duplicatePreviousWeek": "Az előző hét bejegyzéseinek másolása erre a hétre."
+    },
+    "locked": {
+      "title": "Zárolt időszak.",
+      "description": "A hét néhány napja beküldött timesheethez tartozik, ezért csak olvasható."
+    },
+    "grid": {
+      "projects": "Projektek",
+      "total": "Összesen",
+      "dailyTotal": "Napi összesen"
+    },
+    "inactive": {
+      "title": "Inaktív hét",
+      "description": "Ezen a projekten ezen a héten nem történt munka.",
+      "undo": "Inaktív hét visszavonása",
+      "mark": "Megjelölés inaktív hétként",
+      "removeEntriesFirst": "Előbb töröld a bejegyzéseket"
+    },
+    "help": {
+      "durationFormats": "Időt így adhatsz meg: 3.5, 3:30, 3h 20m vagy 200m. Az üres cellák megnyitják a bejegyzés űrlapot, mert a leírás kötelező."
+    },
+    "empty": {
+      "title": "Nincs aktív hozzárendelt projekt",
+      "description": "Időt akkor tudsz rögzíteni, ha egy admin aktív projekthez rendel ezen a héten."
+    },
+    "draft": {
+      "title": "Mentetlen időbejegyzés-piszkozat",
+      "lastSaved": "Utolsó mentés: {time}.",
+      "saving": "Piszkozat mentése...",
+      "saved": "Piszkozat mentve",
+      "notSaved": "A piszkozat nincs mentve"
+    },
+    "day": {
+      "emptyTitle": "Nincs bejegyzés ezen a napon",
+      "emptyDescription": "Indíts időmérőt vagy adj hozzá bejegyzést a kiválasztott projekthez és naphoz."
+    },
+    "timer": {
+      "trackedWithTimer": "Időmérővel rögzítve",
+      "placeholder": "Min dolgozol?",
+      "start": "Indítás",
+      "stop": "Leállítás"
+    },
+    "entryModal": {
+      "newTitle": "Új időbejegyzés",
+      "editTitle": "Időbejegyzés szerkesztése",
+      "prefillHint": "Adj meg egy rövid leírást, majd mentsd.",
+      "requiredHint": "A projekt és a leírás kötelező. A jövőbeli dátumok és hosszú napok figyelmeztetéssel menthetők."
+    },
+    "fields": {
+      "description": "Leírás",
+      "descriptionPlaceholder": "Min dolgoztál?",
+      "project": "Projekt",
+      "date": "Dátum",
+      "mode": "Mód",
+      "duration": "Időtartam",
+      "start": "Kezdés",
+      "end": "Befejezés"
+    },
+    "mode": {
+      "duration": "Időtartam",
+      "interval": "Idősáv"
+    },
+    "warnings": {
+      "descriptionNeeded": "Leírás szükséges",
+      "descriptionNeededSentence": "Leírás szükséges.",
+      "descriptionSaved": "Leírás mentve",
+      "futureDay": "Jövőbeli nap.",
+      "futureDate": "Jövőbeli dátum",
+      "futureDateAllowed": "Ez jövőbeli dátum. A bejegyzés engedélyezett, de jelölve marad.",
+      "dailyTotalOver24": "A napi összesen több mint 24 óra.",
+      "dailyTotalExact": "Ez {hours} óra egy nap alatt.",
+      "dayHasOverlaps": "A napon átfedő bejegyzések vannak.",
+      "dayOver24": "A kiválasztott napon több mint 24 óra van rögzítve.",
+      "longContinuousSession": "Hosszú egybefüggő munka",
+      "overlapsAnotherEntry": "Átfed egy másik bejegyzéssel",
+      "moreThan24NotBlocked": "Ez több mint 24 óra. Ez figyelmeztetés, nem blokkoló hiba.",
+      "longSessionNotBlocked": "Ez hosszú egybefüggő munkamenet. Ez figyelmeztetés, nem blokkoló hiba."
+    },
+    "source": {
+      "grid": "Rács",
+      "form": "Űrlap",
+      "timer": "Időmérő",
+      "timed": "Időzített",
+      "hours": "Órák"
+    },
+    "fieldErrors": {
+      "durationPositive": "Az időtartamnak nullánál nagyobbnak kell lennie.",
+      "endAfterStart": "A befejezésnek a kezdés után kell lennie."
+    },
+    "breakdown": {
+      "entries": "Bejegyzések",
+      "noEntries": "Még nincs bejegyzés.",
+      "descriptionRequired": "Minden bejegyzéshez kötelező a leírás."
+    },
+    "errors": {
+      "invalidDurationFormat": "Adj meg időt például így: 3.5, 3:30, 3h 20m vagy 200m."
+    }
+  },
+  "TimeTrackingActions": {
+    "success": {
+      "timeEntrySaved": "Időbejegyzés mentve.",
+      "timeEntryUpdated": "Időbejegyzés frissítve.",
+      "timeEntryDeleted": "Időbejegyzés törölve.",
+      "timerStarted": "Időmérő elindítva.",
+      "timerStopped": "Időmérő leállítva és mentve.",
+      "draftSaved": "Piszkozat mentve.",
+      "draftDiscarded": "Piszkozat eldobva.",
+      "inactiveWeekSaved": "A projekt erre a hétre inaktívként jelölve.",
+      "inactiveWeekRemoved": "Inaktív hét eltávolítva."
+    },
+    "errors": {
+      "generic": "Valami hiba történt.",
+      "fixFields": "Javítsd a jelölt mezőket, majd próbáld újra.",
+      "timeEntrySaveFailed": "Az időbejegyzést nem sikerült menteni.",
+      "timeEntryUpdateFailed": "Az időbejegyzést nem sikerült frissíteni.",
+      "timeEntryDeleteFailed": "Az időbejegyzést nem sikerült törölni.",
+      "timerStartFailed": "Az időmérőt nem sikerült elindítani.",
+      "timerStopFailed": "Az időmérőt nem sikerült leállítani.",
+      "previousDayCopyFailed": "Az előző napot nem sikerült másolni.",
+      "previousWeekDuplicateFailed": "Az előző hetet nem sikerült duplikálni.",
+      "draftSaveFailed": "A piszkozatot nem sikerült menteni.",
+      "draftClearFailed": "A piszkozatot nem sikerült törölni.",
+      "inactiveWeekSaveFailed": "Az inaktív hetet nem sikerült menteni.",
+      "inactiveWeekRemoveFailed": "Az inaktív hetet nem sikerült eltávolítani.",
+      "memberNotFound": "A tag nem található.",
+      "timeEntryNotFound": "Az időbejegyzés nem található.",
+      "entryLocked": "Ez a bejegyzés beküldött timesheet miatt zárolt.",
+      "periodLocked": "Ez az időszak beküldött timesheet miatt zárolt.",
+      "weekTouchesLockedPeriod": "Ez a hét zárolt időszakot érint.",
+      "stopTimerFirst": "Új időmérő indítása előtt állítsd le a futó időmérőt.",
+      "noTimerRunning": "Nincs futó időmérő.",
+      "projectNotActiveForDate": "Ez a projekt nem aktív a kiválasztott dátumon.",
+      "projectNotAssignedForWeek": "Ez a projekt nincs hozzárendelve a kiválasztott héten.",
+      "dateTimezoneFormatFailed": "A dátumot nem sikerült formázni az időzónában."
+    },
+    "fields": {
+      "chooseProject": "Válassz projektet.",
+      "validDate": "Válassz érvényes dátumot.",
+      "validTargetDate": "Válassz érvényes céldátumot.",
+      "validWeek": "Válassz érvényes hetet.",
+      "validStartTime": "Válassz érvényes kezdési időt.",
+      "validEndTime": "Válassz érvényes befejezési időt.",
+      "startRequired": "A kezdési idő kötelező.",
+      "endRequired": "A befejezési idő kötelező.",
+      "endAfterStart": "A befejezésnek a kezdés után kell lennie.",
+      "startEndRequired": "A kezdési és befejezési idő kötelező.",
+      "durationPositive": "Az időtartamnak nullánál nagyobbnak kell lennie.",
+      "durationTooLong": "Az időtartam túl hosszú.",
+      "durationTooLarge": "Az időtartam túl nagy.",
+      "descriptionRequired": "A leírás kötelező.",
+      "descriptionMax": "A leírás legfeljebb 1000 karakter lehet.",
+      "timeEntryMissing": "Hiányzik az időbejegyzés azonosítója.",
+      "noteMax": "A megjegyzés legfeljebb 500 karakter lehet.",
+      "draftKeyInvalid": "A piszkozatkulcs érvénytelen."
+    },
+    "copy": {
+      "previousDay": {
+        "noneFound": "Nem található bejegyzés az előző napon.",
+        "noneCopied": "Nem sikerült bejegyzést másolni az előző napról.",
+        "copied": "{created} bejegyzés másolva az előző napról.",
+        "copiedWithSkipped": "{created} bejegyzés másolva az előző napról; {skipped} kihagyva."
+      },
+      "previousWeek": {
+        "noneFound": "Nem található bejegyzés az előző héten.",
+        "noneCopied": "Nem sikerült bejegyzést másolni az előző hétről.",
+        "copied": "{created} bejegyzés másolva az előző hétről.",
+        "copiedWithSkipped": "{created} bejegyzés másolva az előző hétről; {skipped} kihagyva."
+      }
+    }
+  },
+  "Settings": {
+    "page": {
+      "eyebrow": "Fiók",
+      "title": "Biztonsági beállítások",
+      "subtitle": "Kezeld a bejelentkezési módokat, passkey-ket és authenticator alkalmazásos ellenőrzést a Sheet Happens fiókodhoz."
+    },
+    "setupBanner": {
+      "securityReady": "Biztonság kész",
+      "actionRequired": "Teendő szükséges",
+      "title": "Fiókbiztonság befejezése",
+      "completeDescription": "A biztonsági beállítás kész. Folytathatod az alkalmazásban.",
+      "adminTotpDescription": "Az admin eszközökhöz authenticator alkalmazásos ellenőrzés szükséges. Kapcsold be, mielőtt visszatérsz a kezelőfelületekre.",
+      "memberDescription": "Adj hozzá passkey-t vagy kapcsold be az authenticator alkalmazást a folytatás előtt.",
+      "noFurtherAction": "Most nincs további biztonsági teendő.",
+      "adminTotpHint": "Az alábbi authenticator alkalmazásos vezérlőkkel teljesítheted az admin 2FA követelményt. A passkey továbbra is elérhető bejelentkezéshez, de v1-ben nem váltja ki az admin TOTP-t.",
+      "memberHint": "Az alábbi passkey vagy authenticator alkalmazásos vezérlőkkel teljesítheted ezt a követelményt."
+    },
+    "states": {
+      "connected": "Kapcsolva",
+      "enabled": "Bekapcsolva",
+      "available": "Elérhető",
+      "linked": "Kapcsolva",
+      "recommended": "Ajánlott",
+      "notSet": "Nincs beállítva",
+      "notEnabled": "Nincs bekapcsolva"
+    },
+    "actions": {
+      "add": "Hozzáadás",
+      "setUp": "Beállítás",
+      "reset": "Visszaállítás",
+      "disable": "Kikapcsolás",
+      "remove": "Eltávolítás",
+      "save": "Mentés",
+      "continue": "Folytatás"
+    },
+    "methods": {
+      "magicLink": {
+        "label": "Emailes mágikus link",
+        "description": "Elsődleges jelszó nélküli bejelentkezés ehhez: {email}."
+      },
+      "password": {
+        "label": "Email + jelszó",
+        "enabledDescription": "A jelszavas bejelentkezés be van kapcsolva ennél a fióknál.",
+        "setupDescription": "Jelszó beállítása emailben küldött linken keresztül."
+      },
+      "google": {
+        "label": "Céges Google",
+        "linkedDescription": "Céges Google fiók kapcsolva.",
+        "availableDescription": "Aktiválás után elérhető a jogosult céges Google fiókoknak."
+      },
+      "passkeys": {
+        "label": "Passkey-k",
+        "registeredDescription": "{count} passkey regisztrálva.",
+        "emptyDescription": "Használj Touch ID-t, Face ID-t, Windows Hellót vagy hardveres biztonsági kulcsot.",
+        "countSet": "{count} beállítva"
+      },
+      "totp": {
+        "label": "Authenticator alkalmazás",
+        "enabledDescription": "A támogatott bejelentkezési ellenőrzésekhez időalapú egyszer használatos kód szükséges.",
+        "setupDescription": "Adj hozzá alkalmazásalapú egyszer használatos kódokat második faktorként."
+      }
+    },
+    "posture": {
+      "title": "Biztonsági állapot",
+      "description": "Kezeld a fiók bejelentkezési módjait és helyreállítási lehetőségeit.",
+      "primarySignIn": "Elsődleges bejelentkezés",
+      "magicLink": "Mágikus link",
+      "passwordSignIn": "Jelszavas bejelentkezés",
+      "passkeyCoverage": "Passkey lefedettség",
+      "passkeysRegistered": "{count} regisztrálva"
+    },
+    "password": {
+      "title": "Email + jelszó",
+      "description": "A jelszavas bejelentkezés opcionális, és a meghívott tag email címéhez kötött.",
+      "enabledTitle": "A jelszavas bejelentkezés be van kapcsolva",
+      "notSetTitle": "Nincs beállított jelszó",
+      "enabledDescription": "Küldj visszaállító linket, ha forgatni vagy helyreállítani kell a jelszót.",
+      "notSetDescription": "Küldj beállító linket, hogy ehhez a fiókhoz jelszó készüljön.",
+      "sendResetLink": "Visszaállító link küldése",
+      "sendSetupLink": "Beállító link küldése",
+      "googleHint": "A céges Google bejelentkezés aktiválás után elérhető a jogosult munkahelyi fiókoknak."
+    },
+    "passkeys": {
+      "defaultName": "Sheet Happens passkey",
+      "title": "Passkey-k",
+      "description": "Regisztrálj eszközbiometriát vagy hardveres biztonsági kulcsot phishing-ellenálló bejelentkezéshez.",
+      "addTitle": "Passkey hozzáadása",
+      "addDescription": "Adj érthető nevet, hogy később azonosítani tudd az eszközt.",
+      "nameField": "Passkey neve",
+      "addDevice": "Eszköz passkey hozzáadása",
+      "addSecurityKey": "Biztonsági kulcs hozzáadása",
+      "registeredTitle": "Regisztrált passkey-k",
+      "registeredDescription": "Távolítsd el azokat a passkey-ket, amelyeket már nem ismersz fel. A mágikus linkes bejelentkezés továbbra is elérhető.",
+      "emptyRegistered": "Ehhez a fiókhoz még nincs regisztrált passkey.",
+      "nameColumn": "Név",
+      "synced": "Szinkronizált",
+      "deviceType": {
+        "passkey": "Passkey",
+        "platform": "Eszköz passkey",
+        "crossPlatform": "Biztonsági kulcs"
+      }
+    },
+    "totp": {
+      "title": "Authenticator alkalmazás",
+      "description": "Állíts be TOTP-t authenticator alkalmazással, és őrizd biztonságos helyen a tartalék kódokat.",
+      "lockedUntil": "A TOTP ellenőrzés ideiglenesen zárolva van eddig: {time}.",
+      "failedAttempts": "{count} sikertelen TOTP próbálkozás van rögzítve.",
+      "currentPassword": "Jelenlegi jelszó",
+      "currentPasswordHint": "Kötelező, mert ennél a fióknál be van kapcsolva a jelszavas bejelentkezés.",
+      "enabledTitle": "Az authenticator alkalmazás be van kapcsolva",
+      "enabledDescription": "A bejelentkezési ellenőrzések kérhetnek 6 jegyű kódot az authenticator alkalmazásból.",
+      "newBackupCodes": "Új tartalék kódok",
+      "notEnabledTitle": "Az authenticator alkalmazás nincs bekapcsolva",
+      "notEnabledDescription": "Generálj titkot, add hozzá az authenticator alkalmazáshoz, majd ellenőrizd az első kódot.",
+      "setUp": "Authenticator beállítása",
+      "qrAlt": "Authenticator alkalmazás beállító QR kód",
+      "qrUnavailable": "QR nem elérhető",
+      "generatingQr": "QR generálása",
+      "scanQr": "QR kód beolvasása",
+      "scanTitle": "Olvasd be az authenticator alkalmazással",
+      "scanDescription": "Nyisd meg ezt az authenticator alkalmazásban: {email}, olvasd be a QR kódot, majd add meg az aktuális 6 jegyű kódot lent.",
+      "manualKeyTitle": "Kézi kulcs tartalék megoldás",
+      "manualKeyLabel": "Kézi kulcs",
+      "copyKey": "Kulcs másolása",
+      "openInAuthenticator": "Megnyitás authenticatorban",
+      "codeField": "6 jegyű kód",
+      "codeHint": "Add meg az authenticator alkalmazás aktuális kódját.",
+      "codeInputLabel": "Authenticator kód",
+      "verifyAndEnable": "Ellenőrzés és bekapcsolás",
+      "footer": "A TOTP a v1 admin második faktor. Az emailes jelszó és a passkey bejelentkezési módok maradnak, nem váltják ki az admin 2FA-t."
+    },
+    "backupCodes": {
+      "title": "Tartalék kódok",
+      "description": "Mentsd el ezeket most. Minden kód egyszer használható, ha az authenticator alkalmazás nem elérhető.",
+      "copyAll": "Összes másolása",
+      "copyLabel": "Tartalék kódok"
+    },
+    "confirm": {
+      "removePasskey": "Eltávolítod ezt: {name}?",
+      "disableTotp": "Kikapcsolod az authenticator alkalmazásos ellenőrzést ennél a fióknál?",
+      "regenerateBackupCodes": "Új tartalék kódokat generálsz? A meglévő tartalék kódok nem fognak működni."
+    },
+    "notices": {
+      "passkeyAdded": "Passkey hozzáadva.",
+      "passwordLinkSent": "Ha a fiók jogosult, a jelszóbeállító link elküldve.",
+      "totpSecretGenerated": "Authenticator titok generálva. A beállítás befejezéséhez ellenőrizz egy kódot.",
+      "totpEnabled": "Authenticator alkalmazás bekapcsolva.",
+      "totpDisabled": "Authenticator alkalmazás kikapcsolva.",
+      "backupCodesGenerated": "Új tartalék kódok generálva. Mentsd el őket most.",
+      "copied": "{label} másolva."
+    },
+    "errors": {
+      "addPasskeyFailed": "Nem sikerült hozzáadni a passkey-t.",
+      "passwordEmailFailed": "Nem sikerült elküldeni a jelszóbeállító emailt.",
+      "totpSetupFailed": "Nem sikerült elindítani az authenticator beállítását.",
+      "totpDisableFailed": "Nem sikerült kikapcsolni az authenticator alkalmazást.",
+      "backupCodesFailed": "Nem sikerült tartalék kódokat generálni.",
+      "copyFailed": "Nem sikerült másolni: {label}.",
+      "currentPasswordRequired": "Add meg a jelenlegi jelszavad az authenticator alkalmazásos ellenőrzés kezeléséhez.",
+      "invalidPassword": "A jelenlegi jelszó kötelező vagy hibás."
+    }
+  },
+  "SettingsActions": {
+    "success": {
+      "passkeyRenamed": "Passkey átnevezve.",
+      "passkeyRemoved": "Passkey eltávolítva.",
+      "totpDisabledAudited": "Authenticator kikapcsolás naplózva.",
+      "backupCodesRegeneratedAudited": "Tartalék kód generálás naplózva."
+    },
+    "errors": {
+      "passkeyIdMissing": "Hiányzik a passkey azonosítója.",
+      "passkeyNameRequired": "A passkey neve kötelező.",
+      "passkeyNotFound": "A passkey nem található.",
+      "passkeyRenameFailed": "Nem sikerült átnevezni a passkey-t.",
+      "passkeyRemoveFailed": "Nem sikerült eltávolítani a passkey-t.",
+      "totpDisableAuditFailed": "Az authenticator alkalmazás kikapcsolt, de a naplóeseményt nem sikerült rögzíteni.",
+      "backupCodesAuditFailed": "A tartalék kódok újragenerálva, de a naplóeseményt nem sikerült rögzíteni.",
+      "noAuthAccount": "Ehhez a taghoz nincs kapcsolt auth fiók."
+    }
+  },
+  "TwoFactorActions": {
+    "success": {
+      "verified": "Második faktor ellenőrizve.",
+      "cleared": "Második faktor állapot törölve."
+    },
+    "errors": {
+      "enterTotp": "Add meg a 6 jegyű authenticator kódot.",
+      "enterBackupCode": "Add meg a tartalék kódot.",
+      "missingUser": "A második faktor ellenőrzés nem adott vissza hitelesített felhasználót.",
+      "missingSession": "A második faktor ellenőrzés nem adott vissza aktív munkamenetet.",
+      "invalidCode": "A kód érvénytelen. Próbáld újra.",
+      "tooManyAttempts": "Túl sok sikertelen próbálkozás. Próbáld újra később.",
+      "expiredChallenge": "Ez a második faktor ellenőrzés lejárt. Kezdd újra a bejelentkezést.",
+      "verifyFailed": "Nem sikerült ellenőrizni a második faktort."
+    }
   }
 }
