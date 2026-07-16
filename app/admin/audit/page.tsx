@@ -1,3 +1,5 @@
+import { getTranslations } from "next-intl/server";
+
 import { AppShell } from "@/src/components/layout/AppShell";
 import {
   Card,
@@ -18,6 +20,7 @@ type AdminAuditPageProps = {
 
 export default async function AdminAuditPage({ searchParams }: AdminAuditPageProps) {
   const { member: admin } = await requireAdminAppMember("/admin/audit");
+  const t = await getTranslations("AdminAudit");
   const resolvedSearchParams = (await searchParams) ?? {};
   const auditLog = await listAuditLogsForAdmin(resolvedSearchParams, {
     timeZone: "Europe/Budapest",
@@ -28,27 +31,26 @@ export default async function AdminAuditPage({ searchParams }: AdminAuditPagePro
       <section className="mx-auto grid w-full max-w-[92rem] gap-6 px-4 py-8 sm:px-6 lg:px-8">
         <div className="flex flex-col gap-2">
           <p className="font-ui text-sm font-medium uppercase tracking-[0.18em] text-accent">
-            Admin
+            {t("eyebrow")}
           </p>
           <div className="flex flex-col justify-between gap-4 lg:flex-row lg:items-end">
             <div>
-              <h1 className="text-3xl font-bold text-foreground">Audit log</h1>
+              <h1 className="text-3xl font-bold text-foreground">{t("title")}</h1>
               <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">
-                Review security, member, project, rate, and time-tracking changes from the
-                append-only audit trail.
+                {t("subtitle")}
               </p>
             </div>
             <div className="grid min-w-72 grid-cols-2 gap-2 rounded-[var(--radius-lg)] border border-border bg-card/70 p-3 text-center">
               <div>
                 <p className="text-2xl font-semibold text-foreground">{auditLog.totalItems}</p>
                 <p className="font-ui text-[11px] font-medium uppercase tracking-[0.12em] text-muted-foreground">
-                  Matching
+                  {t("stats.matching")}
                 </p>
               </div>
               <div>
                 <p className="text-2xl font-semibold text-accent">{auditLog.totalPages}</p>
                 <p className="font-ui text-[11px] font-medium uppercase tracking-[0.12em] text-muted-foreground">
-                  Pages
+                  {t("stats.pages")}
                 </p>
               </div>
             </div>
@@ -57,11 +59,8 @@ export default async function AdminAuditPage({ searchParams }: AdminAuditPagePro
 
         <Card density="lg">
           <CardHeader className="block">
-            <CardTitle>Event watcher</CardTitle>
-            <CardDescription>
-              Security, member, project, rate, and time-tracking events with actor, target, and
-              request context.
-            </CardDescription>
+            <CardTitle>{t("watcher.title")}</CardTitle>
+            <CardDescription>{t("watcher.description")}</CardDescription>
           </CardHeader>
           <CardContent>
             <AdminAuditLogClient result={auditLog} />

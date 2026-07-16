@@ -4,6 +4,7 @@ import { Eye, RefreshCw, Search, X } from "lucide-react";
 import type { Route } from "next";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { type FormEvent, useEffect, useState, useTransition } from "react";
+import { useTranslations } from "next-intl";
 
 import { Badge } from "@/src/components/ui/Badge";
 import { Button } from "@/src/components/ui/Button";
@@ -31,6 +32,7 @@ const selectClassName =
   "flex h-10 w-full rounded-[var(--radius-md)] border border-input bg-background/50 px-3 py-2 text-sm text-foreground shadow-sm transition focus-visible:border-ring focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/35";
 
 export function AdminAuditLogClient({ result }: AdminAuditLogClientProps) {
+  const t = useTranslations("AdminAudit");
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -38,6 +40,7 @@ export function AdminAuditLogClient({ result }: AdminAuditLogClientProps) {
   const [selectedRow, setSelectedRow] = useState<AuditLogRow | null>(null);
   const [isRefreshing, startRefreshTransition] = useTransition();
   const rows = result.rows as AuditTableRow[];
+  const auditColumns = getAuditColumns(t);
 
   useEffect(() => {
     if (!watching) return undefined;
@@ -86,10 +89,14 @@ export function AdminAuditLogClient({ result }: AdminAuditLogClientProps) {
       <div className="flex flex-col justify-between gap-3 rounded-[var(--radius-lg)] border border-border bg-card/70 p-3 sm:flex-row sm:items-center">
         <div>
           <p className="text-sm font-medium text-foreground">
-            Showing {result.pageStart}-{result.pageEnd} of {result.totalItems} events
+            {t("client.showing", {
+              start: result.pageStart,
+              end: result.pageEnd,
+              total: result.totalItems,
+            })}
           </p>
           <p className="text-xs text-muted-foreground">
-            Last refreshed {formatIsoTimestamp(result.refreshedAt)}
+            {t("client.lastRefreshed", { time: formatIsoTimestamp(result.refreshedAt) })}
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
@@ -100,7 +107,7 @@ export function AdminAuditLogClient({ result }: AdminAuditLogClientProps) {
               checked={watching}
               onChange={(event) => setWatching(event.currentTarget.checked)}
             />
-            Watch
+            {t("client.watch")}
           </label>
           <Button
             type="button"
@@ -110,7 +117,7 @@ export function AdminAuditLogClient({ result }: AdminAuditLogClientProps) {
             loading={isRefreshing}
             onClick={refreshNow}
           >
-            Refresh
+            {t("client.refresh")}
           </Button>
         </div>
       </div>
@@ -120,23 +127,23 @@ export function AdminAuditLogClient({ result }: AdminAuditLogClientProps) {
         onSubmit={submitFilters}
       >
         <div className="grid gap-3 lg:grid-cols-[minmax(15rem,1fr)_repeat(3,minmax(10rem,12rem))]">
-          <Field label="Search" htmlFor="audit-search">
+          <Field label={t("client.search")} htmlFor="audit-search">
             <Input
               id="audit-search"
               name="q"
               type="search"
               defaultValue={result.filters.query}
-              placeholder="Action, actor, target, request, IP"
+              placeholder={t("client.searchPlaceholder")}
             />
           </Field>
-          <Field label="Event" htmlFor="audit-action">
+          <Field label={t("client.event")} htmlFor="audit-action">
             <select
               id="audit-action"
               name="action"
               defaultValue={result.filters.action}
               className={selectClassName}
             >
-              <option value="">All events</option>
+              <option value="">{t("client.allEvents")}</option>
               {result.actionOptions.map((option) => (
                 <option key={option.value} value={option.value}>
                   {option.label}
@@ -144,14 +151,14 @@ export function AdminAuditLogClient({ result }: AdminAuditLogClientProps) {
               ))}
             </select>
           </Field>
-          <Field label="Target" htmlFor="audit-target-type">
+          <Field label={t("client.target")} htmlFor="audit-target-type">
             <select
               id="audit-target-type"
               name="targetType"
               defaultValue={result.filters.targetType}
               className={selectClassName}
             >
-              <option value="">All targets</option>
+              <option value="">{t("client.allTargets")}</option>
               {result.targetTypeOptions.map((option) => (
                 <option key={option.value} value={option.value}>
                   {option.label}
@@ -159,14 +166,14 @@ export function AdminAuditLogClient({ result }: AdminAuditLogClientProps) {
               ))}
             </select>
           </Field>
-          <Field label="Actor" htmlFor="audit-actor">
+          <Field label={t("client.actor")} htmlFor="audit-actor">
             <select
               id="audit-actor"
               name="actor"
               defaultValue={result.filters.actorMemberId}
               className={selectClassName}
             >
-              <option value="">All actors</option>
+              <option value="">{t("client.allActors")}</option>
               {result.actorOptions.map((option) => (
                 <option key={option.value} value={option.value}>
                   {option.email ? `${option.label} (${option.email})` : option.label}
@@ -176,14 +183,14 @@ export function AdminAuditLogClient({ result }: AdminAuditLogClientProps) {
           </Field>
         </div>
         <div className="grid gap-3 sm:grid-cols-[minmax(10rem,12rem)_minmax(10rem,12rem)_auto_auto] sm:items-end">
-          <Field label="From" htmlFor="audit-from">
+          <Field label={t("client.from")} htmlFor="audit-from">
             <Input id="audit-from" name="from" type="date" defaultValue={result.filters.fromDate} />
           </Field>
-          <Field label="To" htmlFor="audit-to">
+          <Field label={t("client.to")} htmlFor="audit-to">
             <Input id="audit-to" name="to" type="date" defaultValue={result.filters.toDate} />
           </Field>
           <Button type="submit" icon={Search}>
-            Apply
+            {t("client.apply")}
           </Button>
           <Button
             type="button"
@@ -191,7 +198,7 @@ export function AdminAuditLogClient({ result }: AdminAuditLogClientProps) {
             icon={X}
             onClick={() => router.push(pathname as Route)}
           >
-            Clear
+            {t("client.clear")}
           </Button>
         </div>
       </form>
@@ -200,10 +207,10 @@ export function AdminAuditLogClient({ result }: AdminAuditLogClientProps) {
         rows={rows}
         columns={auditColumns}
         getRowKey={(row) => row.id}
-        empty="No audit events match the current filters."
+        empty={t("client.empty")}
         displayMode="responsive"
         density="compact"
-        aria-label="Audit log events"
+        aria-label={t("client.ariaLabel")}
         rowActions={(row) => (
           <Button
             type="button"
@@ -212,7 +219,7 @@ export function AdminAuditLogClient({ result }: AdminAuditLogClientProps) {
             icon={Eye}
             onClick={() => setSelectedRow(row)}
           >
-            Details
+            {t("client.details")}
           </Button>
         )}
       />
@@ -233,61 +240,63 @@ export function AdminAuditLogClient({ result }: AdminAuditLogClientProps) {
   );
 }
 
-const auditColumns: TableColumn<AuditTableRow>[] = [
-  {
-    id: "createdAt",
-    header: "Time",
-    cell: (row) => (
-      <span className="font-ui text-xs font-semibold text-foreground">{row.createdAtLabel}</span>
-    ),
-    width: "12rem",
-  },
-  {
-    id: "action",
-    header: "Event",
-    cell: (row) => (
-      <span className="grid gap-1">
-        <Badge tone={getActionTone(row.action)} dot>
-          {row.action}
-        </Badge>
-        <span className="font-mono text-xs text-muted-foreground">{row.id.slice(0, 8)}</span>
-      </span>
-    ),
-    width: "17rem",
-  },
-  {
-    id: "actor",
-    header: "Actor",
-    cell: (row) => (
-      <span className="grid gap-0.5">
-        <span className="font-medium text-foreground">{row.actorName}</span>
-        {row.actorEmail ? <span className="text-xs">{row.actorEmail}</span> : null}
-      </span>
-    ),
-    width: "14rem",
-  },
-  {
-    id: "target",
-    header: "Target",
-    cell: (row) => (
-      <span className="grid gap-0.5">
-        <span className="font-medium text-foreground">{row.targetType}</span>
-        <span className="break-all font-mono text-xs">{row.targetId}</span>
-      </span>
-    ),
-  },
-  {
-    id: "request",
-    header: "Request",
-    cell: (row) => (
-      <span className="grid gap-0.5">
-        <span>{row.ipAddress ?? "No IP"}</span>
-        {row.requestId ? <span className="font-mono text-xs">{row.requestId}</span> : null}
-      </span>
-    ),
-    width: "12rem",
-  },
-];
+function getAuditColumns(t: ReturnType<typeof useTranslations>): TableColumn<AuditTableRow>[] {
+  return [
+    {
+      id: "createdAt",
+      header: t("client.time"),
+      cell: (row) => (
+        <span className="font-ui text-xs font-semibold text-foreground">{row.createdAtLabel}</span>
+      ),
+      width: "12rem",
+    },
+    {
+      id: "action",
+      header: t("client.event"),
+      cell: (row) => (
+        <span className="grid gap-1">
+          <Badge tone={getActionTone(row.action)} dot>
+            {row.action}
+          </Badge>
+          <span className="font-mono text-xs text-muted-foreground">{row.id.slice(0, 8)}</span>
+        </span>
+      ),
+      width: "17rem",
+    },
+    {
+      id: "actor",
+      header: t("client.actor"),
+      cell: (row) => (
+        <span className="grid gap-0.5">
+          <span className="font-medium text-foreground">{row.actorName}</span>
+          {row.actorEmail ? <span className="text-xs">{row.actorEmail}</span> : null}
+        </span>
+      ),
+      width: "14rem",
+    },
+    {
+      id: "target",
+      header: t("client.target"),
+      cell: (row) => (
+        <span className="grid gap-0.5">
+          <span className="font-medium text-foreground">{row.targetType}</span>
+          <span className="break-all font-mono text-xs">{row.targetId}</span>
+        </span>
+      ),
+    },
+    {
+      id: "request",
+      header: t("client.request"),
+      cell: (row) => (
+        <span className="grid gap-0.5">
+          <span>{row.ipAddress ?? t("client.noIp")}</span>
+          {row.requestId ? <span className="font-mono text-xs">{row.requestId}</span> : null}
+        </span>
+      ),
+      width: "12rem",
+    },
+  ];
+}
 
 function AuditLogDetailsDialog({
   row,
@@ -296,31 +305,37 @@ function AuditLogDetailsDialog({
   row: AuditLogRow | null;
   onOpenChange: (open: boolean) => void;
 }) {
+  const t = useTranslations("AdminAudit");
+
   return (
     <Dialog open={Boolean(row)} onOpenChange={onOpenChange}>
       <DialogContent className="max-h-[calc(100vh-2rem)] max-w-4xl overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>{row ? row.action : "Audit event"}</DialogTitle>
-          <DialogDescription>
-            Append-only event details. Sensitive-looking keys are redacted before display.
-          </DialogDescription>
+          <DialogTitle>{row ? row.action : t("client.auditEvent")}</DialogTitle>
+          <DialogDescription>{t("client.dialogDescription")}</DialogDescription>
         </DialogHeader>
         {row ? (
           <div className="grid gap-4">
             <dl className="grid gap-3 rounded-[var(--radius-lg)] border border-border bg-card/70 p-4 text-sm sm:grid-cols-2">
-              <AuditMeta label="Time" value={row.createdAtLabel} />
+              <AuditMeta label={t("client.time")} value={row.createdAtLabel} />
               <AuditMeta
-                label="Actor"
+                label={t("client.actor")}
                 value={row.actorEmail ? `${row.actorName} (${row.actorEmail})` : row.actorName}
               />
-              <AuditMeta label="Target" value={`${row.targetType} / ${row.targetId}`} />
-              <AuditMeta label="Request" value={row.requestId ?? "No request id"} />
-              <AuditMeta label="IP address" value={row.ipAddress ?? "No IP"} />
-              <AuditMeta label="User agent" value={row.userAgent ?? "No user agent"} />
+              <AuditMeta label={t("client.target")} value={`${row.targetType} / ${row.targetId}`} />
+              <AuditMeta
+                label={t("client.request")}
+                value={row.requestId ?? t("client.noRequestId")}
+              />
+              <AuditMeta label={t("client.ipAddress")} value={row.ipAddress ?? t("client.noIp")} />
+              <AuditMeta
+                label={t("client.userAgent")}
+                value={row.userAgent ?? t("client.noUserAgent")}
+              />
             </dl>
             <div className="grid gap-4 lg:grid-cols-2">
-              <JsonBlock title="Before" value={row.before} />
-              <JsonBlock title="After" value={row.after} />
+              <JsonBlock title={t("client.before")} value={row.before} />
+              <JsonBlock title={t("client.after")} value={row.after} />
             </div>
           </div>
         ) : null}
@@ -341,6 +356,7 @@ function AuditMeta({ label, value }: { label: string; value: string }) {
 }
 
 function JsonBlock({ title, value }: { title: string; value: unknown }) {
+  const t = useTranslations("AdminAudit");
   const hasValue = value !== null && value !== undefined;
 
   return (
@@ -352,7 +368,7 @@ function JsonBlock({ title, value }: { title: string; value: unknown }) {
           !hasValue && "text-muted-foreground/70",
         )}
       >
-        {hasValue ? JSON.stringify(value, null, 2) : "No data"}
+        {hasValue ? JSON.stringify(value, null, 2) : t("client.noData")}
       </pre>
     </section>
   );
