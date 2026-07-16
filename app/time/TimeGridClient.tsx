@@ -34,6 +34,7 @@ import {
   useTransition,
   type ReactNode,
 } from "react";
+import { useTranslations } from "next-intl";
 
 import { parseDurationToMinutes } from "@/src/lib/duration";
 import { cn } from "@/src/lib/utils";
@@ -98,8 +99,11 @@ type TimeGridClientProps = {
   week: TimeGridWeek;
 };
 
+type TimeTrackingTranslator = ReturnType<typeof useTranslations>;
+
 export function TimeGridClient({ week }: TimeGridClientProps) {
   const router = useRouter();
+  const t = useTranslations("TimeTracking");
   const [isPending, startTransition] = useTransition();
   const [view, setView] = useState<"grid" | "day">("grid");
   const [selectedDayIso, setSelectedDayIso] = useState(() =>
@@ -169,7 +173,7 @@ export function TimeGridClient({ week }: TimeGridClientProps) {
     const cell = getCellEntries(entriesByCell, project.projectId, day.isoDate);
 
     if (parsedMinutes === null) {
-      setNotice({ tone: "error", message: "Use time like 3.5, 3:30, 3h 20m, or 200m." });
+      setNotice({ tone: "error", message: t("errors.invalidDurationFormat") });
       return;
     }
 
@@ -280,7 +284,7 @@ export function TimeGridClient({ week }: TimeGridClientProps) {
             onClick={() => setView("grid")}
           >
             <Grid3X3 className="size-4" aria-hidden="true" />
-            Weekly grid
+            {t("view.weeklyGrid")}
           </button>
           <button
             type="button"
@@ -293,7 +297,7 @@ export function TimeGridClient({ week }: TimeGridClientProps) {
             onClick={() => setView("day")}
           >
             <List className="size-4" aria-hidden="true" />
-            Day
+            {t("view.day")}
           </button>
         </div>
 
@@ -320,7 +324,7 @@ export function TimeGridClient({ week }: TimeGridClientProps) {
           }}
         >
           <Plus className="size-4" aria-hidden="true" />
-          New entry
+          {t("actions.newEntry")}
         </button>
       </div>
 
@@ -330,7 +334,7 @@ export function TimeGridClient({ week }: TimeGridClientProps) {
             <button
               type="button"
               className="grid size-8 place-items-center rounded-full text-muted-foreground transition hover:bg-secondary hover:text-foreground"
-              aria-label="Previous week"
+              aria-label={t("actions.previousWeek")}
               onClick={() => navigateToWeek(week.previousWeek)}
             >
               <ChevronLeft className="size-4" aria-hidden="true" />
@@ -339,7 +343,7 @@ export function TimeGridClient({ week }: TimeGridClientProps) {
             <button
               type="button"
               className="grid size-8 place-items-center rounded-full text-muted-foreground transition hover:bg-secondary hover:text-foreground"
-              aria-label="Next week"
+              aria-label={t("actions.nextWeek")}
               onClick={() => navigateToWeek(week.nextWeek)}
             >
               <ChevronRight className="size-4" aria-hidden="true" />
@@ -348,7 +352,7 @@ export function TimeGridClient({ week }: TimeGridClientProps) {
 
           {week.weekStart === week.thisWeek ? (
             <span className="rounded-[var(--radius-pill)] bg-accent/15 px-3 py-1.5 font-ui text-[11px] font-semibold uppercase tracking-[0.08em] text-accent">
-              This week
+              {t("labels.thisWeek")}
             </span>
           ) : (
             <button
@@ -357,14 +361,14 @@ export function TimeGridClient({ week }: TimeGridClientProps) {
               onClick={() => navigateToWeek(week.thisWeek)}
             >
               <RotateCcw className="size-4" aria-hidden="true" />
-              This week
+              {t("labels.thisWeek")}
             </button>
           )}
         </div>
 
         <div className="flex items-center gap-3 lg:justify-end">
           <span className="font-ui text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
-            Week total
+            {t("labels.weekTotal")}
           </span>
           <span className="text-[26px] font-semibold text-foreground">
             {formatMinutesAsHours(weekTotal)}
@@ -379,27 +383,27 @@ export function TimeGridClient({ week }: TimeGridClientProps) {
           disabled={isPending || !selectedDay || selectedDay.locked}
           className="inline-flex items-center gap-2 rounded-[var(--radius-pill)] border border-border bg-card px-3 py-2 text-sm font-medium text-foreground transition hover:bg-secondary disabled:cursor-not-allowed disabled:text-muted-foreground disabled:opacity-50"
           title={
-            selectedDay ? `Copy entries from the day before ${selectedDay.isoDate}.` : undefined
+            selectedDay ? t("tooltips.copyPreviousDay", { date: selectedDay.isoDate }) : undefined
           }
           onClick={() => runAction(() => copyPreviousDayEntriesAction({ targetDate }))}
         >
           <Copy className="size-4" aria-hidden="true" />
-          Same as yesterday
+          {t("actions.sameAsYesterday")}
         </button>
         <button
           type="button"
           disabled={isPending || weekHasLockedPeriod}
           className="inline-flex items-center gap-2 rounded-[var(--radius-pill)] border border-border bg-card px-3 py-2 text-sm font-medium text-foreground transition hover:bg-secondary disabled:cursor-not-allowed disabled:text-muted-foreground disabled:opacity-50"
-          title="Copy entries from the previous week into this week."
+          title={t("tooltips.duplicatePreviousWeek")}
           onClick={() =>
             runAction(() => duplicatePreviousWeekAction({ weekStartDate: week.weekStart }))
           }
         >
           <Copy className="size-4" aria-hidden="true" />
-          Duplicate last week
+          {t("actions.duplicateLastWeek")}
         </button>
         <span className="font-ui text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
-          Assigned
+          {t("labels.assigned")}
         </span>
         {projectRows.slice(0, 3).map((project) => (
           <span
@@ -417,7 +421,7 @@ export function TimeGridClient({ week }: TimeGridClientProps) {
         {recentProjects.length ? (
           <>
             <span className="font-ui text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
-              Recent
+              {t("labels.recent")}
             </span>
             {recentProjects.slice(0, 3).map((project) => (
               <button
@@ -468,8 +472,7 @@ export function TimeGridClient({ week }: TimeGridClientProps) {
         <div className="flex items-start gap-3 rounded-[var(--radius-md)] border border-warning/30 bg-warning/12 px-4 py-3 text-sm text-warning">
           <AlertTriangle className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
           <div>
-            <span className="font-semibold">Locked period.</span> Some days in this week belong to a
-            submitted timesheet and are read-only.
+            <span className="font-semibold">{t("locked.title")}</span> {t("locked.description")}
           </div>
         </div>
       ) : null}
@@ -516,13 +519,14 @@ export function TimeGridClient({ week }: TimeGridClientProps) {
               runAction(() => startRunningTimerAction({ projectId, description }))
             }
             onStopTimer={() => runAction(stopRunningTimerAction)}
+            t={t}
           />
         ) : (
           <>
             <div className="hidden overflow-x-auto lg:block">
               <div className="min-w-[900px] overflow-hidden rounded-[var(--radius-lg)] border border-border bg-card">
                 <div className="grid grid-cols-[minmax(190px,1.5fr)_repeat(7,minmax(54px,1fr))_92px]">
-                  <GridHeaderCell label="Projects" />
+                  <GridHeaderCell label={t("grid.projects")} />
                   {week.days.map((day) => (
                     <div
                       key={day.isoDate}
@@ -538,7 +542,7 @@ export function TimeGridClient({ week }: TimeGridClientProps) {
                       <span className="mt-0.5 block text-[15px] font-medium">{day.dayNumber}</span>
                     </div>
                   ))}
-                  <GridHeaderCell label="Total" noRightBorder />
+                  <GridHeaderCell label={t("grid.total")} noRightBorder />
 
                   {projectRows.map((project) => {
                     const inactive = inactiveProjectIds.has(project.projectId);
@@ -571,10 +575,10 @@ export function TimeGridClient({ week }: TimeGridClientProps) {
                             disabled={!canToggleInactive && !inactive}
                             title={
                               inactive
-                                ? "Undo inactive week"
+                                ? t("inactive.undo")
                                 : canToggleInactive
-                                  ? "Mark as inactive week"
-                                  : "Remove entries first"
+                                  ? t("inactive.mark")
+                                  : t("inactive.removeEntriesFirst")
                             }
                             className="grid size-7 place-items-center rounded-[var(--radius-xs)] text-muted-foreground transition hover:bg-secondary hover:text-accent disabled:cursor-not-allowed disabled:opacity-35"
                             onClick={() => toggleInactive(project, inactive)}
@@ -607,6 +611,7 @@ export function TimeGridClient({ week }: TimeGridClientProps) {
                                     localDate: day.isoDate,
                                   })
                                 }
+                                t={t}
                               />
                             ))}
                             <div className="flex min-h-14 items-center justify-center border-b border-border text-base font-semibold">
@@ -619,7 +624,7 @@ export function TimeGridClient({ week }: TimeGridClientProps) {
                   })}
 
                   <div className="flex min-h-[52px] items-center border-r border-border bg-secondary px-3 font-ui text-[11px] font-semibold uppercase tracking-[0.06em] text-muted-foreground">
-                    Daily total
+                    {t("grid.dailyTotal")}
                   </div>
                   {week.days.map((day, dayIndex) => {
                     const total = dailyTotals[dayIndex] ?? 0;
@@ -641,7 +646,9 @@ export function TimeGridClient({ week }: TimeGridClientProps) {
                         {formatMinutesAsHours(total) || "0"}
                         {over ? (
                           <WarningTip
-                            text={`That is ${formatMinutesAsHours(total)}h in one day.`}
+                            text={t("warnings.dailyTotalExact", {
+                              hours: formatMinutesAsHours(total),
+                            })}
                           />
                         ) : null}
                       </div>
@@ -697,13 +704,13 @@ export function TimeGridClient({ week }: TimeGridClientProps) {
                             className="text-xs font-semibold text-accent"
                             onClick={() => toggleInactive(project, true)}
                           >
-                            Undo
+                            {t("actions.undo")}
                           </button>
                         ) : null}
                       </div>
                       {inactive ? (
                         <div className="px-4 pb-4 text-sm italic text-muted-foreground">
-                          Inactive week
+                          {t("inactive.title")}
                         </div>
                       ) : (
                         <div className="grid grid-cols-7 gap-1 px-3 pb-3">
@@ -757,8 +764,7 @@ export function TimeGridClient({ week }: TimeGridClientProps) {
 
             <div className="flex items-center gap-2 text-xs text-muted-foreground">
               <Info className="size-4" aria-hidden="true" />
-              Type time like 3.5, 3:30, 3h 20m, or 200m. Empty cells open the entry form because
-              descriptions are required.
+              {t("help.durationFormats")}
             </div>
           </>
         )
@@ -767,9 +773,9 @@ export function TimeGridClient({ week }: TimeGridClientProps) {
           <div className="mx-auto grid size-12 place-items-center rounded-full bg-secondary text-muted-foreground">
             <Clock3 className="size-6" aria-hidden="true" />
           </div>
-          <h2 className="mt-4 text-lg font-semibold">No active assigned projects</h2>
+          <h2 className="mt-4 text-lg font-semibold">{t("empty.title")}</h2>
           <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-muted-foreground">
-            Time can be logged after an admin assigns you to an active project for this week.
+            {t("empty.description")}
           </p>
         </div>
       )}
@@ -784,6 +790,7 @@ export function TimeGridClient({ week }: TimeGridClientProps) {
             refreshWithResult(result);
             if (result.status === "success") setEntryModal(null);
           }}
+          t={t}
         />
       ) : null}
 
@@ -806,6 +813,7 @@ export function TimeGridClient({ week }: TimeGridClientProps) {
           onClose={() => setBreakdown(null)}
           onDelete={(entry) => runAction(() => deleteTimeEntryAction({ timeEntryId: entry.id }))}
           onEdit={(entry) => setEntryModal({ mode: "edit", entry })}
+          t={t}
         />
       ) : null}
     </div>
@@ -840,6 +848,7 @@ type TimeGridCellProps = {
   disabled: boolean;
   onCommit: (rawValue: string) => void;
   onOpenBreakdown: () => void;
+  t: TimeTrackingTranslator;
 };
 
 function TimeGridCell({
@@ -851,16 +860,20 @@ function TimeGridCell({
   disabled,
   onCommit,
   onOpenBreakdown,
+  t,
 }: TimeGridCellProps) {
   const simpleEntry =
     cell.entries.length === 1 && isSimpleDurationEntry(cell.entries[0]) ? cell.entries[0] : null;
   const canInlineEdit = !disabled && !cell.locked && (cell.entries.length === 0 || simpleEntry);
-  const warningTexts = getCellWarnings({
-    day,
-    dayTotalMinutes,
-    entriesByDay,
-    cell,
-  });
+  const warningTexts = getCellWarnings(
+    {
+      day,
+      dayTotalMinutes,
+      entriesByDay,
+      cell,
+    },
+    t,
+  );
 
   if (!isProjectAssignableOnDate(project, day.isoDate)) {
     return (
@@ -926,7 +939,9 @@ function TimeGridCell({
         <button
           type="button"
           className="absolute left-1.5 top-1.5 grid size-4 place-items-center text-muted-foreground hover:text-accent"
-          title={cell.needsDescription ? "Description needed" : "Description saved"}
+          title={
+            cell.needsDescription ? t("warnings.descriptionNeeded") : t("warnings.descriptionSaved")
+          }
           onClick={onOpenBreakdown}
         >
           <MessageSquare className="size-3" aria-hidden="true" />
@@ -938,17 +953,19 @@ function TimeGridCell({
 }
 
 function InactiveProjectRow({ onUndo }: { onUndo: () => void }) {
+  const t = useTranslations("TimeTracking");
+
   return (
     <div className="col-span-8 flex min-h-14 items-center gap-3 border-b border-border bg-[repeating-linear-gradient(135deg,transparent,transparent_8px,var(--secondary)_8px,var(--secondary)_16px)] px-4">
       <Moon className="size-4 text-muted-foreground" aria-hidden="true" />
-      <span className="text-sm font-semibold text-muted-foreground">Inactive week</span>
-      <span className="text-xs text-muted-foreground">· No work on this project this week.</span>
+      <span className="text-sm font-semibold text-muted-foreground">{t("inactive.title")}</span>
+      <span className="text-xs text-muted-foreground">· {t("inactive.description")}</span>
       <button
         type="button"
         className="ml-auto text-sm font-semibold text-accent hover:underline"
         onClick={onUndo}
       >
-        Undo
+        {t("actions.undo")}
       </button>
     </div>
   );
@@ -963,6 +980,8 @@ function DraftRestoreBanner({
   onDiscard: () => void;
   onRestore: () => void;
 }) {
+  const t = useTranslations("TimeTracking");
+
   return (
     <div className="flex flex-col gap-3 rounded-[var(--radius-md)] border border-accent/30 bg-accent/10 px-4 py-3 text-sm text-foreground sm:flex-row sm:items-center sm:justify-between">
       <div className="flex items-start gap-3">
@@ -970,8 +989,10 @@ function DraftRestoreBanner({
           <Info className="size-4" aria-hidden="true" />
         </span>
         <div>
-          <p className="font-semibold">Unsaved time entry draft</p>
-          <p className="text-muted-foreground">Last saved {formatDraftTimestamp(updatedAt)}.</p>
+          <p className="font-semibold">{t("draft.title")}</p>
+          <p className="text-muted-foreground">
+            {t("draft.lastSaved", { time: formatDraftTimestamp(updatedAt) })}
+          </p>
         </div>
       </div>
       <div className="flex flex-wrap gap-2 sm:justify-end">
@@ -981,7 +1002,7 @@ function DraftRestoreBanner({
           onClick={onDiscard}
         >
           <Trash2 className="size-4" aria-hidden="true" />
-          Discard
+          {t("actions.discard")}
         </button>
         <button
           type="button"
@@ -989,7 +1010,7 @@ function DraftRestoreBanner({
           onClick={onRestore}
         >
           <RotateCcw className="size-4" aria-hidden="true" />
-          Restore draft
+          {t("actions.restoreDraft")}
         </button>
       </div>
     </div>
@@ -1013,6 +1034,7 @@ type DayViewProps = {
   onSelectDay: (localDate: string) => void;
   onStartTimer: (projectId: string, description: string) => void;
   onStopTimer: () => void;
+  t: TimeTrackingTranslator;
 };
 
 function DayView({
@@ -1032,6 +1054,7 @@ function DayView({
   onSelectDay,
   onStartTimer,
   onStopTimer,
+  t,
 }: DayViewProps) {
   const sortedEntries = [...entries].sort((a, b) => {
     const aTime = a.startTime ?? "99:99";
@@ -1048,6 +1071,7 @@ function DayView({
         runningTimer={runningTimer}
         onStart={onStartTimer}
         onStop={onStopTimer}
+        t={t}
       />
 
       <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
@@ -1073,7 +1097,7 @@ function DayView({
 
         <div className="flex items-center gap-3 sm:justify-end">
           <span className="font-ui text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
-            Day total
+            {t("labels.dayTotal")}
           </span>
           <span
             className={cn(
@@ -1090,14 +1114,14 @@ function DayView({
       {day.state === "future" ? (
         <div className="flex items-start gap-3 rounded-[var(--radius-md)] border border-warning/30 bg-warning/12 px-4 py-3 text-sm text-warning">
           <AlertTriangle className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
-          This is a future date. Entries are allowed, but they stay flagged.
+          {t("warnings.futureDateAllowed")}
         </div>
       ) : null}
 
       {dailyTotalMinutes > 1440 ? (
         <div className="flex items-start gap-3 rounded-[var(--radius-md)] border border-warning/30 bg-warning/12 px-4 py-3 text-sm text-warning">
           <AlertTriangle className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
-          The selected day has more than 24 logged hours.
+          {t("warnings.dayOver24")}
         </div>
       ) : null}
 
@@ -1105,9 +1129,9 @@ function DayView({
         {sortedEntries.length ? (
           sortedEntries.map((entry) => {
             const project = projectsById.get(entry.projectId);
-            const warnings = getEntryWarnings(entry, entriesByDay.get(entry.localDate) ?? []);
+            const warnings = getEntryWarnings(entry, entriesByDay.get(entry.localDate) ?? [], t);
 
-            if (day.state === "future") warnings.push("Future date");
+            if (day.state === "future") warnings.push(t("warnings.futureDate"));
 
             return (
               <div
@@ -1124,7 +1148,7 @@ function DayView({
                       <span className="block">{entry.endTime}</span>
                     </>
                   ) : (
-                    <span className="italic">Duration</span>
+                    <span className="italic">{t("mode.duration")}</span>
                   )}
                 </div>
 
@@ -1132,7 +1156,7 @@ function DayView({
                   <div className="flex flex-wrap items-center gap-2">
                     <p className="text-sm font-semibold text-foreground">{entry.description}</p>
                     <span className="rounded-[var(--radius-pill)] bg-secondary px-2 py-0.5 font-ui text-[10px] font-semibold uppercase tracking-[0.06em] text-muted-foreground">
-                      {entry.source.toLowerCase()}
+                      {formatEntrySource(entry.source, t)}
                     </span>
                   </div>
                   <div className="mt-1 flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
@@ -1142,7 +1166,7 @@ function DayView({
                         style={{ backgroundColor: project?.color ?? "var(--muted-foreground)" }}
                         aria-hidden="true"
                       />
-                      {project?.name ?? "Archived project"}
+                      {project?.name ?? t("labels.archivedProject")}
                     </span>
                     <span>·</span>
                     <span className="font-semibold text-foreground">
@@ -1169,7 +1193,7 @@ function DayView({
                     type="button"
                     disabled={entry.locked || isPending}
                     className="grid size-9 place-items-center rounded-[var(--radius-sm)] text-muted-foreground transition hover:bg-secondary hover:text-accent disabled:cursor-not-allowed disabled:opacity-40"
-                    aria-label="Edit entry"
+                    aria-label={t("actions.editEntry")}
                     onClick={() => onEditEntry(entry)}
                   >
                     <Pencil className="size-4" aria-hidden="true" />
@@ -1178,7 +1202,7 @@ function DayView({
                     type="button"
                     disabled={entry.locked || isPending}
                     className="grid size-9 place-items-center rounded-[var(--radius-sm)] text-muted-foreground transition hover:bg-destructive/12 hover:text-destructive disabled:cursor-not-allowed disabled:opacity-40"
-                    aria-label="Delete entry"
+                    aria-label={t("actions.deleteEntry")}
                     onClick={() => onDeleteEntry(entry)}
                   >
                     <Trash2 className="size-4" aria-hidden="true" />
@@ -1192,9 +1216,9 @@ function DayView({
             <div className="mx-auto grid size-12 place-items-center rounded-full bg-secondary text-muted-foreground">
               <Clock3 className="size-6" aria-hidden="true" />
             </div>
-            <h2 className="mt-4 text-base font-semibold">No entries on this day</h2>
+            <h2 className="mt-4 text-base font-semibold">{t("day.emptyTitle")}</h2>
             <p className="mx-auto mt-2 max-w-sm text-sm leading-6 text-muted-foreground">
-              Start a timer or add an entry for the selected project and day.
+              {t("day.emptyDescription")}
             </p>
           </div>
         )}
@@ -1208,7 +1232,7 @@ function DayView({
           onClick={() => onAddEntry(day.isoDate)}
         >
           <Plus className="size-4" aria-hidden="true" />
-          Add entry
+          {t("actions.addEntry")}
         </button>
       </div>
     </div>
@@ -1222,6 +1246,7 @@ function TimerComposer({
   runningTimer,
   onStart,
   onStop,
+  t,
 }: {
   disabled: boolean;
   projects: TimeGridAssignedProject[];
@@ -1229,6 +1254,7 @@ function TimerComposer({
   runningTimer: TimeGridWeek["runningTimer"];
   onStart: (projectId: string, description: string) => void;
   onStop: () => void;
+  t: TimeTrackingTranslator;
 }) {
   const [description, setDescription] = useState("");
   const [projectId, setProjectId] = useState(projects[0]?.projectId ?? "");
@@ -1245,7 +1271,7 @@ function TimerComposer({
         </span>
         <div className="min-w-0 flex-1">
           <p className="truncate text-sm font-semibold text-foreground">
-            {runningTimer.description || "Tracked with timer"}
+            {runningTimer.description || t("timer.trackedWithTimer")}
           </p>
           <p className="mt-1 flex items-center gap-2 text-sm text-muted-foreground">
             <span
@@ -1264,7 +1290,7 @@ function TimerComposer({
           onClick={onStop}
         >
           <Square className="size-3.5 fill-current" aria-hidden="true" />
-          Stop
+          {t("timer.stop")}
         </button>
       </div>
     );
@@ -1276,7 +1302,7 @@ function TimerComposer({
         <PlayCircle className="hidden size-5 text-muted-foreground lg:block" aria-hidden="true" />
         <input
           value={description}
-          placeholder="What are you working on?"
+          placeholder={t("timer.placeholder")}
           className={inputClassName(false)}
           onChange={(event) => setDescription(event.target.value)}
         />
@@ -1301,14 +1327,14 @@ function TimerComposer({
           }}
         >
           <Play className="size-4 fill-current" aria-hidden="true" />
-          Start
+          {t("timer.start")}
         </button>
       </div>
 
       {recentProjects.length ? (
         <div className="flex flex-wrap items-center gap-2">
           <span className="font-ui text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
-            Recent
+            {t("labels.recent")}
           </span>
           {recentProjects.slice(0, 4).map((project) => (
             <button
@@ -1342,9 +1368,10 @@ type EntryModalProps = {
   projects: TimeGridAssignedProject[];
   onClose: () => void;
   onDone: (result: TimeTrackingActionState) => void;
+  t: TimeTrackingTranslator;
 };
 
-function EntryModal({ state, week, projects, onClose, onDone }: EntryModalProps) {
+function EntryModal({ state, week, projects, onClose, onDone, t }: EntryModalProps) {
   const [isPending, startTransition] = useTransition();
   const initialProjectId = state.mode === "edit" ? state.entry.projectId : state.projectId;
   const initialLocalDate = state.mode === "edit" ? state.entry.localDate : state.localDate;
@@ -1469,12 +1496,12 @@ function EntryModal({ state, week, projects, onClose, onDone }: EntryModalProps)
     const durationMinutes = parseDurationToMinutes(durationText);
 
     if (timingMode === "DURATION" && (!durationMinutes || durationMinutes <= 0)) {
-      setFieldErrors({ durationMinutes: "Duration must be greater than zero." });
+      setFieldErrors({ durationMinutes: t("fieldErrors.durationPositive") });
       return;
     }
 
     if (timingMode === "INTERVAL" && intervalMinutes <= 0) {
-      setFieldErrors({ endTime: "End time must be after start time." });
+      setFieldErrors({ endTime: t("fieldErrors.endAfterStart") });
       return;
     }
 
@@ -1536,13 +1563,13 @@ function EntryModal({ state, week, projects, onClose, onDone }: EntryModalProps)
       >
         <div className="flex items-center justify-between border-b border-border px-6 py-5">
           <h2 id="time-entry-dialog-title" className="text-xl font-semibold">
-            {state.mode === "edit" ? "Edit time entry" : "New time entry"}
+            {state.mode === "edit" ? t("entryModal.editTitle") : t("entryModal.newTitle")}
           </h2>
           <button
             type="button"
             className="grid size-8 place-items-center rounded-full text-muted-foreground hover:bg-secondary hover:text-foreground"
             onClick={closeModal}
-            aria-label="Close"
+            aria-label={t("actions.close")}
           >
             <X className="size-5" aria-hidden="true" />
           </button>
@@ -1572,17 +1599,17 @@ function EntryModal({ state, week, projects, onClose, onDone }: EntryModalProps)
                 </div>
                 <div className="mt-1 flex items-center gap-1.5 text-xs text-muted-foreground">
                   <Info className="size-3.5 text-accent" aria-hidden="true" />
-                  Add a short description and save.
+                  {t("entryModal.prefillHint")}
                 </div>
               </div>
             </div>
           ) : null}
 
-          <Field label="Description" required error={fieldErrors?.description}>
+          <Field label={t("fields.description")} required error={fieldErrors?.description}>
             <textarea
               rows={3}
               value={description}
-              placeholder="What did you work on?"
+              placeholder={t("fields.descriptionPlaceholder")}
               className={inputClassName(Boolean(fieldErrors?.description))}
               onChange={(event) => {
                 setDescription(event.target.value);
@@ -1591,7 +1618,7 @@ function EntryModal({ state, week, projects, onClose, onDone }: EntryModalProps)
             />
           </Field>
 
-          <Field label="Project" required error={fieldErrors?.projectId}>
+          <Field label={t("fields.project")} required error={fieldErrors?.projectId}>
             <select
               value={projectId}
               className={inputClassName(Boolean(fieldErrors?.projectId))}
@@ -1609,7 +1636,7 @@ function EntryModal({ state, week, projects, onClose, onDone }: EntryModalProps)
           </Field>
 
           <div className="grid gap-4 sm:grid-cols-[1fr_160px]">
-            <Field label="Date" required error={fieldErrors?.localDate}>
+            <Field label={t("fields.date")} required error={fieldErrors?.localDate}>
               <input
                 type="date"
                 value={localDate}
@@ -1622,7 +1649,7 @@ function EntryModal({ state, week, projects, onClose, onDone }: EntryModalProps)
                 }}
               />
             </Field>
-            <Field label="Mode" required>
+            <Field label={t("fields.mode")} required>
               <div className="inline-flex rounded-[var(--radius-pill)] border border-border bg-secondary p-1">
                 <button
                   type="button"
@@ -1637,7 +1664,7 @@ function EntryModal({ state, week, projects, onClose, onDone }: EntryModalProps)
                     markDraftDirty();
                   }}
                 >
-                  Duration
+                  {t("mode.duration")}
                 </button>
                 <button
                   type="button"
@@ -1652,14 +1679,14 @@ function EntryModal({ state, week, projects, onClose, onDone }: EntryModalProps)
                     markDraftDirty();
                   }}
                 >
-                  Interval
+                  {t("mode.interval")}
                 </button>
               </div>
             </Field>
           </div>
 
           {timingMode === "DURATION" ? (
-            <Field label="Duration" required error={fieldErrors?.durationMinutes}>
+            <Field label={t("fields.duration")} required error={fieldErrors?.durationMinutes}>
               <input
                 inputMode="decimal"
                 value={durationText}
@@ -1673,7 +1700,7 @@ function EntryModal({ state, week, projects, onClose, onDone }: EntryModalProps)
             </Field>
           ) : (
             <div className="grid gap-4 sm:grid-cols-[1fr_1fr_auto] sm:items-end">
-              <Field label="Start" required error={fieldErrors?.startTime}>
+              <Field label={t("fields.start")} required error={fieldErrors?.startTime}>
                 <input
                   type="time"
                   value={startTime}
@@ -1684,7 +1711,7 @@ function EntryModal({ state, week, projects, onClose, onDone }: EntryModalProps)
                   }}
                 />
               </Field>
-              <Field label="End" required error={fieldErrors?.endTime}>
+              <Field label={t("fields.end")} required error={fieldErrors?.endTime}>
                 <input
                   type="time"
                   value={endTime}
@@ -1704,20 +1731,20 @@ function EntryModal({ state, week, projects, onClose, onDone }: EntryModalProps)
           {timingMode === "DURATION" && parsedMinutes && parsedMinutes > 1440 ? (
             <div className="flex items-center gap-2 text-sm text-warning">
               <AlertTriangle className="size-4" aria-hidden="true" />
-              That is more than 24h. This is a warning, not a blocker.
+              {t("warnings.moreThan24NotBlocked")}
             </div>
           ) : null}
 
           {timingMode === "INTERVAL" && intervalMinutes >= 480 ? (
             <div className="flex items-center gap-2 text-sm text-warning">
               <AlertTriangle className="size-4" aria-hidden="true" />
-              This is a long continuous session. This is a warning, not a blocker.
+              {t("warnings.longSessionNotBlocked")}
             </div>
           ) : null}
 
           <div className="flex items-center gap-2 text-xs text-muted-foreground">
             <Info className="size-4" aria-hidden="true" />
-            Project and description are required. Future dates and long days save with warnings.
+            {t("entryModal.requiredHint")}
           </div>
 
           {createDraftKey && description.trim() && draftStatus !== "idle" ? (
@@ -1729,10 +1756,10 @@ function EntryModal({ state, week, projects, onClose, onDone }: EntryModalProps)
               aria-live="polite"
             >
               {draftStatus === "saving"
-                ? "Saving draft..."
+                ? t("draft.saving")
                 : draftStatus === "saved"
-                  ? "Draft saved"
-                  : "Draft not saved"}
+                  ? t("draft.saved")
+                  : t("draft.notSaved")}
             </div>
           ) : null}
         </div>
@@ -1743,7 +1770,7 @@ function EntryModal({ state, week, projects, onClose, onDone }: EntryModalProps)
             className="rounded-[var(--radius-md)] border border-border px-4 py-2 text-sm font-semibold hover:bg-secondary"
             onClick={closeModal}
           >
-            Cancel
+            {t("actions.cancel")}
           </button>
           <button
             type="button"
@@ -1752,7 +1779,7 @@ function EntryModal({ state, week, projects, onClose, onDone }: EntryModalProps)
             onClick={submit}
           >
             <Check className="size-4" aria-hidden="true" />
-            Save
+            {t("actions.save")}
           </button>
         </div>
       </div>
@@ -1769,6 +1796,7 @@ type BreakdownDialogProps = {
   onClose: () => void;
   onDelete: (entry: TimeGridEntry) => void;
   onEdit: (entry: TimeGridEntry) => void;
+  t: TimeTrackingTranslator;
 };
 
 function BreakdownDialog({
@@ -1780,6 +1808,7 @@ function BreakdownDialog({
   onClose,
   onDelete,
   onEdit,
+  t,
 }: BreakdownDialogProps) {
   const total = entries.reduce((sum, entry) => sum + entry.durationMinutes, 0);
   const dialogRef = useModalFocusTrap<HTMLDivElement>(onClose);
@@ -1809,14 +1838,14 @@ function BreakdownDialog({
               {project.name} · {day.shortLabel} {day.dayNumber}
             </div>
             <h2 id="time-entry-breakdown-title" className="mt-1 text-lg font-semibold">
-              Entries · {formatMinutesAsHours(total)}h
+              {t("breakdown.entries")} · {formatMinutesAsHours(total)}h
             </h2>
           </div>
           <button
             type="button"
             className="grid size-8 place-items-center rounded-full text-muted-foreground hover:bg-secondary hover:text-foreground"
             onClick={onClose}
-            aria-label="Close"
+            aria-label={t("actions.close")}
           >
             <X className="size-5" aria-hidden="true" />
           </button>
@@ -1825,7 +1854,7 @@ function BreakdownDialog({
         <div className="grid gap-3 p-5">
           {entries.length ? (
             entries.map((entry) => {
-              const warnings = getEntryWarnings(entry, entriesByDay.get(entry.localDate) ?? []);
+              const warnings = getEntryWarnings(entry, entriesByDay.get(entry.localDate) ?? [], t);
               return (
                 <div
                   key={entry.id}
@@ -1839,11 +1868,13 @@ function BreakdownDialog({
                       {formatMinutesAsHours(entry.durationMinutes)}h
                     </div>
                     <div className="font-ui text-[10px] font-semibold uppercase tracking-[0.05em] text-muted-foreground">
-                      {entry.startedAt ? "Timed" : "Hours"}
+                      {entry.startedAt ? t("source.timed") : t("source.hours")}
                     </div>
                   </div>
                   <div className="min-w-0 flex-1">
-                    <p className="text-sm font-medium">{entry.description || "No description"}</p>
+                    <p className="text-sm font-medium">
+                      {entry.description || t("labels.noDescription")}
+                    </p>
                     {warnings.length ? (
                       <div className="mt-2 flex flex-wrap gap-2">
                         {warnings.map((warning) => (
@@ -1864,14 +1895,14 @@ function BreakdownDialog({
                       className="rounded-[var(--radius-sm)] px-2 py-1 text-xs font-semibold text-accent hover:bg-card"
                       onClick={() => onEdit(entry)}
                     >
-                      Edit
+                      {t("actions.edit")}
                     </button>
                     <button
                       type="button"
                       disabled={entry.locked}
                       className="grid size-8 place-items-center rounded-[var(--radius-sm)] text-muted-foreground hover:bg-destructive/12 hover:text-destructive disabled:cursor-not-allowed disabled:opacity-40"
                       onClick={() => onDelete(entry)}
-                      aria-label="Delete entry"
+                      aria-label={t("actions.deleteEntry")}
                     >
                       <Trash2 className="size-4" aria-hidden="true" />
                     </button>
@@ -1880,13 +1911,16 @@ function BreakdownDialog({
               );
             })
           ) : (
-            <div className="py-8 text-center text-sm text-muted-foreground">No entries yet.</div>
+            <div className="py-8 text-center text-sm text-muted-foreground">
+              {t("breakdown.noEntries")}
+            </div>
           )}
         </div>
 
         <div className="flex items-center justify-between gap-3 border-t border-border px-5 py-4">
           <span className="flex items-center gap-2 text-xs text-muted-foreground">
-            <Info className="size-4" aria-hidden="true" />A description is required per entry.
+            <Info className="size-4" aria-hidden="true" />
+            {t("breakdown.descriptionRequired")}
           </span>
           <button
             type="button"
@@ -1894,7 +1928,7 @@ function BreakdownDialog({
             onClick={onAdd}
           >
             <Plus className="size-4" aria-hidden="true" />
-            Add entry
+            {t("actions.addEntry")}
           </button>
         </div>
       </div>
@@ -1998,32 +2032,47 @@ function isProjectAssignableOnDate(project: TimeGridAssignedProject, localDate: 
   return true;
 }
 
-function getCellWarnings(input: {
-  day: TimeGridDay;
-  dayTotalMinutes: number;
-  entriesByDay: Map<string, TimeGridEntry[]>;
-  cell: CellEntries;
-}) {
+function getCellWarnings(
+  input: {
+    day: TimeGridDay;
+    dayTotalMinutes: number;
+    entriesByDay: Map<string, TimeGridEntry[]>;
+    cell: CellEntries;
+  },
+  t: TimeTrackingTranslator,
+) {
   const warnings: string[] = [];
 
-  if (input.cell.needsDescription) warnings.push("Description needed.");
-  if (input.day.state === "future" && input.cell.totalMinutes > 0) warnings.push("Future day.");
-  if (input.dayTotalMinutes > 1440) warnings.push("Daily total is over 24h.");
+  if (input.cell.needsDescription) warnings.push(t("warnings.descriptionNeededSentence"));
+  if (input.day.state === "future" && input.cell.totalMinutes > 0) {
+    warnings.push(t("warnings.futureDay"));
+  }
+  if (input.dayTotalMinutes > 1440) warnings.push(t("warnings.dailyTotalOver24"));
   if (hasOverlaps(input.entriesByDay.get(input.day.isoDate) ?? [])) {
-    warnings.push("Day has overlapping entries.");
+    warnings.push(t("warnings.dayHasOverlaps"));
   }
 
   return warnings;
 }
 
-function getEntryWarnings(entry: TimeGridEntry, dayEntries: TimeGridEntry[]) {
+function getEntryWarnings(
+  entry: TimeGridEntry,
+  dayEntries: TimeGridEntry[],
+  t: TimeTrackingTranslator,
+) {
   const warnings: string[] = [];
 
-  if (!entry.description.trim()) warnings.push("Description needed");
-  if (entry.durationMinutes >= 480) warnings.push("Long continuous session");
-  if (entryHasOverlap(entry, dayEntries)) warnings.push("Overlaps another entry");
+  if (!entry.description.trim()) warnings.push(t("warnings.descriptionNeeded"));
+  if (entry.durationMinutes >= 480) warnings.push(t("warnings.longContinuousSession"));
+  if (entryHasOverlap(entry, dayEntries)) warnings.push(t("warnings.overlapsAnotherEntry"));
 
   return warnings;
+}
+
+function formatEntrySource(source: TimeGridEntry["source"], t: TimeTrackingTranslator) {
+  if (source === "FORM") return t("source.form");
+  if (source === "TIMER") return t("source.timer");
+  return t("source.grid");
 }
 
 function hasOverlaps(entries: TimeGridEntry[]) {

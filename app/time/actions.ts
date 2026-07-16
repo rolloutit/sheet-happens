@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
+import { getTranslations } from "next-intl/server";
 import { z } from "zod";
 
 import { requireActiveAppMemberForAction } from "@/src/server/auth/app-access";
@@ -38,6 +39,8 @@ import type {
   TimeTrackingActionState,
   UpdateTimeEntryActionInput,
 } from "./actions.types";
+
+type TimeTrackingActionsTranslator = Awaited<ReturnType<typeof getTranslations>>;
 
 const timingSchema = {
   timingMode: z.enum(["DURATION", "INTERVAL"]).optional(),
@@ -138,13 +141,14 @@ const clearTimeEntryDraftSchema = z.object({
 export async function createTimeEntryAction(
   input: CreateTimeEntryActionInput,
 ): Promise<TimeTrackingActionState> {
+  const t = await getTranslations("TimeTrackingActions");
   const parsed = createTimeEntrySchema.safeParse(input);
 
   if (!parsed.success) {
     return {
       status: "error",
-      message: "Fix the highlighted fields and try again.",
-      fieldErrors: getEntryFieldErrors(parsed.error),
+      message: t("errors.fixFields"),
+      fieldErrors: translateEntryFieldErrors(getEntryFieldErrors(parsed.error), t),
     };
   }
 
@@ -162,23 +166,24 @@ export async function createTimeEntryAction(
 
     return {
       status: "success",
-      message: "Time entry saved.",
+      message: t("success.timeEntrySaved"),
     };
   } catch (error) {
-    return mapTimeTrackingActionError(error, "The time entry could not be saved.");
+    return mapTimeTrackingActionError(error, t("errors.timeEntrySaveFailed"), t);
   }
 }
 
 export async function updateTimeEntryAction(
   input: UpdateTimeEntryActionInput,
 ): Promise<TimeTrackingActionState> {
+  const t = await getTranslations("TimeTrackingActions");
   const parsed = updateTimeEntrySchema.safeParse(input);
 
   if (!parsed.success) {
     return {
       status: "error",
-      message: "Fix the highlighted fields and try again.",
-      fieldErrors: getEntryFieldErrors(parsed.error),
+      message: t("errors.fixFields"),
+      fieldErrors: translateEntryFieldErrors(getEntryFieldErrors(parsed.error), t),
     };
   }
 
@@ -196,22 +201,23 @@ export async function updateTimeEntryAction(
 
     return {
       status: "success",
-      message: "Time entry updated.",
+      message: t("success.timeEntryUpdated"),
     };
   } catch (error) {
-    return mapTimeTrackingActionError(error, "The time entry could not be updated.");
+    return mapTimeTrackingActionError(error, t("errors.timeEntryUpdateFailed"), t);
   }
 }
 
 export async function deleteTimeEntryAction(
   input: DeleteTimeEntryActionInput,
 ): Promise<TimeTrackingActionState> {
+  const t = await getTranslations("TimeTrackingActions");
   const parsed = deleteTimeEntrySchema.safeParse(input);
 
   if (!parsed.success) {
     return {
       status: "error",
-      message: "The time entry could not be deleted.",
+      message: t("errors.timeEntryDeleteFailed"),
     };
   }
 
@@ -228,23 +234,24 @@ export async function deleteTimeEntryAction(
 
     return {
       status: "success",
-      message: "Time entry deleted.",
+      message: t("success.timeEntryDeleted"),
     };
   } catch (error) {
-    return mapTimeTrackingActionError(error, "The time entry could not be deleted.");
+    return mapTimeTrackingActionError(error, t("errors.timeEntryDeleteFailed"), t);
   }
 }
 
 export async function startRunningTimerAction(
   input: StartRunningTimerActionInput,
 ): Promise<TimeTrackingActionState> {
+  const t = await getTranslations("TimeTrackingActions");
   const parsed = startRunningTimerSchema.safeParse(input);
 
   if (!parsed.success) {
     return {
       status: "error",
-      message: "Fix the highlighted fields and try again.",
-      fieldErrors: getEntryFieldErrors(parsed.error),
+      message: t("errors.fixFields"),
+      fieldErrors: translateEntryFieldErrors(getEntryFieldErrors(parsed.error), t),
     };
   }
 
@@ -261,14 +268,16 @@ export async function startRunningTimerAction(
 
     return {
       status: "success",
-      message: "Timer started.",
+      message: t("success.timerStarted"),
     };
   } catch (error) {
-    return mapTimeTrackingActionError(error, "The timer could not be started.");
+    return mapTimeTrackingActionError(error, t("errors.timerStartFailed"), t);
   }
 }
 
 export async function stopRunningTimerAction(): Promise<TimeTrackingActionState> {
+  const t = await getTranslations("TimeTrackingActions");
+
   try {
     const { member } = await requireActiveAppMemberForAction();
     await stopRunningTimer({
@@ -281,22 +290,23 @@ export async function stopRunningTimerAction(): Promise<TimeTrackingActionState>
 
     return {
       status: "success",
-      message: "Timer stopped and saved.",
+      message: t("success.timerStopped"),
     };
   } catch (error) {
-    return mapTimeTrackingActionError(error, "The timer could not be stopped.");
+    return mapTimeTrackingActionError(error, t("errors.timerStopFailed"), t);
   }
 }
 
 export async function copyPreviousDayEntriesAction(
   input: CopyPreviousDayEntriesActionInput,
 ): Promise<TimeTrackingActionState> {
+  const t = await getTranslations("TimeTrackingActions");
   const parsed = copyPreviousDayEntriesSchema.safeParse(input);
 
   if (!parsed.success) {
     return {
       status: "error",
-      message: "Choose a valid target date.",
+      message: t("fields.validTargetDate"),
     };
   }
 
@@ -313,22 +323,23 @@ export async function copyPreviousDayEntriesAction(
 
     return {
       status: "success",
-      message: formatCopyResultMessage(result, "previous day"),
+      message: formatCopyResultMessage(result, "previousDay", t),
     };
   } catch (error) {
-    return mapTimeTrackingActionError(error, "The previous day could not be copied.");
+    return mapTimeTrackingActionError(error, t("errors.previousDayCopyFailed"), t);
   }
 }
 
 export async function duplicatePreviousWeekAction(
   input: DuplicatePreviousWeekActionInput,
 ): Promise<TimeTrackingActionState> {
+  const t = await getTranslations("TimeTrackingActions");
   const parsed = duplicatePreviousWeekSchema.safeParse(input);
 
   if (!parsed.success) {
     return {
       status: "error",
-      message: "Choose a valid week.",
+      message: t("fields.validWeek"),
     };
   }
 
@@ -345,22 +356,23 @@ export async function duplicatePreviousWeekAction(
 
     return {
       status: "success",
-      message: formatCopyResultMessage(result, "previous week"),
+      message: formatCopyResultMessage(result, "previousWeek", t),
     };
   } catch (error) {
-    return mapTimeTrackingActionError(error, "The previous week could not be duplicated.");
+    return mapTimeTrackingActionError(error, t("errors.previousWeekDuplicateFailed"), t);
   }
 }
 
 export async function saveTimeEntryDraftAction(
   input: SaveTimeEntryDraftActionInput,
 ): Promise<TimeTrackingActionState> {
+  const t = await getTranslations("TimeTrackingActions");
   const parsed = timeEntryDraftSchema.safeParse(input);
 
   if (!parsed.success) {
     return {
       status: "error",
-      message: "The draft could not be saved.",
+      message: t("errors.draftSaveFailed"),
     };
   }
 
@@ -374,22 +386,23 @@ export async function saveTimeEntryDraftAction(
 
     return {
       status: "success",
-      message: "Draft saved.",
+      message: t("success.draftSaved"),
     };
   } catch (error) {
-    return mapTimeTrackingActionError(error, "The draft could not be saved.");
+    return mapTimeTrackingActionError(error, t("errors.draftSaveFailed"), t);
   }
 }
 
 export async function clearTimeEntryDraftAction(
   input: ClearTimeEntryDraftActionInput,
 ): Promise<TimeTrackingActionState> {
+  const t = await getTranslations("TimeTrackingActions");
   const parsed = clearTimeEntryDraftSchema.safeParse(input);
 
   if (!parsed.success) {
     return {
       status: "error",
-      message: "The draft could not be cleared.",
+      message: t("errors.draftClearFailed"),
     };
   }
 
@@ -404,22 +417,23 @@ export async function clearTimeEntryDraftAction(
 
     return {
       status: "success",
-      message: "Draft discarded.",
+      message: t("success.draftDiscarded"),
     };
   } catch (error) {
-    return mapTimeTrackingActionError(error, "The draft could not be cleared.");
+    return mapTimeTrackingActionError(error, t("errors.draftClearFailed"), t);
   }
 }
 
 export async function markInactiveProjectWeekAction(
   input: InactiveProjectWeekActionInput,
 ): Promise<TimeTrackingActionState> {
+  const t = await getTranslations("TimeTrackingActions");
   const parsed = inactiveWeekSchema.safeParse(input);
 
   if (!parsed.success) {
     return {
       status: "error",
-      message: "The inactive week could not be saved.",
+      message: t("errors.inactiveWeekSaveFailed"),
     };
   }
 
@@ -437,22 +451,23 @@ export async function markInactiveProjectWeekAction(
 
     return {
       status: "success",
-      message: "Project marked inactive for this week.",
+      message: t("success.inactiveWeekSaved"),
     };
   } catch (error) {
-    return mapTimeTrackingActionError(error, "The inactive week could not be saved.");
+    return mapTimeTrackingActionError(error, t("errors.inactiveWeekSaveFailed"), t);
   }
 }
 
 export async function unmarkInactiveProjectWeekAction(
   input: InactiveProjectWeekActionInput,
 ): Promise<TimeTrackingActionState> {
+  const t = await getTranslations("TimeTrackingActions");
   const parsed = inactiveWeekSchema.safeParse(input);
 
   if (!parsed.success) {
     return {
       status: "error",
-      message: "The inactive week could not be removed.",
+      message: t("errors.inactiveWeekRemoveFailed"),
     };
   }
 
@@ -470,10 +485,10 @@ export async function unmarkInactiveProjectWeekAction(
 
     return {
       status: "success",
-      message: "Inactive week removed.",
+      message: t("success.inactiveWeekRemoved"),
     };
   } catch (error) {
-    return mapTimeTrackingActionError(error, "The inactive week could not be removed.");
+    return mapTimeTrackingActionError(error, t("errors.inactiveWeekRemoveFailed"), t);
   }
 }
 
@@ -526,20 +541,27 @@ function validateTimeEntryTiming(
   }
 }
 
-function formatCopyResultMessage(result: CopyTimeEntriesResult, sourceLabel: string) {
+function formatCopyResultMessage(
+  result: CopyTimeEntriesResult,
+  source: "previousDay" | "previousWeek",
+  t: TimeTrackingActionsTranslator,
+) {
   if (result.sourceCount === 0) {
-    return `No entries found on the ${sourceLabel}.`;
+    return t(`copy.${source}.noneFound`);
   }
 
   if (result.createdCount === 0) {
-    return `No entries could be copied from the ${sourceLabel}.`;
+    return t(`copy.${source}.noneCopied`);
   }
 
   if (result.skippedCount > 0) {
-    return `Copied ${result.createdCount} entr${result.createdCount === 1 ? "y" : "ies"} from the ${sourceLabel}; ${result.skippedCount} skipped.`;
+    return t(`copy.${source}.copiedWithSkipped`, {
+      created: result.createdCount,
+      skipped: result.skippedCount,
+    });
   }
 
-  return `Copied ${result.createdCount} entr${result.createdCount === 1 ? "y" : "ies"} from the ${sourceLabel}.`;
+  return t(`copy.${source}.copied`, { created: result.createdCount });
 }
 
 function getEntryFieldErrors(error: z.ZodError): Partial<Record<TimeEntryFormField, string>> {
@@ -556,6 +578,19 @@ function getEntryFieldErrors(error: z.ZodError): Partial<Record<TimeEntryFormFie
   return fieldErrors;
 }
 
+function translateEntryFieldErrors(
+  fieldErrors: Partial<Record<TimeEntryFormField, string>>,
+  t: TimeTrackingActionsTranslator,
+): Partial<Record<TimeEntryFormField, string>> {
+  const translated: Partial<Record<TimeEntryFormField, string>> = {};
+
+  for (const [field, message] of Object.entries(fieldErrors)) {
+    translated[field as TimeEntryFormField] = translateKnownMessage(message, t);
+  }
+
+  return translated;
+}
+
 function isTimeEntryFormField(field: unknown): field is TimeEntryFormField {
   return (
     field === "projectId" ||
@@ -567,18 +602,22 @@ function isTimeEntryFormField(field: unknown): field is TimeEntryFormField {
   );
 }
 
-function mapTimeTrackingActionError(error: unknown, fallback: string): TimeTrackingActionState {
+function mapTimeTrackingActionError(
+  error: unknown,
+  fallback: string,
+  t: TimeTrackingActionsTranslator,
+): TimeTrackingActionState {
   if (error instanceof AuthenticationError || error instanceof AuthorizationError) {
     return {
       status: "error",
-      message: error.message,
+      message: translateKnownMessage(error.message, t),
     };
   }
 
   if (error instanceof TimeTrackingError || error instanceof TimeTrackingDateError) {
     return {
       status: "error",
-      message: error.message,
+      message: translateKnownMessage(error.message, t),
     };
   }
 
@@ -587,6 +626,45 @@ function mapTimeTrackingActionError(error: unknown, fallback: string): TimeTrack
     message: fallback,
   };
 }
+
+function translateKnownMessage(message: string | undefined, t: TimeTrackingActionsTranslator) {
+  if (!message) return t("errors.generic");
+
+  const key = knownMessageKeys[message];
+  return key ? t(key) : message;
+}
+
+const knownMessageKeys: Record<string, string> = {
+  "Choose a project.": "fields.chooseProject",
+  "Choose a valid date.": "fields.validDate",
+  "Choose a valid target date.": "fields.validTargetDate",
+  "Choose a valid week.": "fields.validWeek",
+  "Choose a valid start time.": "fields.validStartTime",
+  "Choose a valid end time.": "fields.validEndTime",
+  "Start time is required.": "fields.startRequired",
+  "End time is required.": "fields.endRequired",
+  "End time must be after start time.": "fields.endAfterStart",
+  "Timer end time must be after start time.": "fields.endAfterStart",
+  "Start and end time are required.": "fields.startEndRequired",
+  "Duration must be greater than zero.": "fields.durationPositive",
+  "Duration is too long.": "fields.durationTooLong",
+  "Duration is too large.": "fields.durationTooLarge",
+  "Description is required.": "fields.descriptionRequired",
+  "Description must be 1000 characters or less.": "fields.descriptionMax",
+  "Time entry id is missing.": "fields.timeEntryMissing",
+  "Note must be 500 characters or less.": "fields.noteMax",
+  "Draft key is invalid.": "fields.draftKeyInvalid",
+  "Member not found.": "errors.memberNotFound",
+  "Time entry not found.": "errors.timeEntryNotFound",
+  "This entry is locked by a submitted timesheet.": "errors.entryLocked",
+  "This period is locked by a submitted timesheet.": "errors.periodLocked",
+  "This week touches a locked period.": "errors.weekTouchesLockedPeriod",
+  "Stop the running timer before starting another one.": "errors.stopTimerFirst",
+  "No timer is running.": "errors.noTimerRunning",
+  "This project is not active for the selected date.": "errors.projectNotActiveForDate",
+  "This project is not assigned for the selected week.": "errors.projectNotAssignedForWeek",
+  "Could not format date in timezone.": "errors.dateTimezoneFormatFailed",
+};
 
 function isDateInputValue(value: string) {
   if (!value) return false;
