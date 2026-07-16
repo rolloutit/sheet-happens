@@ -1,6 +1,7 @@
 "use client";
 
 import { CalendarClock, Save } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { type FormEvent, useState, useTransition } from "react";
 
 import { Button } from "@/src/components/ui/Button";
@@ -49,13 +50,17 @@ export function MemberEditDrawer({
   onResult,
   onSaved,
 }: MemberEditDrawerProps) {
+  const t = useTranslations("AdminPeople");
+
   return (
     <Drawer open={open} onOpenChange={onOpenChange}>
       <DrawerContent className="w-[min(42rem,100vw)] overflow-y-auto">
         <DrawerHeader>
-          <DrawerTitle className="text-2xl font-semibold text-foreground">Edit member</DrawerTitle>
+          <DrawerTitle className="text-2xl font-semibold text-foreground">
+            {t("editDrawer.title")}
+          </DrawerTitle>
           <DrawerDescription className="text-sm leading-6 text-muted-foreground">
-            Update profile details and schedule profile changes for future work periods.
+            {t("editDrawer.description")}
           </DrawerDescription>
         </DrawerHeader>
 
@@ -93,6 +98,7 @@ function MemberEditForm({
   onResult: (result: AdminPeopleActionState) => void;
   onSaved: () => void;
 }) {
+  const t = useTranslations("AdminPeople");
   const [values, setValues] = useState<EditableValues>(() => getEditableValues(member));
   const [fieldErrors, setFieldErrors] =
     useState<UpdateMemberDetailsActionState["fieldErrors"]>(undefined);
@@ -133,16 +139,38 @@ function MemberEditForm({
         <p className="font-ui text-sm font-semibold text-foreground">{member.name}</p>
         <p className="mt-1 text-sm text-muted-foreground">{member.email}</p>
         <p className="mt-2 text-xs text-muted-foreground">
-          Current profile: <span className="font-medium text-foreground">{member.profile}</span>
-          {member.scheduledProfile && member.scheduledProfileValidFrom
-            ? `, scheduled: ${member.scheduledProfile} on ${member.scheduledProfileValidFrom}`
-            : ""}
+          {t.rich("editDrawer.currentProfile", {
+            profile: member.profileValue
+              ? t(`profiles.${member.profileValue === "CONTRACTOR" ? "contractor" : "employee"}`)
+              : member.profile,
+            strong: (chunks) => <span className="font-medium text-foreground">{chunks}</span>,
+          })}
+          {member.scheduledProfile && member.scheduledProfileValidFrom ? (
+            <>
+              {", "}
+              {t("editDrawer.scheduledProfile", {
+                profile: member.scheduledProfileValue
+                  ? t(
+                      `profiles.${
+                        member.scheduledProfileValue === "CONTRACTOR" ? "contractor" : "employee"
+                      }`,
+                    )
+                  : member.scheduledProfile,
+                validFrom: member.scheduledProfileValidFrom,
+              })}
+            </>
+          ) : null}
         </p>
       </div>
 
       <form className="grid gap-5" onSubmit={submit}>
         <div className="grid gap-4 sm:grid-cols-2">
-          <Field label="First name" required reserveMessageSpace error={fieldErrors?.firstName}>
+          <Field
+            label={t("form.firstName")}
+            required
+            reserveMessageSpace
+            error={fieldErrors?.firstName}
+          >
             {({ id, describedBy, invalid, required }) => (
               <Input
                 id={id}
@@ -155,7 +183,12 @@ function MemberEditForm({
               />
             )}
           </Field>
-          <Field label="Last name" required reserveMessageSpace error={fieldErrors?.lastName}>
+          <Field
+            label={t("form.lastName")}
+            required
+            reserveMessageSpace
+            error={fieldErrors?.lastName}
+          >
             {({ id, describedBy, invalid, required }) => (
               <Input
                 id={id}
@@ -171,9 +204,9 @@ function MemberEditForm({
         </div>
 
         <Field
-          label="Display name"
+          label={t("form.displayName")}
           reserveMessageSpace
-          hint="Leave empty to use first and last name."
+          hint={t("form.displayNameHint")}
           error={fieldErrors?.displayName}
         >
           {({ id, describedBy, invalid }) => (
@@ -191,7 +224,7 @@ function MemberEditForm({
 
         <div className="grid gap-4 sm:grid-cols-[minmax(7rem,0.75fr)_minmax(12rem,1.25fr)_minmax(7rem,0.75fr)]">
           <Field
-            label="Currency"
+            label={t("form.currency")}
             required
             reserveMessageSpace
             error={fieldErrors?.defaultCurrencyCode}
@@ -214,7 +247,12 @@ function MemberEditForm({
               </select>
             )}
           </Field>
-          <Field label="Timezone" required reserveMessageSpace error={fieldErrors?.timezone}>
+          <Field
+            label={t("form.timezone")}
+            required
+            reserveMessageSpace
+            error={fieldErrors?.timezone}
+          >
             {({ id, describedBy, invalid, required }) => (
               <select
                 id={id}
@@ -233,7 +271,7 @@ function MemberEditForm({
               </select>
             )}
           </Field>
-          <Field label="Locale" required reserveMessageSpace error={fieldErrors?.locale}>
+          <Field label={t("form.locale")} required reserveMessageSpace error={fieldErrors?.locale}>
             {({ id, describedBy, invalid, required }) => (
               <select
                 id={id}
@@ -265,10 +303,10 @@ function MemberEditForm({
 
         <DrawerFooter>
           <Button type="button" variant="ghost" disabled={isPending} onClick={onCancel}>
-            Cancel
+            {t("actions.cancel")}
           </Button>
           <Button type="submit" icon={Save} loading={isPending}>
-            Save changes
+            {t("actions.saveChanges")}
           </Button>
         </DrawerFooter>
       </form>
@@ -294,6 +332,7 @@ function ProfileTransitionForm({
   onResult: (result: AdminPeopleActionState) => void;
   onSaved: () => void;
 }) {
+  const t = useTranslations("AdminPeople");
   const [values, setValues] = useState<ProfileTransitionValues>(() => ({
     profile: getOppositeProfile(member.profileValue),
     validFrom: todayDate,
@@ -338,14 +377,21 @@ function ProfileTransitionForm({
       onSubmit={submit}
     >
       <div>
-        <p className="font-ui text-sm font-semibold text-foreground">Profile transition</p>
+        <p className="font-ui text-sm font-semibold text-foreground">
+          {t("profileTransition.title")}
+        </p>
         <p className="mt-1 text-sm leading-6 text-muted-foreground">
-          Schedule employee/contractor profile changes with an effective date.
+          {t("profileTransition.description")}
         </p>
       </div>
 
       <div className="grid gap-4 sm:grid-cols-[minmax(10rem,1fr)_minmax(10rem,1fr)]">
-        <Field label="New profile" required reserveMessageSpace error={fieldErrors?.profile}>
+        <Field
+          label={t("profileTransition.newProfile")}
+          required
+          reserveMessageSpace
+          error={fieldErrors?.profile}
+        >
           {({ id, describedBy, invalid, required }) => (
             <select
               id={id}
@@ -358,13 +404,18 @@ function ProfileTransitionForm({
                 updateField("profile", event.target.value as ProfileTransitionValues["profile"])
               }
             >
-              <option value="CONTRACTOR">Contractor</option>
-              <option value="EMPLOYEE">Employee</option>
+              <option value="CONTRACTOR">{t("profiles.contractor")}</option>
+              <option value="EMPLOYEE">{t("profiles.employee")}</option>
             </select>
           )}
         </Field>
 
-        <Field label="Effective date" required reserveMessageSpace error={fieldErrors?.validFrom}>
+        <Field
+          label={t("profileTransition.effectiveDate")}
+          required
+          reserveMessageSpace
+          error={fieldErrors?.validFrom}
+        >
           {({ id, describedBy, invalid, required }) => (
             <Input
               id={id}
@@ -381,9 +432,9 @@ function ProfileTransitionForm({
       </div>
 
       <Field
-        label="Reason"
+        label={t("profileTransition.reason")}
         reserveMessageSpace
-        hint="Add a reason for this profile change."
+        hint={t("profileTransition.reasonHint")}
         error={fieldErrors?.reason}
       >
         {({ id, describedBy, invalid }) => (
@@ -409,7 +460,7 @@ function ProfileTransitionForm({
 
       <DrawerFooter>
         <Button type="submit" icon={CalendarClock} loading={isPending}>
-          Schedule transition
+          {t("actions.scheduleTransition")}
         </Button>
       </DrawerFooter>
     </form>

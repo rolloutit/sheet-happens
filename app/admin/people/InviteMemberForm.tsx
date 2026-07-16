@@ -1,6 +1,7 @@
 "use client";
 
 import { Send } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { useActionState, useEffect, useRef } from "react";
 import { useFormStatus } from "react-dom";
 
@@ -22,6 +23,7 @@ export type InviteMemberFormProps = {
 };
 
 export function InviteMemberForm({ preferenceOptions }: InviteMemberFormProps) {
+  const t = useTranslations("AdminPeople");
   const [state, formAction] = useActionState(inviteMemberAction, initialState);
   const formRef = useRef<HTMLFormElement>(null);
 
@@ -34,7 +36,12 @@ export function InviteMemberForm({ preferenceOptions }: InviteMemberFormProps) {
   return (
     <form ref={formRef} action={formAction} className="grid gap-5">
       <div className="grid gap-4 md:grid-cols-3">
-        <Field label="First name" required reserveMessageSpace error={state.fieldErrors?.firstName}>
+        <Field
+          label={t("form.firstName")}
+          required
+          reserveMessageSpace
+          error={state.fieldErrors?.firstName}
+        >
           {({ id, describedBy, invalid, required }) => (
             <Input
               id={id}
@@ -46,7 +53,12 @@ export function InviteMemberForm({ preferenceOptions }: InviteMemberFormProps) {
             />
           )}
         </Field>
-        <Field label="Last name" required reserveMessageSpace error={state.fieldErrors?.lastName}>
+        <Field
+          label={t("form.lastName")}
+          required
+          reserveMessageSpace
+          error={state.fieldErrors?.lastName}
+        >
           {({ id, describedBy, invalid, required }) => (
             <Input
               id={id}
@@ -59,7 +71,12 @@ export function InviteMemberForm({ preferenceOptions }: InviteMemberFormProps) {
           )}
         </Field>
 
-        <Field label="Email" required reserveMessageSpace error={state.fieldErrors?.email}>
+        <Field
+          label={t("form.email")}
+          required
+          reserveMessageSpace
+          error={state.fieldErrors?.email}
+        >
           {({ id, describedBy, invalid, required }) => (
             <Input
               id={id}
@@ -75,7 +92,12 @@ export function InviteMemberForm({ preferenceOptions }: InviteMemberFormProps) {
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-[minmax(10rem,1fr)_minmax(10rem,1fr)_minmax(7rem,0.75fr)_minmax(12rem,1.25fr)_minmax(6rem,0.6fr)]">
-        <Field label="Profile" required reserveMessageSpace error={state.fieldErrors?.profile}>
+        <Field
+          label={t("form.profile")}
+          required
+          reserveMessageSpace
+          error={state.fieldErrors?.profile}
+        >
           {({ id, describedBy, invalid, required }) => (
             <select
               id={id}
@@ -86,12 +108,12 @@ export function InviteMemberForm({ preferenceOptions }: InviteMemberFormProps) {
               required={required}
               className={nativeSelectClassName}
             >
-              <option value="CONTRACTOR">Contractor</option>
-              <option value="EMPLOYEE">Employee</option>
+              <option value="CONTRACTOR">{t("profiles.contractor")}</option>
+              <option value="EMPLOYEE">{t("profiles.employee")}</option>
             </select>
           )}
         </Field>
-        <Field label="Role" required reserveMessageSpace error={state.fieldErrors?.role}>
+        <Field label={t("form.role")} required reserveMessageSpace error={state.fieldErrors?.role}>
           {({ id, describedBy, invalid, required }) => (
             <select
               id={id}
@@ -102,16 +124,16 @@ export function InviteMemberForm({ preferenceOptions }: InviteMemberFormProps) {
               required={required}
               className={nativeSelectClassName}
             >
-              <option value="MEMBER">Member</option>
-              <option value="ADMIN">Admin</option>
+              <option value="MEMBER">{t("roles.member")}</option>
+              <option value="ADMIN">{t("roles.admin")}</option>
             </select>
           )}
         </Field>
         <Field
-          label="Currency"
+          label={t("form.currency")}
           required
           reserveMessageSpace
-          hint="Default billing/reporting currency."
+          hint={t("form.currencyHint")}
           error={state.fieldErrors?.defaultCurrencyCode}
         >
           {({ id, describedBy, invalid, required }) => (
@@ -132,7 +154,12 @@ export function InviteMemberForm({ preferenceOptions }: InviteMemberFormProps) {
             </select>
           )}
         </Field>
-        <Field label="Timezone" required reserveMessageSpace error={state.fieldErrors?.timezone}>
+        <Field
+          label={t("form.timezone")}
+          required
+          reserveMessageSpace
+          error={state.fieldErrors?.timezone}
+        >
           {({ id, describedBy, invalid, required }) => (
             <select
               id={id}
@@ -151,7 +178,12 @@ export function InviteMemberForm({ preferenceOptions }: InviteMemberFormProps) {
             </select>
           )}
         </Field>
-        <Field label="Locale" required reserveMessageSpace error={state.fieldErrors?.locale}>
+        <Field
+          label={t("form.locale")}
+          required
+          reserveMessageSpace
+          error={state.fieldErrors?.locale}
+        >
           {({ id, describedBy, invalid, required }) => (
             <select
               id={id}
@@ -194,11 +226,12 @@ export function InviteMemberForm({ preferenceOptions }: InviteMemberFormProps) {
 }
 
 function SubmitButton() {
+  const t = useTranslations("AdminPeople");
   const { pending } = useFormStatus();
 
   return (
     <Button type="submit" icon={Send} loading={pending}>
-      Send invitation
+      {t("actions.sendInvitation")}
     </Button>
   );
 }

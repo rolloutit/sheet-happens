@@ -11,6 +11,7 @@ import {
   ShieldCheck,
   UserMinus,
 } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 
@@ -67,6 +68,7 @@ export function AdminPeopleTable({
   preferenceOptions,
   todayDate,
 }: AdminPeopleTableProps) {
+  const t = useTranslations("AdminPeople");
   const router = useRouter();
   const [message, setMessage] = useState<AdminPeopleActionState | null>(null);
   const [pendingKey, setPendingKey] = useState<string | null>(null);
@@ -118,7 +120,34 @@ export function AdminPeopleTable({
       <PeopleTable
         rows={rows}
         labels={{
-          empty: "No members have been invited yet.",
+          caption: t("table.caption"),
+          ariaLabel: t("table.ariaLabel"),
+          rowActionsLabel: t("table.rowActions"),
+          empty: t("table.emptyInvited"),
+          columns: {
+            person: t("table.columns.person"),
+            profile: t("table.columns.profile"),
+            role: t("table.columns.role"),
+            state: t("table.columns.state"),
+            currency: t("table.columns.currency"),
+          },
+          profiles: {
+            CONTRACTOR: t("profiles.contractor"),
+            EMPLOYEE: t("profiles.employee"),
+          },
+          roles: {
+            ADMIN: t("roles.admin"),
+            MEMBER: t("roles.member"),
+          },
+          states: {
+            active: t("states.active"),
+            inactive: t("states.inactive"),
+            invited: t("states.invited"),
+            locked: t("states.locked"),
+          },
+          scheduledProfile: (profile, validFrom) =>
+            t("table.scheduledProfile", { profile, validFrom }),
+          edit: (row) => t("table.editMember", { name: row.name }),
         }}
         onEdit={(row) => {
           setEditingMember(getAdminPersonRow(rows, row));
@@ -226,6 +255,8 @@ function PersonActionsMenu({
   onReactivate: () => void;
   onArchive: () => void;
 }) {
+  const t = useTranslations("AdminPeople");
+
   if (row.state === "locked") {
     return null;
   }
@@ -238,28 +269,28 @@ function PersonActionsMenu({
       <DropdownTrigger asChild>
         <IconButton
           icon={MoreHorizontal}
-          label={`Open actions for ${row.name}`}
+          label={t("actions.openFor", { name: row.name })}
           size="sm"
           variant="ghost"
         />
       </DropdownTrigger>
       <DropdownContent align="end">
-        <DropdownLabel>Actions</DropdownLabel>
+        <DropdownLabel>{t("actions.menuLabel")}</DropdownLabel>
         {!isSelf ? (
           <DropdownItem disabled={isPending("role")} onSelect={() => onChangeRole(nextRole)}>
             <ShieldCheck className="size-4" aria-hidden="true" />
-            {nextRole === "ADMIN" ? "Make admin" : "Make member"}
+            {nextRole === "ADMIN" ? t("actions.makeAdmin") : t("actions.makeMember")}
           </DropdownItem>
         ) : null}
         {row.state === "invited" ? (
           <>
             <DropdownItem disabled={isPending("resend")} onSelect={onResend}>
               <Mail className="size-4" aria-hidden="true" />
-              Resend invitation
+              {t("actions.resendInvitation")}
             </DropdownItem>
             <DropdownItem disabled={isPending("revoke")} onSelect={onRevokeInvite}>
               <Ban className="size-4" aria-hidden="true" />
-              Revoke invitation
+              {t("actions.revokeInvitation")}
             </DropdownItem>
           </>
         ) : null}
@@ -267,24 +298,24 @@ function PersonActionsMenu({
           <>
             <DropdownItem disabled={isPending("sessions")} onSelect={onRevokeSessions}>
               <LogOut className="size-4" aria-hidden="true" />
-              Revoke sessions
+              {t("actions.revokeSessions")}
             </DropdownItem>
             <DropdownItem disabled={isPending("totp")} onSelect={onResetTotp}>
               <KeyRound className="size-4" aria-hidden="true" />
-              Reset authenticator
+              {t("actions.resetAuthenticator")}
             </DropdownItem>
           </>
         ) : null}
         {row.state === "active" && !isSelf ? (
           <DropdownItem disabled={isPending("deactivate")} onSelect={onDeactivate}>
             <UserMinus className="size-4" aria-hidden="true" />
-            Deactivate
+            {t("actions.deactivate")}
           </DropdownItem>
         ) : null}
         {row.state === "inactive" && row.hasAuthUser ? (
           <DropdownItem disabled={isPending("reactivate")} onSelect={onReactivate}>
             <RotateCcw className="size-4" aria-hidden="true" />
-            Reactivate
+            {t("actions.reactivate")}
           </DropdownItem>
         ) : null}
         {!isSelf ? (
@@ -292,7 +323,7 @@ function PersonActionsMenu({
             <DropdownSeparator />
             <DropdownItem tone="danger" onSelect={onArchive}>
               <Archive className="size-4" aria-hidden="true" />
-              Archive
+              {t("actions.archive")}
             </DropdownItem>
           </>
         ) : null}
@@ -312,23 +343,26 @@ function ArchiveMemberDialog({
   onOpenChange: (open: boolean) => void;
   onConfirm: (member: AdminPersonRow) => void;
 }) {
+  const t = useTranslations("AdminPeople");
+
   return (
     <Dialog open={Boolean(member)} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>{member ? `Archive ${member.name}?` : "Archive member?"}</DialogTitle>
-          <DialogDescription>
-            This blocks future app access and revokes active sessions, but keeps historical records
-            for reporting, invoices, payslips, and audit history.
-          </DialogDescription>
+          <DialogTitle>
+            {member
+              ? t("archiveDialog.titleNamed", { name: member.name })
+              : t("archiveDialog.title")}
+          </DialogTitle>
+          <DialogDescription>{t("archiveDialog.description")}</DialogDescription>
         </DialogHeader>
         <div className="rounded-[var(--radius-md)] border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
-          This is not GDPR erasure. Personal data anonymization is a separate controlled workflow.
+          {t("archiveDialog.warning")}
         </div>
         <DialogFooter>
           <DialogClose asChild>
             <Button type="button" variant="ghost" disabled={pending}>
-              Cancel
+              {t("actions.cancel")}
             </Button>
           </DialogClose>
           <Button
@@ -340,7 +374,7 @@ function ArchiveMemberDialog({
               if (member) onConfirm(member);
             }}
           >
-            Archive member
+            {t("actions.archiveMember")}
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -359,27 +393,26 @@ function ResetTotpDialog({
   onOpenChange: (open: boolean) => void;
   onConfirm: (member: AdminPersonRow) => void;
 }) {
+  const t = useTranslations("AdminPeople");
+
   return (
     <Dialog open={Boolean(member)} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
           <DialogTitle>
-            {member ? `Reset authenticator for ${member.name}?` : "Reset authenticator?"}
+            {member
+              ? t("resetTotpDialog.titleNamed", { name: member.name })
+              : t("resetTotpDialog.title")}
           </DialogTitle>
-          <DialogDescription>
-            This removes authenticator-app verification and backup codes for the selected member,
-            then revokes active sessions. They can sign in again with another allowed method and set
-            up an authenticator app again from security settings.
-          </DialogDescription>
+          <DialogDescription>{t("resetTotpDialog.description")}</DialogDescription>
         </DialogHeader>
         <div className="rounded-[var(--radius-md)] border border-warning/40 bg-warning/10 px-3 py-2 text-sm text-warning">
-          Use this only when the member has lost authenticator access and their backup codes are not
-          available.
+          {t("resetTotpDialog.warning")}
         </div>
         <DialogFooter>
           <DialogClose asChild>
             <Button type="button" variant="ghost" disabled={pending}>
-              Cancel
+              {t("actions.cancel")}
             </Button>
           </DialogClose>
           <Button
@@ -391,7 +424,7 @@ function ResetTotpDialog({
               if (member) onConfirm(member);
             }}
           >
-            Reset authenticator
+            {t("actions.resetAuthenticator")}
           </Button>
         </DialogFooter>
       </DialogContent>

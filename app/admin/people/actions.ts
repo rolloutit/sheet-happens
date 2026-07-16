@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { getTranslations } from "next-intl/server";
 import { z } from "zod";
 
 import { requireAdminAppMemberForAction } from "@/src/server/auth/app-access";
@@ -42,67 +43,76 @@ import type {
   UpdateMemberDetailsField,
 } from "./actions.types";
 
-const inviteMemberSchema = z.object({
-  email: z.string().trim().email("Enter a valid email address."),
-  firstName: z.string().trim().min(1, "First name is required."),
-  lastName: z.string().trim().min(1, "Last name is required."),
-  profile: z.enum(["EMPLOYEE", "CONTRACTOR"], {
-    error: "Choose a valid profile.",
-  }),
-  role: z.enum(["MEMBER", "ADMIN"], {
-    error: "Choose a valid role.",
-  }),
-  defaultCurrencyCode: z
-    .string()
-    .transform(normalizeCurrencyCode)
-    .refine(isSupportedCurrencyCode, "Choose a supported currency."),
-  timezone: z
-    .string()
-    .transform(normalizeTimeZone)
-    .refine(isSupportedTimeZone, "Choose a supported timezone."),
-  locale: z
-    .string()
-    .transform(normalizeLocale)
-    .refine(isSupportedLocale, "Choose a supported language."),
-});
+type AdminPeopleActionsTranslator = Awaited<ReturnType<typeof getTranslations>>;
 
-const updateMemberDetailsSchema = z.object({
-  memberId: z.string().trim().min(1, "Member id is missing."),
-  firstName: z.string().trim().min(1, "First name is required."),
-  lastName: z.string().trim().min(1, "Last name is required."),
-  displayName: z.string().trim().max(120, "Display name must be 120 characters or less."),
-  defaultCurrencyCode: z
-    .string()
-    .transform(normalizeCurrencyCode)
-    .refine(isSupportedCurrencyCode, "Choose a supported currency."),
-  timezone: z
-    .string()
-    .transform(normalizeTimeZone)
-    .refine(isSupportedTimeZone, "Choose a supported timezone."),
-  locale: z
-    .string()
-    .transform(normalizeLocale)
-    .refine(isSupportedLocale, "Choose a supported language."),
-});
+function createInviteMemberSchema(t: AdminPeopleActionsTranslator) {
+  return z.object({
+    email: z.string().trim().email(t("validation.validEmail")),
+    firstName: z.string().trim().min(1, t("validation.firstNameRequired")),
+    lastName: z.string().trim().min(1, t("validation.lastNameRequired")),
+    profile: z.enum(["EMPLOYEE", "CONTRACTOR"], {
+      error: t("validation.validProfile"),
+    }),
+    role: z.enum(["MEMBER", "ADMIN"], {
+      error: t("validation.validRole"),
+    }),
+    defaultCurrencyCode: z
+      .string()
+      .transform(normalizeCurrencyCode)
+      .refine(isSupportedCurrencyCode, t("validation.supportedCurrency")),
+    timezone: z
+      .string()
+      .transform(normalizeTimeZone)
+      .refine(isSupportedTimeZone, t("validation.supportedTimezone")),
+    locale: z
+      .string()
+      .transform(normalizeLocale)
+      .refine(isSupportedLocale, t("validation.supportedLanguage")),
+  });
+}
 
-const scheduleProfileTransitionSchema = z.object({
-  memberId: z.string().trim().min(1, "Member id is missing."),
-  profile: z.enum(["EMPLOYEE", "CONTRACTOR"], {
-    error: "Choose a valid profile.",
-  }),
-  validFrom: z
-    .string()
-    .trim()
-    .refine(isDateInputValue, "Choose a valid effective date.")
-    .transform(parseDateInputValue),
-  reason: z.string().trim().max(500, "Reason must be 500 characters or less."),
-});
+function createUpdateMemberDetailsSchema(t: AdminPeopleActionsTranslator) {
+  return z.object({
+    memberId: z.string().trim().min(1, t("validation.memberIdMissing")),
+    firstName: z.string().trim().min(1, t("validation.firstNameRequired")),
+    lastName: z.string().trim().min(1, t("validation.lastNameRequired")),
+    displayName: z.string().trim().max(120, t("validation.displayNameMax")),
+    defaultCurrencyCode: z
+      .string()
+      .transform(normalizeCurrencyCode)
+      .refine(isSupportedCurrencyCode, t("validation.supportedCurrency")),
+    timezone: z
+      .string()
+      .transform(normalizeTimeZone)
+      .refine(isSupportedTimeZone, t("validation.supportedTimezone")),
+    locale: z
+      .string()
+      .transform(normalizeLocale)
+      .refine(isSupportedLocale, t("validation.supportedLanguage")),
+  });
+}
+
+function createScheduleProfileTransitionSchema(t: AdminPeopleActionsTranslator) {
+  return z.object({
+    memberId: z.string().trim().min(1, t("validation.memberIdMissing")),
+    profile: z.enum(["EMPLOYEE", "CONTRACTOR"], {
+      error: t("validation.validProfile"),
+    }),
+    validFrom: z
+      .string()
+      .trim()
+      .refine(isDateInputValue, t("validation.validEffectiveDate"))
+      .transform(parseDateInputValue),
+    reason: z.string().trim().max(500, t("validation.reasonMax")),
+  });
+}
 
 export async function inviteMemberAction(
   _previousState: InviteMemberActionState,
   formData: FormData,
 ): Promise<InviteMemberActionState> {
-  const parsed = inviteMemberSchema.safeParse({
+  const t = await getTranslations("AdminPeopleActions");
+  const parsed = createInviteMemberSchema(t).safeParse({
     email: getFormString(formData, "email"),
     firstName: getFormString(formData, "firstName"),
     lastName: getFormString(formData, "lastName"),
@@ -116,7 +126,7 @@ export async function inviteMemberAction(
   if (!parsed.success) {
     return {
       status: "error",
-      message: "Fix the highlighted fields and try again.",
+      message: t("errors.fixFields"),
       fieldErrors: getFieldErrors(parsed.error),
     };
   }
@@ -132,7 +142,7 @@ export async function inviteMemberAction(
 
     return {
       status: "success",
-      message: `Invitation sent to ${invitation.email}.`,
+      message: t("success.invitationSent", { email: invitation.email }),
     };
   } catch (error) {
     if (
@@ -148,7 +158,7 @@ export async function inviteMemberAction(
 
     return {
       status: "error",
-      message: "The invitation could not be sent. Try again later.",
+      message: t("errors.invitationFailed"),
     };
   }
 }
@@ -156,12 +166,13 @@ export async function inviteMemberAction(
 export async function updateMemberDetailsAction(
   input: UpdateMemberDetailsActionInput,
 ): Promise<UpdateMemberDetailsActionState> {
-  const parsed = updateMemberDetailsSchema.safeParse(input);
+  const t = await getTranslations("AdminPeopleActions");
+  const parsed = createUpdateMemberDetailsSchema(t).safeParse(input);
 
   if (!parsed.success) {
     return {
       status: "error",
-      message: "Fix the highlighted fields and try again.",
+      message: t("errors.fixFields"),
       fieldErrors: getUpdateMemberDetailsFieldErrors(parsed.error),
     };
   }
@@ -177,7 +188,7 @@ export async function updateMemberDetailsAction(
 
     return {
       status: "success",
-      message: result.changed ? "Member details updated." : "No changes to save.",
+      message: result.changed ? t("success.memberUpdated") : t("success.noChanges"),
     };
   } catch (error) {
     if (
@@ -193,7 +204,7 @@ export async function updateMemberDetailsAction(
 
     return {
       status: "error",
-      message: "The member details could not be updated. Try again later.",
+      message: t("errors.memberUpdateFailed"),
     };
   }
 }
@@ -201,12 +212,13 @@ export async function updateMemberDetailsAction(
 export async function scheduleProfileTransitionAction(
   input: ScheduleProfileTransitionActionInput,
 ): Promise<ScheduleProfileTransitionActionState> {
-  const parsed = scheduleProfileTransitionSchema.safeParse(input);
+  const t = await getTranslations("AdminPeopleActions");
+  const parsed = createScheduleProfileTransitionSchema(t).safeParse(input);
 
   if (!parsed.success) {
     return {
       status: "error",
-      message: "Fix the highlighted fields and try again.",
+      message: t("errors.fixFields"),
       fieldErrors: getScheduleProfileTransitionFieldErrors(parsed.error),
     };
   }
@@ -223,8 +235,8 @@ export async function scheduleProfileTransitionAction(
     return {
       status: "success",
       message: result.immediate
-        ? "Profile changed."
-        : `Profile transition scheduled for ${result.validFrom}.`,
+        ? t("success.profileChanged")
+        : t("success.profileTransitionScheduled", { validFrom: result.validFrom }),
     };
   } catch (error) {
     if (
@@ -240,80 +252,101 @@ export async function scheduleProfileTransitionAction(
 
     return {
       status: "error",
-      message: "The profile transition could not be scheduled. Try again later.",
+      message: t("errors.profileTransitionFailed"),
     };
   }
 }
 
 export async function resendMemberInviteAction(memberId: string): Promise<AdminPeopleActionState> {
+  const t = await getTranslations("AdminPeopleActions");
+
   return runAdminPeopleAction(async (adminId) => {
     const invitation = await resendMemberInvitation({
       memberId,
       actorMemberId: adminId,
     });
 
-    return `Invitation resent to ${invitation.email}.`;
+    return t("success.invitationResent", { email: invitation.email });
   });
 }
 
 export async function revokeMemberInviteAction(memberId: string): Promise<AdminPeopleActionState> {
+  const t = await getTranslations("AdminPeopleActions");
+
   return runAdminPeopleAction(async (adminId) => {
     await revokeMemberInvitation({
       memberId,
       actorMemberId: adminId,
     });
 
-    return "Invitation revoked.";
+    return t("success.invitationRevoked");
   });
 }
 
 export async function deactivateMemberAction(memberId: string): Promise<AdminPeopleActionState> {
+  const t = await getTranslations("AdminPeopleActions");
+
   return runAdminPeopleAction(async (adminId) => {
     const result = await deactivateMember({
       memberId,
       actorMemberId: adminId,
     });
 
-    return `Member deactivated. ${formatSessionCount(result.revokedSessionCount)} revoked.`;
+    return t("success.memberDeactivated", {
+      sessions: formatSessionCount(result.revokedSessionCount, t),
+    });
   });
 }
 
 export async function reactivateMemberAction(memberId: string): Promise<AdminPeopleActionState> {
+  const t = await getTranslations("AdminPeopleActions");
+
   return runAdminPeopleAction(async (adminId) => {
     await reactivateMember({
       memberId,
       actorMemberId: adminId,
     });
 
-    return "Member reactivated.";
+    return t("success.memberReactivated");
   });
 }
 
 export async function softDeleteMemberAction(memberId: string): Promise<AdminPeopleActionState> {
+  const t = await getTranslations("AdminPeopleActions");
+
   return runAdminPeopleAction(async (adminId) => {
     const result = await softDeleteMember({
       memberId,
       actorMemberId: adminId,
     });
 
-    return `Member archived. ${formatSessionCount(result.revokedSessionCount)} revoked. ${formatInvitationCount(result.revokedInvitationCount)} revoked.`;
+    return t("success.memberArchived", {
+      sessions: formatSessionCount(result.revokedSessionCount, t),
+      invitations: formatInvitationCount(result.revokedInvitationCount, t),
+    });
   });
 }
 
 export async function revokeMemberSessionsAction(
   memberId: string,
 ): Promise<AdminPeopleActionState> {
+  const t = await getTranslations("AdminPeopleActions");
+
   return runAdminPeopleAction(async (adminId) => {
     const result = await revokeMemberSessions({
       memberId,
       actorMemberId: adminId,
     });
 
-    return `${formatSessionCount(result.revokedSessionCount)} revoked.`;
+    return t("success.sessionsRevoked", {
+      sessions: formatSessionCount(result.revokedSessionCount, t),
+    });
   });
 }
 
 export async function resetMemberTotpAction(memberId: string): Promise<AdminPeopleActionState> {
+  const t = await getTranslations("AdminPeopleActions");
+
   return runAdminPeopleAction(async (adminId) => {
     const result = await resetMemberTotp({
       memberId,
@@ -321,10 +354,13 @@ export async function resetMemberTotpAction(memberId: string): Promise<AdminPeop
     });
 
     const resetMessage = result.hadTotp
-      ? "Authenticator app reset."
-      : "No authenticator app was set.";
+      ? t("success.authenticatorReset")
+      : t("success.noAuthenticator");
 
-    return `${resetMessage} ${formatSessionCount(result.revokedSessionCount)} revoked.`;
+    return t("success.authenticatorResetResult", {
+      resetMessage,
+      sessions: formatSessionCount(result.revokedSessionCount, t),
+    });
   });
 }
 
@@ -332,6 +368,8 @@ export async function changeMemberRoleAction(
   memberId: string,
   role: "ADMIN" | "MEMBER",
 ): Promise<AdminPeopleActionState> {
+  const t = await getTranslations("AdminPeopleActions");
+
   return runAdminPeopleAction(async (adminId) => {
     await changeMemberRole({
       memberId,
@@ -339,7 +377,9 @@ export async function changeMemberRoleAction(
       role,
     });
 
-    return `Role changed to ${role === "ADMIN" ? "Admin" : "Member"}.`;
+    return t("success.roleChanged", {
+      role: role === "ADMIN" ? t("roles.admin") : t("roles.member"),
+    });
   });
 }
 
@@ -397,6 +437,8 @@ function getScheduleProfileTransitionFieldErrors(
 async function runAdminPeopleAction(
   action: (adminId: string) => Promise<string>,
 ): Promise<AdminPeopleActionState> {
+  const t = await getTranslations("AdminPeopleActions");
+
   try {
     const { member: admin } = await requireAdminAppMemberForAction();
     const message = await action(admin.id);
@@ -424,7 +466,7 @@ async function runAdminPeopleAction(
 
     return {
       status: "error",
-      message: "The member action could not be completed. Try again later.",
+      message: t("errors.memberActionFailed"),
     };
   }
 }
@@ -457,12 +499,12 @@ function isInviteMemberField(field: unknown): field is InviteMemberField {
   );
 }
 
-function formatSessionCount(count: number) {
-  return `${count} session${count === 1 ? "" : "s"}`;
+function formatSessionCount(count: number, t: Awaited<ReturnType<typeof getTranslations>>) {
+  return t("counts.sessions", { count });
 }
 
-function formatInvitationCount(count: number) {
-  return `${count} pending invitation${count === 1 ? "" : "s"}`;
+function formatInvitationCount(count: number, t: Awaited<ReturnType<typeof getTranslations>>) {
+  return t("counts.invitations", { count });
 }
 
 function isDateInputValue(value: string) {

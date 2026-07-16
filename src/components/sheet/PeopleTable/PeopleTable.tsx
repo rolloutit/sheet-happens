@@ -28,26 +28,29 @@ export function PeopleTable({
   labels,
   className,
 }: PeopleTableProps) {
+  const columns = labels?.columns;
+
   return (
     <DataTable
       className={className}
-      caption="People management table"
-      aria-label="People management table"
+      caption={labels?.caption ?? "People management table"}
+      aria-label={labels?.ariaLabel ?? "People management table"}
       rows={rows}
       loading={loading}
       empty={labels?.empty ?? "No people match the current filters."}
       getRowKey={(row) => row.id}
       rowActionLabel={onRowOpen ? (row) => labels?.open?.(row) ?? `Open ${row.name}` : undefined}
       onRowClick={onRowOpen}
+      rowActionsLabel={labels?.rowActionsLabel}
       sort={sort}
       onSortChange={onSortChange}
       displayMode="table"
       columns={[
         {
           id: "name",
-          header: "Person",
+          header: columns?.person ?? "Person",
           sortable: true,
-          sortLabel: "person",
+          sortLabel: columns?.person?.toLowerCase() ?? "person",
           cell: (row) => (
             <div className="flex items-center gap-3">
               <Avatar name={row.name} size="sm" tone={row.avatarTone} />
@@ -60,15 +63,26 @@ export function PeopleTable({
         },
         {
           id: "profile",
-          header: "Profile",
+          header: columns?.profile ?? "Profile",
           accessor: "profile",
           sortable: true,
           cell: (row) => (
             <div className="grid gap-1">
-              <Badge tone="cta">{row.profile}</Badge>
+              <Badge tone="cta">
+                {row.profileValue
+                  ? (labels?.profiles?.[row.profileValue] ?? row.profile)
+                  : row.profile}
+              </Badge>
               {row.scheduledProfile && row.scheduledProfileValidFrom ? (
                 <p className="text-xs text-muted-foreground">
-                  Scheduled: {row.scheduledProfile} on {row.scheduledProfileValidFrom}
+                  {labels?.scheduledProfile
+                    ? labels.scheduledProfile(
+                        row.scheduledProfileValue
+                          ? (labels.profiles?.[row.scheduledProfileValue] ?? row.scheduledProfile)
+                          : row.scheduledProfile,
+                        row.scheduledProfileValidFrom,
+                      )
+                    : `Scheduled: ${row.scheduledProfile} on ${row.scheduledProfileValidFrom}`}
                 </p>
               ) : null}
             </div>
@@ -76,23 +90,32 @@ export function PeopleTable({
         },
         {
           id: "role",
-          header: "Role",
+          header: columns?.role ?? "Role",
           accessor: "role",
           sortable: true,
           cell: (row) => (
             <Badge tone={row.roleValue === "ADMIN" ? "warning" : "neutral"}>
-              {row.role ?? "Member"}
+              {row.roleValue
+                ? (labels?.roles?.[row.roleValue] ?? row.role)
+                : (row.role ?? "Member")}
             </Badge>
           ),
         },
         {
           id: "state",
-          header: "State",
+          header: columns?.state ?? "State",
           accessor: "state",
           sortable: true,
-          cell: (row) => <Badge tone={stateTone[row.state]}>{row.state}</Badge>,
+          cell: (row) => (
+            <Badge tone={stateTone[row.state]}>{labels?.states?.[row.state] ?? row.state}</Badge>
+          ),
         },
-        { id: "currency", header: "Currency", accessor: "currency", sortable: true },
+        {
+          id: "currency",
+          header: columns?.currency ?? "Currency",
+          accessor: "currency",
+          sortable: true,
+        },
         {
           id: "actions",
           header: "",

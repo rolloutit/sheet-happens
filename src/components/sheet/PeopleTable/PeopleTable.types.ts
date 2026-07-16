@@ -34,6 +34,20 @@ export type PeopleTableLabels = {
   delete?: (row: PersonTableRow) => string;
   open?: (row: PersonTableRow) => string;
   empty?: string;
+  caption?: string;
+  ariaLabel?: string;
+  rowActionsLabel?: string;
+  columns?: {
+    person: string;
+    profile: string;
+    role: string;
+    state: string;
+    currency: string;
+  };
+  profiles?: Record<PersonProfileValue, string>;
+  roles?: Record<PersonRoleValue, string>;
+  states?: Record<PersonRowState, string>;
+  scheduledProfile?: (profile: string, validFrom: string) => string;
 };
 
 export type PeopleTableProps = {
