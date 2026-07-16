@@ -1,3 +1,5 @@
+import { getTranslations } from "next-intl/server";
+
 import { AppShell } from "@/src/components/layout/AppShell";
 import {
   Card,
@@ -22,6 +24,7 @@ export const dynamic = "force-dynamic";
 
 export default async function AdminProjectsPage() {
   const { member: admin } = await requireAdminAppMember("/admin/projects");
+  const t = await getTranslations("AdminProjects");
   const [projects, groups, assignments, assignmentRates, assignableMembers] = await Promise.all([
     listProjectsForAdmin(),
     listProjectGroupsForAdmin(),
@@ -38,33 +41,32 @@ export default async function AdminProjectsPage() {
       <section className="mx-auto grid w-full max-w-[92rem] gap-6 px-4 py-8 sm:px-6 lg:px-8">
         <div className="flex flex-col gap-2">
           <p className="font-ui text-sm font-medium uppercase tracking-[0.18em] text-accent">
-            Admin
+            {t("eyebrow")}
           </p>
           <div className="flex flex-col justify-between gap-4 lg:flex-row lg:items-end">
             <div>
-              <h1 className="text-3xl font-bold text-foreground">Projects</h1>
+              <h1 className="text-3xl font-bold text-foreground">{t("title")}</h1>
               <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">
-                Create work targets, control their active state, and keep archived projects
-                available for historical reporting.
+                {t("subtitle")}
               </p>
             </div>
             <div className="grid min-w-72 grid-cols-3 gap-2 rounded-[var(--radius-lg)] border border-border bg-card/70 p-3 text-center">
               <div>
                 <p className="text-2xl font-semibold text-foreground">{projects.length}</p>
                 <p className="font-ui text-[11px] font-medium uppercase tracking-[0.12em] text-muted-foreground">
-                  Projects
+                  {t("stats.projects")}
                 </p>
               </div>
               <div>
                 <p className="text-2xl font-semibold text-accent">{activeProjects}</p>
                 <p className="font-ui text-[11px] font-medium uppercase tracking-[0.12em] text-muted-foreground">
-                  Active
+                  {t("stats.active")}
                 </p>
               </div>
               <div>
                 <p className="text-2xl font-semibold text-warning">{internalProjects}</p>
                 <p className="font-ui text-[11px] font-medium uppercase tracking-[0.12em] text-muted-foreground">
-                  Internal
+                  {t("stats.internal")}
                 </p>
               </div>
             </div>
@@ -74,10 +76,8 @@ export default async function AdminProjectsPage() {
         <div className="grid gap-6">
           <Card density="lg">
             <CardHeader className="block">
-              <CardTitle>Create project</CardTitle>
-              <CardDescription>
-                Projects are the work targets used for assignments and time entries.
-              </CardDescription>
+              <CardTitle>{t("create.title")}</CardTitle>
+              <CardDescription>{t("create.description")}</CardDescription>
             </CardHeader>
             <CardContent>
               <ProjectCreateForm />
@@ -86,11 +86,8 @@ export default async function AdminProjectsPage() {
 
           <Card density="lg">
             <CardHeader className="block">
-              <CardTitle>Project directory</CardTitle>
-              <CardDescription>
-                Active projects are available for assignment and time tracking. Archived projects
-                stay out of working lists while historical records remain available.
-              </CardDescription>
+              <CardTitle>{t("directory.title")}</CardTitle>
+              <CardDescription>{t("directory.description")}</CardDescription>
             </CardHeader>
             <CardContent>
               <AdminProjectsTable
@@ -106,10 +103,8 @@ export default async function AdminProjectsPage() {
 
           <Card density="lg">
             <CardHeader className="block">
-              <CardTitle>Project groups</CardTitle>
-              <CardDescription>
-                Organize projects into groups for filtering and reporting.
-              </CardDescription>
+              <CardTitle>{t("groups.title")}</CardTitle>
+              <CardDescription>{t("groups.description")}</CardDescription>
             </CardHeader>
             <CardContent>
               <AdminProjectGroupsPanel groups={groups} projects={projects} />

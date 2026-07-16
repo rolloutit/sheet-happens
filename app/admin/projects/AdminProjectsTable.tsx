@@ -15,6 +15,7 @@ import {
   WalletCards,
 } from "lucide-react";
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { Children, useState, useTransition, type ReactNode } from "react";
 
@@ -102,6 +103,7 @@ export type AdminProjectsTableProps = {
 type ProjectTableRow = AdminProjectRow & Record<string, unknown>;
 type PendingAction = "edit" | "status" | "archive";
 type ProjectStatusFilter = "all" | "ACTIVE" | "INACTIVE" | "internal";
+type AdminProjectsTranslator = ReturnType<typeof useTranslations>;
 
 const statusTone: Record<ProjectLifecycleStatus, BadgeProps["tone"]> = {
   ACTIVE: "success",
@@ -129,6 +131,7 @@ export function AdminProjectsTable({
   assignableMembers,
   todayDate,
 }: AdminProjectsTableProps) {
+  const t = useTranslations("AdminProjects");
   const router = useRouter();
   const [query, setQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<ProjectStatusFilter>("all");
@@ -268,49 +271,49 @@ export function AdminProjectsTable({
             setBulkMessage(null);
           }}
         >
-          Bulk assign
+          {t("actions.bulkAssign")}
         </Button>
       </div>
 
       <div className="grid gap-3 rounded-[var(--radius-lg)] border border-border bg-background/45 p-3 lg:grid-cols-[minmax(16rem,1fr)_auto_auto]">
         <label className="flex h-10 items-center gap-2 rounded-[var(--radius-md)] border border-border bg-card px-3 shadow-soft">
           <Search className="size-4 text-muted-foreground" aria-hidden="true" />
-          <span className="sr-only">Search projects</span>
+          <span className="sr-only">{t("filters.search")}</span>
           <input
             value={query}
             onChange={(event) => setQuery(event.target.value)}
-            placeholder="Search projects..."
+            placeholder={t("filters.searchPlaceholder")}
             className="min-w-0 flex-1 bg-transparent text-sm text-foreground outline-none placeholder:text-muted-foreground"
           />
         </label>
 
         <label className="grid h-10 grid-cols-[auto_1fr] items-center gap-2 rounded-[var(--radius-md)] border border-border bg-card px-3 shadow-soft">
           <span className="font-ui text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
-            State
+            {t("filters.state")}
           </span>
           <select
             value={statusFilter}
             onChange={(event) => setStatusFilter(event.target.value as ProjectStatusFilter)}
             className="min-w-28 bg-transparent text-sm font-semibold text-foreground outline-none"
           >
-            <option value="all">All</option>
-            <option value="ACTIVE">Active</option>
-            <option value="INACTIVE">Inactive</option>
-            <option value="internal">Internal</option>
+            <option value="all">{t("filters.all")}</option>
+            <option value="ACTIVE">{t("states.active")}</option>
+            <option value="INACTIVE">{t("states.inactive")}</option>
+            <option value="internal">{t("states.internal")}</option>
           </select>
         </label>
 
         <label className="grid h-10 grid-cols-[auto_1fr] items-center gap-2 rounded-[var(--radius-md)] border border-border bg-card px-3 shadow-soft">
           <span className="font-ui text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
-            Group
+            {t("filters.group")}
           </span>
           <select
             value={groupFilter}
             onChange={(event) => setGroupFilter(event.target.value)}
             className="min-w-36 bg-transparent text-sm font-semibold text-foreground outline-none"
           >
-            <option value="all">All</option>
-            <option value="ungrouped">Ungrouped</option>
+            <option value="all">{t("filters.all")}</option>
+            <option value="ungrouped">{t("states.ungrouped")}</option>
             {groups.map((group) => (
               <option key={group.id} value={group.id}>
                 {group.name}
@@ -321,22 +324,18 @@ export function AdminProjectsTable({
       </div>
 
       <DataTable
-        caption="Project management table"
-        aria-label="Project management table"
+        caption={t("table.caption")}
+        aria-label={t("table.ariaLabel")}
         rows={tableRows}
-        empty={
-          rows.length
-            ? "No projects match the current filters."
-            : "No projects have been created yet."
-        }
+        empty={rows.length ? t("table.emptyFiltered") : t("table.empty")}
         getRowKey={(row) => row.id}
         displayMode="responsive"
         density="comfortable"
         columns={[
           {
             id: "name",
-            header: "Project",
-            mobileLabel: "Project",
+            header: t("table.columns.project"),
+            mobileLabel: t("table.columns.project"),
             cell: (row) => (
               <div className="grid grid-cols-[auto_1fr] gap-3">
                 <ProjectColorSwatch colorToken={row.colorToken} size="lg" className="mt-1" />
@@ -346,7 +345,7 @@ export function AdminProjectsTable({
                     <code className="rounded-[var(--radius-sm)] bg-secondary px-1.5 py-0.5 font-mono text-xs text-muted-foreground">
                       {row.slug}
                     </code>
-                    {row.isInternal ? <Badge tone="cta">Internal</Badge> : null}
+                    {row.isInternal ? <Badge tone="cta">{t("states.internal")}</Badge> : null}
                     {row.groups.map((group) => (
                       <Badge key={group.id} tone="info">
                         <FolderOpen className="size-3" aria-hidden="true" />
@@ -363,35 +362,37 @@ export function AdminProjectsTable({
           },
           {
             id: "status",
-            header: "State",
+            header: t("table.columns.state"),
             accessor: "status",
-            mobileLabel: "State",
-            cell: (row) => <Badge tone={statusTone[row.status]}>{formatStatus(row.status)}</Badge>,
+            mobileLabel: t("table.columns.state"),
+            cell: (row) => (
+              <Badge tone={statusTone[row.status]}>{getProjectStatusLabel(row.status, t)}</Badge>
+            ),
           },
           {
             id: "timeline",
-            header: "Timeline",
-            mobileLabel: "Timeline",
+            header: t("table.columns.timeline"),
+            mobileLabel: t("table.columns.timeline"),
             cell: (row) => (
-              <span className="text-sm text-muted-foreground">{formatProjectTimeline(row)}</span>
+              <span className="text-sm text-muted-foreground">{formatProjectTimeline(row, t)}</span>
             ),
           },
           {
             id: "usage",
-            header: "Usage",
-            mobileLabel: "Usage",
+            header: t("table.columns.usage"),
+            mobileLabel: t("table.columns.usage"),
             cell: (row) => (
               <div className="grid gap-1 text-sm text-muted-foreground">
-                <span>{row.assignmentCount} assignments</span>
-                <span>{row.groupCount} groups</span>
+                <span>{t("table.assignmentCount", { count: row.assignmentCount })}</span>
+                <span>{t("table.groupCount", { count: row.groupCount })}</span>
               </div>
             ),
           },
           {
             id: "updatedAt",
-            header: "Updated",
+            header: t("table.columns.updated"),
             accessor: "updatedAt",
-            mobileLabel: "Updated",
+            mobileLabel: t("table.columns.updated"),
             cell: (row) => (
               <span className="text-sm text-muted-foreground">
                 {formatTimestamp(row.updatedAt)}
@@ -545,6 +546,7 @@ function ProjectActionsMenu({
   onSetActive: (active: boolean) => void;
   onArchive: () => void;
 }) {
+  const t = useTranslations("AdminProjects");
   const nextActive = project.status !== "ACTIVE";
 
   return (
@@ -552,20 +554,20 @@ function ProjectActionsMenu({
       <DropdownTrigger asChild>
         <IconButton
           icon={MoreHorizontal}
-          label={`Open actions for ${project.name}`}
+          label={t("actions.openFor", { name: project.name })}
           size="sm"
           variant="ghost"
         />
       </DropdownTrigger>
       <DropdownContent align="end">
-        <DropdownLabel>Actions</DropdownLabel>
+        <DropdownLabel>{t("actions.menuLabel")}</DropdownLabel>
         <DropdownItem onSelect={onOpenDetails}>
           <FolderOpen className="size-4" aria-hidden="true" />
-          Open details
+          {t("actions.openDetails")}
         </DropdownItem>
         <DropdownItem disabled={isPending("edit")} onSelect={onEdit}>
           <Edit3 className="size-4" aria-hidden="true" />
-          Edit project
+          {t("actions.editProject")}
         </DropdownItem>
         <DropdownItem disabled={isPending("status")} onSelect={() => onSetActive(nextActive)}>
           {nextActive ? (
@@ -573,12 +575,12 @@ function ProjectActionsMenu({
           ) : (
             <PauseCircle className="size-4" aria-hidden="true" />
           )}
-          {nextActive ? "Activate" : "Deactivate"}
+          {nextActive ? t("actions.activate") : t("actions.deactivate")}
         </DropdownItem>
         <DropdownSeparator />
         <DropdownItem tone="danger" disabled={isPending("archive")} onSelect={onArchive}>
           <Archive className="size-4" aria-hidden="true" />
-          Archive
+          {t("actions.archive")}
         </DropdownItem>
       </DropdownContent>
     </Dropdown>
@@ -608,6 +610,7 @@ function BulkAssignmentDialog({
   onOpenChange: (open: boolean) => void;
   onSubmit: (input: BulkAssignProjectMembersActionInput) => void;
 }) {
+  const t = useTranslations("AdminProjects");
   const [mode, setMode] = useState<BulkAssignmentMode>("people-to-projects");
   const [memberQuery, setMemberQuery] = useState("");
   const [projectQuery, setProjectQuery] = useState("");
@@ -657,11 +660,11 @@ function BulkAssignmentDialog({
 
   const peoplePanel = (
     <BulkSelectionPanel
-      title="People"
-      searchLabel="Search people"
+      title={t("bulk.people")}
+      searchLabel={t("bulk.searchPeople")}
       searchValue={memberQuery}
       onSearchChange={setMemberQuery}
-      empty="No members match this search."
+      empty={t("bulk.noMembers")}
     >
       {filteredMembers.map((member) => {
         const duplicateCount = getDuplicateCountForMember(member.id, summary.duplicates);
@@ -674,16 +677,16 @@ function BulkAssignmentDialog({
             subtitle={member.email}
             badges={[
               {
-                label: formatProfile(member.profile),
+                label: getAssignmentProfileLabel(member.profile, t),
                 tone: assignmentProfileTone[member.profile],
               },
               {
-                label: formatStatus(member.status),
+                label: getAssignmentStatusLabel(member.status, t),
                 tone: assignmentStatusTone[member.status],
               },
               duplicateCount
                 ? {
-                    label: `${duplicateCount} duplicate${duplicateCount === 1 ? "" : "s"}`,
+                    label: t("bulk.duplicateCount", { count: duplicateCount }),
                     tone: "warning",
                   }
                 : null,
@@ -697,11 +700,11 @@ function BulkAssignmentDialog({
 
   const projectsPanel = (
     <BulkSelectionPanel
-      title="Projects"
-      searchLabel="Search projects"
+      title={t("bulk.projects")}
+      searchLabel={t("bulk.searchProjects")}
       searchValue={projectQuery}
       onSearchChange={setProjectQuery}
-      empty="No projects match this search."
+      empty={t("bulk.noProjects")}
     >
       {filteredProjects.map((project) => {
         const duplicateCount = getDuplicateCountForProject(project.id, summary.duplicates);
@@ -712,21 +715,21 @@ function BulkAssignmentDialog({
             checked={selectedProjectIds.includes(project.id)}
             colorToken={project.colorToken}
             title={project.name}
-            subtitle={formatProjectTimeline(project)}
+            subtitle={formatProjectTimeline(project, t)}
             badges={[
               {
-                label: formatStatus(project.status),
+                label: getProjectStatusLabel(project.status, t),
                 tone: statusTone[project.status],
               },
               project.isInternal
                 ? {
-                    label: "Internal",
+                    label: t("states.internal"),
                     tone: "cta",
                   }
                 : null,
               duplicateCount
                 ? {
-                    label: `${duplicateCount} duplicate${duplicateCount === 1 ? "" : "s"}`,
+                    label: t("bulk.duplicateCount", { count: duplicateCount }),
                     tone: "warning",
                   }
                 : null,
@@ -748,11 +751,8 @@ function BulkAssignmentDialog({
     >
       <DialogContent className="max-w-5xl">
         <DialogHeader>
-          <DialogTitle>Bulk assign</DialogTitle>
-          <DialogDescription>
-            Create project assignments across multiple people and projects. Existing overlapping
-            assignments are skipped.
-          </DialogDescription>
+          <DialogTitle>{t("bulk.title")}</DialogTitle>
+          <DialogDescription>{t("bulk.description")}</DialogDescription>
         </DialogHeader>
 
         <div className="grid max-h-[74vh] gap-5 overflow-y-auto pr-1">
@@ -772,19 +772,19 @@ function BulkAssignmentDialog({
 
           <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
             <SegmentedControl
-              label="Bulk assignment mode"
+              label={t("bulk.mode")}
               size="sm"
               value={mode}
               onValueChange={(value) => setMode(value as BulkAssignmentMode)}
               items={[
-                { value: "people-to-projects", label: "People to projects" },
-                { value: "projects-to-people", label: "Projects to people" },
+                { value: "people-to-projects", label: t("bulk.peopleToProjects") },
+                { value: "projects-to-people", label: t("bulk.projectsToPeople") },
               ]}
             />
             <Button type="button" variant="ghost" size="sm" asChild>
               <Link href="/admin/rates">
                 <WalletCards className="size-4" aria-hidden="true" />
-                Manage rates
+                {t("actions.manageRates")}
               </Link>
             </Button>
           </div>
@@ -796,7 +796,7 @@ function BulkAssignmentDialog({
 
           <div className="grid gap-4 rounded-[var(--radius-lg)] border border-border bg-background/45 p-4 md:grid-cols-[minmax(10rem,1fr)_minmax(10rem,1fr)_auto] md:items-start">
             <Field
-              label="Valid from"
+              label={t("assignment.validFrom")}
               required
               reserveMessageSpace
               error={actionState?.fieldErrors?.validFrom}
@@ -813,7 +813,11 @@ function BulkAssignmentDialog({
                 />
               )}
             </Field>
-            <Field label="Valid to" reserveMessageSpace error={actionState?.fieldErrors?.validTo}>
+            <Field
+              label={t("assignment.validTo")}
+              reserveMessageSpace
+              error={actionState?.fieldErrors?.validTo}
+            >
               {({ id, describedBy, invalid }) => (
                 <Input
                   id={id}
@@ -832,10 +836,14 @@ function BulkAssignmentDialog({
                 onChange={(event) => setActive(event.target.checked)}
                 className={nativeCheckboxClassName}
               />
-              Active
+              {t("states.active")}
             </label>
             <div className="md:col-span-3">
-              <Field label="Notes" reserveMessageSpace error={actionState?.fieldErrors?.notes}>
+              <Field
+                label={t("form.notes")}
+                reserveMessageSpace
+                error={actionState?.fieldErrors?.notes}
+              >
                 {({ id, describedBy, invalid }) => (
                   <Input
                     id={id}
@@ -843,7 +851,7 @@ function BulkAssignmentDialog({
                     onChange={(event) => setNotes(event.target.value)}
                     aria-describedby={describedBy}
                     invalid={invalid}
-                    placeholder="Optional note for all created assignments"
+                    placeholder={t("bulk.notesPlaceholder")}
                   />
                 )}
               </Field>
@@ -852,17 +860,14 @@ function BulkAssignmentDialog({
 
           <div className="grid gap-3 rounded-[var(--radius-lg)] border border-border bg-card p-4">
             <div className="grid gap-3 sm:grid-cols-3">
-              <ProjectFact label="New assignments" value={String(summary.newCount)} />
-              <ProjectFact label="Duplicates" value={String(summary.duplicateCount)} />
-              <ProjectFact label="Selected pairs" value={String(summary.totalCount)} />
+              <ProjectFact label={t("bulk.newAssignments")} value={String(summary.newCount)} />
+              <ProjectFact label={t("bulk.duplicates")} value={String(summary.duplicateCount)} />
+              <ProjectFact label={t("bulk.selectedPairs")} value={String(summary.totalCount)} />
             </div>
-            <p className="text-sm leading-6 text-muted-foreground">
-              Contractors assigned here use their central rate until a project override is added on
-              the Rates screen.
-            </p>
+            <p className="text-sm leading-6 text-muted-foreground">{t("bulk.rateHint")}</p>
             {summary.totalCount > 0 && summary.newCount === 0 ? (
               <p className="rounded-[var(--radius-md)] border border-warning/35 bg-warning/12 px-3 py-2 text-sm text-warning">
-                Every selected pair already overlaps an existing assignment for this date range.
+                {t("bulk.allDuplicates")}
               </p>
             ) : null}
           </div>
@@ -871,7 +876,7 @@ function BulkAssignmentDialog({
         <DialogFooter>
           <DialogClose asChild>
             <Button type="button" variant="ghost" disabled={pending}>
-              Cancel
+              {t("actions.cancel")}
             </Button>
           </DialogClose>
           <Button
@@ -890,7 +895,7 @@ function BulkAssignmentDialog({
               })
             }
           >
-            Assign {summary.newCount || ""}
+            {t("actions.assignCount", { count: summary.newCount })}
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -1027,6 +1032,7 @@ function ProjectDetailDrawer({
   onUpdate: (input: UpdateProjectAssignmentActionInput) => void;
   onClose: (input: CloseProjectAssignmentActionInput) => void;
 }) {
+  const t = useTranslations("AdminProjects");
   const [editingAssignmentId, setEditingAssignmentId] = useState<string | null>(null);
   const assignPending = project ? pendingKey === `${project.id}:assign` : false;
   const nextActive = project?.status !== "ACTIVE";
@@ -1042,13 +1048,13 @@ function ProjectDetailDrawer({
                   <ProjectColorSwatch colorToken={project.colorToken} size="lg" className="mt-1" />
                   <div className="grid min-w-0 gap-2">
                     <p className="font-ui text-xs font-semibold uppercase tracking-[0.18em] text-accent">
-                      Project
+                      {t("detail.eyebrow")}
                     </p>
                     <DrawerTitle className="text-2xl font-semibold text-foreground">
                       {project.name}
                     </DrawerTitle>
                     <DrawerDescription className="text-sm leading-6 text-muted-foreground">
-                      {formatProjectTimeline(project)}
+                      {formatProjectTimeline(project, t)}
                     </DrawerDescription>
                   </div>
                 </div>
@@ -1060,7 +1066,7 @@ function ProjectDetailDrawer({
                     icon={Edit3}
                     onClick={onEditProject}
                   >
-                    Edit
+                    {t("actions.edit")}
                   </Button>
                   <Button
                     type="button"
@@ -1070,17 +1076,19 @@ function ProjectDetailDrawer({
                     loading={projectPendingAction}
                     onClick={() => onSetProjectActive(nextActive)}
                   >
-                    {nextActive ? "Activate" : "Deactivate"}
+                    {nextActive ? t("actions.activate") : t("actions.deactivate")}
                   </Button>
                 </div>
               </div>
             </DrawerHeader>
 
             <div className="mt-4 flex flex-wrap items-center gap-2">
-              <Badge tone={statusTone[project.status]}>{formatStatus(project.status)}</Badge>
-              {project.isInternal ? <Badge tone="cta">Internal</Badge> : null}
+              <Badge tone={statusTone[project.status]}>
+                {getProjectStatusLabel(project.status, t)}
+              </Badge>
+              {project.isInternal ? <Badge tone="cta">{t("states.internal")}</Badge> : null}
               {project.groups.length === 0 ? (
-                <Badge tone="neutral">Ungrouped</Badge>
+                <Badge tone="neutral">{t("states.ungrouped")}</Badge>
               ) : (
                 project.groups.map((group) => (
                   <Badge key={group.id} tone="info">
@@ -1095,8 +1103,7 @@ function ProjectDetailDrawer({
           <div className="grid max-h-[calc(100vh-9rem)] gap-6 overflow-y-auto px-5 py-5">
             {project.status !== "ACTIVE" ? (
               <div className="rounded-[var(--radius-lg)] border border-warning/35 bg-warning/12 px-4 py-3 text-sm leading-6 text-warning">
-                This project is not active. It stays visible for admin work, but should not be used
-                for new time-entry choices.
+                {t("detail.inactiveWarning")}
               </div>
             ) : null}
 
@@ -1116,14 +1123,17 @@ function ProjectDetailDrawer({
 
             <section className="grid gap-3">
               <div className="grid gap-3 sm:grid-cols-3">
-                <ProjectFact label="Assignments" value={String(assignments.length)} />
-                <ProjectFact label="Groups" value={String(project.groupCount)} />
-                <ProjectFact label="Updated" value={formatTimestamp(project.updatedAt)} />
+                <ProjectFact label={t("detail.assignments")} value={String(assignments.length)} />
+                <ProjectFact label={t("detail.groups")} value={String(project.groupCount)} />
+                <ProjectFact
+                  label={t("detail.updated")}
+                  value={formatTimestamp(project.updatedAt)}
+                />
               </div>
               <div className="rounded-[var(--radius-lg)] border border-border bg-card p-4">
-                <p className="font-ui text-sm font-semibold text-foreground">Notes</p>
+                <p className="font-ui text-sm font-semibold text-foreground">{t("form.notes")}</p>
                 <p className="mt-2 text-sm leading-6 text-muted-foreground">
-                  {project.notes || "No project notes have been added."}
+                  {project.notes || t("detail.noNotes")}
                 </p>
               </div>
             </section>
@@ -1145,14 +1155,16 @@ function ProjectDetailDrawer({
               }}
             >
               <div>
-                <h3 className="font-ui text-sm font-semibold text-foreground">Add assignment</h3>
+                <h3 className="font-ui text-sm font-semibold text-foreground">
+                  {t("assignment.addTitle")}
+                </h3>
                 <p className="mt-1 text-xs leading-5 text-muted-foreground">
-                  Invited and active members can be assigned before account activation.
+                  {t("assignment.addDescription")}
                 </p>
               </div>
               <div className="grid gap-4 lg:grid-cols-[minmax(14rem,1.4fr)_minmax(9rem,0.7fr)_minmax(9rem,0.7fr)]">
                 <Field
-                  label="Member"
+                  label={t("assignment.member")}
                   required
                   reserveMessageSpace
                   error={actionState?.fieldErrors?.memberId}
@@ -1168,19 +1180,19 @@ function ProjectDetailDrawer({
                       className={nativeSelectClassName}
                     >
                       <option value="" disabled>
-                        Choose member
+                        {t("assignment.chooseMember")}
                       </option>
                       {assignableMembers.map((member) => (
                         <option key={member.id} value={member.id}>
-                          {member.name} - {formatProfile(member.profile)},{" "}
-                          {formatStatus(member.status)}
+                          {member.name} - {getAssignmentProfileLabel(member.profile, t)},{" "}
+                          {getAssignmentStatusLabel(member.status, t)}
                         </option>
                       ))}
                     </select>
                   )}
                 </Field>
                 <Field
-                  label="Valid from"
+                  label={t("assignment.validFrom")}
                   required
                   reserveMessageSpace
                   error={actionState?.fieldErrors?.validFrom}
@@ -1198,7 +1210,7 @@ function ProjectDetailDrawer({
                   )}
                 </Field>
                 <Field
-                  label="Valid to"
+                  label={t("assignment.validTo")}
                   reserveMessageSpace
                   error={actionState?.fieldErrors?.validTo}
                 >
@@ -1215,14 +1227,18 @@ function ProjectDetailDrawer({
               </div>
 
               <div className="grid gap-4 lg:grid-cols-[1fr_auto] lg:items-end">
-                <Field label="Notes" reserveMessageSpace error={actionState?.fieldErrors?.notes}>
+                <Field
+                  label={t("form.notes")}
+                  reserveMessageSpace
+                  error={actionState?.fieldErrors?.notes}
+                >
                   {({ id, describedBy, invalid }) => (
                     <Input
                       id={id}
                       name="notes"
                       aria-describedby={describedBy}
                       invalid={invalid}
-                      placeholder="Optional assignment notes"
+                      placeholder={t("assignment.notesPlaceholder")}
                     />
                   )}
                 </Field>
@@ -1234,7 +1250,7 @@ function ProjectDetailDrawer({
                     defaultChecked
                     className={nativeCheckboxClassName}
                   />
-                  Active
+                  {t("states.active")}
                 </label>
               </div>
 
@@ -1245,7 +1261,7 @@ function ProjectDetailDrawer({
                   loading={assignPending}
                   disabled={assignableMembers.length === 0}
                 >
-                  Assign member
+                  {t("actions.assignMember")}
                 </Button>
               </div>
             </form>
@@ -1254,23 +1270,23 @@ function ProjectDetailDrawer({
               <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                 <div>
                   <h3 className="font-ui text-sm font-semibold text-foreground">
-                    Assigned members
+                    {t("assignment.assignedMembers")}
                   </h3>
                   <p className="mt-1 text-xs leading-5 text-muted-foreground">
-                    Effective dates and rate source are shown per assignment.
+                    {t("assignment.assignedMembersDescription")}
                   </p>
                 </div>
                 <Button type="button" variant="ghost" size="sm" asChild>
                   <Link href="/admin/rates">
                     <WalletCards className="size-4" aria-hidden="true" />
-                    Manage rates
+                    {t("actions.manageRates")}
                   </Link>
                 </Button>
               </div>
 
               {assignments.length === 0 ? (
                 <div className="rounded-[var(--radius-lg)] border border-border bg-card p-6 text-center text-sm text-muted-foreground">
-                  No members are assigned to this project yet.
+                  {t("assignment.empty")}
                 </div>
               ) : (
                 assignments.map((assignment) => {
@@ -1278,7 +1294,7 @@ function ProjectDetailDrawer({
                   const updatePending = pendingKey === `${assignment.id}:update`;
                   const closePending = pendingKey === `${assignment.id}:close`;
                   const canEndToday = assignment.active && todayDate >= assignment.validFrom;
-                  const rateSource = getAssignmentRateSource(assignment, assignmentRates);
+                  const rateSource = getAssignmentRateSource(assignment, assignmentRates, t);
 
                   return (
                     <div
@@ -1297,13 +1313,13 @@ function ProjectDetailDrawer({
                           </div>
                           <div className="flex flex-wrap items-center gap-2">
                             <Badge tone={assignmentProfileTone[assignment.memberProfile]}>
-                              {formatProfile(assignment.memberProfile)}
+                              {getAssignmentProfileLabel(assignment.memberProfile, t)}
                             </Badge>
                             <Badge tone={assignmentStatusTone[assignment.memberStatus]}>
-                              {formatStatus(assignment.memberStatus)}
+                              {getAssignmentStatusLabel(assignment.memberStatus, t)}
                             </Badge>
                             <Badge tone={assignment.active ? "success" : "neutral"}>
-                              {assignment.active ? "active" : "inactive"}
+                              {assignment.active ? t("states.active") : t("states.inactive")}
                             </Badge>
                             <Badge tone={rateSource.tone}>{rateSource.label}</Badge>
                           </div>
@@ -1321,7 +1337,7 @@ function ProjectDetailDrawer({
                               disabled={updatePending || closePending}
                               onClick={() => setEditingAssignmentId(editing ? null : assignment.id)}
                             >
-                              {editing ? "Cancel" : "Edit"}
+                              {editing ? t("actions.cancel") : t("actions.edit")}
                             </Button>
                             <Button
                               type="button"
@@ -1337,7 +1353,7 @@ function ProjectDetailDrawer({
                                 })
                               }
                             >
-                              End today
+                              {t("actions.endToday")}
                             </Button>
                           </div>
                         </div>
@@ -1390,6 +1406,8 @@ function ProjectAssignmentEditForm({
   onCancel: () => void;
   onSubmit: (input: UpdateProjectAssignmentActionInput) => void;
 }) {
+  const t = useTranslations("AdminProjects");
+
   return (
     <form
       className="grid gap-4 border-t border-border pt-4"
@@ -1408,7 +1426,7 @@ function ProjectAssignmentEditForm({
     >
       <div className="grid gap-4 md:grid-cols-[minmax(9rem,1fr)_minmax(9rem,1fr)_auto] md:items-end">
         <Field
-          label="Valid from"
+          label={t("assignment.validFrom")}
           required
           reserveMessageSpace
           error={actionState?.fieldErrors?.validFrom}
@@ -1425,7 +1443,11 @@ function ProjectAssignmentEditForm({
             />
           )}
         </Field>
-        <Field label="Valid to" reserveMessageSpace error={actionState?.fieldErrors?.validTo}>
+        <Field
+          label={t("assignment.validTo")}
+          reserveMessageSpace
+          error={actionState?.fieldErrors?.validTo}
+        >
           {({ id, describedBy, invalid }) => (
             <Input
               id={id}
@@ -1445,10 +1467,10 @@ function ProjectAssignmentEditForm({
             defaultChecked={assignment.active}
             className={nativeCheckboxClassName}
           />
-          Active
+          {t("states.active")}
         </label>
       </div>
-      <Field label="Notes" reserveMessageSpace error={actionState?.fieldErrors?.notes}>
+      <Field label={t("form.notes")} reserveMessageSpace error={actionState?.fieldErrors?.notes}>
         {({ id, describedBy, invalid }) => (
           <Input
             id={id}
@@ -1461,10 +1483,10 @@ function ProjectAssignmentEditForm({
       </Field>
       <div className="flex justify-end gap-2">
         <Button type="button" variant="ghost" disabled={pending} onClick={onCancel}>
-          Cancel
+          {t("actions.cancel")}
         </Button>
         <Button type="submit" icon={Save} loading={pending}>
-          Save assignment
+          {t("actions.saveAssignment")}
         </Button>
       </div>
     </form>
@@ -1484,16 +1506,15 @@ function ProjectEditDialog({
   onOpenChange: (open: boolean) => void;
   onSubmit: (input: UpdateProjectActionInput) => void;
 }) {
+  const t = useTranslations("AdminProjects");
+
   return (
     <Dialog open={Boolean(project)} onOpenChange={onOpenChange}>
       {project ? (
         <DialogContent className="max-w-2xl">
           <DialogHeader>
-            <DialogTitle>Edit {project.name}</DialogTitle>
-            <DialogDescription>
-              Deactivate a project to prevent future time entry while keeping historical records
-              intact.
-            </DialogDescription>
+            <DialogTitle>{t("editDialog.title", { name: project.name })}</DialogTitle>
+            <DialogDescription>{t("editDialog.description")}</DialogDescription>
           </DialogHeader>
 
           <form
@@ -1517,7 +1538,7 @@ function ProjectEditDialog({
           >
             <div className="grid gap-4 md:grid-cols-2">
               <Field
-                label="Project name"
+                label={t("form.projectName")}
                 required
                 reserveMessageSpace
                 error={actionState?.fieldErrors?.name}
@@ -1534,7 +1555,11 @@ function ProjectEditDialog({
                   />
                 )}
               </Field>
-              <Field label="Slug" reserveMessageSpace error={actionState?.fieldErrors?.slug}>
+              <Field
+                label={t("form.slug")}
+                reserveMessageSpace
+                error={actionState?.fieldErrors?.slug}
+              >
                 {({ id, describedBy, invalid }) => (
                   <Input
                     id={id}
@@ -1549,6 +1574,7 @@ function ProjectEditDialog({
             </div>
 
             <ProjectColorField
+              label={t("form.projectColor")}
               defaultValue={project.colorToken}
               error={actionState?.fieldErrors?.colorToken}
               reserveMessageSpace
@@ -1556,7 +1582,7 @@ function ProjectEditDialog({
 
             <div className="grid gap-4 md:grid-cols-[minmax(9rem,1fr)_minmax(9rem,1fr)]">
               <Field
-                label="Starts on"
+                label={t("form.startsOn")}
                 reserveMessageSpace
                 error={actionState?.fieldErrors?.startsOn}
               >
@@ -1571,7 +1597,11 @@ function ProjectEditDialog({
                   />
                 )}
               </Field>
-              <Field label="Ends on" reserveMessageSpace error={actionState?.fieldErrors?.endsOn}>
+              <Field
+                label={t("form.endsOn")}
+                reserveMessageSpace
+                error={actionState?.fieldErrors?.endsOn}
+              >
                 {({ id, describedBy, invalid }) => (
                   <Input
                     id={id}
@@ -1595,16 +1625,19 @@ function ProjectEditDialog({
               />
               <span className="grid gap-1">
                 <span className="font-ui text-sm font-semibold text-foreground">
-                  Internal project
+                  {t("form.internalProject")}
                 </span>
                 <span className="text-xs leading-5 text-muted-foreground">
-                  Use for internal or collector work such as team building, communication, or
-                  operational tasks.
+                  {t("form.internalProjectDescription")}
                 </span>
               </span>
             </label>
 
-            <Field label="Notes" reserveMessageSpace error={actionState?.fieldErrors?.notes}>
+            <Field
+              label={t("form.notes")}
+              reserveMessageSpace
+              error={actionState?.fieldErrors?.notes}
+            >
               {({ id, describedBy, invalid }) => (
                 <Textarea
                   id={id}
@@ -1628,11 +1661,11 @@ function ProjectEditDialog({
             <DialogFooter>
               <DialogClose asChild>
                 <Button type="button" variant="ghost" disabled={pending}>
-                  Cancel
+                  {t("actions.cancel")}
                 </Button>
               </DialogClose>
               <Button type="submit" icon={Edit3} loading={pending}>
-                Save changes
+                {t("actions.saveChanges")}
               </Button>
             </DialogFooter>
           </form>
@@ -1653,23 +1686,26 @@ function ArchiveProjectDialog({
   onOpenChange: (open: boolean) => void;
   onConfirm: (project: AdminProjectRow) => void;
 }) {
+  const t = useTranslations("AdminProjects");
+
   return (
     <Dialog open={Boolean(project)} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>{project ? `Archive ${project.name}?` : "Archive project?"}</DialogTitle>
-          <DialogDescription>
-            Archived projects disappear from working admin lists and future assignment/time-entry
-            flows, but historical records remain linked for reporting.
-          </DialogDescription>
+          <DialogTitle>
+            {project
+              ? t("archiveDialog.titleNamed", { name: project.name })
+              : t("archiveDialog.title")}
+          </DialogTitle>
+          <DialogDescription>{t("archiveDialog.description")}</DialogDescription>
         </DialogHeader>
         <div className="rounded-[var(--radius-md)] border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
-          This is a soft delete. Use it only when the project should no longer be selectable.
+          {t("archiveDialog.warning")}
         </div>
         <DialogFooter>
           <DialogClose asChild>
             <Button type="button" variant="ghost" disabled={pending}>
-              Cancel
+              {t("actions.cancel")}
             </Button>
           </DialogClose>
           <Button
@@ -1681,7 +1717,7 @@ function ArchiveProjectDialog({
               if (project) onConfirm(project);
             }}
           >
-            Archive project
+            {t("actions.archiveProject")}
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -1817,11 +1853,36 @@ function isDateOnlyString(value: string) {
   return !Number.isNaN(date.getTime()) && date.toISOString().slice(0, 10) === value;
 }
 
-function formatProjectTimeline(project: AdminProjectRow) {
-  if (project.startsOn && project.endsOn) return `${project.startsOn} to ${project.endsOn}`;
-  if (project.startsOn) return `From ${project.startsOn}`;
-  if (project.endsOn) return `Until ${project.endsOn}`;
-  return "Open-ended";
+function getProjectStatusLabel(status: ProjectLifecycleStatus, t: AdminProjectsTranslator) {
+  if (status === "ACTIVE") return t("states.active");
+  if (status === "INACTIVE") return t("states.inactive");
+  return t("states.archived");
+}
+
+function getAssignmentStatusLabel(
+  status: ProjectAssignmentMemberStatus,
+  t: AdminProjectsTranslator,
+) {
+  if (status === "ACTIVE") return t("states.active");
+  if (status === "INACTIVE") return t("states.inactive");
+  if (status === "INVITED") return t("states.invited");
+  return t("states.deleted");
+}
+
+function getAssignmentProfileLabel(
+  profile: ProjectAssignmentMemberProfile,
+  t: AdminProjectsTranslator,
+) {
+  return profile === "CONTRACTOR" ? t("profiles.contractor") : t("profiles.employee");
+}
+
+function formatProjectTimeline(project: AdminProjectRow, t: AdminProjectsTranslator) {
+  if (project.startsOn && project.endsOn) {
+    return t("timeline.range", { from: project.startsOn, to: project.endsOn });
+  }
+  if (project.startsOn) return t("timeline.from", { from: project.startsOn });
+  if (project.endsOn) return t("timeline.until", { to: project.endsOn });
+  return t("timeline.openEnded");
 }
 
 function formatAssignmentTimeline(assignment: AdminProjectAssignmentRow) {
@@ -1832,6 +1893,7 @@ function formatAssignmentTimeline(assignment: AdminProjectAssignmentRow) {
 function getAssignmentRateSource(
   assignment: AdminProjectAssignmentRow,
   assignmentRates: AdminAssignmentRateRow[],
+  t: AdminProjectsTranslator,
 ): {
   label: string;
   detail: string;
@@ -1839,8 +1901,8 @@ function getAssignmentRateSource(
 } {
   if (assignment.memberProfile === "EMPLOYEE") {
     return {
-      label: "Central rate",
-      detail: "Employee assignments use the member central rate.",
+      label: t("rateSource.centralRate"),
+      detail: t("rateSource.employeeCentralRate"),
       tone: "neutral",
     };
   }
@@ -1849,25 +1911,27 @@ function getAssignmentRateSource(
 
   if (rate?.currentOverrideRate) {
     return {
-      label: "Project override",
-      detail: `${formatRatePeriodAmount(rate.currentOverrideRate)} current override.`,
+      label: t("rateSource.projectOverride"),
+      detail: t("rateSource.currentOverride", {
+        rate: formatRatePeriodAmount(rate.currentOverrideRate),
+      }),
       tone: "info",
     };
   }
 
   if (rate?.overrideRatePeriods.length) {
     return {
-      label: "Scheduled override",
-      detail: `${rate.overrideRatePeriods.length} override period${
-        rate.overrideRatePeriods.length === 1 ? "" : "s"
-      } scheduled.`,
+      label: t("rateSource.scheduledOverride"),
+      detail: t("rateSource.scheduledOverrideDetail", {
+        count: rate.overrideRatePeriods.length,
+      }),
       tone: "warning",
     };
   }
 
   return {
-    label: "Central rate",
-    detail: "Contractor assignment currently uses the member central rate.",
+    label: t("rateSource.centralRate"),
+    detail: t("rateSource.contractorCentralRate"),
     tone: "neutral",
   };
 }

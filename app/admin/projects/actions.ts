@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
+import { getTranslations } from "next-intl/server";
 import { z } from "zod";
 
 import { requireAdminAppMemberForAction } from "@/src/server/auth/app-access";
@@ -49,116 +50,138 @@ import type {
   UpdateProjectActionInput,
 } from "./actions.types";
 
-const projectDateSchema = z.string().trim().refine(isDateInputValue, "Choose a valid date.");
+type AdminProjectsActionsTranslator = Awaited<ReturnType<typeof getTranslations>>;
 
-const projectFormSchema = z
-  .object({
-    name: z.string().trim().min(1, "Project name is required."),
-    slug: z.string().trim().max(80, "Slug must be 80 characters or less."),
-    colorToken: z.enum(PROJECT_COLOR_TOKENS, "Choose a supported project color."),
-    startsOn: projectDateSchema,
-    endsOn: projectDateSchema,
-    isInternal: z.boolean(),
-    notes: z.string().trim().max(1000, "Notes must be 1000 characters or less."),
-  })
-  .superRefine((value, context) => {
-    if (!value.startsOn || !value.endsOn) return;
-
-    if (value.endsOn < value.startsOn) {
-      context.addIssue({
-        code: "custom",
-        message: "Project end date cannot be before the start date.",
-        path: ["endsOn"],
-      });
-    }
-  });
-
-const assignmentBaseSchema = z.object({
-  memberId: z.string().trim().min(1, "Choose a member."),
-  validFrom: z
-    .string()
-    .trim()
-    .min(1, "Assignment start date is required.")
-    .refine(isDateInputValue, "Choose a valid start date."),
-  validTo: projectDateSchema,
-  active: z.boolean(),
-  notes: z.string().trim().max(1000, "Notes must be 1000 characters or less."),
-});
-
-const assignmentFormSchema = assignmentBaseSchema.superRefine(validateAssignmentDateRange);
-
-const updateAssignmentFormSchema = assignmentBaseSchema
-  .omit({
-    memberId: true,
-  })
-  .superRefine(validateAssignmentDateRange);
-
-function validateAssignmentDateRange(
-  value: { validFrom: string; validTo: string },
-  context: z.RefinementCtx,
-) {
-  if (!value.validTo) return;
-
-  if (value.validTo < value.validFrom) {
-    context.addIssue({
-      code: "custom",
-      message: "Assignment end date cannot be before the start date.",
-      path: ["validTo"],
-    });
-  }
+function createProjectDateSchema(t: AdminProjectsActionsTranslator) {
+  return z.string().trim().refine(isDateInputValue, t("validation.validDate"));
 }
 
-const closeAssignmentSchema = z.object({
-  assignmentId: z.string().trim().min(1, "Assignment id is missing."),
-  validTo: z
-    .string()
-    .trim()
-    .min(1, "Assignment end date is required.")
-    .refine(isDateInputValue, "Choose a valid end date."),
-});
+function createProjectFormSchema(t: AdminProjectsActionsTranslator) {
+  const projectDateSchema = createProjectDateSchema(t);
 
-const bulkAssignmentFormSchema = z
-  .object({
-    memberIds: z.array(z.string().trim().min(1)).min(1, "Choose at least one member."),
-    projectIds: z.array(z.string().trim().min(1)).min(1, "Choose at least one project."),
+  return z
+    .object({
+      name: z.string().trim().min(1, t("validation.projectNameRequired")),
+      slug: z.string().trim().max(80, t("validation.slugMax")),
+      colorToken: z.enum(PROJECT_COLOR_TOKENS, t("validation.supportedProjectColor")),
+      startsOn: projectDateSchema,
+      endsOn: projectDateSchema,
+      isInternal: z.boolean(),
+      notes: z.string().trim().max(1000, t("validation.notesMax")),
+    })
+    .superRefine((value, context) => {
+      if (!value.startsOn || !value.endsOn) return;
+
+      if (value.endsOn < value.startsOn) {
+        context.addIssue({
+          code: "custom",
+          message: t("validation.projectEndBeforeStart"),
+          path: ["endsOn"],
+        });
+      }
+    });
+}
+
+function createAssignmentBaseSchema(t: AdminProjectsActionsTranslator) {
+  return z.object({
+    memberId: z.string().trim().min(1, t("validation.chooseMember")),
     validFrom: z
       .string()
       .trim()
-      .min(1, "Assignment start date is required.")
-      .refine(isDateInputValue, "Choose a valid start date."),
-    validTo: projectDateSchema,
+      .min(1, t("validation.assignmentStartRequired"))
+      .refine(isDateInputValue, t("validation.validStartDate")),
+    validTo: createProjectDateSchema(t),
     active: z.boolean(),
-    notes: z.string().trim().max(1000, "Notes must be 1000 characters or less."),
-  })
-  .superRefine((value, context) => {
-    validateAssignmentDateRange(value, context);
+    notes: z.string().trim().max(1000, t("validation.notesMax")),
+  });
+}
 
-    if (new Set(value.memberIds).size * new Set(value.projectIds).size > 200) {
+function createAssignmentFormSchema(t: AdminProjectsActionsTranslator) {
+  return createAssignmentBaseSchema(t).superRefine(validateAssignmentDateRange(t));
+}
+
+function createUpdateAssignmentFormSchema(t: AdminProjectsActionsTranslator) {
+  return createAssignmentBaseSchema(t)
+    .omit({
+      memberId: true,
+    })
+    .superRefine(validateAssignmentDateRange(t));
+}
+
+function validateAssignmentDateRange(t: AdminProjectsActionsTranslator) {
+  return (value: { validFrom: string; validTo: string }, context: z.RefinementCtx) => {
+    if (!value.validTo) return;
+
+    if (value.validTo < value.validFrom) {
       context.addIssue({
         code: "custom",
-        message: "Bulk assignment is limited to 200 member/project pairs.",
-        path: ["projectIds"],
+        message: t("validation.assignmentEndBeforeStart"),
+        path: ["validTo"],
       });
     }
+  };
+}
+
+function createCloseAssignmentSchema(t: AdminProjectsActionsTranslator) {
+  return z.object({
+    assignmentId: z.string().trim().min(1, t("validation.assignmentIdMissing")),
+    validTo: z
+      .string()
+      .trim()
+      .min(1, t("validation.assignmentEndRequired"))
+      .refine(isDateInputValue, t("validation.validEndDate")),
   });
+}
 
-const projectGroupFormSchema = z.object({
-  name: z.string().trim().min(1, "Group name is required."),
-  slug: z.string().trim().max(80, "Slug must be 80 characters or less."),
-  description: z.string().trim().max(1000, "Description must be 1000 characters or less."),
-  active: z.boolean(),
-});
+function createBulkAssignmentFormSchema(t: AdminProjectsActionsTranslator) {
+  return z
+    .object({
+      memberIds: z.array(z.string().trim().min(1)).min(1, t("validation.chooseAtLeastOneMember")),
+      projectIds: z.array(z.string().trim().min(1)).min(1, t("validation.chooseAtLeastOneProject")),
+      validFrom: z
+        .string()
+        .trim()
+        .min(1, t("validation.assignmentStartRequired"))
+        .refine(isDateInputValue, t("validation.validStartDate")),
+      validTo: createProjectDateSchema(t),
+      active: z.boolean(),
+      notes: z.string().trim().max(1000, t("validation.notesMax")),
+    })
+    .superRefine((value, context) => {
+      validateAssignmentDateRange(t)(value, context);
 
-const projectGroupProjectSchema = z.object({
-  projectGroupId: z.string().trim().min(1, "Project group id is missing."),
-  projectId: z.string().trim().min(1, "Choose a project."),
-});
+      if (new Set(value.memberIds).size * new Set(value.projectIds).size > 200) {
+        context.addIssue({
+          code: "custom",
+          message: t("validation.bulkAssignmentLimit"),
+          path: ["projectIds"],
+        });
+      }
+    });
+}
+
+function createProjectGroupFormSchema(t: AdminProjectsActionsTranslator) {
+  return z.object({
+    name: z.string().trim().min(1, t("validation.groupNameRequired")),
+    slug: z.string().trim().max(80, t("validation.slugMax")),
+    description: z.string().trim().max(1000, t("validation.descriptionMax")),
+    active: z.boolean(),
+  });
+}
+
+function createProjectGroupProjectSchema(t: AdminProjectsActionsTranslator) {
+  return z.object({
+    projectGroupId: z.string().trim().min(1, t("validation.projectGroupIdMissing")),
+    projectId: z.string().trim().min(1, t("validation.chooseProject")),
+  });
+}
 
 export async function createProjectAction(
   _previousState: ProjectActionState,
   formData: FormData,
 ): Promise<ProjectActionState> {
-  const parsed = projectFormSchema.safeParse({
+  const t = await getTranslations("AdminProjectsActions");
+  const parsed = createProjectFormSchema(t).safeParse({
     name: getFormString(formData, "name"),
     slug: getFormString(formData, "slug"),
     colorToken: getFormString(formData, "colorToken"),
@@ -171,7 +194,7 @@ export async function createProjectAction(
   if (!parsed.success) {
     return {
       status: "error",
-      message: "Fix the highlighted fields and try again.",
+      message: t("errors.fixFields"),
       fieldErrors: getProjectFieldErrors(parsed.error),
     };
   }
@@ -190,22 +213,23 @@ export async function createProjectAction(
 
     return {
       status: "success",
-      message: "Project created.",
+      message: t("success.projectCreated"),
     };
   } catch (error) {
-    return mapProjectActionError(error, "The project could not be created.");
+    return mapProjectActionError(error, t("errors.projectCreateFailed"), t);
   }
 }
 
 export async function updateProjectAction(
   input: UpdateProjectActionInput,
 ): Promise<ProjectActionState> {
-  const parsed = projectFormSchema.safeParse(input);
+  const t = await getTranslations("AdminProjectsActions");
+  const parsed = createProjectFormSchema(t).safeParse(input);
 
   if (!parsed.success) {
     return {
       status: "error",
-      message: "Fix the highlighted fields and try again.",
+      message: t("errors.fixFields"),
       fieldErrors: getProjectFieldErrors(parsed.error),
     };
   }
@@ -225,10 +249,10 @@ export async function updateProjectAction(
 
     return {
       status: "success",
-      message: result.changed ? "Project updated." : "No changes to save.",
+      message: result.changed ? t("success.projectUpdated") : t("success.noChanges"),
     };
   } catch (error) {
-    return mapProjectActionError(error, "The project could not be updated.");
+    return mapProjectActionError(error, t("errors.projectUpdateFailed"), t);
   }
 }
 
@@ -236,6 +260,8 @@ export async function setProjectActiveAction(
   projectId: string,
   active: boolean,
 ): Promise<ProjectActionState> {
+  const t = await getTranslations("AdminProjectsActions");
+
   try {
     const { member: admin } = await requireAdminAppMemberForAction();
     const result = await changeProjectStatus({
@@ -251,16 +277,18 @@ export async function setProjectActiveAction(
       status: "success",
       message: result.changed
         ? active
-          ? "Project activated."
-          : "Project deactivated."
-        : "Project status was already up to date.",
+          ? t("success.projectActivated")
+          : t("success.projectDeactivated")
+        : t("success.projectStatusUnchanged"),
     };
   } catch (error) {
-    return mapProjectActionError(error, "The project status could not be changed.");
+    return mapProjectActionError(error, t("errors.projectStatusFailed"), t);
   }
 }
 
 export async function archiveProjectAction(projectId: string): Promise<ProjectActionState> {
+  const t = await getTranslations("AdminProjectsActions");
+
   try {
     const { member: admin } = await requireAdminAppMemberForAction();
     await archiveProject({
@@ -273,22 +301,23 @@ export async function archiveProjectAction(projectId: string): Promise<ProjectAc
 
     return {
       status: "success",
-      message: "Project archived.",
+      message: t("success.projectArchived"),
     };
   } catch (error) {
-    return mapProjectActionError(error, "The project could not be archived.");
+    return mapProjectActionError(error, t("errors.projectArchiveFailed"), t);
   }
 }
 
 export async function assignProjectMemberAction(
   input: AssignProjectMemberActionInput,
 ): Promise<ProjectAssignmentActionState> {
-  const parsed = assignmentFormSchema.safeParse(input);
+  const t = await getTranslations("AdminProjectsActions");
+  const parsed = createAssignmentFormSchema(t).safeParse(input);
 
   if (!parsed.success) {
     return {
       status: "error",
-      message: "Fix the highlighted assignment fields and try again.",
+      message: t("errors.fixAssignmentFields"),
       fieldErrors: getProjectAssignmentFieldErrors(parsed.error),
     };
   }
@@ -308,22 +337,23 @@ export async function assignProjectMemberAction(
 
     return {
       status: "success",
-      message: "Member assigned to project.",
+      message: t("success.memberAssigned"),
     };
   } catch (error) {
-    return mapProjectAssignmentActionError(error, "The project assignment could not be created.");
+    return mapProjectAssignmentActionError(error, t("errors.assignmentCreateFailed"), t);
   }
 }
 
 export async function bulkAssignProjectMembersAction(
   input: BulkAssignProjectMembersActionInput,
 ): Promise<ProjectBulkAssignmentActionState> {
-  const parsed = bulkAssignmentFormSchema.safeParse(input);
+  const t = await getTranslations("AdminProjectsActions");
+  const parsed = createBulkAssignmentFormSchema(t).safeParse(input);
 
   if (!parsed.success) {
     return {
       status: "error",
-      message: "Fix the highlighted bulk assignment fields and try again.",
+      message: t("errors.fixBulkAssignmentFields"),
       fieldErrors: getProjectBulkAssignmentFieldErrors(parsed.error),
     };
   }
@@ -344,7 +374,7 @@ export async function bulkAssignProjectMembersAction(
     if (result.createdCount === 0) {
       return {
         status: "success",
-        message: "No new assignments were created because every selected pair already overlaps.",
+        message: t("success.noBulkAssignmentsCreated"),
         createdCount: 0,
         skippedDuplicateCount: result.skippedDuplicateCount,
       };
@@ -354,25 +384,29 @@ export async function bulkAssignProjectMembersAction(
       status: "success",
       message:
         result.skippedDuplicateCount > 0
-          ? `${result.createdCount} assignments created. ${result.skippedDuplicateCount} duplicates skipped.`
-          : `${result.createdCount} assignments created.`,
+          ? t("success.bulkAssignmentsCreatedWithSkipped", {
+              created: result.createdCount,
+              skipped: result.skippedDuplicateCount,
+            })
+          : t("success.bulkAssignmentsCreated", { count: result.createdCount }),
       createdCount: result.createdCount,
       skippedDuplicateCount: result.skippedDuplicateCount,
     };
   } catch (error) {
-    return mapProjectBulkAssignmentActionError(error, "The bulk assignments could not be created.");
+    return mapProjectBulkAssignmentActionError(error, t("errors.bulkAssignmentCreateFailed"), t);
   }
 }
 
 export async function updateProjectAssignmentAction(
   input: UpdateProjectAssignmentActionInput,
 ): Promise<ProjectAssignmentActionState> {
-  const parsed = updateAssignmentFormSchema.safeParse(input);
+  const t = await getTranslations("AdminProjectsActions");
+  const parsed = createUpdateAssignmentFormSchema(t).safeParse(input);
 
   if (!parsed.success) {
     return {
       status: "error",
-      message: "Fix the highlighted assignment fields and try again.",
+      message: t("errors.fixAssignmentFields"),
       fieldErrors: getProjectAssignmentFieldErrors(parsed.error),
     };
   }
@@ -392,22 +426,23 @@ export async function updateProjectAssignmentAction(
 
     return {
       status: "success",
-      message: result.changed ? "Project assignment updated." : "No assignment changes to save.",
+      message: result.changed ? t("success.assignmentUpdated") : t("success.noAssignmentChanges"),
     };
   } catch (error) {
-    return mapProjectAssignmentActionError(error, "The project assignment could not be updated.");
+    return mapProjectAssignmentActionError(error, t("errors.assignmentUpdateFailed"), t);
   }
 }
 
 export async function closeProjectAssignmentAction(
   input: CloseProjectAssignmentActionInput,
 ): Promise<ProjectAssignmentActionState> {
-  const parsed = closeAssignmentSchema.safeParse(input);
+  const t = await getTranslations("AdminProjectsActions");
+  const parsed = createCloseAssignmentSchema(t).safeParse(input);
 
   if (!parsed.success) {
     return {
       status: "error",
-      message: "Fix the highlighted assignment fields and try again.",
+      message: t("errors.fixAssignmentFields"),
       fieldErrors: getProjectAssignmentFieldErrors(parsed.error),
     };
   }
@@ -425,22 +460,23 @@ export async function closeProjectAssignmentAction(
 
     return {
       status: "success",
-      message: "Project assignment ended.",
+      message: t("success.assignmentEnded"),
     };
   } catch (error) {
-    return mapProjectAssignmentActionError(error, "The project assignment could not be ended.");
+    return mapProjectAssignmentActionError(error, t("errors.assignmentEndFailed"), t);
   }
 }
 
 export async function createProjectGroupAction(
   input: CreateProjectGroupActionInput,
 ): Promise<ProjectGroupActionState> {
-  const parsed = projectGroupFormSchema.safeParse(input);
+  const t = await getTranslations("AdminProjectsActions");
+  const parsed = createProjectGroupFormSchema(t).safeParse(input);
 
   if (!parsed.success) {
     return {
       status: "error",
-      message: "Fix the highlighted group fields and try again.",
+      message: t("errors.fixGroupFields"),
       fieldErrors: getProjectGroupFieldErrors(parsed.error),
     };
   }
@@ -458,22 +494,23 @@ export async function createProjectGroupAction(
 
     return {
       status: "success",
-      message: "Project group created.",
+      message: t("success.groupCreated"),
     };
   } catch (error) {
-    return mapProjectGroupActionError(error, "The project group could not be created.");
+    return mapProjectGroupActionError(error, t("errors.groupCreateFailed"), t);
   }
 }
 
 export async function updateProjectGroupAction(
   input: UpdateProjectGroupActionInput,
 ): Promise<ProjectGroupActionState> {
-  const parsed = projectGroupFormSchema.safeParse(input);
+  const t = await getTranslations("AdminProjectsActions");
+  const parsed = createProjectGroupFormSchema(t).safeParse(input);
 
   if (!parsed.success) {
     return {
       status: "error",
-      message: "Fix the highlighted group fields and try again.",
+      message: t("errors.fixGroupFields"),
       fieldErrors: getProjectGroupFieldErrors(parsed.error),
     };
   }
@@ -492,16 +529,18 @@ export async function updateProjectGroupAction(
 
     return {
       status: "success",
-      message: result.changed ? "Project group updated." : "No group changes to save.",
+      message: result.changed ? t("success.groupUpdated") : t("success.noGroupChanges"),
     };
   } catch (error) {
-    return mapProjectGroupActionError(error, "The project group could not be updated.");
+    return mapProjectGroupActionError(error, t("errors.groupUpdateFailed"), t);
   }
 }
 
 export async function archiveProjectGroupAction(
   projectGroupId: string,
 ): Promise<ProjectGroupActionState> {
+  const t = await getTranslations("AdminProjectsActions");
+
   try {
     const { member: admin } = await requireAdminAppMemberForAction();
     await archiveProjectGroup({
@@ -515,22 +554,23 @@ export async function archiveProjectGroupAction(
 
     return {
       status: "success",
-      message: "Project group archived.",
+      message: t("success.groupArchived"),
     };
   } catch (error) {
-    return mapProjectGroupActionError(error, "The project group could not be archived.");
+    return mapProjectGroupActionError(error, t("errors.groupArchiveFailed"), t);
   }
 }
 
 export async function addProjectToGroupAction(
   input: AddProjectToGroupActionInput,
 ): Promise<ProjectGroupProjectActionState> {
-  const parsed = projectGroupProjectSchema.safeParse(input);
+  const t = await getTranslations("AdminProjectsActions");
+  const parsed = createProjectGroupProjectSchema(t).safeParse(input);
 
   if (!parsed.success) {
     return {
       status: "error",
-      message: "Fix the highlighted group fields and try again.",
+      message: t("errors.fixGroupFields"),
       fieldErrors: getProjectGroupProjectFieldErrors(parsed.error),
     };
   }
@@ -548,22 +588,25 @@ export async function addProjectToGroupAction(
 
     return {
       status: "success",
-      message: result.changed ? "Project added to group." : "Project was already in this group.",
+      message: result.changed
+        ? t("success.projectAddedToGroup")
+        : t("success.projectAlreadyInGroup"),
     };
   } catch (error) {
-    return mapProjectGroupProjectActionError(error, "The project could not be added to the group.");
+    return mapProjectGroupProjectActionError(error, t("errors.addProjectToGroupFailed"), t);
   }
 }
 
 export async function removeProjectFromGroupAction(
   input: RemoveProjectFromGroupActionInput,
 ): Promise<ProjectGroupProjectActionState> {
-  const parsed = projectGroupProjectSchema.safeParse(input);
+  const t = await getTranslations("AdminProjectsActions");
+  const parsed = createProjectGroupProjectSchema(t).safeParse(input);
 
   if (!parsed.success) {
     return {
       status: "error",
-      message: "Fix the highlighted group fields and try again.",
+      message: t("errors.fixGroupFields"),
       fieldErrors: getProjectGroupProjectFieldErrors(parsed.error),
     };
   }
@@ -581,13 +624,12 @@ export async function removeProjectFromGroupAction(
 
     return {
       status: "success",
-      message: result.changed ? "Project removed from group." : "Project was not in this group.",
+      message: result.changed
+        ? t("success.projectRemovedFromGroup")
+        : t("success.projectNotInGroup"),
     };
   } catch (error) {
-    return mapProjectGroupProjectActionError(
-      error,
-      "The project could not be removed from the group.",
-    );
+    return mapProjectGroupProjectActionError(error, t("errors.removeProjectFromGroupFailed"), t);
   }
 }
 
@@ -740,8 +782,12 @@ async function getProjectRequestMetadata(): Promise<ProjectRequestMetadata> {
   };
 }
 
-function mapProjectGroupActionError(error: unknown, fallback: string): ProjectGroupActionState {
-  const result = mapProjectActionError(error, fallback);
+function mapProjectGroupActionError(
+  error: unknown,
+  fallback: string,
+  t: AdminProjectsActionsTranslator,
+): ProjectGroupActionState {
+  const result = mapProjectActionError(error, fallback, t);
 
   return {
     status: result.status,
@@ -752,8 +798,9 @@ function mapProjectGroupActionError(error: unknown, fallback: string): ProjectGr
 function mapProjectGroupProjectActionError(
   error: unknown,
   fallback: string,
+  t: AdminProjectsActionsTranslator,
 ): ProjectGroupProjectActionState {
-  const result = mapProjectActionError(error, fallback);
+  const result = mapProjectActionError(error, fallback, t);
 
   return {
     status: result.status,
@@ -764,8 +811,9 @@ function mapProjectGroupProjectActionError(
 function mapProjectAssignmentActionError(
   error: unknown,
   fallback: string,
+  t: AdminProjectsActionsTranslator,
 ): ProjectAssignmentActionState {
-  const result = mapProjectActionError(error, fallback);
+  const result = mapProjectActionError(error, fallback, t);
 
   return {
     status: result.status,
@@ -776,8 +824,9 @@ function mapProjectAssignmentActionError(
 function mapProjectBulkAssignmentActionError(
   error: unknown,
   fallback: string,
+  t: AdminProjectsActionsTranslator,
 ): ProjectBulkAssignmentActionState {
-  const result = mapProjectActionError(error, fallback);
+  const result = mapProjectActionError(error, fallback, t);
 
   return {
     status: result.status,
@@ -785,7 +834,11 @@ function mapProjectBulkAssignmentActionError(
   };
 }
 
-function mapProjectActionError(error: unknown, fallback: string): ProjectActionState {
+function mapProjectActionError(
+  error: unknown,
+  fallback: string,
+  t: AdminProjectsActionsTranslator,
+): ProjectActionState {
   console.error("[admin/projects] action failed", error);
 
   if (
@@ -804,14 +857,14 @@ function mapProjectActionError(error: unknown, fallback: string): ProjectActionS
   if (error instanceof Prisma.PrismaClientKnownRequestError) {
     return {
       status: "error",
-      message: mapKnownPrismaProjectError(error, fallback),
+      message: mapKnownPrismaProjectError(error, fallback, t),
     };
   }
 
   if (error instanceof Prisma.PrismaClientInitializationError) {
     return {
       status: "error",
-      message: "The database is not reachable. Try again later or contact support.",
+      message: t("errors.databaseUnavailable"),
     };
   }
 
@@ -821,20 +874,24 @@ function mapProjectActionError(error: unknown, fallback: string): ProjectActionS
   };
 }
 
-function mapKnownPrismaProjectError(error: Prisma.PrismaClientKnownRequestError, fallback: string) {
+function mapKnownPrismaProjectError(
+  error: Prisma.PrismaClientKnownRequestError,
+  fallback: string,
+  t: AdminProjectsActionsTranslator,
+) {
   switch (error.code) {
     case "P2002":
-      if (fallback.includes("group")) {
-        return "A project group with this slug already exists.";
+      if ([t("errors.groupCreateFailed"), t("errors.groupUpdateFailed")].includes(fallback)) {
+        return t("errors.groupSlugExists");
       }
-      return "A project with this slug already exists.";
+      return t("errors.projectSlugExists");
     case "P2003":
-      return "The project could not be linked to the current admin member. Refresh the page and try again.";
+      return t("errors.projectLinkFailed");
     case "P2021":
     case "P2022":
-      return "Projects are temporarily unavailable. Try again later or contact support.";
+      return t("errors.projectsUnavailable");
     case "P2025":
-      return "This project no longer exists or was already archived.";
+      return t("errors.projectMissing");
     default:
       return fallback;
   }

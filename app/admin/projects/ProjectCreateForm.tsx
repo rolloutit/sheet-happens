@@ -1,6 +1,7 @@
 "use client";
 
 import { FolderPlus } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { useActionState, useEffect, useRef } from "react";
 import { useFormStatus } from "react-dom";
 
@@ -20,6 +21,7 @@ const initialState: ProjectActionState = {
 };
 
 export function ProjectCreateForm() {
+  const t = useTranslations("AdminProjects");
   const [state, formAction] = useActionState(createProjectAction, initialState);
   const formRef = useRef<HTMLFormElement>(null);
 
@@ -32,7 +34,12 @@ export function ProjectCreateForm() {
   return (
     <form ref={formRef} action={formAction} className="grid gap-5">
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-[1.5fr_1fr]">
-        <Field label="Project name" required reserveMessageSpace error={state.fieldErrors?.name}>
+        <Field
+          label={t("form.projectName")}
+          required
+          reserveMessageSpace
+          error={state.fieldErrors?.name}
+        >
           {({ id, describedBy, invalid, required }) => (
             <Input
               id={id}
@@ -45,8 +52,8 @@ export function ProjectCreateForm() {
           )}
         </Field>
         <Field
-          label="Slug"
-          hint="Leave empty to generate it from the name."
+          label={t("form.slug")}
+          hint={t("form.slugHint")}
           reserveMessageSpace
           error={state.fieldErrors?.slug}
         >
@@ -63,10 +70,14 @@ export function ProjectCreateForm() {
         </Field>
       </div>
 
-      <ProjectColorField error={state.fieldErrors?.colorToken} reserveMessageSpace />
+      <ProjectColorField
+        label={t("form.projectColor")}
+        error={state.fieldErrors?.colorToken}
+        reserveMessageSpace
+      />
 
       <div className="grid gap-4 md:grid-cols-[minmax(9rem,1fr)_minmax(9rem,1fr)_minmax(14rem,1.25fr)]">
-        <Field label="Starts on" reserveMessageSpace error={state.fieldErrors?.startsOn}>
+        <Field label={t("form.startsOn")} reserveMessageSpace error={state.fieldErrors?.startsOn}>
           {({ id, describedBy, invalid }) => (
             <Input
               id={id}
@@ -77,7 +88,7 @@ export function ProjectCreateForm() {
             />
           )}
         </Field>
-        <Field label="Ends on" reserveMessageSpace error={state.fieldErrors?.endsOn}>
+        <Field label={t("form.endsOn")} reserveMessageSpace error={state.fieldErrors?.endsOn}>
           {({ id, describedBy, invalid }) => (
             <Input
               id={id}
@@ -96,23 +107,24 @@ export function ProjectCreateForm() {
             className={nativeCheckboxClassName}
           />
           <span className="grid gap-1">
-            <span className="font-ui text-sm font-semibold text-foreground">Internal project</span>
+            <span className="font-ui text-sm font-semibold text-foreground">
+              {t("form.internalProject")}
+            </span>
             <span className="text-xs leading-5 text-muted-foreground">
-              Use for internal or collector work such as team building, communication, or
-              operational tasks.
+              {t("form.internalProjectDescription")}
             </span>
           </span>
         </label>
       </div>
 
-      <Field label="Notes" reserveMessageSpace error={state.fieldErrors?.notes}>
+      <Field label={t("form.notes")} reserveMessageSpace error={state.fieldErrors?.notes}>
         {({ id, describedBy, invalid }) => (
           <Textarea
             id={id}
             name="notes"
             aria-describedby={describedBy}
             invalid={invalid}
-            placeholder="Optional admin notes"
+            placeholder={t("form.notesPlaceholder")}
           />
         )}
       </Field>
@@ -139,11 +151,12 @@ export function ProjectCreateForm() {
 }
 
 function SubmitButton() {
+  const t = useTranslations("AdminProjects");
   const { pending } = useFormStatus();
 
   return (
     <Button type="submit" icon={FolderPlus} loading={pending}>
-      Create project
+      {t("actions.createProject")}
     </Button>
   );
 }

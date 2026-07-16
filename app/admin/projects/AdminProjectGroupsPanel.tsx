@@ -1,6 +1,7 @@
 "use client";
 
 import { Archive, Edit3, FolderPlus, MoreHorizontal, Plus, Save, X } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 
@@ -60,6 +61,7 @@ const initialGroupProjectState: ProjectGroupProjectActionState = {
 };
 
 export function AdminProjectGroupsPanel({ groups, projects }: AdminProjectGroupsPanelProps) {
+  const t = useTranslations("AdminProjects");
   const router = useRouter();
   const [createState, setCreateState] = useState<ProjectGroupActionState>(initialGroupState);
   const [linkState, setLinkState] =
@@ -139,7 +141,7 @@ export function AdminProjectGroupsPanel({ groups, projects }: AdminProjectGroups
       >
         <div className="grid gap-4 lg:grid-cols-[minmax(13rem,1fr)_minmax(11rem,0.7fr)]">
           <Field
-            label="Group name"
+            label={t("groupsPanel.groupName")}
             required
             reserveMessageSpace
             error={createState.fieldErrors?.name}
@@ -155,7 +157,7 @@ export function AdminProjectGroupsPanel({ groups, projects }: AdminProjectGroups
               />
             )}
           </Field>
-          <Field label="Slug" reserveMessageSpace error={createState.fieldErrors?.slug}>
+          <Field label={t("form.slug")} reserveMessageSpace error={createState.fieldErrors?.slug}>
             {({ id, describedBy, invalid }) => (
               <Input
                 id={id}
@@ -163,7 +165,7 @@ export function AdminProjectGroupsPanel({ groups, projects }: AdminProjectGroups
                 autoComplete="off"
                 aria-describedby={describedBy}
                 invalid={invalid}
-                placeholder="Generated from name"
+                placeholder={t("groupsPanel.generatedSlug")}
               />
             )}
           </Field>
@@ -171,7 +173,7 @@ export function AdminProjectGroupsPanel({ groups, projects }: AdminProjectGroups
 
         <div className="grid gap-4 lg:grid-cols-[1fr_auto] lg:items-end">
           <Field
-            label="Description"
+            label={t("groupsPanel.description")}
             reserveMessageSpace
             error={createState.fieldErrors?.description}
           >
@@ -181,7 +183,7 @@ export function AdminProjectGroupsPanel({ groups, projects }: AdminProjectGroups
                 name="description"
                 aria-describedby={describedBy}
                 invalid={invalid}
-                placeholder="Optional grouping note"
+                placeholder={t("groupsPanel.descriptionPlaceholder")}
               />
             )}
           </Field>
@@ -193,7 +195,7 @@ export function AdminProjectGroupsPanel({ groups, projects }: AdminProjectGroups
               defaultChecked
               className={nativeCheckboxClassName}
             />
-            Active
+            {t("states.active")}
           </label>
         </div>
 
@@ -203,7 +205,7 @@ export function AdminProjectGroupsPanel({ groups, projects }: AdminProjectGroups
 
         <div className="flex justify-end">
           <Button type="submit" icon={FolderPlus} loading={pendingKey === "group:create"}>
-            Create group
+            {t("actions.createGroup")}
           </Button>
         </div>
       </form>
@@ -211,7 +213,7 @@ export function AdminProjectGroupsPanel({ groups, projects }: AdminProjectGroups
       <div className="grid gap-3">
         {groups.length === 0 ? (
           <div className="rounded-[var(--radius-lg)] border border-border bg-card p-6 text-center text-sm text-muted-foreground">
-            No project groups have been created yet.
+            {t("groupsPanel.empty")}
           </div>
         ) : (
           groups.map((group) => (
@@ -305,6 +307,7 @@ function ProjectGroupCard({
   onAddProject: (projectId: string) => void;
   onRemoveProject: (projectId: string) => void;
 }) {
+  const t = useTranslations("AdminProjects");
   const linkedProjectIds = new Set(group.projects.map((project) => project.id));
   const availableProjects = projects.filter((project) => !linkedProjectIds.has(project.id));
 
@@ -315,14 +318,14 @@ function ProjectGroupCard({
           <div className="flex flex-wrap items-center gap-2">
             <h3 className="font-ui text-base font-semibold text-foreground">{group.name}</h3>
             <Badge tone={group.active ? "success" : "neutral"}>
-              {group.active ? "active" : "inactive"}
+              {group.active ? t("states.active") : t("states.inactive")}
             </Badge>
           </div>
           <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
             <code className="rounded-[var(--radius-sm)] bg-secondary px-1.5 py-0.5 font-mono">
               {group.slug}
             </code>
-            <span>{group.projectCount} projects</span>
+            <span>{t("groupsPanel.projectCount", { count: group.projectCount })}</span>
           </div>
           {group.description ? (
             <p className="max-w-2xl text-sm leading-6 text-muted-foreground">{group.description}</p>
@@ -333,21 +336,21 @@ function ProjectGroupCard({
           <DropdownTrigger asChild>
             <IconButton
               icon={MoreHorizontal}
-              label={`Open actions for ${group.name}`}
+              label={t("actions.openFor", { name: group.name })}
               size="sm"
               variant="ghost"
             />
           </DropdownTrigger>
           <DropdownContent align="end">
-            <DropdownLabel>Actions</DropdownLabel>
+            <DropdownLabel>{t("actions.menuLabel")}</DropdownLabel>
             <DropdownItem onSelect={onEdit}>
               <Edit3 className="size-4" aria-hidden="true" />
-              Edit group
+              {t("actions.editGroup")}
             </DropdownItem>
             <DropdownSeparator />
             <DropdownItem tone="danger" onSelect={onArchive}>
               <Archive className="size-4" aria-hidden="true" />
-              Archive
+              {t("actions.archive")}
             </DropdownItem>
           </DropdownContent>
         </Dropdown>
@@ -355,7 +358,7 @@ function ProjectGroupCard({
 
       <div className="flex flex-wrap gap-2">
         {group.projects.length === 0 ? (
-          <span className="text-sm text-muted-foreground">No projects in this group.</span>
+          <span className="text-sm text-muted-foreground">{t("groupsPanel.noProjects")}</span>
         ) : (
           group.projects.map((project) => {
             const pending = pendingKey === `${group.id}:${project.id}:remove`;
@@ -367,10 +370,13 @@ function ProjectGroupCard({
               >
                 <ProjectColorSwatch colorToken={project.colorToken} size="sm" />
                 {project.name}
-                {project.isInternal ? <Badge tone="cta">Internal</Badge> : null}
+                {project.isInternal ? <Badge tone="cta">{t("states.internal")}</Badge> : null}
                 <button
                   type="button"
-                  aria-label={`Remove ${project.name} from ${group.name}`}
+                  aria-label={t("groupsPanel.removeProjectLabel", {
+                    project: project.name,
+                    group: group.name,
+                  })}
                   disabled={pending}
                   onClick={() => onRemoveProject(project.id)}
                   className="rounded-full text-muted-foreground outline-none transition hover:text-destructive focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50"
@@ -404,7 +410,9 @@ function ProjectGroupCard({
           disabled={availableProjects.length === 0}
         >
           <option value="" disabled>
-            {availableProjects.length ? "Choose project" : "All projects are in this group"}
+            {availableProjects.length
+              ? t("groupsPanel.chooseProject")
+              : t("groupsPanel.allProjectsLinked")}
           </option>
           {availableProjects.map((project) => (
             <option key={project.id} value={project.id}>
@@ -419,7 +427,7 @@ function ProjectGroupCard({
           loading={pendingKey?.startsWith(`${group.id}:`) && pendingKey.endsWith(":add")}
           disabled={availableProjects.length === 0}
         >
-          Add project
+          {t("actions.addProject")}
         </Button>
       </form>
     </div>
@@ -439,16 +447,15 @@ function ProjectGroupEditDialog({
   onOpenChange: (open: boolean) => void;
   onSubmit: (input: UpdateProjectGroupActionInput) => void;
 }) {
+  const t = useTranslations("AdminProjects");
+
   return (
     <Dialog open={Boolean(group)} onOpenChange={onOpenChange}>
       {group ? (
         <DialogContent className="max-w-2xl">
           <DialogHeader>
-            <DialogTitle>Edit {group.name}</DialogTitle>
-            <DialogDescription>
-              Group changes affect filtering and project organization. They do not change project
-              assignment or billing rules.
-            </DialogDescription>
+            <DialogTitle>{t("groupsPanel.editTitle", { name: group.name })}</DialogTitle>
+            <DialogDescription>{t("groupsPanel.editDescription")}</DialogDescription>
           </DialogHeader>
 
           <form
@@ -469,7 +476,7 @@ function ProjectGroupEditDialog({
           >
             <div className="grid gap-4 md:grid-cols-2">
               <Field
-                label="Group name"
+                label={t("groupsPanel.groupName")}
                 required
                 reserveMessageSpace
                 error={actionState.fieldErrors?.name}
@@ -486,7 +493,11 @@ function ProjectGroupEditDialog({
                   />
                 )}
               </Field>
-              <Field label="Slug" reserveMessageSpace error={actionState.fieldErrors?.slug}>
+              <Field
+                label={t("form.slug")}
+                reserveMessageSpace
+                error={actionState.fieldErrors?.slug}
+              >
                 {({ id, describedBy, invalid }) => (
                   <Input
                     id={id}
@@ -501,7 +512,7 @@ function ProjectGroupEditDialog({
             </div>
 
             <Field
-              label="Description"
+              label={t("groupsPanel.description")}
               reserveMessageSpace
               error={actionState.fieldErrors?.description}
             >
@@ -524,7 +535,7 @@ function ProjectGroupEditDialog({
                 defaultChecked={group.active}
                 className={nativeCheckboxClassName}
               />
-              Active
+              {t("states.active")}
             </label>
 
             {actionState.status === "error" && actionState.message ? (
@@ -534,11 +545,11 @@ function ProjectGroupEditDialog({
             <DialogFooter>
               <DialogClose asChild>
                 <Button type="button" variant="ghost" disabled={pending}>
-                  Cancel
+                  {t("actions.cancel")}
                 </Button>
               </DialogClose>
               <Button type="submit" icon={Save} loading={pending}>
-                Save group
+                {t("actions.saveGroup")}
               </Button>
             </DialogFooter>
           </form>
@@ -559,23 +570,26 @@ function ArchiveProjectGroupDialog({
   onOpenChange: (open: boolean) => void;
   onConfirm: (group: AdminProjectGroupRow) => void;
 }) {
+  const t = useTranslations("AdminProjects");
+
   return (
     <Dialog open={Boolean(group)} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>{group ? `Archive ${group.name}?` : "Archive project group?"}</DialogTitle>
-          <DialogDescription>
-            Archived groups are removed from filters and organization helpers. The projects stay
-            unchanged.
-          </DialogDescription>
+          <DialogTitle>
+            {group
+              ? t("groupsPanel.archiveTitleNamed", { name: group.name })
+              : t("groupsPanel.archiveTitle")}
+          </DialogTitle>
+          <DialogDescription>{t("groupsPanel.archiveDescription")}</DialogDescription>
         </DialogHeader>
         <div className="rounded-[var(--radius-md)] border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
-          This is a soft delete for the group only.
+          {t("groupsPanel.archiveWarning")}
         </div>
         <DialogFooter>
           <DialogClose asChild>
             <Button type="button" variant="ghost" disabled={pending}>
-              Cancel
+              {t("actions.cancel")}
             </Button>
           </DialogClose>
           <Button
@@ -587,7 +601,7 @@ function ArchiveProjectGroupDialog({
               if (group) onConfirm(group);
             }}
           >
-            Archive group
+            {t("actions.archiveGroup")}
           </Button>
         </DialogFooter>
       </DialogContent>
