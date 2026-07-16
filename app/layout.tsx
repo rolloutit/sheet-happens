@@ -1,20 +1,23 @@
 import type { Metadata } from "next";
 import { NextIntlClientProvider } from "next-intl";
+import { getLocale, getMessages } from "next-intl/server";
 
 import "./globals.css";
 import { ThemeProvider } from "@/src/components/layout/ThemeProvider";
-import en from "@/messages/en.json";
 
 export const metadata: Metadata = {
   title: "Sheet Happens",
   description: "Internal time tracking and timesheet workflow for Rollout IT.",
 };
 
-export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
+export default async function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
+  const locale = await getLocale();
+  const messages = await getMessages();
+
   return (
-    <html lang="en" className="dark" suppressHydrationWarning>
+    <html lang={locale} className="dark" suppressHydrationWarning>
       <body>
-        <NextIntlClientProvider locale="en" messages={en}>
+        <NextIntlClientProvider locale={locale} messages={messages}>
           <ThemeProvider attribute="class" defaultTheme="dark" enableSystem={false}>
             {children}
           </ThemeProvider>

@@ -8,13 +8,17 @@ import {
   FolderKanban,
   HelpCircle,
   LayoutDashboard,
+  LogOut,
   Menu,
   PanelLeftClose,
   ScrollText,
+  Settings,
   Square,
+  User,
   Users,
   WalletCards,
 } from "lucide-react";
+import { useLocale, useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { useState, useSyncExternalStore, useTransition } from "react";
 
@@ -27,6 +31,7 @@ import {
   DrawerTrigger,
 } from "@/src/components/ui/Drawer";
 import { authClient } from "@/src/lib/auth-client";
+import { setLocaleAction } from "@/src/i18n/actions";
 import { CommandPill } from "../CommandPill";
 import { LanguageToggle } from "../LanguageToggle";
 import { MobileBottomBar } from "../MobileBottomBar";
@@ -34,29 +39,31 @@ import { NotificationButton } from "../NotificationButton";
 import { UserMenu } from "../UserMenu";
 import type { AppShellProps, AppShellTimer } from "./AppShell.types";
 
+type AppShellTranslator = ReturnType<typeof useTranslations>;
+
 const navItems = [
   {
     id: "dashboard",
-    label: "Irányítópult",
+    labelKey: "nav.dashboard",
     icon: LayoutDashboard,
     group: "main",
     href: "/dashboard",
   },
-  { id: "time", label: "Időkövetés", icon: Clock3, group: "main", href: "/time" },
-  { id: "timesheets", label: "Timesheet", icon: CalendarDays, group: "main", href: "#" },
-  { id: "review", label: "Jóváhagyás", icon: WalletCards, group: "admin", href: "#" },
-  { id: "reports", label: "Riportok", icon: BarChart3, group: "admin", href: "#" },
+  { id: "time", labelKey: "nav.time", icon: Clock3, group: "main", href: "/time" },
+  { id: "timesheets", labelKey: "nav.timesheets", icon: CalendarDays, group: "main", href: "#" },
+  { id: "review", labelKey: "nav.review", icon: WalletCards, group: "admin", href: "#" },
+  { id: "reports", labelKey: "nav.reports", icon: BarChart3, group: "admin", href: "#" },
   {
     id: "projects",
-    label: "Projektek",
+    labelKey: "nav.projects",
     icon: FolderKanban,
     group: "admin",
     href: "/admin/projects",
   },
-  { id: "people", label: "Emberek", icon: Users, group: "admin", href: "/admin/people" },
-  { id: "rates", label: "Óradíjak", icon: WalletCards, group: "admin", href: "/admin/rates" },
-  { id: "audit", label: "Napló", icon: ScrollText, group: "admin", href: "/admin/audit" },
-  { id: "info", label: "Információs oldal", icon: BookOpen, group: "admin", href: "#" },
+  { id: "people", labelKey: "nav.people", icon: Users, group: "admin", href: "/admin/people" },
+  { id: "rates", labelKey: "nav.rates", icon: WalletCards, group: "admin", href: "/admin/rates" },
+  { id: "audit", labelKey: "nav.audit", icon: ScrollText, group: "admin", href: "/admin/audit" },
+  { id: "info", labelKey: "nav.info", icon: BookOpen, group: "admin", href: "#" },
 ] as const;
 
 const defaultUser = {
@@ -65,24 +72,6 @@ const defaultUser = {
   role: "Admin",
   initials: "VD",
 };
-
-const defaultNotifications = [
-  {
-    id: "missing-hours",
-    title: "Hiányzó pénteki órák",
-    body: "Egy kontraktor timesheetje még nem teljes.",
-    time: "2 perc",
-    tone: "warning" as const,
-  },
-  {
-    id: "invoice-review",
-    title: "Új számla jóváhagyásra",
-    body: "Apollo Migration számla vár ellenőrzésre.",
-    time: "1 óra",
-    tone: "info" as const,
-    read: true,
-  },
-];
 
 export function AppShell({
   children,
@@ -93,7 +82,7 @@ export function AppShell({
   language,
   user = defaultUser,
   userActions,
-  notifications = defaultNotifications,
+  notifications,
   timer,
   onStopTimer,
   onNavigate,
@@ -105,15 +94,53 @@ export function AppShell({
   onUserAction,
 }: AppShellProps) {
   const router = useRouter();
+  const locale = useLocale();
+  const t = useTranslations("AppShell");
   const [mobileOpen, setMobileOpen] = useState(false);
-  const [localLanguage, setLocalLanguage] = useState(language ?? "hu");
+  const [localLanguage, setLocalLanguage] = useState(language ?? locale);
   const [timerNotice, setTimerNotice] = useState<string | null>(null);
   const selectedLanguage = language ?? localLanguage;
   const [isStoppingTimer, startStoppingTimerTransition] = useTransition();
+  const [, startLanguageTransition] = useTransition();
+  const resolvedNotifications = notifications ?? [
+    {
+      id: "missing-hours",
+      title: t("notifications.missingHours.title"),
+      body: t("notifications.missingHours.body"),
+      time: t("notifications.missingHours.time"),
+      tone: "warning" as const,
+    },
+    {
+      id: "invoice-review",
+      title: t("notifications.invoiceReview.title"),
+      body: t("notifications.invoiceReview.body"),
+      time: t("notifications.invoiceReview.time"),
+      tone: "info" as const,
+      read: true,
+    },
+  ];
+  const translatedUser = {
+    ...user,
+    role: translateUserRole(t, user.role),
+  };
+  const translatedUserActions =
+    userActions ??
+    ([
+      { id: "profile", label: t("userMenu.profile"), icon: User },
+      { id: "settings", label: t("userMenu.settings"), icon: Settings },
+      { id: "sign-out", label: t("userMenu.signOut"), icon: LogOut, tone: "danger" as const },
+    ] satisfies NonNullable<AppShellProps["userActions"]>);
 
   function handleLanguageChange(nextLanguage: string) {
     if (language === undefined) setLocalLanguage(nextLanguage);
     onLanguageChange?.(nextLanguage);
+
+    startLanguageTransition(async () => {
+      const result = await setLocaleAction(nextLanguage);
+      if (result.status === "success") {
+        router.refresh();
+      }
+    });
   }
 
   function handleNavigate(itemId: string) {
@@ -173,19 +200,19 @@ export function AppShell({
             <div className="min-w-0">
               <p className="truncate text-base font-semibold leading-tight">Sheet Happens</p>
               <p className="font-ui text-[10px] font-medium uppercase tracking-[0.08em] text-muted-foreground">
-                Rollout IT · belső
+                {t("brand.subtitle")}
               </p>
             </div>
           ) : null}
         </div>
-        <nav className="flex-1 overflow-y-auto px-[18px] py-2" aria-label="Primary navigation">
-          <NavGroup group="main" current={current} onNavigate={handleNavigate} />
+        <nav className="flex-1 overflow-y-auto px-[18px] py-2" aria-label={t("primaryNavigation")}>
+          <NavGroup group="main" current={current} onNavigate={handleNavigate} t={t} />
           {role === "admin" ? (
             <>
               <p className="mx-3 mb-2 mt-5 font-ui text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
                 Admin
               </p>
-              <NavGroup group="admin" current={current} onNavigate={handleNavigate} />
+              <NavGroup group="admin" current={current} onNavigate={handleNavigate} t={t} />
             </>
           ) : null}
         </nav>
@@ -195,14 +222,14 @@ export function AppShell({
             className="flex items-center gap-3 rounded-[var(--radius-md)] px-3 py-2 text-sm font-medium text-muted-foreground transition hover:bg-secondary hover:text-foreground"
           >
             <HelpCircle className="size-[18px]" aria-hidden="true" />
-            Súgó
+            {t("help")}
           </a>
           <button
             type="button"
             className="flex items-center gap-3 rounded-[var(--radius-md)] px-3 py-2 text-left text-sm font-medium text-muted-foreground transition hover:bg-secondary hover:text-foreground"
           >
             <PanelLeftClose className="size-[18px]" aria-hidden="true" />
-            Oldalsáv összecsukása
+            {t("collapseSidebar")}
           </button>
         </div>
       </aside>
@@ -217,7 +244,7 @@ export function AppShell({
                     className={`grid size-9 place-items-center rounded-[var(--radius-md)] border border-border bg-card text-accent ${
                       mobileNavigationMode === "auto" ? "lg:hidden" : ""
                     }`}
-                    aria-label="Navigáció megnyitása"
+                    aria-label={t("openNavigation")}
                   >
                     <Menu className="size-4" aria-hidden="true" />
                   </button>
@@ -236,18 +263,19 @@ export function AppShell({
                           Sheet Happens
                         </DrawerTitle>
                         <DrawerDescription className="font-ui text-[10px] font-medium uppercase tracking-[0.08em] text-muted-foreground">
-                          Rollout IT · belső
+                          {t("brand.subtitle")}
                         </DrawerDescription>
                       </div>
                     </div>
                   </DrawerHeader>
                   <nav
                     className="grid gap-1 overflow-y-auto px-[18px] py-4"
-                    aria-label="Mobile navigation"
+                    aria-label={t("mobileNavigation")}
                   >
                     <NavGroup
                       group="main"
                       current={current}
+                      t={t}
                       onNavigate={(itemId) => {
                         handleNavigate(itemId);
                         setMobileOpen(false);
@@ -261,6 +289,7 @@ export function AppShell({
                         <NavGroup
                           group="admin"
                           current={current}
+                          t={t}
                           onNavigate={(itemId) => {
                             handleNavigate(itemId);
                             setMobileOpen(false);
@@ -273,9 +302,9 @@ export function AppShell({
               </Drawer>
               <div>
                 <p className="font-ui text-[11px] font-semibold uppercase tracking-[0.14em] text-accent">
-                  {role === "admin" ? "Mindenki" : "Kontraktor"}
+                  {role === "admin" ? t("scope.all") : t(`roles.${role}`)}
                 </p>
-                <p className="text-lg font-semibold leading-tight">{pageTitle(current)}</p>
+                <p className="text-lg font-semibold leading-tight">{pageTitle(current, t)}</p>
               </div>
             </div>
             <div className="hidden items-center gap-3 md:flex">
@@ -284,6 +313,7 @@ export function AppShell({
                   timer={timer}
                   disabled={!onStopTimer || isStoppingTimer}
                   error={timerNotice}
+                  stopLabel={t("timer.stop")}
                   onOpen={() => {
                     window.location.href = timer.href ?? "/time";
                   }}
@@ -291,20 +321,36 @@ export function AppShell({
                 />
               ) : null}
               <CommandPill
-                label="Ugrás bárhová..."
+                label={t("command.label")}
                 shortcut="Cmd+K"
-                status={onCommand ? undefined : "Hamarosan"}
+                status={onCommand ? undefined : t("soon")}
                 disabled={!onCommand}
                 onClick={onCommand}
               />
-              <LanguageToggle value={selectedLanguage} onValueChange={handleLanguageChange} />
+              <LanguageToggle
+                value={selectedLanguage}
+                label={t("language")}
+                onValueChange={handleLanguageChange}
+              />
               <NotificationButton
-                notifications={notifications}
+                notifications={resolvedNotifications}
+                labels={{
+                  trigger: t("notifications.trigger"),
+                  menu: t("notifications.menu"),
+                  markAllRead: t("notifications.markAllRead"),
+                  empty: t("notifications.empty"),
+                  viewAll: t("notifications.viewAll"),
+                }}
                 onNotificationSelect={onNotificationSelect}
                 onMarkAllRead={onMarkAllRead}
                 onViewAll={onViewNotifications}
               />
-              <UserMenu user={user} actions={userActions} onAction={handleUserAction} />
+              <UserMenu
+                user={translatedUser}
+                actions={translatedUserActions}
+                label={t("userMenu.label")}
+                onAction={handleUserAction}
+              />
             </div>
           </div>
         </header>
@@ -312,7 +358,11 @@ export function AppShell({
       </div>
       <MobileBottomBar
         current={current}
-        items={bottomNavItems(role)}
+        items={bottomNavItems(role).map((item) => ({
+          ...item,
+          label: t(item.labelKey),
+        }))}
+        label={t("mobileNavigation")}
         onNavigate={handleNavigate}
         className={mobileNavigationMode === "auto" ? "lg:hidden" : ""}
       />
@@ -324,12 +374,14 @@ function HeaderTimerPill({
   timer,
   disabled,
   error,
+  stopLabel,
   onOpen,
   onStop,
 }: {
   timer: AppShellTimer;
   disabled: boolean;
   error: string | null;
+  stopLabel: string;
   onOpen: () => void;
   onStop: () => void;
 }) {
@@ -358,7 +410,7 @@ function HeaderTimerPill({
       <button
         type="button"
         className="absolute -right-1 -top-1 grid size-5 place-items-center rounded-full border border-destructive/40 bg-card text-destructive shadow-soft transition hover:bg-destructive/12 disabled:cursor-not-allowed disabled:opacity-50"
-        aria-label="Stop timer"
+        aria-label={stopLabel}
         disabled={disabled}
         onClick={(event) => {
           event.stopPropagation();
@@ -418,10 +470,12 @@ function NavGroup({
   group,
   current,
   onNavigate,
+  t,
 }: {
   group: "main" | "admin";
   current: string;
   onNavigate?: (itemId: string) => void;
+  t: AppShellTranslator;
 }) {
   return (
     <div className="grid gap-1">
@@ -444,7 +498,7 @@ function NavGroup({
                 <span className="absolute -left-2 top-1/2 h-5 w-1 -translate-y-1/2 rounded bg-accent" />
               ) : null}
               <item.icon className="size-[19px]" aria-hidden="true" />
-              {item.label}
+              {t(item.labelKey)}
             </a>
           );
         })}
@@ -452,11 +506,11 @@ function NavGroup({
   );
 }
 
-function pageTitle(current: string) {
-  if (current === "settings") return "Beállítások";
+function pageTitle(current: string, t: AppShellTranslator) {
+  if (current === "settings") return t("nav.settings");
 
   const item = navItems.find((navItem) => navItem.id === current);
-  return item?.label ?? "Irányítópult";
+  return item ? t(item.labelKey) : t("nav.dashboard");
 }
 
 function bottomNavItems(role: AppShellProps["role"]) {
@@ -468,4 +522,11 @@ function bottomNavItems(role: AppShellProps["role"]) {
   }
 
   return baseItems;
+}
+
+function translateUserRole(t: AppShellTranslator, role: string | undefined) {
+  if (!role) return role;
+  if (role === "Admin") return t("userRoles.admin");
+  if (role === "Member") return t("userRoles.member");
+  return role;
 }
