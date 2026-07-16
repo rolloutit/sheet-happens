@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
+import { getTranslations } from "next-intl/server";
 
 import {
   requireActiveAppMemberForAction,
@@ -16,22 +17,25 @@ import type {
   SecuritySettingsActionState,
 } from "./actions.types";
 
+type SettingsActionsTranslator = Awaited<ReturnType<typeof getTranslations>>;
+
 export async function renamePasskeyAction(
   input: RenamePasskeyActionInput,
 ): Promise<SecuritySettingsActionState> {
+  const t = await getTranslations("SettingsActions");
   const name = normalizePasskeyName(input.name);
 
   if (!input.passkeyId) {
     return {
       status: "error",
-      message: "Passkey id is missing.",
+      message: t("errors.passkeyIdMissing"),
     };
   }
 
   if (!name) {
     return {
       status: "error",
-      message: "Passkey name is required.",
+      message: t("errors.passkeyNameRequired"),
     };
   }
 
@@ -59,7 +63,7 @@ export async function renamePasskeyAction(
     if (!passkey) {
       return {
         status: "error",
-        message: "Passkey not found.",
+        message: t("errors.passkeyNotFound"),
       };
     }
 
@@ -100,19 +104,19 @@ export async function renamePasskeyAction(
 
     return {
       status: "success",
-      message: "Passkey renamed.",
+      message: t("success.passkeyRenamed"),
     };
   } catch (error) {
     if (error instanceof AuthenticationError || error instanceof AuthorizationError) {
       return {
         status: "error",
-        message: error.message,
+        message: translateSettingsActionMessage(error.message, t),
       };
     }
 
     return {
       status: "error",
-      message: "Could not rename the passkey.",
+      message: t("errors.passkeyRenameFailed"),
     };
   }
 }
@@ -120,10 +124,12 @@ export async function renamePasskeyAction(
 export async function deletePasskeyAction(
   input: DeletePasskeyActionInput,
 ): Promise<SecuritySettingsActionState> {
+  const t = await getTranslations("SettingsActions");
+
   if (!input.passkeyId) {
     return {
       status: "error",
-      message: "Passkey id is missing.",
+      message: t("errors.passkeyIdMissing"),
     };
   }
 
@@ -153,7 +159,7 @@ export async function deletePasskeyAction(
     if (!passkey) {
       return {
         status: "error",
-        message: "Passkey not found.",
+        message: t("errors.passkeyNotFound"),
       };
     }
 
@@ -190,24 +196,26 @@ export async function deletePasskeyAction(
 
     return {
       status: "success",
-      message: "Passkey removed.",
+      message: t("success.passkeyRemoved"),
     };
   } catch (error) {
     if (error instanceof AuthenticationError || error instanceof AuthorizationError) {
       return {
         status: "error",
-        message: error.message,
+        message: translateSettingsActionMessage(error.message, t),
       };
     }
 
     return {
       status: "error",
-      message: "Could not remove the passkey.",
+      message: t("errors.passkeyRemoveFailed"),
     };
   }
 }
 
 export async function auditTotpDisabledAction(): Promise<SecuritySettingsActionState> {
+  const t = await getTranslations("SettingsActions");
+
   try {
     const { member } = await requireSecuritySettingsAppMember("/settings");
     const requestHeaders = await headers();
@@ -234,24 +242,26 @@ export async function auditTotpDisabledAction(): Promise<SecuritySettingsActionS
 
     return {
       status: "success",
-      message: "Authenticator app disablement audited.",
+      message: t("success.totpDisabledAudited"),
     };
   } catch (error) {
     if (error instanceof AuthenticationError || error instanceof AuthorizationError) {
       return {
         status: "error",
-        message: error.message,
+        message: translateSettingsActionMessage(error.message, t),
       };
     }
 
     return {
       status: "error",
-      message: "Authenticator app was disabled, but the audit event could not be recorded.",
+      message: t("errors.totpDisableAuditFailed"),
     };
   }
 }
 
 export async function auditBackupCodesRegeneratedAction(): Promise<SecuritySettingsActionState> {
+  const t = await getTranslations("SettingsActions");
+
   try {
     const { member } = await requireSecuritySettingsAppMember("/settings");
     const requestHeaders = await headers();
@@ -277,23 +287,31 @@ export async function auditBackupCodesRegeneratedAction(): Promise<SecuritySetti
 
     return {
       status: "success",
-      message: "Backup-code regeneration audited.",
+      message: t("success.backupCodesRegeneratedAudited"),
     };
   } catch (error) {
     if (error instanceof AuthenticationError || error instanceof AuthorizationError) {
       return {
         status: "error",
-        message: error.message,
+        message: translateSettingsActionMessage(error.message, t),
       };
     }
 
     return {
       status: "error",
-      message: "Backup codes were regenerated, but the audit event could not be recorded.",
+      message: t("errors.backupCodesAuditFailed"),
     };
   }
 }
 
 function normalizePasskeyName(name: string) {
   return name.trim().replace(/\s+/g, " ").slice(0, 80);
+}
+
+function translateSettingsActionMessage(message: string, t: SettingsActionsTranslator) {
+  if (message === "No auth account is linked to this member.") {
+    return t("errors.noAuthAccount");
+  }
+
+  return message;
 }

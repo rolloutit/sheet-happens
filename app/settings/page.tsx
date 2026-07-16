@@ -1,6 +1,7 @@
 import { ShieldCheck, ShieldPlus } from "lucide-react";
 import type { Route } from "next";
 import Link from "next/link";
+import { getTranslations } from "next-intl/server";
 
 import { AppShell } from "@/src/components/layout/AppShell";
 import { Badge } from "@/src/components/ui/Badge";
@@ -40,6 +41,7 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
   const setupParam = getSingleParam(params.setup);
   const setupReason = getSingleParam(params.reason);
   const access = await requireSecuritySettingsAppMember("/settings");
+  const t = await getTranslations("Settings");
   const { member, authUser } = access;
   const securityState = await getSecurityState(authUser.id);
   const googleAuthSettings = getGoogleAuthSettings();
@@ -60,15 +62,16 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
     >
       <section className="mx-auto grid w-full max-w-[86rem] gap-6 px-4 py-8 sm:px-6 lg:px-8">
         <SectionHead
-          eyebrow="Account"
-          title="Security settings"
-          subtitle="Manage sign-in methods, passkeys, and authenticator-app verification for your Sheet Happens account."
+          eyebrow={t("page.eyebrow")}
+          title={t("page.title")}
+          subtitle={t("page.subtitle")}
         />
         {showSetupBanner ? (
           <SecuritySetupBanner
             adminTotpRequired={adminTotpRequired}
             callbackURL={callbackURL}
             complete={!setupStillRequired}
+            t={t}
           />
         ) : null}
         <SecuritySettingsClient
@@ -112,16 +115,18 @@ function SecuritySetupBanner({
   adminTotpRequired,
   callbackURL,
   complete,
+  t,
 }: {
   adminTotpRequired: boolean;
   callbackURL: string;
   complete: boolean;
+  t: Awaited<ReturnType<typeof getTranslations>>;
 }) {
   return (
     <Card variant={complete ? "selected" : "warning"} density="lg">
       <CardHeader className="block">
         <Badge tone={complete ? "success" : "warning"} dot>
-          {complete ? "Security ready" : "Action required"}
+          {complete ? t("setupBanner.securityReady") : t("setupBanner.actionRequired")}
         </Badge>
         <CardTitle className="mt-4 flex items-center gap-2">
           {complete ? (
@@ -129,30 +134,30 @@ function SecuritySetupBanner({
           ) : (
             <ShieldPlus className="size-5 text-warning" aria-hidden="true" />
           )}
-          Complete account security
+          {t("setupBanner.title")}
         </CardTitle>
         <CardDescription>
           {complete
-            ? "Security setup is complete. You can continue to the app."
+            ? t("setupBanner.completeDescription")
             : adminTotpRequired
-              ? "Admin tools require authenticator-app verification. Enable an authenticator app before returning to management screens."
-              : "Add a passkey or enable an authenticator app before continuing."}
+              ? t("setupBanner.adminTotpDescription")
+              : t("setupBanner.memberDescription")}
         </CardDescription>
       </CardHeader>
       {complete && callbackURL !== "/settings" ? (
         <CardFooter>
           <Button asChild icon={ShieldCheck}>
-            <Link href={callbackURL as Route}>Continue</Link>
+            <Link href={callbackURL as Route}>{t("actions.continue")}</Link>
           </Button>
         </CardFooter>
       ) : (
         <CardContent>
           <p className="text-sm text-muted-foreground">
             {complete
-              ? "No further security action is required right now."
+              ? t("setupBanner.noFurtherAction")
               : adminTotpRequired
-                ? "Use the authenticator-app controls below to satisfy the admin 2FA requirement. Passkeys remain available for sign-in, but they do not replace admin TOTP in v1."
-                : "Use the passkey or authenticator-app controls below to satisfy this requirement."}
+                ? t("setupBanner.adminTotpHint")
+                : t("setupBanner.memberHint")}
           </p>
         </CardContent>
       )}

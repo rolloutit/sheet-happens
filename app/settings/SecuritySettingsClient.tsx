@@ -20,6 +20,7 @@ import {
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState, useTransition } from "react";
 import { toDataURL } from "qrcode";
+import { useLocale, useTranslations } from "next-intl";
 
 import { SecurityMethodList } from "@/src/components/sheet/SecurityMethodList";
 import type { SecurityMethod } from "@/src/components/sheet/SecurityMethodList";
@@ -104,10 +105,11 @@ type PendingAction =
   | `rename-${string}`
   | `delete-${string}`;
 
-const defaultPasskeyName = "Sheet Happens passkey";
-
 export function SecuritySettingsClient({ user, passkeys, twoFactor }: SecuritySettingsClientProps) {
   const router = useRouter();
+  const locale = useLocale();
+  const t = useTranslations("Settings");
+  const defaultPasskeyName = t("passkeys.defaultName");
   const [isPending, startTransition] = useTransition();
   const [pendingAction, setPendingAction] = useState<PendingAction | null>(null);
   const [notice, setNotice] = useState<Notice | null>(null);
@@ -124,63 +126,67 @@ export function SecuritySettingsClient({ user, passkeys, twoFactor }: SecuritySe
     () => [
       {
         id: "magic-link",
-        label: "Email magic link",
-        description: `Primary passwordless sign-in for ${user.email}.`,
+        label: t("methods.magicLink.label"),
+        description: t("methods.magicLink.description", { email: user.email }),
         state: "connected",
-        stateLabel: "Connected",
+        stateLabel: t("states.connected"),
         icon: MailCheck,
       },
       {
         id: "password",
-        label: "Email password",
+        label: t("methods.password.label"),
         description: user.passwordEnabled
-          ? "Password sign-in is enabled for this account."
-          : "Set a password through an emailed setup link.",
+          ? t("methods.password.enabledDescription")
+          : t("methods.password.setupDescription"),
         state: user.passwordEnabled ? "connected" : "recommended",
-        stateLabel: user.passwordEnabled ? "Enabled" : "Available",
+        stateLabel: user.passwordEnabled ? t("states.enabled") : t("states.available"),
         icon: LockKeyhole,
-        actionLabel: user.passwordEnabled ? "Reset" : "Set up",
+        actionLabel: user.passwordEnabled ? t("actions.reset") : t("actions.setUp"),
       },
       ...(user.googleAvailable
         ? [
             {
               id: "google",
-              label: "Company Google",
+              label: t("methods.google.label"),
               description: user.googleLinked
-                ? "A company Google account is linked."
-                : "Available for eligible company Google accounts after activation.",
+                ? t("methods.google.linkedDescription")
+                : t("methods.google.availableDescription"),
               state: user.googleLinked ? "connected" : "not_enabled",
-              stateLabel: user.googleLinked ? "Linked" : "Available",
+              stateLabel: user.googleLinked ? t("states.linked") : t("states.available"),
               icon: Building2,
             } satisfies SecurityMethod,
           ]
         : []),
       {
         id: "passkeys",
-        label: "Passkeys",
+        label: t("methods.passkeys.label"),
         description:
           passkeys.length > 0
-            ? `${passkeys.length} passkey${passkeys.length === 1 ? "" : "s"} registered.`
-            : "Use Touch ID, Face ID, Windows Hello, or a hardware security key.",
+            ? t("methods.passkeys.registeredDescription", { count: passkeys.length })
+            : t("methods.passkeys.emptyDescription"),
         state: passkeys.length > 0 ? "connected" : "recommended",
-        stateLabel: passkeys.length > 0 ? `${passkeys.length} set` : "Recommended",
+        stateLabel:
+          passkeys.length > 0
+            ? t("methods.passkeys.countSet", { count: passkeys.length })
+            : t("states.recommended"),
         icon: KeyRound,
-        actionLabel: "Add",
+        actionLabel: t("actions.add"),
       },
       {
         id: "totp",
-        label: "Authenticator app",
+        label: t("methods.totp.label"),
         description: twoFactor.enabled
-          ? "A time-based one-time code is required during supported sign-in challenges."
-          : "Add app-based one-time codes as a second factor.",
+          ? t("methods.totp.enabledDescription")
+          : t("methods.totp.setupDescription"),
         state: twoFactor.enabled ? "connected" : "recommended",
-        stateLabel: twoFactor.enabled ? "Enabled" : "Recommended",
+        stateLabel: twoFactor.enabled ? t("states.enabled") : t("states.recommended"),
         icon: Smartphone,
-        actionLabel: twoFactor.enabled ? "Disable" : "Set up",
+        actionLabel: twoFactor.enabled ? t("actions.disable") : t("actions.setUp"),
       },
     ],
     [
       passkeys.length,
+      t,
       twoFactor.enabled,
       user.email,
       user.googleAvailable,
@@ -240,20 +246,20 @@ export function SecuritySettingsClient({ user, passkeys, twoFactor }: SecuritySe
     if (result.error) {
       setNotice({
         tone: "error",
-        message: getAuthErrorMessage(result.error, "Could not add the passkey."),
+        message: getAuthErrorMessage(result.error, t("errors.addPasskeyFailed"), t),
       });
       return;
     }
 
     setNotice({
       tone: "success",
-      message: "Passkey added.",
+      message: t("notices.passkeyAdded"),
     });
     router.refresh();
   }
 
   function renamePasskey(passkey: PasskeyView) {
-    const nextName = getEditedPasskeyName(passkeyNameEdits, passkey).trim();
+    const nextName = getEditedPasskeyName(passkeyNameEdits, passkey, t).trim();
 
     setPendingAction(`rename-${passkey.id}`);
     setNotice(null);
@@ -268,7 +274,7 @@ export function SecuritySettingsClient({ user, passkeys, twoFactor }: SecuritySe
   }
 
   function deletePasskey(passkey: PasskeyView) {
-    if (!window.confirm(`Remove ${getPasskeyLabel(passkey)}?`)) {
+    if (!window.confirm(t("confirm.removePasskey", { name: getPasskeyLabel(passkey, t) }))) {
       return;
     }
 
@@ -309,14 +315,14 @@ export function SecuritySettingsClient({ user, passkeys, twoFactor }: SecuritySe
     if (result.error) {
       setNotice({
         tone: "error",
-        message: getAuthErrorMessage(result.error, "Could not send the password setup email."),
+        message: getAuthErrorMessage(result.error, t("errors.passwordEmailFailed"), t),
       });
       return;
     }
 
     setNotice({
       tone: "success",
-      message: "Password setup link sent if this account is eligible.",
+      message: t("notices.passwordLinkSent"),
     });
   }
 
@@ -340,7 +346,7 @@ export function SecuritySettingsClient({ user, passkeys, twoFactor }: SecuritySe
     if (result.error || !result.data) {
       setNotice({
         tone: "error",
-        message: getAuthErrorMessage(result.error, "Could not start authenticator setup."),
+        message: getAuthErrorMessage(result.error, t("errors.totpSetupFailed"), t),
       });
       return;
     }
@@ -354,7 +360,7 @@ export function SecuritySettingsClient({ user, passkeys, twoFactor }: SecuritySe
     setBackupCodes(result.data.backupCodes);
     setNotice({
       tone: "info",
-      message: "Authenticator secret generated. Verify a code to finish setup.",
+      message: t("notices.totpSecretGenerated"),
     });
   }
 
@@ -381,7 +387,7 @@ export function SecuritySettingsClient({ user, passkeys, twoFactor }: SecuritySe
     setTotpCode("");
     setNotice({
       tone: "success",
-      message: "Authenticator app enabled.",
+      message: t("notices.totpEnabled"),
     });
     router.refresh();
   }
@@ -391,7 +397,7 @@ export function SecuritySettingsClient({ user, passkeys, twoFactor }: SecuritySe
       return;
     }
 
-    if (!window.confirm("Disable authenticator-app verification for this account?")) {
+    if (!window.confirm(t("confirm.disableTotp"))) {
       return;
     }
 
@@ -407,7 +413,7 @@ export function SecuritySettingsClient({ user, passkeys, twoFactor }: SecuritySe
     if (result.error) {
       setNotice({
         tone: "error",
-        message: getAuthErrorMessage(result.error, "Could not disable authenticator app."),
+        message: getAuthErrorMessage(result.error, t("errors.totpDisableFailed"), t),
       });
       return;
     }
@@ -418,8 +424,7 @@ export function SecuritySettingsClient({ user, passkeys, twoFactor }: SecuritySe
     const auditResult = await auditTotpDisabledAction();
     setNotice({
       tone: auditResult.status === "success" ? "success" : "error",
-      message:
-        auditResult.status === "success" ? "Authenticator app disabled." : auditResult.message,
+      message: auditResult.status === "success" ? t("notices.totpDisabled") : auditResult.message,
     });
     router.refresh();
   }
@@ -429,7 +434,7 @@ export function SecuritySettingsClient({ user, passkeys, twoFactor }: SecuritySe
       return;
     }
 
-    if (!window.confirm("Generate new backup codes? Existing backup codes will stop working.")) {
+    if (!window.confirm(t("confirm.regenerateBackupCodes"))) {
       return;
     }
 
@@ -445,7 +450,7 @@ export function SecuritySettingsClient({ user, passkeys, twoFactor }: SecuritySe
     if (result.error || !result.data) {
       setNotice({
         tone: "error",
-        message: getAuthErrorMessage(result.error, "Could not generate backup codes."),
+        message: getAuthErrorMessage(result.error, t("errors.backupCodesFailed"), t),
       });
       return;
     }
@@ -456,9 +461,7 @@ export function SecuritySettingsClient({ user, passkeys, twoFactor }: SecuritySe
     setNotice({
       tone: auditResult.status === "success" ? "success" : "error",
       message:
-        auditResult.status === "success"
-          ? "New backup codes generated. Store them now."
-          : auditResult.message,
+        auditResult.status === "success" ? t("notices.backupCodesGenerated") : auditResult.message,
     });
   }
 
@@ -467,12 +470,12 @@ export function SecuritySettingsClient({ user, passkeys, twoFactor }: SecuritySe
       await navigator.clipboard.writeText(value);
       setNotice({
         tone: "success",
-        message: `${label} copied.`,
+        message: t("notices.copied", { label }),
       });
     } catch {
       setNotice({
         tone: "error",
-        message: `Could not copy ${label.toLowerCase()}.`,
+        message: t("errors.copyFailed", { label }),
       });
     }
   }
@@ -484,7 +487,7 @@ export function SecuritySettingsClient({ user, passkeys, twoFactor }: SecuritySe
 
     setNotice({
       tone: "error",
-      message: "Enter your current password to manage authenticator-app verification.",
+      message: t("errors.currentPasswordRequired"),
     });
     return false;
   }
@@ -526,43 +529,45 @@ export function SecuritySettingsClient({ user, passkeys, twoFactor }: SecuritySe
 
         <Card variant="elevated">
           <CardHeader className="block">
-            <CardTitle>Security posture</CardTitle>
-            <CardDescription>
-              Manage the sign-in methods and recovery options for this account.
-            </CardDescription>
+            <CardTitle>{t("posture.title")}</CardTitle>
+            <CardDescription>{t("posture.description")}</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="grid gap-3">
               <PostureRow
                 icon={ShieldCheck}
-                label="Primary sign-in"
-                value="Magic link"
+                label={t("posture.primarySignIn")}
+                value={t("posture.magicLink")}
                 tone="success"
               />
               <PostureRow
                 icon={LockKeyhole}
-                label="Password sign-in"
-                value={user.passwordEnabled ? "Enabled" : "Not set"}
+                label={t("posture.passwordSignIn")}
+                value={user.passwordEnabled ? t("states.enabled") : t("states.notSet")}
                 tone={user.passwordEnabled ? "success" : "warning"}
               />
               {user.googleAvailable ? (
                 <PostureRow
                   icon={Building2}
-                  label="Company Google"
-                  value={user.googleLinked ? "Linked" : "Available"}
+                  label={t("methods.google.label")}
+                  value={user.googleLinked ? t("states.linked") : t("states.available")}
                   tone={user.googleLinked ? "success" : "warning"}
                 />
               ) : null}
               <PostureRow
                 icon={KeyRound}
-                label="Passkey coverage"
-                value={passkeys.length > 0 ? `${passkeys.length} registered` : "Not set"}
+                label={t("posture.passkeyCoverage")}
+                value={
+                  passkeys.length > 0
+                    ? t("posture.passkeysRegistered", { count: passkeys.length })
+                    : t("states.notSet")
+                }
                 tone={passkeys.length > 0 ? "success" : "warning"}
               />
               <PostureRow
                 icon={Smartphone}
-                label="Authenticator app"
-                value={twoFactor.enabled ? "Enabled" : "Not enabled"}
+                label={t("methods.totp.label")}
+                value={twoFactor.enabled ? t("states.enabled") : t("states.notEnabled")}
                 tone={twoFactor.enabled ? "success" : "warning"}
               />
             </div>
@@ -572,10 +577,8 @@ export function SecuritySettingsClient({ user, passkeys, twoFactor }: SecuritySe
 
       <Card id="password-management" density="lg">
         <CardHeader className="block">
-          <CardTitle>Email password</CardTitle>
-          <CardDescription>
-            Password sign-in is optional and remains bound to the invited member email address.
-          </CardDescription>
+          <CardTitle>{t("password.title")}</CardTitle>
+          <CardDescription>{t("password.description")}</CardDescription>
         </CardHeader>
         <CardContent className="gap-4">
           <div className="flex flex-col gap-3 rounded-[var(--radius-lg)] border border-border bg-secondary/50 p-4 sm:flex-row sm:items-center sm:justify-between">
@@ -592,12 +595,12 @@ export function SecuritySettingsClient({ user, passkeys, twoFactor }: SecuritySe
               </span>
               <div>
                 <p className="font-ui text-sm font-semibold text-foreground">
-                  {user.passwordEnabled ? "Password sign-in is enabled" : "No password is set"}
+                  {user.passwordEnabled ? t("password.enabledTitle") : t("password.notSetTitle")}
                 </p>
                 <p className="mt-1 text-sm leading-6 text-muted-foreground">
                   {user.passwordEnabled
-                    ? "Send a reset link if you need to rotate or recover the password."
-                    : "Send a setup link to create a password for this account."}
+                    ? t("password.enabledDescription")
+                    : t("password.notSetDescription")}
                 </p>
               </div>
             </div>
@@ -609,15 +612,13 @@ export function SecuritySettingsClient({ user, passkeys, twoFactor }: SecuritySe
               disabled={busy}
               onClick={() => void requestPasswordReset()}
             >
-              {user.passwordEnabled ? "Send reset link" : "Send setup link"}
+              {user.passwordEnabled ? t("password.sendResetLink") : t("password.sendSetupLink")}
             </Button>
           </div>
           {user.googleAvailable ? (
             <div className="flex items-start gap-3 rounded-[var(--radius-lg)] border border-border bg-secondary/50 p-4 text-sm text-muted-foreground">
               <Building2 className="mt-0.5 size-4 shrink-0 text-accent" aria-hidden="true" />
-              <p>
-                Company Google sign-in is available for eligible work accounts after activation.
-              </p>
+              <p>{t("password.googleHint")}</p>
             </div>
           ) : null}
         </CardContent>
@@ -625,18 +626,13 @@ export function SecuritySettingsClient({ user, passkeys, twoFactor }: SecuritySe
 
       <Card id="passkey-management" density="lg">
         <CardHeader className="block">
-          <CardTitle>Passkeys</CardTitle>
-          <CardDescription>
-            Register device biometrics or hardware security keys for phishing-resistant sign-in.
-          </CardDescription>
+          <CardTitle>{t("passkeys.title")}</CardTitle>
+          <CardDescription>{t("passkeys.description")}</CardDescription>
         </CardHeader>
         <CardContent className="gap-6">
-          <FormSection
-            title="Add a passkey"
-            description="Use a clear name so you can identify the device later."
-          >
+          <FormSection title={t("passkeys.addTitle")} description={t("passkeys.addDescription")}>
             <div className="grid gap-4 lg:grid-cols-[minmax(16rem,24rem)_auto] lg:items-end">
-              <Field label="Passkey name" reserveMessageSpace>
+              <Field label={t("passkeys.nameField")} reserveMessageSpace>
                 {({ id }) => (
                   <Input
                     id={id}
@@ -654,7 +650,7 @@ export function SecuritySettingsClient({ user, passkeys, twoFactor }: SecuritySe
                   disabled={busy}
                   onClick={() => void addPasskey("platform")}
                 >
-                  Add device passkey
+                  {t("passkeys.addDevice")}
                 </Button>
                 <Button
                   type="button"
@@ -664,25 +660,25 @@ export function SecuritySettingsClient({ user, passkeys, twoFactor }: SecuritySe
                   disabled={busy}
                   onClick={() => void addPasskey("cross-platform")}
                 >
-                  Add security key
+                  {t("passkeys.addSecurityKey")}
                 </Button>
               </div>
             </div>
           </FormSection>
 
           <FormSection
-            title="Registered passkeys"
-            description="Remove passkeys you no longer recognize. Magic-link sign-in remains available."
+            title={t("passkeys.registeredTitle")}
+            description={t("passkeys.registeredDescription")}
           >
             {passkeys.length === 0 ? (
               <div className="rounded-[var(--radius-lg)] border border-dashed border-border bg-secondary/50 p-5 text-sm text-muted-foreground">
-                No passkeys have been registered for this account yet.
+                {t("passkeys.emptyRegistered")}
               </div>
             ) : (
               <div className="grid gap-3">
                 {passkeys.map((passkey) => {
-                  const currentName = getEditedPasskeyName(passkeyNameEdits, passkey);
-                  const changed = currentName.trim() !== getPasskeyLabel(passkey);
+                  const currentName = getEditedPasskeyName(passkeyNameEdits, passkey, t);
+                  const changed = currentName.trim() !== getPasskeyLabel(passkey, t);
 
                   return (
                     <div
@@ -690,7 +686,7 @@ export function SecuritySettingsClient({ user, passkeys, twoFactor }: SecuritySe
                       className="grid gap-4 rounded-[var(--radius-lg)] border border-border bg-secondary/50 p-4 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center"
                     >
                       <div className="grid gap-3 sm:grid-cols-[minmax(14rem,1fr)_auto] sm:items-center">
-                        <Field label="Name" reserveMessageSpace>
+                        <Field label={t("passkeys.nameColumn")} reserveMessageSpace>
                           {({ id }) => (
                             <Input
                               id={id}
@@ -706,10 +702,12 @@ export function SecuritySettingsClient({ user, passkeys, twoFactor }: SecuritySe
                           )}
                         </Field>
                         <div className="flex flex-wrap gap-2 pb-0 sm:pb-6">
-                          <PasskeyBadge label={formatDeviceType(passkey.deviceType)} />
-                          {passkey.backedUp ? <PasskeyBadge label="Synced" tone="success" /> : null}
+                          <PasskeyBadge label={formatDeviceType(passkey.deviceType, t)} />
+                          {passkey.backedUp ? (
+                            <PasskeyBadge label={t("passkeys.synced")} tone="success" />
+                          ) : null}
                           {passkey.createdAt ? (
-                            <PasskeyBadge label={formatDate(passkey.createdAt)} />
+                            <PasskeyBadge label={formatDate(passkey.createdAt, locale)} />
                           ) : null}
                         </div>
                       </div>
@@ -723,7 +721,7 @@ export function SecuritySettingsClient({ user, passkeys, twoFactor }: SecuritySe
                           disabled={busy || !changed}
                           onClick={() => renamePasskey(passkey)}
                         >
-                          Save
+                          {t("actions.save")}
                         </Button>
                         <Button
                           type="button"
@@ -734,7 +732,7 @@ export function SecuritySettingsClient({ user, passkeys, twoFactor }: SecuritySe
                           disabled={busy}
                           onClick={() => deletePasskey(passkey)}
                         >
-                          Remove
+                          {t("actions.remove")}
                         </Button>
                       </div>
                     </div>
@@ -748,18 +746,17 @@ export function SecuritySettingsClient({ user, passkeys, twoFactor }: SecuritySe
 
       <Card density="lg">
         <CardHeader className="block">
-          <CardTitle>Authenticator app</CardTitle>
-          <CardDescription>
-            Set up TOTP with an authenticator app and keep backup codes somewhere safe.
-          </CardDescription>
+          <CardTitle>{t("totp.title")}</CardTitle>
+          <CardDescription>{t("totp.description")}</CardDescription>
         </CardHeader>
         <CardContent className="gap-6">
           {twoFactor.lockedUntil ? (
             <div className="flex items-start gap-3 rounded-[var(--radius-lg)] border border-warning/40 bg-warning/10 p-4 text-sm text-warning">
               <TriangleAlert className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
               <p>
-                TOTP verification is temporarily locked until{" "}
-                {formatDateTime(twoFactor.lockedUntil)}.
+                {t("totp.lockedUntil", {
+                  time: formatDateTime(twoFactor.lockedUntil, locale),
+                })}
               </p>
             </div>
           ) : null}
@@ -767,16 +764,13 @@ export function SecuritySettingsClient({ user, passkeys, twoFactor }: SecuritySe
           {twoFactor.failedVerificationCount > 0 && !twoFactor.lockedUntil ? (
             <div className="flex items-start gap-3 rounded-[var(--radius-lg)] border border-warning/40 bg-warning/10 p-4 text-sm text-warning">
               <TriangleAlert className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
-              <p>{twoFactor.failedVerificationCount} failed TOTP attempt(s) are recorded.</p>
+              <p>{t("totp.failedAttempts", { count: twoFactor.failedVerificationCount })}</p>
             </div>
           ) : null}
 
           {user.passwordEnabled ? (
             <div className="grid gap-3 rounded-[var(--radius-lg)] border border-border bg-secondary/50 p-4">
-              <Field
-                label="Current password"
-                hint="Required because password sign-in is enabled for this account."
-              >
+              <Field label={t("totp.currentPassword")} hint={t("totp.currentPasswordHint")}>
                 {({ id, describedBy }) => (
                   <Input
                     id={id}
@@ -807,10 +801,10 @@ export function SecuritySettingsClient({ user, passkeys, twoFactor }: SecuritySe
                   </span>
                   <div>
                     <p className="font-ui text-sm font-semibold text-foreground">
-                      Authenticator app is enabled
+                      {t("totp.enabledTitle")}
                     </p>
                     <p className="mt-1 text-sm leading-6 text-muted-foreground">
-                      Sign-in challenges can require a 6 digit code from your authenticator app.
+                      {t("totp.enabledDescription")}
                     </p>
                   </div>
                 </div>
@@ -823,7 +817,7 @@ export function SecuritySettingsClient({ user, passkeys, twoFactor }: SecuritySe
                     disabled={busy}
                     onClick={() => void regenerateBackupCodes()}
                   >
-                    New backup codes
+                    {t("totp.newBackupCodes")}
                   </Button>
                   <Button
                     type="button"
@@ -832,7 +826,7 @@ export function SecuritySettingsClient({ user, passkeys, twoFactor }: SecuritySe
                     disabled={busy}
                     onClick={() => void disableTotp()}
                   >
-                    Disable
+                    {t("actions.disable")}
                   </Button>
                 </div>
               </div>
@@ -841,10 +835,10 @@ export function SecuritySettingsClient({ user, passkeys, twoFactor }: SecuritySe
             <div className="flex flex-col gap-3 rounded-[var(--radius-lg)] border border-border bg-secondary/50 p-4 sm:flex-row sm:items-center sm:justify-between">
               <div>
                 <p className="font-ui text-sm font-semibold text-foreground">
-                  Authenticator app is not enabled
+                  {t("totp.notEnabledTitle")}
                 </p>
                 <p className="mt-1 text-sm leading-6 text-muted-foreground">
-                  Generate a secret, add it to your authenticator app, and verify the first code.
+                  {t("totp.notEnabledDescription")}
                 </p>
               </div>
               <Button
@@ -854,7 +848,7 @@ export function SecuritySettingsClient({ user, passkeys, twoFactor }: SecuritySe
                 disabled={busy}
                 onClick={() => void beginTotpSetup()}
               >
-                Set up authenticator
+                {t("totp.setUp")}
               </Button>
             </div>
           )}
@@ -866,37 +860,32 @@ export function SecuritySettingsClient({ user, passkeys, twoFactor }: SecuritySe
                   <div className="grid aspect-square place-items-center rounded-[var(--radius-md)] border border-border bg-white p-3 text-center shadow-sm">
                     {totpQrCodeDataUrl ? (
                       // eslint-disable-next-line @next/next/no-img-element -- QR code is a generated data URL, not an optimizable remote/static image.
-                      <img
-                        src={totpQrCodeDataUrl}
-                        alt="Authenticator app setup QR code"
-                        className="size-full"
-                      />
+                      <img src={totpQrCodeDataUrl} alt={t("totp.qrAlt")} className="size-full" />
                     ) : (
                       <div className="grid justify-items-center gap-3 text-slate-700">
                         <QrCode className="size-10" aria-hidden="true" />
                         <p className="px-4 text-xs font-semibold">
-                          {totpQrCodeError ? "QR unavailable" : "Generating QR"}
+                          {totpQrCodeError ? t("totp.qrUnavailable") : t("totp.generatingQr")}
                         </p>
                       </div>
                     )}
                   </div>
                   <p className="text-center font-ui text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">
-                    Scan QR code
+                    {t("totp.scanQr")}
                   </p>
                 </div>
                 <div className="grid content-start gap-3">
                   <div>
                     <p className="font-ui text-sm font-semibold text-foreground">
-                      Scan with your authenticator app
+                      {t("totp.scanTitle")}
                     </p>
                     <p className="mt-1 text-sm leading-6 text-muted-foreground">
-                      Open {user.email} in your authenticator app, scan the QR code, then enter the
-                      current 6-digit code below.
+                      {t("totp.scanDescription", { email: user.email })}
                     </p>
                   </div>
                   <div>
                     <p className="font-ui text-sm font-semibold text-foreground">
-                      Manual key fallback
+                      {t("totp.manualKeyTitle")}
                     </p>
                     <p className="mt-1 break-all rounded-[var(--radius-md)] border border-border bg-background/60 px-3 py-2 font-mono text-sm text-muted-foreground">
                       {totpSecret}
@@ -908,25 +897,22 @@ export function SecuritySettingsClient({ user, passkeys, twoFactor }: SecuritySe
                       variant="soft"
                       size="sm"
                       icon={Copy}
-                      onClick={() => void copyText(totpSecret, "Manual key")}
+                      onClick={() => void copyText(totpSecret, t("totp.manualKeyLabel"))}
                     >
-                      Copy key
+                      {t("totp.copyKey")}
                     </Button>
                     <Button asChild type="button" variant="soft" size="sm" icon={ExternalLink}>
-                      <a href={totpSetup.totpURI}>Open in authenticator</a>
+                      <a href={totpSetup.totpURI}>{t("totp.openInAuthenticator")}</a>
                     </Button>
                   </div>
                 </div>
               </div>
 
               <div className="grid gap-3 lg:grid-cols-[minmax(16rem,22rem)_auto] lg:items-end">
-                <Field
-                  label="6-digit code"
-                  hint="Enter the current code from your authenticator app."
-                >
+                <Field label={t("totp.codeField")} hint={t("totp.codeHint")}>
                   {({ describedBy }) => (
                     <CodeInput
-                      label="Authenticator code"
+                      label={t("totp.codeInputLabel")}
                       value={totpCode}
                       onValueChange={setTotpCode}
                       aria-describedby={describedBy}
@@ -942,7 +928,7 @@ export function SecuritySettingsClient({ user, passkeys, twoFactor }: SecuritySe
                   onClick={() => void verifyTotpSetup()}
                   className="lg:mb-6"
                 >
-                  Verify and enable
+                  {t("totp.verifyAndEnable")}
                 </Button>
               </div>
             </div>
@@ -951,15 +937,12 @@ export function SecuritySettingsClient({ user, passkeys, twoFactor }: SecuritySe
           {backupCodes.length > 0 ? (
             <BackupCodesPanel
               codes={backupCodes}
-              onCopy={(value) => copyText(value, "Backup codes")}
+              onCopy={(value) => copyText(value, t("backupCodes.copyLabel"))}
             />
           ) : null}
         </CardContent>
         <CardFooter>
-          <p className="text-sm text-muted-foreground">
-            TOTP is the v1 admin second factor. Email passwords and passkeys remain sign-in methods,
-            not admin 2FA replacements.
-          </p>
+          <p className="text-sm text-muted-foreground">{t("totp.footer")}</p>
         </CardFooter>
       </Card>
     </div>
@@ -1021,15 +1004,16 @@ function BackupCodesPanel({
   codes: string[];
   onCopy: (value: string) => void | Promise<void>;
 }) {
+  const t = useTranslations("Settings");
   const allCodes = codes.join("\n");
 
   return (
     <div className="grid gap-3 rounded-[var(--radius-lg)] border border-warning/40 bg-warning/10 p-4">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <p className="font-ui text-sm font-semibold text-foreground">Backup codes</p>
+          <p className="font-ui text-sm font-semibold text-foreground">{t("backupCodes.title")}</p>
           <p className="mt-1 text-sm leading-6 text-muted-foreground">
-            Store these now. Each code can be used once if your authenticator app is unavailable.
+            {t("backupCodes.description")}
           </p>
         </div>
         <Button
@@ -1039,7 +1023,7 @@ function BackupCodesPanel({
           icon={Copy}
           onClick={() => void onCopy(allCodes)}
         >
-          Copy all
+          {t("backupCodes.copyAll")}
         </Button>
       </div>
       <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
@@ -1056,16 +1040,23 @@ function BackupCodesPanel({
   );
 }
 
-function getPasskeyLabel(passkey: PasskeyView) {
-  return passkey.name?.trim() || formatDeviceType(passkey.deviceType);
+function getPasskeyLabel(passkey: PasskeyView, t: ReturnType<typeof useTranslations>) {
+  return passkey.name?.trim() || formatDeviceType(passkey.deviceType, t);
 }
 
-function getEditedPasskeyName(edits: Record<string, string>, passkey: PasskeyView) {
-  return edits[passkey.id] ?? getPasskeyLabel(passkey);
+function getEditedPasskeyName(
+  edits: Record<string, string>,
+  passkey: PasskeyView,
+  t: ReturnType<typeof useTranslations>,
+) {
+  return edits[passkey.id] ?? getPasskeyLabel(passkey, t);
 }
 
-function formatDeviceType(deviceType: string) {
-  if (!deviceType) return "Passkey";
+function formatDeviceType(deviceType: string, t: ReturnType<typeof useTranslations>) {
+  if (!deviceType) return t("passkeys.deviceType.passkey");
+  if (deviceType === "platform") return t("passkeys.deviceType.platform");
+  if (deviceType === "cross-platform") return t("passkeys.deviceType.crossPlatform");
+
   return deviceType
     .split(/[-_\s]+/)
     .filter(Boolean)
@@ -1073,16 +1064,16 @@ function formatDeviceType(deviceType: string) {
     .join(" ");
 }
 
-function formatDate(value: string) {
-  return new Intl.DateTimeFormat("en", {
+function formatDate(value: string, locale: string) {
+  return new Intl.DateTimeFormat(locale, {
     month: "short",
     day: "numeric",
     year: "numeric",
   }).format(new Date(value));
 }
 
-function formatDateTime(value: string) {
-  return new Intl.DateTimeFormat("en", {
+function formatDateTime(value: string, locale: string) {
+  return new Intl.DateTimeFormat(locale, {
     month: "short",
     day: "numeric",
     year: "numeric",
@@ -1101,10 +1092,14 @@ function getTotpSecret(totpURI: string) {
   }
 }
 
-function getAuthErrorMessage(error: { message?: string; code?: string } | null, fallback: string) {
+function getAuthErrorMessage(
+  error: { message?: string; code?: string } | null,
+  fallback: string,
+  t: ReturnType<typeof useTranslations>,
+) {
   if (!error) return fallback;
   if (error.code === "INVALID_PASSWORD" || error.message === "Invalid password") {
-    return "Current password is required or incorrect.";
+    return t("errors.invalidPassword");
   }
 
   return error.message || error.code || fallback;
