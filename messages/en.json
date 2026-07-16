@@ -248,11 +248,16 @@
   "Dashboard": {
     "eyebrow": "Home",
     "title": "Dashboard",
-    "subtitle": "Track work, review assignments, and continue from the workflows available to you.",
-    "greeting": "Welcome, {name}",
-    "summary": {
-      "admin": "Admin workflows are available from the sidebar.",
-      "member": "Your time tracking workspace is ready."
+    "subtitle": "Not implemented yet.",
+    "placeholder": {
+      "title": "Available shortcuts",
+      "description": "Use these links until the dashboard is implemented."
+    },
+    "actions": {
+      "time": "Open time tracking",
+      "settings": "Open settings",
+      "people": "Open people",
+      "projects": "Open projects"
     }
   },
   "DashboardCards": {
