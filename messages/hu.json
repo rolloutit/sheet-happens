@@ -248,11 +248,16 @@
   "Dashboard": {
     "eyebrow": "Kezdőlap",
     "title": "Irányítópult",
-    "subtitle": "Kövesd a munkát, nézd át a hozzárendeléseket, és folytasd a számodra elérhető munkafolyamatokat.",
-    "greeting": "Üdv, {name}",
-    "summary": {
-      "admin": "Az admin munkafolyamatok az oldalsávból érhetők el.",
-      "member": "Az időkövetési munkaterületed készen áll."
+    "subtitle": "Még nincs implementálva.",
+    "placeholder": {
+      "title": "Elérhető gyorslinkek",
+      "description": "Ezek a linkek használhatók, amíg a dashboard elkészül."
+    },
+    "actions": {
+      "time": "Időkövetés megnyitása",
+      "settings": "Beállítások megnyitása",
+      "people": "Emberek megnyitása",
+      "projects": "Projektek megnyitása"
     }
   },
   "DashboardCards": {

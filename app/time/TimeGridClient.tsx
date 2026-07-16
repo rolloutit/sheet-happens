@@ -64,6 +64,8 @@ import {
   type TimeTrackingActionState,
 } from "./actions.types";
 
+const GRID_ENTRY_IDLE_OPEN_DELAY_MS = 900;
+
 type Notice = {
   tone: "success" | "error";
   message: string;
@@ -874,6 +876,54 @@ function TimeGridCell({
     },
     t,
   );
+  const idleEditorTimerRef = useRef<number | null>(null);
+  const skipNextBlurCommitValueRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (idleEditorTimerRef.current !== null) {
+        window.clearTimeout(idleEditorTimerRef.current);
+      }
+    };
+  }, []);
+
+  function clearIdleEditorTimer() {
+    if (idleEditorTimerRef.current !== null) {
+      window.clearTimeout(idleEditorTimerRef.current);
+      idleEditorTimerRef.current = null;
+    }
+  }
+
+  function scheduleIdleEditorOpen(input: HTMLInputElement) {
+    clearIdleEditorTimer();
+
+    if (cell.entries.length !== 0) return;
+
+    const parsedMinutes = parseDurationToMinutes(input.value);
+    if (parsedMinutes === null || parsedMinutes <= 0) return;
+
+    idleEditorTimerRef.current = window.setTimeout(() => {
+      if (document.activeElement !== input) return;
+
+      const currentValue = input.value;
+      const currentMinutes = parseDurationToMinutes(currentValue);
+      if (currentMinutes === null || currentMinutes <= 0) return;
+
+      skipNextBlurCommitValueRef.current = currentValue;
+      onCommit(currentValue);
+    }, GRID_ENTRY_IDLE_OPEN_DELAY_MS);
+  }
+
+  function commitOnBlur(rawValue: string) {
+    clearIdleEditorTimer();
+
+    if (skipNextBlurCommitValueRef.current === rawValue) {
+      skipNextBlurCommitValueRef.current = null;
+      return;
+    }
+
+    onCommit(rawValue);
+  }
 
   if (!isProjectAssignableOnDate(project, day.isoDate)) {
     return (
@@ -927,7 +977,8 @@ function TimeGridCell({
           "h-full min-h-14 w-full border-0 bg-transparent px-2 text-center text-base font-medium text-foreground outline-none focus:shadow-[inset_0_0_0_2px_var(--ring)] disabled:cursor-not-allowed disabled:text-muted-foreground",
           warningTexts.length > 0 && "text-warning",
         )}
-        onBlur={(event) => onCommit(event.currentTarget.value)}
+        onChange={(event) => scheduleIdleEditorOpen(event.currentTarget)}
+        onBlur={(event) => commitOnBlur(event.currentTarget.value)}
         onKeyDown={(event) => {
           if (event.key === "Enter") {
             event.preventDefault();
