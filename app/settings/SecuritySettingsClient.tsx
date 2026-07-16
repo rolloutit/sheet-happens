@@ -18,7 +18,7 @@ import {
   TriangleAlert,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useEffect, useMemo, useState, useTransition } from "react";
+import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { toDataURL } from "qrcode";
 import { useLocale, useTranslations } from "next-intl";
 
@@ -121,6 +121,7 @@ export function SecuritySettingsClient({ user, passkeys, twoFactor }: SecuritySe
   const [backupCodes, setBackupCodes] = useState<string[]>([]);
   const [totpQrCode, setTotpQrCode] = useState<{ uri: string; dataUrl: string } | null>(null);
   const [totpQrCodeErrorUri, setTotpQrCodeErrorUri] = useState<string | null>(null);
+  const totpSetupPanelRef = useRef<HTMLDivElement | null>(null);
 
   const methods = useMemo<SecurityMethod[]>(
     () => [
@@ -198,6 +199,24 @@ export function SecuritySettingsClient({ user, passkeys, twoFactor }: SecuritySe
   const totpUri = totpSetup.status === "ready" ? totpSetup.totpURI : "";
   const totpQrCodeDataUrl = totpQrCode?.uri === totpUri ? totpQrCode.dataUrl : null;
   const totpQrCodeError = totpQrCodeErrorUri === totpUri;
+
+  useEffect(() => {
+    if (!totpUri) return;
+
+    const frame = window.requestAnimationFrame(() => {
+      const panel = totpSetupPanelRef.current;
+      if (!panel) return;
+
+      const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      panel.focus({ preventScroll: true });
+      panel.scrollIntoView({
+        behavior: prefersReducedMotion ? "auto" : "smooth",
+        block: "start",
+      });
+    });
+
+    return () => window.cancelAnimationFrame(frame);
+  }, [totpUri]);
 
   useEffect(() => {
     if (!totpUri) return;
@@ -854,7 +873,11 @@ export function SecuritySettingsClient({ user, passkeys, twoFactor }: SecuritySe
           )}
 
           {totpSetup.status === "ready" ? (
-            <div className="grid gap-5 rounded-[var(--radius-lg)] border border-border bg-secondary/50 p-4">
+            <div
+              ref={totpSetupPanelRef}
+              tabIndex={-1}
+              className="grid scroll-mt-24 gap-5 rounded-[var(--radius-lg)] border border-border bg-secondary/50 p-4 outline-none"
+            >
               <div className="grid gap-4 lg:grid-cols-[14rem_minmax(0,1fr)]">
                 <div className="grid content-start gap-2">
                   <div className="grid aspect-square place-items-center rounded-[var(--radius-md)] border border-border bg-white p-3 text-center shadow-sm">
