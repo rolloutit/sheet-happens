@@ -26,3 +26,7 @@ Server Actions must stay thin: authenticate, authorize, validate with Zod, call 
 ## State
 
 Use local React state for component-local UI state. Use URL search params for shareable table/filter state. Do not add Redux, Zustand, or TanStack Query for v1.
+
+## i18n
+
+All user-facing runtime text must be bilingual in Hungarian and English. UI copy belongs in `messages/hu.json` and `messages/en.json`; server actions should return localized messages with `getTranslations`; auth emails must use locale-aware templates. New features are not complete until labels, validation messages, empty/error states, toasts, dialogs, and emails are covered in both locales.
