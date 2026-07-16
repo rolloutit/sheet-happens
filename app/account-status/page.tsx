@@ -1,6 +1,7 @@
 import { ShieldAlert, UserX } from "lucide-react";
 import type { Route } from "next";
 import { redirect } from "next/navigation";
+import { getTranslations } from "next-intl/server";
 
 import { AccountStatusActions } from "./AccountStatusActions";
 import { ErrorState } from "@/src/components/ui/ErrorState";
@@ -26,6 +27,7 @@ export default async function AccountStatusPage({ searchParams }: AccountStatusP
   const callbackURL = sanitizeCallbackURL(getSingleParam(params.callbackURL));
   const reason = getSingleParam(params.reason);
   const access = await getAppAccessState();
+  const t = await getTranslations("AccountStatus");
 
   if (access.status === "anonymous") {
     redirect(loginRoute(callbackURL));
@@ -43,7 +45,7 @@ export default async function AccountStatusPage({ searchParams }: AccountStatusP
     redirect(callbackURL as Route);
   }
 
-  const content = getAccountStatusContent(access.status, reason);
+  const content = getAccountStatusContent(access.status, reason, t);
 
   return (
     <main className="grid min-h-screen place-items-center bg-background px-4 py-10 text-foreground sm:px-6 lg:px-8">
@@ -59,43 +61,47 @@ export default async function AccountStatusPage({ searchParams }: AccountStatusP
   );
 }
 
-function getAccountStatusContent(status: string, reason: string) {
+function getAccountStatusContent(
+  status: string,
+  reason: string,
+  t: Awaited<ReturnType<typeof getTranslations>>,
+) {
   if (reason === "admin-required") {
     return {
       tone: "warning" as const,
-      title: "Admin access required",
-      message: "Your account is active, but it does not have permission to open this admin area.",
+      title: t("adminRequired.title"),
+      message: t("adminRequired.message"),
     };
   }
 
   if (status === "invited") {
     return {
       tone: "warning" as const,
-      title: "Account not activated",
-      message: "Use your invitation link once to activate this member profile.",
+      title: t("invited.title"),
+      message: t("invited.message"),
     };
   }
 
   if (status === "inactive") {
     return {
       tone: "warning" as const,
-      title: "Account inactive",
-      message: "This member profile is inactive. Ask an admin to reactivate it.",
+      title: t("inactive.title"),
+      message: t("inactive.message"),
     };
   }
 
   if (status === "deleted") {
     return {
       tone: "error" as const,
-      title: "Account unavailable",
-      message: "This member profile is deleted and cannot access Sheet Happens.",
+      title: t("deleted.title"),
+      message: t("deleted.message"),
     };
   }
 
   return {
     tone: "warning" as const,
-    title: "No member profile linked",
-    message: "This auth account is not linked to a Sheet Happens member profile.",
+    title: t("unlinked.title"),
+    message: t("unlinked.message"),
   };
 }
 

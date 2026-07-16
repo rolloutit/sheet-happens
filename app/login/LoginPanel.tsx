@@ -1,6 +1,7 @@
 "use client";
 
 import { Building2, KeyRound, LockKeyhole, Mail, ShieldCheck } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { useMemo, useState } from "react";
 
 import { Badge } from "@/src/components/ui/Badge";
@@ -38,6 +39,7 @@ export function LoginPanel({
   initialError,
   googleEnabled = false,
 }: LoginPanelProps) {
+  const t = useTranslations("Login");
   const [email, setEmail] = useState(initialEmail);
   const [password, setPassword] = useState("");
   const [pendingAction, setPendingAction] = useState<PendingAction | null>(null);
@@ -45,7 +47,7 @@ export function LoginPanel({
     initialError
       ? {
           tone: "error",
-          message: getLoginErrorMessage(initialError),
+          message: getLoginErrorMessage(initialError, t),
         }
       : null,
   );
@@ -79,14 +81,14 @@ export function LoginPanel({
     if (result.error) {
       setStatus({
         tone: "error",
-        message: result.error.message ?? "Could not send the sign-in email.",
+        message: result.error.message ?? t("errors.magicLinkSendFailed"),
       });
       return;
     }
 
     setStatus({
       tone: "success",
-      message: `If ${normalizedEmail} belongs to an active Sheet Happens member, a sign-in link is on its way.`,
+      message: t("status.magicLinkSent", { email: normalizedEmail }),
     });
   }
 
@@ -101,7 +103,7 @@ export function LoginPanel({
     if (result.error) {
       setStatus({
         tone: "error",
-        message: result.error.message ?? "Passkey sign-in was not completed.",
+        message: result.error.message ?? t("errors.passkeyIncomplete"),
       });
       return;
     }
@@ -119,7 +121,7 @@ export function LoginPanel({
     if (!password) {
       setStatus({
         tone: "error",
-        message: "Password is required.",
+        message: t("errors.passwordRequired"),
       });
       return;
     }
@@ -138,7 +140,7 @@ export function LoginPanel({
     if (result.error) {
       setStatus({
         tone: "error",
-        message: result.error.message ?? "Email or password is incorrect.",
+        message: result.error.message ?? t("errors.emailPasswordIncorrect"),
       });
       return;
     }
@@ -166,14 +168,14 @@ export function LoginPanel({
     if (result.error) {
       setStatus({
         tone: "error",
-        message: result.error.message ?? "Could not send the password reset email.",
+        message: result.error.message ?? t("errors.passwordResetSendFailed"),
       });
       return;
     }
 
     setStatus({
       tone: "success",
-      message: `If ${normalizedEmail} belongs to an active Sheet Happens member, a password setup link is on its way.`,
+      message: t("status.passwordSetupSent", { email: normalizedEmail }),
     });
   }
 
@@ -193,7 +195,7 @@ export function LoginPanel({
     if (result.error || !result.data?.url) {
       setStatus({
         tone: "error",
-        message: result.error?.message ?? "Google sign-in could not be started.",
+        message: result.error?.message ?? t("errors.googleStartFailed"),
       });
       return;
     }
@@ -205,7 +207,7 @@ export function LoginPanel({
     if (!normalizedEmail) {
       setStatus({
         tone: "error",
-        message: "Email is required.",
+        message: t("errors.emailRequired"),
       });
       return false;
     }
@@ -226,18 +228,18 @@ export function LoginPanel({
             <div>
               <p className="font-ui text-sm font-semibold text-[#eafbfa]">Sheet Happens</p>
               <p className="font-ui text-[10px] font-medium uppercase tracking-[0.12em] text-[#9fbfbb]">
-                Rollout IT · belső
+                {t("brandSubtitle")}
               </p>
             </div>
           </div>
           <div className="grid gap-3">
-            {["Time tracking", "Timesheets", "Invoices"].map((label) => (
+            {[t("side.timeTracking"), t("side.timesheets"), t("side.invoices")].map((label) => (
               <div
                 key={label}
                 className="rounded-[var(--radius-lg)] border border-white/10 bg-white/8 p-3 backdrop-blur"
               >
                 <p className="font-ui text-sm font-semibold text-[#eafbfa]">{label}</p>
-                <p className="mt-1 text-xs text-[#9fbfbb]">Protected workflow access</p>
+                <p className="mt-1 text-xs text-[#9fbfbb]">{t("side.protected")}</p>
               </div>
             ))}
           </div>
@@ -247,11 +249,9 @@ export function LoginPanel({
       <section className="grid place-items-center p-4 sm:p-6">
         <Card variant="elevated" className="w-full max-w-md p-4 sm:p-5">
           <CardHeader className="mb-3 block">
-            <Badge tone="info">Welcome back</Badge>
-            <CardTitle className="mt-3 text-xl">Sign in to Sheet Happens</CardTitle>
-            <CardDescription className="leading-5">
-              Use a registered method for an already activated Sheet Happens account.
-            </CardDescription>
+            <Badge tone="info">{t("badge")}</Badge>
+            <CardTitle className="mt-3 text-xl">{t("title")}</CardTitle>
+            <CardDescription className="leading-5">{t("description")}</CardDescription>
           </CardHeader>
           <CardContent className="gap-4">
             {status ? <LoginStatusMessage status={status} /> : null}
@@ -265,7 +265,7 @@ export function LoginPanel({
                 disabled={busy}
                 onClick={() => void signInWithPasskey()}
               >
-                Continue with passkey
+                {t("actions.passkey")}
               </Button>
               {googleEnabled ? (
                 <Button
@@ -276,19 +276,19 @@ export function LoginPanel({
                   disabled={busy}
                   onClick={() => void signInWithGoogle()}
                 >
-                  Continue with company Google
+                  {t("actions.google")}
                 </Button>
               ) : null}
             </div>
 
             <div className="grid gap-3">
-              <Field label="Email">
+              <Field label={t("fields.email")}>
                 {({ id }) => (
                   <Input
                     id={id}
                     type="email"
                     autoComplete="email"
-                    placeholder="you@company.com"
+                    placeholder={t("fields.emailPlaceholder")}
                     value={email}
                     onChange={(event) => setEmail(event.target.value)}
                     onKeyDown={(event) => {
@@ -306,7 +306,7 @@ export function LoginPanel({
                     className="font-ui text-sm font-semibold text-foreground"
                     htmlFor="login-password"
                   >
-                    Password
+                    {t("fields.password")}
                   </label>
                   <button
                     type="button"
@@ -314,7 +314,7 @@ export function LoginPanel({
                     disabled={busy}
                     onClick={() => void requestPasswordReset()}
                   >
-                    Forgot password?
+                    {t("actions.forgotPassword")}
                   </button>
                 </div>
                 <Input
@@ -338,14 +338,12 @@ export function LoginPanel({
                 disabled={busy}
                 onClick={() => void signInWithPassword()}
               >
-                Sign in
+                {t("actions.passwordSignIn")}
               </Button>
             </div>
 
             <div className="grid gap-3 border-t border-border pt-4">
-              <p className="text-sm text-muted-foreground">
-                Passwordless email sign-in remains available for activated accounts.
-              </p>
+              <p className="text-sm text-muted-foreground">{t("passwordlessHint")}</p>
               <Button
                 type="button"
                 variant="soft"
@@ -354,14 +352,14 @@ export function LoginPanel({
                 disabled={busy}
                 onClick={() => void sendMagicLink()}
               >
-                Email sign-in link
+                {t("actions.emailLink")}
               </Button>
             </div>
           </CardContent>
           <CardFooter className="mt-4 justify-start">
             <p className="flex items-start gap-2 text-sm leading-6 text-muted-foreground">
               <ShieldCheck className="mt-0.5 size-4 shrink-0 text-accent" aria-hidden="true" />
-              Invited users must activate their invitation link once before normal sign-in works.
+              {t("inviteActivationHint")}
             </p>
           </CardFooter>
         </Card>
@@ -390,10 +388,10 @@ function LoginStatusMessage({ status }: { status: LoginStatus }) {
   );
 }
 
-function getLoginErrorMessage(error: string) {
+function getLoginErrorMessage(error: string, t: ReturnType<typeof useTranslations>) {
   if (error === "invalid_magic_link" || error === "invalid_token") {
-    return "This sign-in link is invalid or expired. Request a new one.";
+    return t("errors.invalidLink");
   }
 
-  return "Sign-in could not be completed. Request a new sign-in link.";
+  return t("errors.genericSignIn");
 }

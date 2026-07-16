@@ -1,6 +1,7 @@
 "use server";
 
 import { headers } from "next/headers";
+import { getTranslations } from "next-intl/server";
 
 import { auth } from "@/src/server/auth/auth";
 import { clearSecondFactorCookie, setSecondFactorCookie } from "@/src/server/auth/second-factor";
@@ -17,13 +18,13 @@ type VerificationResult = {
 export async function verifySecondFactorAction(
   input: VerifySecondFactorActionInput,
 ): Promise<VerifySecondFactorActionState> {
+  const t = await getTranslations("TwoFactorActions");
   const normalizedCode = normalizeCode(input);
 
   if (!normalizedCode) {
     return {
       status: "error",
-      message:
-        input.method === "totp" ? "Enter the 6 digit authenticator code." : "Enter a backup code.",
+      message: input.method === "totp" ? t("errors.enterTotp") : t("errors.enterBackupCode"),
     };
   }
 
@@ -60,7 +61,7 @@ export async function verifySecondFactorAction(
     if (!normalizedResult.userId) {
       return {
         status: "error",
-        message: "Second-factor verification did not return an authenticated user.",
+        message: t("errors.missingUser"),
       };
     }
 
@@ -74,7 +75,7 @@ export async function verifySecondFactorAction(
     if (!sessionToken) {
       return {
         status: "error",
-        message: "Second-factor verification did not return an active session.",
+        message: t("errors.missingSession"),
       };
     }
 
@@ -98,22 +99,23 @@ export async function verifySecondFactorAction(
 
     return {
       status: "success",
-      message: "Second factor verified.",
+      message: t("success.verified"),
     };
   } catch (error) {
     return {
       status: "error",
-      message: getSecondFactorErrorMessage(error),
+      message: getSecondFactorErrorMessage(error, t),
     };
   }
 }
 
 export async function clearSecondFactorAction(): Promise<VerifySecondFactorActionState> {
+  const t = await getTranslations("TwoFactorActions");
   await clearSecondFactorCookie();
 
   return {
     status: "success",
-    message: "Second-factor state cleared.",
+    message: t("success.cleared"),
   };
 }
 
@@ -182,23 +184,26 @@ async function resolveVerifiedSessionToken(input: {
   return createdSession?.token ?? null;
 }
 
-function getSecondFactorErrorMessage(error: unknown) {
+function getSecondFactorErrorMessage(
+  error: unknown,
+  t: Awaited<ReturnType<typeof getTranslations>>,
+) {
   const maybeError = error as { message?: string; body?: { code?: string; message?: string } };
   const code = maybeError.body?.code;
 
   if (code === "INVALID_CODE" || code === "INVALID_BACKUP_CODE") {
-    return "The code is invalid. Try again.";
+    return t("errors.invalidCode");
   }
 
   if (code === "ACCOUNT_TEMPORARILY_LOCKED" || code === "TOO_MANY_ATTEMPTS_REQUEST_NEW_CODE") {
-    return "Too many failed attempts. Try again later.";
+    return t("errors.tooManyAttempts");
   }
 
   if (code === "INVALID_TWO_FACTOR_COOKIE") {
-    return "This second-factor challenge expired. Start sign-in again.";
+    return t("errors.expiredChallenge");
   }
 
-  return maybeError.body?.message ?? maybeError.message ?? "Could not verify the second factor.";
+  return maybeError.body?.message ?? maybeError.message ?? t("errors.verifyFailed");
 }
 
 async function auditTotpEnabled(input: { userId: string; requestHeaders: Headers }) {

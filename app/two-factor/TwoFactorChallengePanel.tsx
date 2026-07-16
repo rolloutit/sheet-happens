@@ -1,6 +1,7 @@
 "use client";
 
 import { KeyRound, LifeBuoy, ShieldCheck } from "lucide-react";
+import { useTranslations } from "next-intl";
 import type { Route } from "next";
 import Link from "next/link";
 import { useMemo, useState, useTransition } from "react";
@@ -31,6 +32,7 @@ export type TwoFactorChallengePanelProps = {
 type SecondFactorMethod = "totp" | "backup_code";
 
 export function TwoFactorChallengePanel({ callbackURL }: TwoFactorChallengePanelProps) {
+  const t = useTranslations("TwoFactor");
   const [method, setMethod] = useState<SecondFactorMethod>("totp");
   const [totpCode, setTotpCode] = useState("");
   const [backupCode, setBackupCode] = useState("");
@@ -66,25 +68,23 @@ export function TwoFactorChallengePanel({ callbackURL }: TwoFactorChallengePanel
   return (
     <Card density="lg" variant="elevated" className="w-full max-w-xl">
       <CardHeader className="block">
-        <Badge tone="info">Second factor</Badge>
-        <CardTitle className="mt-4 text-2xl">Verify your sign-in</CardTitle>
-        <CardDescription>
-          Enter an authenticator-app code or one of your saved backup codes.
-        </CardDescription>
+        <Badge tone="info">{t("badge")}</Badge>
+        <CardTitle className="mt-4 text-2xl">{t("title")}</CardTitle>
+        <CardDescription>{t("description")}</CardDescription>
       </CardHeader>
       <CardContent className="gap-5">
         {state ? <SecondFactorStatus state={state} /> : null}
 
         <Tabs value={method} onValueChange={(value) => setMethod(value as SecondFactorMethod)}>
           <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="totp">Authenticator</TabsTrigger>
-            <TabsTrigger value="backup_code">Backup code</TabsTrigger>
+            <TabsTrigger value="totp">{t("tabs.authenticator")}</TabsTrigger>
+            <TabsTrigger value="backup_code">{t("tabs.backupCode")}</TabsTrigger>
           </TabsList>
           <TabsContent value="totp">
-            <Field label="6 digit code" hint="Use the current code from your authenticator app.">
+            <Field label={t("fields.totp")} hint={t("fields.totpHint")}>
               {({ describedBy }) => (
                 <CodeInput
-                  label="Authenticator code"
+                  label={t("fields.totpInputLabel")}
                   value={totpCode}
                   onValueChange={setTotpCode}
                   disabled={isPending}
@@ -95,7 +95,7 @@ export function TwoFactorChallengePanel({ callbackURL }: TwoFactorChallengePanel
             </Field>
           </TabsContent>
           <TabsContent value="backup_code">
-            <Field label="Backup code" hint="Backup codes can only be used once.">
+            <Field label={t("fields.backupCode")} hint={t("fields.backupCodeHint")}>
               {({ id, describedBy, invalid }) => (
                 <Input
                   id={id}
@@ -122,11 +122,11 @@ export function TwoFactorChallengePanel({ callbackURL }: TwoFactorChallengePanel
             checked={trustDevice}
             disabled={isPending}
             onCheckedChange={(checked) => setTrustDevice(checked === true)}
-            aria-label="Trust this device for 30 days"
+            aria-label={t("trust.ariaLabel")}
           />
           <span>
-            <span className="font-ui font-semibold text-foreground">Trust this device</span>
-            <span className="block leading-6">Skip this challenge here for 30 days.</span>
+            <span className="font-ui font-semibold text-foreground">{t("trust.title")}</span>
+            <span className="block leading-6">{t("trust.description")}</span>
           </span>
         </label>
       </CardContent>
@@ -134,7 +134,7 @@ export function TwoFactorChallengePanel({ callbackURL }: TwoFactorChallengePanel
         <Button asChild variant="ghost">
           <Link href={loginHref as Route}>
             <LifeBuoy aria-hidden="true" />
-            Use another sign-in
+            {t("actions.useAnotherSignIn")}
           </Link>
         </Button>
         <Button
@@ -144,7 +144,7 @@ export function TwoFactorChallengePanel({ callbackURL }: TwoFactorChallengePanel
           disabled={!canSubmit}
           onClick={submitSecondFactor}
         >
-          Verify
+          {t("actions.verify")}
         </Button>
       </CardFooter>
     </Card>

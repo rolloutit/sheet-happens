@@ -322,6 +322,7 @@ export async function inviteMember(input: InviteMemberInput, deps: InviteMemberD
     email,
     name: displayName,
     acceptUrl,
+    locale,
   });
 
   return {

@@ -1,6 +1,7 @@
 "use client";
 
 import { CheckCircle2, Mail, Send, ShieldAlert } from "lucide-react";
+import { useTranslations } from "next-intl";
 import type { Route } from "next";
 import Link from "next/link";
 import { useActionState, useMemo, useState } from "react";
@@ -48,6 +49,7 @@ export function AcceptInvitationPanel({
   status,
   sessionUser,
 }: AcceptInvitationPanelProps) {
+  const t = useTranslations("AcceptInvite");
   const [activationState, activationAction] = useActionState(
     activateInvitationAction,
     initialActivationState,
@@ -78,14 +80,14 @@ export function AcceptInvitationPanel({
     if (result.error) {
       setMagicLinkState({
         status: "error",
-        message: result.error.message ?? "Could not send the sign-in email.",
+        message: result.error.message ?? t("errors.magicLinkSendFailed"),
       });
       return;
     }
 
     setMagicLinkState({
       status: "success",
-      message: `Sign-in email sent to ${email}.`,
+      message: t("status.magicLinkSent", { email }),
     });
   }
 
@@ -93,8 +95,8 @@ export function AcceptInvitationPanel({
     return (
       <InvitationResult
         icon={CheckCircle2}
-        title="Account activated"
-        message="Your Sheet Happens account is active. You can continue to the app."
+        title={t("result.activatedTitle")}
+        message={t("result.activatedMessage")}
         tone="success"
       />
     );
@@ -105,8 +107,8 @@ export function AcceptInvitationPanel({
       return (
         <InvitationResult
           icon={CheckCircle2}
-          title="Invitation already accepted"
-          message="This invitation has already been used. Continue to the app if you are signed in with this account."
+          title={t("result.acceptedTitle")}
+          message={t("result.acceptedMessage")}
           tone="success"
         />
       );
@@ -115,11 +117,11 @@ export function AcceptInvitationPanel({
     return (
       <ErrorState
         icon={expired ? ShieldAlert : CheckCircle2}
-        title={expired ? "Invitation expired" : "Invitation unavailable"}
+        title={expired ? t("error.expiredTitle") : t("error.unavailableTitle")}
         message={
           expired
-            ? "Ask an admin to send a new invitation."
-            : `This invitation is currently ${status.toLowerCase()}.`
+            ? t("error.expiredMessage")
+            : t("error.unavailableMessage", { status: status.toLowerCase() })
         }
         tone={expired ? "error" : "warning"}
       />
@@ -129,9 +131,9 @@ export function AcceptInvitationPanel({
   return (
     <Card density="lg" className="w-full max-w-xl">
       <CardHeader className="block">
-        <CardTitle>Accept invitation</CardTitle>
+        <CardTitle>{t("title")}</CardTitle>
         <CardDescription>
-          {name ? `${name}, you have` : "You have"} been invited to Sheet Happens as {email}.
+          {name ? t("descriptionNamed", { name, email }) : t("description", { email })}
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -139,11 +141,14 @@ export function AcceptInvitationPanel({
           <form action={activationAction} className="grid gap-4">
             <input type="hidden" name="token" value={token} />
             <div className="rounded-[var(--radius-md)] border border-border bg-secondary/60 px-3 py-2 text-sm text-muted-foreground">
-              Signed in as <span className="font-medium text-foreground">{sessionUser.email}</span>
+              {t.rich("signedInAs", {
+                email: sessionUser.email,
+                strong: (chunks) => <span className="font-medium text-foreground">{chunks}</span>,
+              })}
             </div>
             {!signedInWithInvitedEmail ? (
               <p className="rounded-[var(--radius-md)] border border-warning/40 bg-warning/10 px-3 py-2 text-sm text-warning">
-                This invitation belongs to {email}. Sign in with that email before activating it.
+                {t("wrongEmail", { email })}
               </p>
             ) : null}
             {activationState.message ? <StatusMessage state={activationState} /> : null}
@@ -153,7 +158,7 @@ export function AcceptInvitationPanel({
           </form>
         ) : (
           <div className="grid gap-4">
-            <Field label="Invited email" hint="A magic sign-in link will be sent here.">
+            <Field label={t("fields.invitedEmail")} hint={t("fields.invitedEmailHint")}>
               {({ id, describedBy }) => (
                 <Input id={id} value={email} aria-describedby={describedBy} readOnly />
               )}
@@ -170,7 +175,7 @@ export function AcceptInvitationPanel({
             loading={sendingMagicLink}
             onClick={handleSendMagicLink}
           >
-            Email sign-in link
+            {t("actions.emailLink")}
           </Button>
         </CardFooter>
       ) : null}
@@ -189,6 +194,8 @@ function InvitationResult({
   message: string;
   tone: "success";
 }) {
+  const t = useTranslations("AcceptInvite");
+
   return (
     <Card density="lg" className="w-full max-w-xl">
       <CardHeader className="block">
@@ -200,7 +207,7 @@ function InvitationResult({
       </CardHeader>
       <CardFooter>
         <Button asChild variant={tone === "success" ? "primary" : "soft"}>
-          <Link href={"/dashboard" as Route}>Continue</Link>
+          <Link href={"/dashboard" as Route}>{t("actions.continue")}</Link>
         </Button>
       </CardFooter>
     </Card>
@@ -208,11 +215,12 @@ function InvitationResult({
 }
 
 function ActivateButton({ disabled }: { disabled?: boolean }) {
+  const t = useTranslations("AcceptInvite");
   const { pending } = useFormStatus();
 
   return (
     <Button type="submit" icon={Send} loading={pending} disabled={disabled}>
-      Activate account
+      {t("actions.activate")}
     </Button>
   );
 }

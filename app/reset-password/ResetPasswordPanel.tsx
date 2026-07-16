@@ -1,6 +1,7 @@
 "use client";
 
 import { LockKeyhole, Mail, ShieldCheck } from "lucide-react";
+import { useTranslations } from "next-intl";
 import Link from "next/link";
 import { useState } from "react";
 
@@ -33,6 +34,7 @@ type Notice = {
 type PendingAction = "request" | "reset";
 
 export function ResetPasswordPanel({ callbackURL, initialError, token }: ResetPasswordPanelProps) {
+  const t = useTranslations("ResetPassword");
   const [email, setEmail] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -41,7 +43,7 @@ export function ResetPasswordPanel({ callbackURL, initialError, token }: ResetPa
     initialError
       ? {
           tone: "error",
-          message: getResetErrorMessage(initialError),
+          message: getResetErrorMessage(initialError, t),
         }
       : null,
   );
@@ -54,7 +56,7 @@ export function ResetPasswordPanel({ callbackURL, initialError, token }: ResetPa
     if (!normalizedEmail) {
       setNotice({
         tone: "error",
-        message: "Email is required.",
+        message: t("errors.emailRequired"),
       });
       return;
     }
@@ -72,14 +74,14 @@ export function ResetPasswordPanel({ callbackURL, initialError, token }: ResetPa
     if (result.error) {
       setNotice({
         tone: "error",
-        message: result.error.message ?? "Could not send the password reset email.",
+        message: result.error.message ?? t("errors.sendFailed"),
       });
       return;
     }
 
     setNotice({
       tone: "success",
-      message: `If ${normalizedEmail} belongs to an active Sheet Happens member, a password setup link is on its way.`,
+      message: t("status.setupSent", { email: normalizedEmail }),
     });
   }
 
@@ -87,7 +89,7 @@ export function ResetPasswordPanel({ callbackURL, initialError, token }: ResetPa
     if (newPassword.length < 12) {
       setNotice({
         tone: "error",
-        message: "Password must be at least 12 characters.",
+        message: t("errors.passwordTooShort"),
       });
       return;
     }
@@ -95,7 +97,7 @@ export function ResetPasswordPanel({ callbackURL, initialError, token }: ResetPa
     if (newPassword !== confirmPassword) {
       setNotice({
         tone: "error",
-        message: "Passwords do not match.",
+        message: t("errors.passwordMismatch"),
       });
       return;
     }
@@ -113,14 +115,14 @@ export function ResetPasswordPanel({ callbackURL, initialError, token }: ResetPa
     if (result.error) {
       setNotice({
         tone: "error",
-        message: result.error.message ?? "Could not reset the password.",
+        message: result.error.message ?? t("errors.resetFailed"),
       });
       return;
     }
 
     setNotice({
       tone: "success",
-      message: "Password updated. You can sign in with email and password now.",
+      message: t("status.passwordUpdated"),
     });
     setNewPassword("");
     setConfirmPassword("");
@@ -129,22 +131,16 @@ export function ResetPasswordPanel({ callbackURL, initialError, token }: ResetPa
   return (
     <Card variant="elevated" className="w-full max-w-md">
       <CardHeader className="block">
-        <Badge tone="info">Account access</Badge>
-        <CardTitle className="mt-4 text-2xl">
-          {token ? "Set a new password" : "Request a password setup link"}
-        </CardTitle>
-        <CardDescription>
-          {token
-            ? "Choose a password for your activated Sheet Happens account."
-            : "Password setup links are only sent for active Sheet Happens members."}
-        </CardDescription>
+        <Badge tone="info">{t("badge")}</Badge>
+        <CardTitle className="mt-4 text-2xl">{token ? t("titleSet") : t("titleRequest")}</CardTitle>
+        <CardDescription>{token ? t("descriptionSet") : t("descriptionRequest")}</CardDescription>
       </CardHeader>
       <CardContent className="gap-5">
         {notice ? <NoticeMessage notice={notice} /> : null}
 
         {token ? (
           <div className="grid gap-3">
-            <Field label="New password" hint="Use at least 12 characters.">
+            <Field label={t("fields.newPassword")} hint={t("fields.newPasswordHint")}>
               {({ id, describedBy }) => (
                 <Input
                   id={id}
@@ -162,7 +158,7 @@ export function ResetPasswordPanel({ callbackURL, initialError, token }: ResetPa
                 />
               )}
             </Field>
-            <Field label="Confirm password">
+            <Field label={t("fields.confirmPassword")}>
               {({ id }) => (
                 <Input
                   id={id}
@@ -186,18 +182,18 @@ export function ResetPasswordPanel({ callbackURL, initialError, token }: ResetPa
               disabled={busy}
               onClick={() => void resetPassword()}
             >
-              Update password
+              {t("actions.updatePassword")}
             </Button>
           </div>
         ) : (
           <div className="grid gap-3">
-            <Field label="Email">
+            <Field label={t("fields.email")}>
               {({ id }) => (
                 <Input
                   id={id}
                   type="email"
                   autoComplete="email"
-                  placeholder="you@company.com"
+                  placeholder={t("fields.emailPlaceholder")}
                   value={email}
                   onChange={(event) => setEmail(event.target.value)}
                   onKeyDown={(event) => {
@@ -216,7 +212,7 @@ export function ResetPasswordPanel({ callbackURL, initialError, token }: ResetPa
               disabled={busy}
               onClick={() => void requestResetLink()}
             >
-              Send password setup link
+              {t("actions.sendSetupLink")}
             </Button>
           </div>
         )}
@@ -225,12 +221,12 @@ export function ResetPasswordPanel({ callbackURL, initialError, token }: ResetPa
         <p className="flex items-start gap-2 text-sm leading-6 text-muted-foreground">
           <ShieldCheck className="mt-0.5 size-4 shrink-0 text-accent" aria-hidden="true" />
           <span>
-            Invitation activation is still separate.{" "}
+            {t("footer.activationSeparate")}{" "}
             <Link
               href="/login"
               className="font-semibold text-accent underline-offset-4 hover:underline"
             >
-              Return to sign-in
+              {t("actions.returnToSignIn")}
             </Link>
             .
           </span>
@@ -256,10 +252,10 @@ function NoticeMessage({ notice }: { notice: Notice }) {
   );
 }
 
-function getResetErrorMessage(error: string) {
+function getResetErrorMessage(error: string, t: ReturnType<typeof useTranslations>) {
   if (error === "INVALID_TOKEN" || error === "invalid_token") {
-    return "This password reset link is invalid or expired. Request a new one.";
+    return t("errors.invalidLink");
   }
 
-  return "Password reset could not be completed. Request a new link.";
+  return t("errors.genericReset");
 }

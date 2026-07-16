@@ -38,6 +38,7 @@ type MemberLifecycleTransaction = {
         displayName: true;
         role: true;
         status: true;
+        locale: true;
         deletedAt: true;
       };
     }): Promise<{
@@ -49,6 +50,7 @@ type MemberLifecycleTransaction = {
       displayName: string;
       role: MemberLifecycleRole;
       status: MemberLifecycleStatus;
+      locale: string;
       deletedAt: Date | null;
     } | null>;
     count(args: {
@@ -203,6 +205,7 @@ export async function resendMemberInvitation(
       invitationId: invitation.id,
       email: normalizeInvitationEmail(member.email),
       name: getDisplayName(member.firstName, member.lastName) || member.displayName,
+      locale: member.locale,
     };
   });
 
@@ -210,6 +213,7 @@ export async function resendMemberInvitation(
     email: result.email,
     name: result.name,
     acceptUrl: buildInvitationAcceptUrl(undefined, token),
+    locale: result.locale,
   });
 
   return {
@@ -654,6 +658,7 @@ async function findMember(tx: MemberLifecycleTransaction, memberId: string) {
       displayName: true,
       role: true,
       status: true,
+      locale: true,
       deletedAt: true,
     },
   });
