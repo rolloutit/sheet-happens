@@ -10,10 +10,7 @@ if (!(await exists(standaloneDir))) {
 }
 
 await copyIfExists(path.join(root, "public"), path.join(standaloneDir, "public"));
-await copyIfExists(
-  path.join(root, ".next", "static"),
-  path.join(standaloneDir, ".next", "static"),
-);
+await copyIfExists(path.join(root, ".next", "static"), path.join(standaloneDir, ".next", "static"));
 
 async function copyIfExists(from, to) {
   if (!(await exists(from))) {

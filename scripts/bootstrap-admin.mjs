@@ -164,7 +164,9 @@ async function upsertBootstrapMember(client, input) {
 
   if (member.status === "active") {
     if (member.role !== "admin") {
-      throw new Error(`Cannot bootstrap ${input.email}; an active non-admin member already exists.`);
+      throw new Error(
+        `Cannot bootstrap ${input.email}; an active non-admin member already exists.`,
+      );
     }
 
     return {
