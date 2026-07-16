@@ -1,6 +1,7 @@
 "use client";
 
 import { ArrowUpRight, Clock3, Send, Users } from "lucide-react";
+import { useTranslations } from "next-intl";
 
 import { Avatar } from "@/src/components/ui/Avatar";
 import { Badge } from "@/src/components/ui/Badge";
@@ -17,56 +18,6 @@ import type {
   DashboardHeroAction,
 } from "./DashboardCards.types";
 
-const defaultStats = [
-  {
-    label: "Rögzített órák",
-    value: "1 284h",
-    icon: Clock3,
-    trend: { label: "+8%", direction: "up" },
-    sparkline: [30, 48, 35, 64, 58, 82, 72],
-  },
-  {
-    label: "Billable érték",
-    value: "EUR 86k",
-    icon: Clock3,
-    trend: { label: "+12%", direction: "up" },
-    sparkline: [22, 44, 51, 49, 67, 75, 86],
-  },
-  {
-    label: "Beküldve",
-    value: "48",
-    icon: Users,
-    trend: { label: "+6", direction: "up" },
-    sparkline: [18, 26, 31, 36, 42, 45, 48],
-  },
-  {
-    label: "Hiányzó napok",
-    value: "17",
-    tone: "warning",
-    helperText: "Figyelmet igényel",
-    sparkline: [26, 24, 23, 20, 19, 18, 17],
-  },
-] satisfies NonNullable<DashboardCardsProps["stats"]>;
-
-const defaultChecklistItems: DashboardChecklistItem[] = [
-  { id: "descriptions", label: "Hiányzó leírások ellenőrzése", checked: true },
-  { id: "invoice", label: "Számla feltöltése" },
-  { id: "bank", label: "Bankadatok megerősítése" },
-];
-
-const defaultFlaggedUsers = [
-  { id: "anna", name: "Kovács Anna", detail: "2 hiányzó nap", severity: "warning" },
-  { id: "bence", name: "Tóth Bence", detail: "számla nélkül", severity: "danger" },
-  { id: "eszter", name: "Nagy Eszter", detail: "jóváhagyásra vár", severity: "info" },
-] satisfies NonNullable<DashboardCardsProps["flaggedUsers"]>;
-
-const defaultStatusSegments = [
-  { id: "submitted", label: "Beküldve", value: 46, tone: "info" },
-  { id: "approved", label: "Jóváhagyva", value: 32, tone: "success" },
-  { id: "rejected", label: "Elutasítva", value: 12, tone: "danger" },
-  { id: "missing", label: "Hiányzik", value: 10, tone: "neutral" },
-] satisfies NonNullable<DashboardCardsProps["statusSegments"]>;
-
 export function DashboardCards({
   name = "Márta",
   role = "contractor",
@@ -75,39 +26,94 @@ export function DashboardCards({
   summary,
   primaryAction,
   secondaryAction,
-  stats = defaultStats,
-  checklistTitle = "Prioritás",
-  checklistDescription = "Hózárási ellenőrzőlista",
-  checklistBadge = "Hamarosan",
-  checklistItems = defaultChecklistItems,
-  flaggedUsers = defaultFlaggedUsers,
+  stats,
+  checklistTitle,
+  checklistDescription,
+  checklistBadge,
+  checklistItems,
+  flaggedUsers,
   selectedFlaggedUserIds = [],
   onFlaggedUserSelectionChange,
   onRemindFlaggedUsers,
   reminderSent,
-  statusTitle = "Státusz áttekintés",
-  statusSegments = defaultStatusSegments,
+  statusTitle,
+  statusSegments,
   statusAction,
   className,
 }: DashboardCardsProps) {
+  const t = useTranslations("DashboardCards");
   const isAdmin = role === "admin";
+  const resolvedStats =
+    stats ??
+    ([
+      {
+        label: t("stats.loggedHours"),
+        value: "1 284h",
+        icon: Clock3,
+        trend: { label: "+8%", direction: "up" },
+        sparkline: [30, 48, 35, 64, 58, 82, 72],
+      },
+      {
+        label: t("stats.billableValue"),
+        value: "EUR 86k",
+        icon: Clock3,
+        trend: { label: "+12%", direction: "up" },
+        sparkline: [22, 44, 51, 49, 67, 75, 86],
+      },
+      {
+        label: t("stats.submitted"),
+        value: "48",
+        icon: Users,
+        trend: { label: "+6", direction: "up" },
+        sparkline: [18, 26, 31, 36, 42, 45, 48],
+      },
+      {
+        label: t("stats.missingDays"),
+        value: "17",
+        tone: "warning",
+        helperText: t("stats.needsAttention"),
+        sparkline: [26, 24, 23, 20, 19, 18, 17],
+      },
+    ] satisfies NonNullable<DashboardCardsProps["stats"]>);
+  const resolvedChecklistItems =
+    checklistItems ??
+    ([
+      { id: "descriptions", label: t("checklist.missingDescriptions"), checked: true },
+      { id: "invoice", label: t("checklist.uploadInvoice") },
+      { id: "bank", label: t("checklist.confirmBank") },
+    ] satisfies DashboardChecklistItem[]);
+  const resolvedFlaggedUsers =
+    flaggedUsers ??
+    ([
+      { id: "anna", name: "Kovács Anna", detail: t("flagged.missingDays"), severity: "warning" },
+      { id: "bence", name: "Tóth Bence", detail: t("flagged.noInvoice"), severity: "danger" },
+      { id: "eszter", name: "Nagy Eszter", detail: t("flagged.waitingReview"), severity: "info" },
+    ] satisfies NonNullable<DashboardCardsProps["flaggedUsers"]>);
+  const resolvedStatusSegments =
+    statusSegments ??
+    ([
+      { id: "submitted", label: t("status.submitted"), value: 46, tone: "info" },
+      { id: "approved", label: t("status.approved"), value: 32, tone: "success" },
+      { id: "rejected", label: t("status.rejected"), value: 12, tone: "danger" },
+      { id: "missing", label: t("status.missing"), value: 10, tone: "neutral" },
+    ] satisfies NonNullable<DashboardCardsProps["statusSegments"]>);
   const resolvedPrimaryAction =
     primaryAction ??
     ({
-      label: isAdmin ? "Jóváhagyási sor" : "Timesheet beküldése",
+      label: isAdmin ? t("actions.reviewQueue") : t("actions.submitTimesheet"),
       icon: Send,
       variant: "cta",
     } satisfies DashboardHeroAction);
   const resolvedSecondaryAction =
     secondaryAction ??
     ({
-      label: "Riport megnyitása",
+      label: t("actions.openReport"),
       icon: ArrowUpRight,
       variant: "soft",
     } satisfies DashboardHeroAction);
   const resolvedStatusAction = statusAction ?? (
     <Button variant="ghost" size="sm" icon={ArrowUpRight}>
-      Megnyitás
+      {t("actions.open")}
     </Button>
   );
 
@@ -120,12 +126,9 @@ export function DashboardCards({
             <Badge tone={isAdmin ? "warning" : "info"}>
               {roleLabel ?? (isAdmin ? "admin" : role)}
             </Badge>
-            <h2 className="mt-3 text-2xl font-semibold">{greeting ?? `Jó reggelt, ${name}`}</h2>
+            <h2 className="mt-3 text-2xl font-semibold">{greeting ?? t("greeting", { name })}</h2>
             <p className="mt-1 text-sm text-muted-foreground">
-              {summary ??
-                (isAdmin
-                  ? "12 beküldés vár jóváhagyásra a júniusi zárás előtt."
-                  : "A júniusi timesheet 82 százalékban kész.")}
+              {summary ?? (isAdmin ? t("summary.admin") : t("summary.member"))}
             </p>
           </div>
         </div>
@@ -149,36 +152,36 @@ export function DashboardCards({
         </div>
       </section>
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-        {stats.map((stat, index) => (
+        {resolvedStats.map((stat, index) => (
           <StatCard key={`${stat.label}-${index}`} {...stat} />
         ))}
       </div>
       <div className="grid gap-4 lg:grid-cols-[1fr_1.1fr]">
         {isAdmin ? (
           <FlaggedUserList
-            items={flaggedUsers}
+            items={resolvedFlaggedUsers}
             selectedIds={selectedFlaggedUserIds}
             onSelectedIdsChange={onFlaggedUserSelectionChange}
             onRemind={onRemindFlaggedUsers}
             reminderSent={reminderSent}
             labels={{
-              selectAll: "Összes kijelölése",
-              remind: "Emlékeztető küldése",
-              sent: "Emlékeztető elküldve",
-              selected: (count) => `${count} kijelölve`,
+              selectAll: t("flagged.selectAll"),
+              remind: t("flagged.remind"),
+              sent: t("flagged.sent"),
+              selected: (count) => t("flagged.selected", { count }),
             }}
           />
         ) : (
           <PriorityCard
-            title={checklistTitle}
-            description={checklistDescription}
-            badge={checklistBadge}
-            items={checklistItems}
+            title={checklistTitle ?? t("checklist.title")}
+            description={checklistDescription ?? t("checklist.description")}
+            badge={checklistBadge ?? t("checklist.badge")}
+            items={resolvedChecklistItems}
           />
         )}
         <StatusOverview
-          title={statusTitle}
-          segments={statusSegments}
+          title={statusTitle ?? t("status.title")}
+          segments={resolvedStatusSegments}
           action={resolvedStatusAction}
         />
       </div>
