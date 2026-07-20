@@ -35,6 +35,7 @@ Replace placeholder values before sharing a concrete test run:
 - `{TIME_TRACKING_PROJECT_B}`: second active project assigned to the time-tracking test user.
 - `{TIME_ENTRY_DESCRIPTION}`: description text used for test time entries.
 - `{TIME_ENTRY_UPDATED_DESCRIPTION}`: edited description text used for test time entries.
+- `{TIMESHEET_MONTH}`: contractor timesheet month formatted as `YYYY-MM`.
 - `{PROJECT_NAME}`: name for a newly created project.
 - `{PROJECT_UPDATED_NAME}`: updated project name.
 - `{PROJECT_SLUG}`: URL-safe or code-like project slug.
@@ -444,6 +445,37 @@ Expected result:
 - Keyboard focus stays inside the open dialog.
 - `Escape` closes the dialog.
 - Focus returns to the control that opened the dialog.
+
+## Contractor Timesheets
+
+Run these tests as `{CONTRACTOR_EMAIL}` unless the scenario says otherwise.
+
+### Contractor Can Open Monthly Preview
+
+1. Open `https://{DOMAIN_NAME}/timesheets?month={TIMESHEET_MONTH}`.
+2. Confirm the Timesheets page opens in the app shell.
+3. Confirm the current and previous month controls are visible.
+4. Confirm the selected month shows a status.
+5. Confirm the summary shows hours, amount, and entry count.
+6. Confirm the project breakdown is grouped by project.
+
+Expected result:
+
+- Contractors can access `/timesheets`.
+- The preview is calculated from current time entries when no submitted snapshot exists.
+- Projects show total hours, rate state, currency, and amount.
+- Missing rates or mixed currencies are shown as warnings instead of hidden.
+
+### Employee Cannot Open Timesheets
+
+1. Sign in as `{EMPLOYEE_EMAIL}`.
+2. Open `https://{DOMAIN_NAME}/timesheets`.
+3. Check the sidebar and mobile navigation.
+
+Expected result:
+
+- The employee is shown an account-status message that contractor profile is required.
+- The Timesheets navigation item is not visible for the employee.
 
 ## Admin Projects
 
