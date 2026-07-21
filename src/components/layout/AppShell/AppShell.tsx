@@ -40,6 +40,7 @@ import { UserMenu } from "../UserMenu";
 import type { AppShellProps, AppShellTimer } from "./AppShell.types";
 
 type AppShellTranslator = ReturnType<typeof useTranslations>;
+type AppShellRole = NonNullable<AppShellProps["role"]>;
 
 const navItems = [
   {
@@ -50,7 +51,14 @@ const navItems = [
     href: "/dashboard",
   },
   { id: "time", labelKey: "nav.time", icon: Clock3, group: "main", href: "/time" },
-  { id: "timesheets", labelKey: "nav.timesheets", icon: CalendarDays, group: "main", href: "#" },
+  {
+    id: "timesheets",
+    labelKey: "nav.timesheets",
+    icon: CalendarDays,
+    group: "main",
+    href: "/timesheets",
+    roles: ["contractor"],
+  },
   { id: "review", labelKey: "nav.review", icon: WalletCards, group: "admin", href: "#" },
   { id: "reports", labelKey: "nav.reports", icon: BarChart3, group: "admin", href: "#" },
   {
@@ -206,13 +214,19 @@ export function AppShell({
           ) : null}
         </div>
         <nav className="flex-1 overflow-y-auto px-[18px] py-2" aria-label={t("primaryNavigation")}>
-          <NavGroup group="main" current={current} onNavigate={handleNavigate} t={t} />
+          <NavGroup group="main" role={role} current={current} onNavigate={handleNavigate} t={t} />
           {role === "admin" ? (
             <>
               <p className="mx-3 mb-2 mt-5 font-ui text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
                 Admin
               </p>
-              <NavGroup group="admin" current={current} onNavigate={handleNavigate} t={t} />
+              <NavGroup
+                group="admin"
+                role={role}
+                current={current}
+                onNavigate={handleNavigate}
+                t={t}
+              />
             </>
           ) : null}
         </nav>
@@ -274,6 +288,7 @@ export function AppShell({
                   >
                     <NavGroup
                       group="main"
+                      role={role}
                       current={current}
                       t={t}
                       onNavigate={(itemId) => {
@@ -288,6 +303,7 @@ export function AppShell({
                         </p>
                         <NavGroup
                           group="admin"
+                          role={role}
                           current={current}
                           t={t}
                           onNavigate={(itemId) => {
@@ -468,11 +484,13 @@ function formatElapsed(milliseconds: number) {
 
 function NavGroup({
   group,
+  role,
   current,
   onNavigate,
   t,
 }: {
   group: "main" | "admin";
+  role: AppShellProps["role"];
   current: string;
   onNavigate?: (itemId: string) => void;
   t: AppShellTranslator;
@@ -481,6 +499,7 @@ function NavGroup({
     <div className="grid gap-1">
       {navItems
         .filter((item) => item.group === group)
+        .filter((item) => isNavItemVisibleForRole(item, role ?? "employee"))
         .map((item) => {
           const active = item.id === current;
           return (
@@ -514,7 +533,10 @@ function pageTitle(current: string, t: AppShellTranslator) {
 }
 
 function bottomNavItems(role: AppShellProps["role"]) {
-  const baseItems = navItems.filter((item) => item.group === "main");
+  const resolvedRole = role ?? "employee";
+  const baseItems = navItems
+    .filter((item) => item.group === "main")
+    .filter((item) => isNavItemVisibleForRole(item, resolvedRole));
   const adminShortcut = navItems.find((item) => item.id === "reports");
 
   if (role === "admin" && adminShortcut) {
@@ -522,6 +544,10 @@ function bottomNavItems(role: AppShellProps["role"]) {
   }
 
   return baseItems;
+}
+
+function isNavItemVisibleForRole(item: (typeof navItems)[number], role: AppShellRole) {
+  return !("roles" in item) || (item.roles as readonly AppShellRole[]).includes(role);
 }
 
 function translateUserRole(t: AppShellTranslator, role: string | undefined) {

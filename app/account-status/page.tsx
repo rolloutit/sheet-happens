@@ -41,7 +41,11 @@ export default async function AccountStatusPage({ searchParams }: AccountStatusP
     redirect(securitySetupRoute(callbackURL));
   }
 
-  if (access.status === "active" && reason !== "admin-required") {
+  if (
+    access.status === "active" &&
+    reason !== "admin-required" &&
+    reason !== "contractor-required"
+  ) {
     redirect(callbackURL as Route);
   }
 
@@ -71,6 +75,14 @@ function getAccountStatusContent(
       tone: "warning" as const,
       title: t("adminRequired.title"),
       message: t("adminRequired.message"),
+    };
+  }
+
+  if (reason === "contractor-required") {
+    return {
+      tone: "warning" as const,
+      title: t("contractorRequired.title"),
+      message: t("contractorRequired.message"),
     };
   }
 

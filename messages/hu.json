@@ -225,6 +225,10 @@
       "title": "Admin jogosultság szükséges",
       "message": "A fiókod aktív, de nincs jogosultságod megnyitni ezt az admin területet."
     },
+    "contractorRequired": {
+      "title": "Kontraktori profil szükséges",
+      "message": "A timesheetek csak kontraktori profilok számára érhetők el."
+    },
     "invited": {
       "title": "A fiók nincs aktiválva",
       "message": "Használd egyszer a meghívólinkedet a tagprofil aktiválásához."
@@ -258,6 +262,61 @@
       "settings": "Beállítások megnyitása",
       "people": "Emberek megnyitása",
       "projects": "Projektek megnyitása"
+    }
+  },
+  "Timesheets": {
+    "eyebrow": "Kontraktori folyamat",
+    "title": "Timesheetek",
+    "subtitle": "Havi kontraktori timesheet előnézet a rögzített idő alapján.",
+    "revision": "{number}. revízió",
+    "summary": {
+      "hours": "Óra",
+      "amount": "Összeg",
+      "entries": "Bejegyzés"
+    },
+    "status": {
+      "not_created": "Nincs beküldve",
+      "submitted": "Beküldve",
+      "rejected": "Elutasítva",
+      "approved": "Jóváhagyva",
+      "invoiced": "Számlázva",
+      "invoice_rejected": "Számla elutasítva",
+      "accepted": "Elfogadva",
+      "paid": "Kifizetve",
+      "missing": "Hiányzik"
+    },
+    "warnings": {
+      "mixedCurrency": "A kiválasztott hónap több pénznemet tartalmaz.",
+      "missingRates": "{count} bejegyzéshez nincs óradíj.",
+      "rejected": "Elutasítva: {reason}"
+    },
+    "breakdown": {
+      "title": "Projekt bontás",
+      "caption": "Havi timesheet projekt bontás",
+      "currentSource": "Az aktuális időbejegyzésekből számolva.",
+      "snapshotSource": "A beküldött timesheet snapshotból számolva.",
+      "empty": "Nincs időbejegyzés ebben a hónapban."
+    },
+    "table": {
+      "project": "Projekt",
+      "hours": "Óra",
+      "rate": "Óradíj",
+      "amount": "Összeg",
+      "entries": "Bejegyzés"
+    },
+    "rate": {
+      "missing": "Hiányzó óradíj",
+      "mixed": "Vegyes óradíjak",
+      "none": "-"
+    },
+    "rateSource": {
+      "MEMBER_DEFAULT": "központi",
+      "PROJECT_OVERRIDE": "projekt felülírás"
+    },
+    "amount": {
+      "mixedCurrency": "Vegyes pénznem",
+      "missingRate": "Hiányzó óradíj",
+      "none": "-"
     }
   },
   "DashboardCards": {

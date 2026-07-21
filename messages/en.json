@@ -225,6 +225,10 @@
       "title": "Admin access required",
       "message": "Your account is active, but it does not have permission to open this admin area."
     },
+    "contractorRequired": {
+      "title": "Contractor profile required",
+      "message": "Timesheets are available only for contractor profiles."
+    },
     "invited": {
       "title": "Account not activated",
       "message": "Use your invitation link once to activate this member profile."
@@ -258,6 +262,61 @@
       "settings": "Open settings",
       "people": "Open people",
       "projects": "Open projects"
+    }
+  },
+  "Timesheets": {
+    "eyebrow": "Contractor workflow",
+    "title": "Timesheets",
+    "subtitle": "Monthly contractor timesheet preview based on tracked time.",
+    "revision": "Revision {number}",
+    "summary": {
+      "hours": "Hours",
+      "amount": "Amount",
+      "entries": "Entries"
+    },
+    "status": {
+      "not_created": "Not submitted",
+      "submitted": "Submitted",
+      "rejected": "Rejected",
+      "approved": "Approved",
+      "invoiced": "Invoiced",
+      "invoice_rejected": "Invoice rejected",
+      "accepted": "Accepted",
+      "paid": "Paid",
+      "missing": "Missing"
+    },
+    "warnings": {
+      "mixedCurrency": "The selected month contains multiple currencies.",
+      "missingRates": "Missing rates for {count} entries.",
+      "rejected": "Rejected: {reason}"
+    },
+    "breakdown": {
+      "title": "Project breakdown",
+      "caption": "Monthly timesheet project breakdown",
+      "currentSource": "Calculated from current time entries.",
+      "snapshotSource": "Calculated from the submitted timesheet snapshot.",
+      "empty": "No time entries for this month."
+    },
+    "table": {
+      "project": "Project",
+      "hours": "Hours",
+      "rate": "Rate",
+      "amount": "Amount",
+      "entries": "Entries"
+    },
+    "rate": {
+      "missing": "Missing rate",
+      "mixed": "Mixed rates",
+      "none": "-"
+    },
+    "rateSource": {
+      "MEMBER_DEFAULT": "central",
+      "PROJECT_OVERRIDE": "project override"
+    },
+    "amount": {
+      "mixedCurrency": "Mixed currency",
+      "missingRate": "Missing rate",
+      "none": "-"
     }
   },
   "DashboardCards": {
