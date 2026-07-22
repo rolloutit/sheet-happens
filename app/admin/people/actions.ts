@@ -145,11 +145,11 @@ export async function inviteMemberAction(
       message: t("success.invitationSent", { email: invitation.email }),
     };
   } catch (error) {
-    if (
-      error instanceof InvitationConflictError ||
-      error instanceof AuthenticationError ||
-      error instanceof AuthorizationError
-    ) {
+    if (error instanceof InvitationConflictError) {
+      return getInvitationConflictState(error, t);
+    }
+
+    if (error instanceof AuthenticationError || error instanceof AuthorizationError) {
       return {
         status: "error",
         message: error.message,
@@ -400,6 +400,36 @@ function getFieldErrors(error: z.ZodError): InviteMemberActionState["fieldErrors
   }
 
   return fieldErrors;
+}
+
+function getInvitationConflictState(
+  error: InvitationConflictError,
+  t: AdminPeopleActionsTranslator,
+): InviteMemberActionState {
+  if (error.code === "PENDING_INVITATION") {
+    return {
+      status: "error",
+      message: t("errors.fixFields"),
+      fieldErrors: {
+        email: t("validation.emailPendingInvitation"),
+      },
+    };
+  }
+
+  if (error.code === "EXISTING_MEMBER") {
+    return {
+      status: "error",
+      message: t("errors.fixFields"),
+      fieldErrors: {
+        email: t("validation.emailAlreadyMember"),
+      },
+    };
+  }
+
+  return {
+    status: "error",
+    message: t("errors.invitationConflict"),
+  };
 }
 
 function getUpdateMemberDetailsFieldErrors(

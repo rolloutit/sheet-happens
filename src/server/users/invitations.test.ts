@@ -190,7 +190,9 @@ describe("inviteMember", () => {
           sendEmail: vi.fn().mockResolvedValue(undefined),
         },
       ),
-    ).rejects.toBeInstanceOf(InvitationConflictError);
+    ).rejects.toMatchObject({
+      code: "EXISTING_MEMBER",
+    } satisfies Partial<InvitationConflictError>);
   });
 
   it("rejects duplicate pending invitations", async () => {
@@ -214,7 +216,9 @@ describe("inviteMember", () => {
           sendEmail: vi.fn().mockResolvedValue(undefined),
         },
       ),
-    ).rejects.toBeInstanceOf(InvitationConflictError);
+    ).rejects.toMatchObject({
+      code: "PENDING_INVITATION",
+    } satisfies Partial<InvitationConflictError>);
   });
 
   it("rejects unsupported member preference values", async () => {
@@ -238,7 +242,9 @@ describe("inviteMember", () => {
           sendEmail,
         },
       ),
-    ).rejects.toBeInstanceOf(InvitationConflictError);
+    ).rejects.toMatchObject({
+      code: "UNSUPPORTED_PREFERENCES",
+    } satisfies Partial<InvitationConflictError>);
     expect(db.$transaction).not.toHaveBeenCalled();
     expect(sendEmail).not.toHaveBeenCalled();
   });

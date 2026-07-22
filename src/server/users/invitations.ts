@@ -133,8 +133,17 @@ export type InviteMemberDeps = {
   now?: () => Date;
 };
 
+export type InvitationConflictCode =
+  | "EXISTING_MEMBER"
+  | "INVALID_INVITATION_DETAILS"
+  | "PENDING_INVITATION"
+  | "UNSUPPORTED_PREFERENCES";
+
 export class InvitationConflictError extends Error {
-  constructor(message: string) {
+  constructor(
+    message: string,
+    readonly code: InvitationConflictCode,
+  ) {
     super(message);
     this.name = "InvitationConflictError";
   }
@@ -183,7 +192,10 @@ export async function inviteMember(input: InviteMemberInput, deps: InviteMemberD
   const tokenHash = hashInvitationToken(token);
 
   if (!email || !firstName || !lastName || !displayName) {
-    throw new InvitationConflictError("Invitation requires email, first name, and last name.");
+    throw new InvitationConflictError(
+      "Invitation requires email, first name, and last name.",
+      "INVALID_INVITATION_DETAILS",
+    );
   }
 
   if (
@@ -193,6 +205,7 @@ export async function inviteMember(input: InviteMemberInput, deps: InviteMemberD
   ) {
     throw new InvitationConflictError(
       "Invitation requires supported currency, timezone, and locale.",
+      "UNSUPPORTED_PREFERENCES",
     );
   }
 
@@ -208,7 +221,10 @@ export async function inviteMember(input: InviteMemberInput, deps: InviteMemberD
     });
 
     if (existingMember && !canInviteExistingMember(existingMember)) {
-      throw new InvitationConflictError("A non-invited member already exists for this email.");
+      throw new InvitationConflictError(
+        "A non-invited member already exists for this email.",
+        "EXISTING_MEMBER",
+      );
     }
 
     const pendingInvitation = await tx.invitation.findFirst({
@@ -225,7 +241,10 @@ export async function inviteMember(input: InviteMemberInput, deps: InviteMemberD
     });
 
     if (pendingInvitation) {
-      throw new InvitationConflictError("A pending invitation already exists for this email.");
+      throw new InvitationConflictError(
+        "A pending invitation already exists for this email.",
+        "PENDING_INVITATION",
+      );
     }
 
     const member = existingMember

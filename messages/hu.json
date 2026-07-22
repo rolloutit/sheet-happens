@@ -494,6 +494,7 @@
     },
     "errors": {
       "fixFields": "Javítsd a kiemelt mezőket, majd próbáld újra.",
+      "invitationConflict": "A meghívó ezekkel az adatokkal nem küldhető el.",
       "invitationFailed": "A meghívót nem sikerült elküldeni. Próbáld újra később.",
       "memberUpdateFailed": "A tag adatait nem sikerült frissíteni. Próbáld újra később.",
       "profileTransitionFailed": "A profilváltást nem sikerült ütemezni. Próbáld újra később.",
@@ -505,6 +506,8 @@
       "lastNameRequired": "A vezetéknév megadása kötelező.",
       "validProfile": "Válassz érvényes profilt.",
       "validRole": "Válassz érvényes szerepkört.",
+      "emailPendingInvitation": "Ehhez az email címhez már van függő meghívó.",
+      "emailAlreadyMember": "Ehhez az email címhez már létezik tag.",
       "supportedCurrency": "Válassz támogatott pénznemet.",
       "supportedTimezone": "Válassz támogatott időzónát.",
       "supportedLanguage": "Válassz támogatott nyelvet.",
