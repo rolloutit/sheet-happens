@@ -18,7 +18,7 @@ export type InviteMemberInput = {
   role?: "ADMIN" | "MEMBER";
   profile: "CONTRACTOR" | "EMPLOYEE";
   timezone: string;
-  locale: string;
+  locale?: string;
   defaultCurrencyCode?: string;
   validFrom?: Date;
   invitedByMemberId: string;
@@ -172,6 +172,9 @@ export function buildInvitationAcceptUrl(appUrl: string | undefined, token: stri
   return url.toString();
 }
 
+const defaultInvitationCurrencyCode = "HUF";
+const defaultInvitationLocale = "hu";
+
 export async function inviteMember(input: InviteMemberInput, deps: InviteMemberDeps = {}) {
   const db: InviteMemberDb = deps.db ?? (prisma as unknown as InviteMemberDb);
   const sendEmail = deps.sendEmail ?? sendInvitationEmail;
@@ -183,9 +186,11 @@ export async function inviteMember(input: InviteMemberInput, deps: InviteMemberD
   const lastName = input.lastName.trim();
   const displayName = getDisplayName(firstName, lastName);
   const role = input.role ?? "MEMBER";
-  const defaultCurrencyCode = normalizeCurrencyCode(input.defaultCurrencyCode ?? "EUR");
+  const defaultCurrencyCode = normalizeCurrencyCode(
+    input.defaultCurrencyCode ?? defaultInvitationCurrencyCode,
+  );
   const timezone = normalizeTimeZone(input.timezone);
-  const locale = normalizeLocale(input.locale);
+  const locale = normalizeLocale(input.locale ?? defaultInvitationLocale);
   const validFrom = input.validFrom ?? now;
   const expiresAt = input.expiresAt ?? getDefaultInvitationExpiresAt(now);
   const token = createToken();

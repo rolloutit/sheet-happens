@@ -52,7 +52,6 @@ describe("inviteMember", () => {
         lastName: "Contractor",
         profile: "CONTRACTOR",
         timezone: "Europe/Budapest",
-        locale: "en",
         invitedByMemberId: "admin-1",
         appUrl: "https://sheet.example.com",
       },
@@ -70,6 +69,8 @@ describe("inviteMember", () => {
           email: "contractor@example.com",
           status: "INVITED",
           currentProfile: "CONTRACTOR",
+          defaultCurrencyCode: "HUF",
+          locale: "hu",
         }),
       }),
     );
@@ -105,6 +106,7 @@ describe("inviteMember", () => {
         email: "contractor@example.com",
         name: "Zoe Contractor",
         acceptUrl: "https://sheet.example.com/accept-invite?token=token-1",
+        locale: "hu",
       }),
     );
     expect(result).toMatchObject({
