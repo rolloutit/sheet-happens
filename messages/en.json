@@ -494,6 +494,7 @@
     },
     "errors": {
       "fixFields": "Fix the highlighted fields and try again.",
+      "invitationConflict": "The invitation cannot be sent with these details.",
       "invitationFailed": "The invitation could not be sent. Try again later.",
       "memberUpdateFailed": "The member details could not be updated. Try again later.",
       "profileTransitionFailed": "The profile transition could not be scheduled. Try again later.",
@@ -505,6 +506,8 @@
       "lastNameRequired": "Last name is required.",
       "validProfile": "Choose a valid profile.",
       "validRole": "Choose a valid role.",
+      "emailPendingInvitation": "A pending invitation already exists for this email.",
+      "emailAlreadyMember": "A member already exists for this email.",
       "supportedCurrency": "Choose a supported currency.",
       "supportedTimezone": "Choose a supported timezone.",
       "supportedLanguage": "Choose a supported language.",
