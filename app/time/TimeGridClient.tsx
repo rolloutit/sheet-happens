@@ -802,7 +802,8 @@ export function TimeGridClient({ week }: TimeGridClientProps) {
           entries={breakdownEntries}
           entriesByDay={entriesByDay}
           project={breakdownProject}
-          onAdd={() =>
+          onAdd={() => {
+            setBreakdown(null);
             setEntryModal({
               mode: "create",
               source: "GRID",
@@ -810,11 +811,14 @@ export function TimeGridClient({ week }: TimeGridClientProps) {
               localDate: breakdownDay.isoDate,
               durationMinutes: 60,
               prefill: true,
-            })
-          }
+            });
+          }}
           onClose={() => setBreakdown(null)}
           onDelete={(entry) => runAction(() => deleteTimeEntryAction({ timeEntryId: entry.id }))}
-          onEdit={(entry) => setEntryModal({ mode: "edit", entry })}
+          onEdit={(entry) => {
+            setBreakdown(null);
+            setEntryModal({ mode: "edit", entry });
+          }}
           t={t}
         />
       ) : null}
