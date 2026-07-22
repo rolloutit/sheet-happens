@@ -140,7 +140,7 @@ export function InviteMemberForm({ preferenceOptions }: InviteMemberFormProps) {
             <select
               id={id}
               name="defaultCurrencyCode"
-              defaultValue="EUR"
+              defaultValue="HUF"
               aria-describedby={describedBy}
               aria-invalid={invalid}
               required={required}
@@ -188,7 +188,7 @@ export function InviteMemberForm({ preferenceOptions }: InviteMemberFormProps) {
             <select
               id={id}
               name="locale"
-              defaultValue="en"
+              defaultValue="hu"
               aria-describedby={describedBy}
               aria-invalid={invalid}
               required={required}
