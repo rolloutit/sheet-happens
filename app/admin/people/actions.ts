@@ -24,6 +24,7 @@ import {
   MemberProfileTransitionError,
   reactivateMember,
   resetMemberTotp,
+  restoreArchivedMember,
   revokeMemberSessions,
   scheduleMemberProfileTransition,
   resendMemberInvitation,
@@ -308,6 +309,23 @@ export async function reactivateMemberAction(memberId: string): Promise<AdminPeo
     });
 
     return t("success.memberReactivated");
+  });
+}
+
+export async function restoreArchivedMemberAction(
+  memberId: string,
+): Promise<AdminPeopleActionState> {
+  const t = await getTranslations("AdminPeopleActions");
+
+  return runAdminPeopleAction(async (adminId) => {
+    const result = await restoreArchivedMember({
+      memberId,
+      actorMemberId: adminId,
+    });
+
+    return result.invitationSent
+      ? t("success.memberRestoredWithInvitation", { email: result.email })
+      : t("success.memberRestored");
   });
 }
 
