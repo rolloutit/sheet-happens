@@ -828,6 +828,20 @@ Expected result:
 - A success message confirms the invitation was resent.
 - The invited email receives a new invitation link.
 
+### Resend Expired Invitation
+
+1. Sign in as `{ADMIN_EMAIL}` with TOTP enabled and verified.
+2. Open `https://{DOMAIN_NAME}/admin/people`.
+3. Find a member with state `invited` whose previous invitation link has expired.
+4. Click the resend invitation action.
+
+Expected result:
+
+- A success message confirms the invitation was resent.
+- The invited email receives a new invitation link.
+- The old expired invitation link remains unavailable.
+- The new invitation link can be accepted.
+
 ### Edit Member Details
 
 1. Sign in as `{ADMIN_EMAIL}` with TOTP enabled and verified.
@@ -907,6 +921,23 @@ Expected result:
 - An audit row is recorded for `member.deleted`.
 - For linked auth users, an audit row is recorded for `member.session_revoked`.
 - For pending invitations, an audit row is recorded for `member.pending_invitations_revoked`.
+
+### Restore Archived Member
+
+1. Sign in as `{ADMIN_EMAIL}` with TOTP enabled and verified.
+2. Open `https://{DOMAIN_NAME}/admin/people`.
+3. Find an archived member.
+4. Click the restore account action.
+5. Refresh `https://{DOMAIN_NAME}/admin/people`.
+
+Expected result:
+
+- A success message confirms that the member was restored.
+- If the archived member had a linked auth account, the member becomes active and can sign in again.
+- If the archived member had no linked auth account, the member becomes invited and receives a new invitation email.
+- Previously revoked sessions are not restored.
+- Historical records remain attached to the restored member.
+- An audit row is recorded for `member.restored`.
 
 ### Archive Safety Guards
 
@@ -1301,7 +1332,7 @@ Expected result:
 - Non-admin users cannot open admin routes.
 - Users without passkey or TOTP are redirected to the security setup gate.
 - Admin users without TOTP are redirected to the admin TOTP gate.
-- Admin people page can invite, resend, edit, deactivate, reactivate, and archive members.
+- Admin people page can invite, resend, edit, deactivate, reactivate, archive, and restore members.
 - Admin people page can revoke member sessions.
 - Passkey add, login, rename, and remove still work.
 - TOTP setup, challenge, invalid-code handling, trusted device, backup-code fallback, and disable
