@@ -43,6 +43,7 @@ import {
   changeMemberRoleAction,
   deactivateMemberAction,
   reactivateMemberAction,
+  restoreArchivedMemberAction,
   resetMemberTotpAction,
   resendMemberInviteAction,
   revokeMemberSessionsAction,
@@ -60,7 +61,15 @@ export type AdminPeopleTableProps = {
 };
 
 type PendingAction =
-  "resend" | "revoke" | "sessions" | "totp" | "deactivate" | "reactivate" | "role" | "archive";
+  | "resend"
+  | "revoke"
+  | "sessions"
+  | "totp"
+  | "deactivate"
+  | "reactivate"
+  | "restore"
+  | "role"
+  | "archive";
 
 export function AdminPeopleTable({
   rows,
@@ -179,6 +188,7 @@ export function AdminPeopleTable({
               onReactivate={() =>
                 runAction(row, "reactivate", () => reactivateMemberAction(row.id))
               }
+              onRestore={() => runAction(row, "restore", () => restoreArchivedMemberAction(row.id))}
               onArchive={() => {
                 setArchivingMember(getAdminPersonRow(rows, row));
                 setMessage(null);
@@ -241,6 +251,7 @@ function PersonActionsMenu({
   onResetTotp,
   onDeactivate,
   onReactivate,
+  onRestore,
   onArchive,
 }: {
   row: PersonTableRow;
@@ -253,12 +264,31 @@ function PersonActionsMenu({
   onResetTotp: () => void;
   onDeactivate: () => void;
   onReactivate: () => void;
+  onRestore: () => void;
   onArchive: () => void;
 }) {
   const t = useTranslations("AdminPeople");
 
   if (row.state === "locked") {
-    return null;
+    return (
+      <Dropdown>
+        <DropdownTrigger asChild>
+          <IconButton
+            icon={MoreHorizontal}
+            label={t("actions.openFor", { name: row.name })}
+            size="sm"
+            variant="ghost"
+          />
+        </DropdownTrigger>
+        <DropdownContent align="end">
+          <DropdownLabel>{t("actions.menuLabel")}</DropdownLabel>
+          <DropdownItem disabled={isPending("restore")} onSelect={onRestore}>
+            <RotateCcw className="size-4" aria-hidden="true" />
+            {t("actions.restoreAccount")}
+          </DropdownItem>
+        </DropdownContent>
+      </Dropdown>
+    );
   }
 
   const isSelf = row.id === currentMemberId;
