@@ -166,9 +166,6 @@ export async function resendMemberInvitation(
       where: {
         memberId: member.id,
         status: "PENDING",
-        expiresAt: {
-          gt: now,
-        },
       },
       select: { id: true },
       orderBy: { createdAt: "desc" },

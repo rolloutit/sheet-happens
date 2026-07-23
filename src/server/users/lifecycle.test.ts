@@ -108,6 +108,14 @@ describe("member lifecycle services", () => {
       },
     );
 
+    expect(tx.invitation.findFirst).toHaveBeenCalledWith({
+      where: {
+        memberId: "member-1",
+        status: "PENDING",
+      },
+      select: { id: true },
+      orderBy: { createdAt: "desc" },
+    });
     expect(tx.invitation.update).toHaveBeenCalledWith(
       expect.objectContaining({
         where: { id: "invitation-1" },
