@@ -112,6 +112,7 @@ describe("time entry services", () => {
         {
           projectId: "project-a",
           localDate: dateOnly("2026-07-02"),
+          durationMinutes: 120,
         },
       ],
     });
@@ -168,6 +169,45 @@ describe("time entry services", () => {
         }),
       }),
     );
+  });
+
+  it("rejects copied entries when the target day would exceed 24 hours", async () => {
+    const { db, tx } = createTimeTrackingDb({
+      sourceEntries: [
+        {
+          id: "source-1",
+          projectId: "project-a",
+          projectAssignmentId: "assignment-a",
+          localDate: dateOnly("2026-07-01"),
+          durationMinutes: 300,
+          description: "Too much",
+          startedAt: null,
+          endedAt: null,
+          timezone: "Europe/Budapest",
+        },
+      ],
+      existingTargetEntries: [
+        {
+          projectId: "project-b",
+          localDate: dateOnly("2026-07-02"),
+          durationMinutes: 1200,
+        },
+      ],
+    });
+
+    await expect(
+      copyPreviousDayEntries(
+        {
+          memberId: "member-1",
+          actorMemberId: "member-1",
+          targetDate: dateOnly("2026-07-02"),
+        },
+        { db: db as never },
+      ),
+    ).rejects.toThrow("Daily total cannot exceed 24 hours.");
+
+    expect(tx.timeEntry.create).not.toHaveBeenCalled();
+    expect(tx.auditLog.create).not.toHaveBeenCalled();
   });
 
   it("saves a normalized time entry draft", async () => {

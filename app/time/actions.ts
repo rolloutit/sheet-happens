@@ -5,6 +5,7 @@ import { headers } from "next/headers";
 import { getTranslations } from "next-intl/server";
 import { z } from "zod";
 
+import { DAILY_HARD_LIMIT_MINUTES } from "@/src/lib/time-entry-limits";
 import { requireActiveAppMemberForAction } from "@/src/server/auth/app-access";
 import { AuthenticationError, AuthorizationError } from "@/src/server/auth/session";
 import {
@@ -44,7 +45,12 @@ type TimeTrackingActionsTranslator = Awaited<ReturnType<typeof getTranslations>>
 
 const timingSchema = {
   timingMode: z.enum(["DURATION", "INTERVAL"]).optional(),
-  durationMinutes: z.number().int().positive("Duration must be greater than zero.").optional(),
+  durationMinutes: z
+    .number()
+    .int()
+    .positive("Duration must be greater than zero.")
+    .max(DAILY_HARD_LIMIT_MINUTES, "Daily total cannot exceed 24 hours.")
+    .optional(),
   startTime: z
     .string()
     .trim()
@@ -280,13 +286,20 @@ export async function stopRunningTimerAction(): Promise<TimeTrackingActionState>
 
   try {
     const { member } = await requireActiveAppMemberForAction();
-    await stopRunningTimer({
+    const result = await stopRunningTimer({
       memberId: member.id,
       actorMemberId: member.id,
       requestMetadata: await getTimeTrackingRequestMetadata(),
     });
 
     revalidatePath("/time");
+
+    if ("discarded" in result) {
+      return {
+        status: "error",
+        message: t("errors.timerDiscardedDailyLimit"),
+      };
+    }
 
     return {
       status: "success",
@@ -649,6 +662,7 @@ const knownMessageKeys: Record<string, string> = {
   "Duration must be greater than zero.": "fields.durationPositive",
   "Duration is too long.": "fields.durationTooLong",
   "Duration is too large.": "fields.durationTooLarge",
+  "Daily total cannot exceed 24 hours.": "fields.dailyTotalTooLarge",
   "Description is required.": "fields.descriptionRequired",
   "Description must be 1000 characters or less.": "fields.descriptionMax",
   "Time entry id is missing.": "fields.timeEntryMissing",

@@ -1,0 +1,2 @@
+export const DAILY_SOFT_WARNING_MINUTES = 8 * 60;
+export const DAILY_HARD_LIMIT_MINUTES = 24 * 60;
