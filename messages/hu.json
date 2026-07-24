@@ -961,6 +961,18 @@
       "copyPreviousDay": "Bejegyzések másolása a(z) {date} előtti napról.",
       "duplicatePreviousWeek": "Az előző hét bejegyzéseinek másolása erre a hétre."
     },
+    "quickActionConfirm": {
+      "confirm": "Bejegyzések másolása",
+      "skipExisting": "A célcellákban lévő meglévő bejegyzések megmaradnak, és kimaradnak a másolásból.",
+      "copyPreviousDay": {
+        "title": "Tegnapi bejegyzések másolása?",
+        "description": "Bejegyzések másolása innen: {sourceDate}, ide: {targetDate}."
+      },
+      "duplicatePreviousWeek": {
+        "title": "Előző hét duplikálása?",
+        "description": "Bejegyzések másolása innen: {sourceWeekStart} - {sourceWeekEnd}, ide: {targetWeekStart} - {targetWeekEnd}."
+      }
+    },
     "locked": {
       "title": "Zárolt időszak.",
       "description": "A hét néhány napja beküldött timesheethez tartozik, ezért csak olvasható."
