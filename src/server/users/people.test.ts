@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { mapMemberToPersonRow } from "./people";
+import { buildPeopleWhere, mapMemberToPersonRow, normalizePeopleFilters } from "./people";
 import type { PeopleMemberRow } from "./people";
 
 const baseMember: PeopleMemberRow = {
@@ -83,5 +83,95 @@ describe("mapMemberToPersonRow", () => {
         deletedAt: new Date("2026-01-01T00:00:00.000Z"),
       }).state,
     ).toBe("locked");
+  });
+});
+
+describe("people admin filters", () => {
+  it("normalizes supported filters and pagination", () => {
+    expect(
+      normalizePeopleFilters({
+        q: " alex@example.com ",
+        state: "active",
+        role: "ADMIN",
+        profile: "CONTRACTOR",
+        page: "3",
+        pageSize: "50",
+      }),
+    ).toEqual({
+      query: "alex@example.com",
+      state: "active",
+      role: "ADMIN",
+      profile: "CONTRACTOR",
+      page: 3,
+      pageSize: 50,
+    });
+  });
+
+  it("falls back from invalid filters and caps page size", () => {
+    expect(
+      normalizePeopleFilters({
+        state: "bad",
+        role: "OWNER",
+        profile: "VENDOR",
+        page: "-1",
+        pageSize: "999",
+      }),
+    ).toEqual({
+      query: "",
+      state: "",
+      role: "",
+      profile: "",
+      page: 1,
+      pageSize: 100,
+    });
+  });
+
+  it("builds search, state, role, and profile filters", () => {
+    expect(
+      buildPeopleWhere(
+        normalizePeopleFilters({
+          q: "anna",
+          state: "invited",
+          role: "MEMBER",
+          profile: "EMPLOYEE",
+        }),
+      ),
+    ).toEqual({
+      AND: [
+        {
+          OR: [
+            { email: { contains: "anna", mode: "insensitive" } },
+            { firstName: { contains: "anna", mode: "insensitive" } },
+            { lastName: { contains: "anna", mode: "insensitive" } },
+            { displayName: { contains: "anna", mode: "insensitive" } },
+          ],
+        },
+        {
+          status: "INVITED",
+          deletedAt: null,
+        },
+        {
+          role: "MEMBER",
+        },
+        {
+          currentProfile: "EMPLOYEE",
+        },
+      ],
+    });
+  });
+
+  it("maps locked state to archived members", () => {
+    expect(buildPeopleWhere(normalizePeopleFilters({ state: "locked" }))).toEqual({
+      OR: [
+        {
+          status: "DELETED",
+        },
+        {
+          deletedAt: {
+            not: null,
+          },
+        },
+      ],
+    });
   });
 });

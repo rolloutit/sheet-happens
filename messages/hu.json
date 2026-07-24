@@ -379,6 +379,29 @@
       "title": "Taglista",
       "description": "Kezeld a meghívott, aktív, inaktív és archivált tagokat."
     },
+    "filters": {
+      "search": "Keresés",
+      "searchPlaceholder": "Név vagy email keresése",
+      "state": "Állapot",
+      "role": "Szerepkör",
+      "profile": "Profil",
+      "allStates": "Minden állapot",
+      "allRoles": "Minden szerepkör",
+      "allProfiles": "Minden profil",
+      "showing": "{start}-{end} / {total} tag megjelenítve",
+      "apply": "Szűrés",
+      "clear": "Törlés"
+    },
+    "pager": {
+      "navigation": "Taglista oldalak",
+      "previous": "Előző",
+      "next": "Következő",
+      "previousPage": "Ugrás a(z) {page}. oldalra",
+      "nextPage": "Ugrás a(z) {page}. oldalra",
+      "page": "Ugrás a(z) {page}. oldalra",
+      "currentPage": "Aktuális oldal: {page}. oldal",
+      "summary": "{page}. oldal / {totalPages}, összesen {totalItems} tag"
+    },
     "form": {
       "firstName": "Keresztnév",
       "lastName": "Vezetéknév",
@@ -411,6 +434,7 @@
       "ariaLabel": "Tagkezelési táblázat",
       "rowActions": "Tagműveletek",
       "emptyInvited": "Még nincs meghívott tag.",
+      "emptyFiltered": "Nincs a szűrőknek megfelelő tag.",
       "scheduledProfile": "Ütemezve: {profile}, dátum: {validFrom}",
       "editMember": "{name} szerkesztése",
       "columns": {
