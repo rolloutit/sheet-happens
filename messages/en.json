@@ -379,6 +379,29 @@
       "title": "Member directory",
       "description": "Manage invited, active, inactive, and archived members."
     },
+    "filters": {
+      "search": "Search",
+      "searchPlaceholder": "Search name or email",
+      "state": "State",
+      "role": "Role",
+      "profile": "Profile",
+      "allStates": "All states",
+      "allRoles": "All roles",
+      "allProfiles": "All profiles",
+      "showing": "Showing {start}-{end} of {total} members",
+      "apply": "Apply filters",
+      "clear": "Clear"
+    },
+    "pager": {
+      "navigation": "People pages",
+      "previous": "Previous",
+      "next": "Next",
+      "previousPage": "Go to page {page}",
+      "nextPage": "Go to page {page}",
+      "page": "Go to page {page}",
+      "currentPage": "Current page, page {page}",
+      "summary": "Page {page} of {totalPages}, {totalItems} members"
+    },
     "form": {
       "firstName": "First name",
       "lastName": "Last name",
@@ -411,6 +434,7 @@
       "ariaLabel": "People management table",
       "rowActions": "Member actions",
       "emptyInvited": "No members have been invited yet.",
+      "emptyFiltered": "No members match the current filters.",
       "scheduledProfile": "Scheduled: {profile} on {validFrom}",
       "editMember": "Edit {name}",
       "columns": {

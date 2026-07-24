@@ -8,12 +8,15 @@ import {
   Mail,
   MoreHorizontal,
   RotateCcw,
+  Search,
   ShieldCheck,
+  X,
   UserMinus,
 } from "lucide-react";
 import { useTranslations } from "next-intl";
-import { useRouter } from "next/navigation";
-import { useState, useTransition } from "react";
+import type { Route } from "next";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { type FormEvent, useState, useTransition } from "react";
 
 import { PeopleTable } from "@/src/components/sheet/PeopleTable";
 import type { PersonRoleValue, PersonTableRow } from "@/src/components/sheet/PeopleTable";
@@ -35,10 +38,13 @@ import {
   DropdownSeparator,
   DropdownTrigger,
 } from "@/src/components/ui/Dropdown";
+import { Field } from "@/src/components/ui/Field";
 import { IconButton } from "@/src/components/ui/IconButton";
+import { Input } from "@/src/components/ui/Input";
+import { Pager } from "@/src/components/ui/Pager";
 import type { MemberPreferenceOptions } from "@/src/lib/member-preferences";
 import { cn } from "@/src/lib/utils";
-import type { AdminPersonRow } from "@/src/server/users";
+import type { AdminPersonRow, PeopleListResult } from "@/src/server/users";
 import {
   changeMemberRoleAction,
   deactivateMemberAction,
@@ -54,7 +60,7 @@ import type { AdminPeopleActionState } from "./actions.types";
 import { MemberEditDrawer } from "./MemberEditDrawer";
 
 export type AdminPeopleTableProps = {
-  rows: AdminPersonRow[];
+  result: PeopleListResult;
   currentMemberId: string;
   preferenceOptions: MemberPreferenceOptions;
   todayDate: string;
@@ -71,14 +77,27 @@ type PendingAction =
   | "role"
   | "archive";
 
+type FilterFormState = {
+  profile: PeopleListResult["filters"]["profile"];
+  query: string;
+  role: PeopleListResult["filters"]["role"];
+  state: PeopleListResult["filters"]["state"];
+};
+
+const selectClassName =
+  "flex h-10 w-full rounded-[var(--radius-md)] border border-input bg-background/50 px-3 py-2 text-sm text-foreground shadow-sm transition focus-visible:border-ring focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/35";
+
 export function AdminPeopleTable({
-  rows,
+  result,
   currentMemberId,
   preferenceOptions,
   todayDate,
 }: AdminPeopleTableProps) {
   const t = useTranslations("AdminPeople");
   const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const rows = result.rows;
   const [message, setMessage] = useState<AdminPeopleActionState | null>(null);
   const [pendingKey, setPendingKey] = useState<string | null>(null);
   const [editingMember, setEditingMember] = useState<AdminPersonRow | null>(null);
@@ -111,8 +130,35 @@ export function AdminPeopleTable({
     return pendingKey === `${row.id}:${action}`;
   }
 
+  function updatePage(page: number) {
+    const params = new URLSearchParams(searchParams.toString());
+
+    if (page <= 1) params.delete("page");
+    else params.set("page", String(page));
+
+    router.push(buildUrl(pathname, params) as Route);
+  }
+
+  function applyFilters(filters: FilterFormState) {
+    const params = new URLSearchParams(searchParams.toString());
+
+    setParam(params, "q", filters.query);
+    setParam(params, "state", filters.state);
+    setParam(params, "role", filters.role);
+    setParam(params, "profile", filters.profile);
+    params.delete("page");
+    setMessage(null);
+
+    router.push(buildUrl(pathname, params) as Route);
+  }
+
+  function clearFilters() {
+    setMessage(null);
+    router.push(pathname as Route);
+  }
+
   return (
-    <div className="grid gap-3">
+    <div className="grid gap-4">
       {message ? (
         <p
           role={message.status === "error" ? "alert" : "status"}
@@ -126,13 +172,19 @@ export function AdminPeopleTable({
           {message.message}
         </p>
       ) : null}
+      <PeopleFiltersForm
+        key={getFilterKey(result.filters)}
+        result={result}
+        onApply={applyFilters}
+        onClear={clearFilters}
+      />
       <PeopleTable
         rows={rows}
         labels={{
           caption: t("table.caption"),
           ariaLabel: t("table.ariaLabel"),
           rowActionsLabel: t("table.rowActions"),
-          empty: t("table.emptyInvited"),
+          empty: t("table.emptyFiltered"),
           columns: {
             person: t("table.columns.person"),
             profile: t("table.columns.profile"),
@@ -197,6 +249,24 @@ export function AdminPeopleTable({
           </div>
         )}
       />
+      <Pager
+        page={result.filters.page}
+        totalPages={result.totalPages}
+        totalItems={result.totalItems}
+        showPageNumbers
+        onPageChange={updatePage}
+        labels={{
+          navigation: t("pager.navigation"),
+          previous: t("pager.previous"),
+          next: t("pager.next"),
+          previousPage: (page) => t("pager.previousPage", { page }),
+          nextPage: (page) => t("pager.nextPage", { page }),
+          page: (page) => t("pager.page", { page }),
+          currentPage: (page) => t("pager.currentPage", { page }),
+          summary: (page, totalPages, totalItems) =>
+            t("pager.summary", { page, totalPages, totalItems: totalItems ?? 0 }),
+        }}
+      />
       <ArchiveMemberDialog
         member={archivingMember}
         pending={archivingMember ? isPending(archivingMember, "archive") : false}
@@ -238,6 +308,168 @@ export function AdminPeopleTable({
 
 function getAdminPersonRow(rows: AdminPersonRow[], row: PersonTableRow) {
   return rows.find((candidate) => candidate.id === row.id) ?? null;
+}
+
+function PeopleFiltersForm({
+  result,
+  onApply,
+  onClear,
+}: {
+  result: PeopleListResult;
+  onApply: (filters: FilterFormState) => void;
+  onClear: () => void;
+}) {
+  const t = useTranslations("AdminPeople");
+  const [filterForm, setFilterForm] = useState<FilterFormState>(() => ({
+    query: result.filters.query,
+    state: result.filters.state,
+    role: result.filters.role,
+    profile: result.filters.profile,
+  }));
+
+  function submitFilters(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    onApply(filterForm);
+  }
+
+  function clearFilters() {
+    setFilterForm({
+      query: "",
+      state: "",
+      role: "",
+      profile: "",
+    });
+    onClear();
+  }
+
+  return (
+    <form
+      className="grid gap-3 rounded-[var(--radius-lg)] border border-border bg-card p-4"
+      onSubmit={submitFilters}
+    >
+      <div className="grid gap-3 lg:grid-cols-[minmax(16rem,1fr)_repeat(3,minmax(9rem,12rem))]">
+        <Field label={t("filters.search")} htmlFor="people-search">
+          <Input
+            id="people-search"
+            name="q"
+            type="search"
+            value={filterForm.query}
+            placeholder={t("filters.searchPlaceholder")}
+            onChange={(event) => {
+              const query = event.currentTarget.value;
+
+              setFilterForm((current) => ({
+                ...current,
+                query,
+              }));
+            }}
+          />
+        </Field>
+        <Field label={t("filters.state")} htmlFor="people-state">
+          <select
+            id="people-state"
+            name="state"
+            value={filterForm.state}
+            className={selectClassName}
+            onChange={(event) => {
+              const state = event.currentTarget.value as FilterFormState["state"];
+
+              setFilterForm((current) => ({
+                ...current,
+                state,
+              }));
+            }}
+          >
+            <option value="">{t("filters.allStates")}</option>
+            <option value="active">{t("states.active")}</option>
+            <option value="inactive">{t("states.inactive")}</option>
+            <option value="invited">{t("states.invited")}</option>
+            <option value="locked">{t("states.locked")}</option>
+          </select>
+        </Field>
+        <Field label={t("filters.role")} htmlFor="people-role">
+          <select
+            id="people-role"
+            name="role"
+            value={filterForm.role}
+            className={selectClassName}
+            onChange={(event) => {
+              const role = event.currentTarget.value as FilterFormState["role"];
+
+              setFilterForm((current) => ({
+                ...current,
+                role,
+              }));
+            }}
+          >
+            <option value="">{t("filters.allRoles")}</option>
+            <option value="ADMIN">{t("roles.admin")}</option>
+            <option value="MEMBER">{t("roles.member")}</option>
+          </select>
+        </Field>
+        <Field label={t("filters.profile")} htmlFor="people-profile">
+          <select
+            id="people-profile"
+            name="profile"
+            value={filterForm.profile}
+            className={selectClassName}
+            onChange={(event) => {
+              const profile = event.currentTarget.value as FilterFormState["profile"];
+
+              setFilterForm((current) => ({
+                ...current,
+                profile,
+              }));
+            }}
+          >
+            <option value="">{t("filters.allProfiles")}</option>
+            <option value="CONTRACTOR">{t("profiles.contractor")}</option>
+            <option value="EMPLOYEE">{t("profiles.employee")}</option>
+          </select>
+        </Field>
+      </div>
+      <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
+        <p className="text-sm font-medium text-muted-foreground" aria-live="polite">
+          {t("filters.showing", {
+            start: result.pageStart,
+            end: result.pageEnd,
+            total: result.totalItems,
+          })}
+        </p>
+        <div className="flex flex-wrap gap-2 sm:justify-end">
+          <Button type="submit" icon={Search}>
+            {t("filters.apply")}
+          </Button>
+          <Button type="button" variant="ghost" icon={X} onClick={clearFilters}>
+            {t("filters.clear")}
+          </Button>
+        </div>
+      </div>
+    </form>
+  );
+}
+
+function getFilterKey(filters: PeopleListResult["filters"]) {
+  return [
+    filters.query,
+    filters.state,
+    filters.role,
+    filters.profile,
+    filters.page,
+    filters.pageSize,
+  ].join(":");
+}
+
+function setParam(params: URLSearchParams, key: string, value: string | null | undefined) {
+  const normalized = typeof value === "string" ? value.trim() : "";
+
+  if (normalized) params.set(key, normalized);
+  else params.delete(key);
+}
+
+function buildUrl(pathname: string, params: URLSearchParams) {
+  const query = params.toString();
+  return query ? `${pathname}?${query}` : pathname;
 }
 
 function PersonActionsMenu({
