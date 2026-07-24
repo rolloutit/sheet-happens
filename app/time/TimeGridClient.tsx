@@ -1579,8 +1579,22 @@ function EntryModal({ state, week, projects, onClose, onDone, t }: EntryModalPro
   const project = projects.find((item) => item.projectId === projectId) ?? projects[0];
   const parsedMinutes = parseDurationToMinutes(durationText);
   const intervalMinutes = calculateIntervalMinutes(startTime, endTime);
+  const entryMinutes =
+    timingMode === "INTERVAL" ? intervalMinutes : parsedMinutes !== null ? parsedMinutes : 0;
+  const projectedDayTotalMinutes =
+    entryMinutes > 0
+      ? getDayLoggedMinutes(
+          week.entries,
+          localDate,
+          state.mode === "edit" ? state.entry.id : null,
+        ) + entryMinutes
+      : 0;
   const durationOverHardLimit =
     timingMode === "DURATION" && parsedMinutes !== null && parsedMinutes > DAILY_HARD_LIMIT_MINUTES;
+  const projectedDayOverHardLimit =
+    projectedDayTotalMinutes > DAILY_HARD_LIMIT_MINUTES && !durationOverHardLimit;
+  const projectedDayOverSoftLimit =
+    projectedDayTotalMinutes > DAILY_SOFT_WARNING_MINUTES && !projectedDayOverHardLimit;
   const createDraftKey =
     state.mode === "create" ? (state.draftKey ?? TIME_ENTRY_FORM_DRAFT_KEY) : null;
   const createDraftSource = state.mode === "create" ? state.source : null;
@@ -1590,6 +1604,7 @@ function EntryModal({ state, week, projects, onClose, onDone, t }: EntryModalPro
     localDate &&
     description.trim() &&
     !durationOverHardLimit &&
+    !projectedDayOverHardLimit &&
     (timingMode === "INTERVAL" ? intervalMinutes > 0 : parsedMinutes && parsedMinutes > 0),
   );
 
@@ -1912,6 +1927,24 @@ function EntryModal({ state, week, projects, onClose, onDone, t }: EntryModalPro
             </div>
           ) : null}
 
+          {projectedDayOverHardLimit ? (
+            <div className="flex items-center gap-2 text-sm text-destructive">
+              <AlertTriangle className="size-4" aria-hidden="true" />
+              {t("warnings.dailyTotalOver24Projected", {
+                hours: formatMinutesAsHours(projectedDayTotalMinutes),
+              })}
+            </div>
+          ) : null}
+
+          {projectedDayOverSoftLimit ? (
+            <div className="flex items-center gap-2 text-sm text-warning">
+              <AlertTriangle className="size-4" aria-hidden="true" />
+              {t("warnings.dayOver8Projected", {
+                hours: formatMinutesAsHours(projectedDayTotalMinutes),
+              })}
+            </div>
+          ) : null}
+
           {timingMode === "INTERVAL" && intervalMinutes >= 480 ? (
             <div className="flex items-center gap-2 text-sm text-warning">
               <AlertTriangle className="size-4" aria-hidden="true" />
@@ -2176,6 +2209,17 @@ function groupEntriesByDay(entries: TimeGridEntry[]) {
   }
 
   return map;
+}
+
+function getDayLoggedMinutes(
+  entries: TimeGridEntry[],
+  localDate: string,
+  excludingEntryId: string | null,
+) {
+  return entries.reduce((sum, entry) => {
+    if (entry.localDate !== localDate || entry.id === excludingEntryId) return sum;
+    return sum + entry.durationMinutes;
+  }, 0);
 }
 
 function getCellEntries(
