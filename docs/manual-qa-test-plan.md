@@ -372,11 +372,16 @@ Expected result:
 2. Create one entry for `{TIME_TRACKING_PROJECT_A}` on a test day.
 3. Select the next day.
 4. Click `Same as yesterday`.
-5. Confirm the copied entry appears on the selected day.
-6. Click `Same as yesterday` again for the same selected day.
+5. Cancel the confirmation dialog.
+6. Confirm no copied entry appears on the selected day.
+7. Click `Same as yesterday` again.
+8. Confirm the dialog.
+9. Confirm the copied entry appears on the selected day.
+10. Click `Same as yesterday` again for the same selected day and confirm the dialog.
 
 Expected result:
 
+- The quick action does not run until the confirmation dialog is confirmed.
 - The first copy creates entries from the previous day.
 - The second copy does not create duplicate entries in project/date cells that already contain time.
 - The success message reports skipped entries when applicable.
@@ -387,11 +392,16 @@ Expected result:
 2. Create entries for `{TIME_TRACKING_PROJECT_A}` and `{TIME_TRACKING_PROJECT_B}`.
 3. Open `https://{DOMAIN_NAME}/time?week={TIME_TRACKING_WEEK_START}`.
 4. Click `Duplicate last week`.
-5. Confirm the previous week's entries appear in the matching days of the current week.
-6. Click `Duplicate last week` again.
+5. Cancel the confirmation dialog.
+6. Confirm no previous-week entries appear in the current week.
+7. Click `Duplicate last week` again.
+8. Confirm the dialog.
+9. Confirm the previous week's entries appear in the matching days of the current week.
+10. Click `Duplicate last week` again and confirm the dialog.
 
 Expected result:
 
+- The quick action does not run until the confirmation dialog is confirmed.
 - Entries are copied from the previous week into matching current-week days.
 - Repeating the action skips project/date cells that already contain entries.
 - Existing current-week entries are not overwritten.
