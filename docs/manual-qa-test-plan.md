@@ -807,6 +807,23 @@ Expected result:
 - The member directory table is visible.
 - The app shell user menu shows the admin user.
 
+### Search, Filter, And Page Members
+
+1. Sign in as `{ADMIN_EMAIL}` with TOTP enabled and verified.
+2. Open `https://{DOMAIN_NAME}/admin/people`.
+3. Search for a known member name or email.
+4. Filter by state, role, and profile.
+5. Move to the next page if more than one page is available.
+6. Clear the filters.
+
+Expected result:
+
+- The member list shows 20 members per page by default.
+- Search matches member name and email.
+- State, role, and profile filters update the URL query string.
+- Pagination keeps the selected filters.
+- Clearing filters returns to the unfiltered first page.
+
 ### Invite Member
 
 1. Sign in as `{ADMIN_EMAIL}` with TOTP enabled and verified.
