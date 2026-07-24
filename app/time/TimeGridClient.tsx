@@ -36,6 +36,15 @@ import {
 } from "react";
 import { useTranslations } from "next-intl";
 
+import { Button } from "@/src/components/ui/Button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/src/components/ui/Dialog";
 import { parseDurationToMinutes } from "@/src/lib/duration";
 import { cn } from "@/src/lib/utils";
 import type {
@@ -97,6 +106,20 @@ type BreakdownState = {
   localDate: string;
 } | null;
 
+type PendingQuickAction =
+  | {
+      type: "copyPreviousDay";
+      sourceDate: string;
+      targetDate: string;
+    }
+  | {
+      type: "duplicatePreviousWeek";
+      sourceWeekEnd: string;
+      sourceWeekStart: string;
+      targetWeekEnd: string;
+      targetWeekStart: string;
+    };
+
 type TimeGridClientProps = {
   week: TimeGridWeek;
 };
@@ -116,6 +139,7 @@ export function TimeGridClient({ week }: TimeGridClientProps) {
   const [notice, setNotice] = useState<Notice>(null);
   const [entryModal, setEntryModal] = useState<EntryModalState>(null);
   const [breakdown, setBreakdown] = useState<BreakdownState>(null);
+  const [pendingQuickAction, setPendingQuickAction] = useState<PendingQuickAction | null>(null);
 
   const inactiveProjectIds = useMemo(
     () => new Set(week.inactiveWeeks.map((inactiveWeek) => inactiveWeek.projectId)),
@@ -168,6 +192,20 @@ export function TimeGridClient({ week }: TimeGridClientProps) {
     startTransition(async () => {
       refreshWithResult(await action());
     });
+  }
+
+  function confirmQuickAction() {
+    const action = pendingQuickAction;
+    if (!action) return;
+
+    setPendingQuickAction(null);
+
+    if (action.type === "copyPreviousDay") {
+      runAction(() => copyPreviousDayEntriesAction({ targetDate: action.targetDate }));
+      return;
+    }
+
+    runAction(() => duplicatePreviousWeekAction({ weekStartDate: action.targetWeekStart }));
   }
 
   function handleCellCommit(project: TimeGridAssignedProject, day: TimeGridDay, rawValue: string) {
@@ -387,7 +425,13 @@ export function TimeGridClient({ week }: TimeGridClientProps) {
           title={
             selectedDay ? t("tooltips.copyPreviousDay", { date: selectedDay.isoDate }) : undefined
           }
-          onClick={() => runAction(() => copyPreviousDayEntriesAction({ targetDate }))}
+          onClick={() =>
+            setPendingQuickAction({
+              type: "copyPreviousDay",
+              sourceDate: shiftIsoDate(targetDate, -1),
+              targetDate,
+            })
+          }
         >
           <Copy className="size-4" aria-hidden="true" />
           {t("actions.sameAsYesterday")}
@@ -398,7 +442,13 @@ export function TimeGridClient({ week }: TimeGridClientProps) {
           className="inline-flex items-center gap-2 rounded-[var(--radius-pill)] border border-border bg-card px-3 py-2 text-sm font-medium text-foreground transition hover:bg-secondary disabled:cursor-not-allowed disabled:text-muted-foreground disabled:opacity-50"
           title={t("tooltips.duplicatePreviousWeek")}
           onClick={() =>
-            runAction(() => duplicatePreviousWeekAction({ weekStartDate: week.weekStart }))
+            setPendingQuickAction({
+              type: "duplicatePreviousWeek",
+              sourceWeekStart: shiftIsoDate(week.weekStart, -7),
+              sourceWeekEnd: shiftIsoDate(week.weekStart, -1),
+              targetWeekStart: week.weekStart,
+              targetWeekEnd: week.weekEnd,
+            })
           }
         >
           <Copy className="size-4" aria-hidden="true" />
@@ -822,6 +872,14 @@ export function TimeGridClient({ week }: TimeGridClientProps) {
           t={t}
         />
       ) : null}
+
+      <QuickActionConfirmDialog
+        action={pendingQuickAction}
+        pending={isPending}
+        onCancel={() => setPendingQuickAction(null)}
+        onConfirm={confirmQuickAction}
+        t={t}
+      />
     </div>
   );
 }
@@ -1069,6 +1127,61 @@ function DraftRestoreBanner({
         </button>
       </div>
     </div>
+  );
+}
+
+type QuickActionConfirmDialogProps = {
+  action: PendingQuickAction | null;
+  pending: boolean;
+  onCancel: () => void;
+  onConfirm: () => void;
+  t: TimeTrackingTranslator;
+};
+
+function QuickActionConfirmDialog({
+  action,
+  pending,
+  onCancel,
+  onConfirm,
+  t,
+}: QuickActionConfirmDialogProps) {
+  const isCopyPreviousDay = action?.type === "copyPreviousDay";
+  const title = isCopyPreviousDay
+    ? t("quickActionConfirm.copyPreviousDay.title")
+    : t("quickActionConfirm.duplicatePreviousWeek.title");
+  const description =
+    !action || isCopyPreviousDay
+      ? t("quickActionConfirm.copyPreviousDay.description", {
+          sourceDate: action?.type === "copyPreviousDay" ? action.sourceDate : "",
+          targetDate: action?.type === "copyPreviousDay" ? action.targetDate : "",
+        })
+      : t("quickActionConfirm.duplicatePreviousWeek.description", {
+          sourceWeekEnd: action.sourceWeekEnd,
+          sourceWeekStart: action.sourceWeekStart,
+          targetWeekEnd: action.targetWeekEnd,
+          targetWeekStart: action.targetWeekStart,
+        });
+
+  return (
+    <Dialog open={Boolean(action)} onOpenChange={(open) => !open && onCancel()}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>{title}</DialogTitle>
+          <DialogDescription>{description}</DialogDescription>
+        </DialogHeader>
+        <div className="rounded-[var(--radius-md)] border border-warning/35 bg-warning/10 px-3 py-2 text-sm text-warning">
+          {t("quickActionConfirm.skipExisting")}
+        </div>
+        <DialogFooter>
+          <Button type="button" variant="ghost" disabled={pending} onClick={onCancel}>
+            {t("actions.cancel")}
+          </Button>
+          <Button type="button" variant="cta" icon={Copy} loading={pending} onClick={onConfirm}>
+            {t("quickActionConfirm.confirm")}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
 
@@ -2085,6 +2198,14 @@ function isProjectAssignableOnDate(project: TimeGridAssignedProject, localDate: 
   if (project.projectStartsOn && localDate < project.projectStartsOn) return false;
   if (project.projectEndsOn && localDate > project.projectEndsOn) return false;
   return true;
+}
+
+function shiftIsoDate(isoDate: string, days: number) {
+  const date = new Date(`${isoDate}T00:00:00.000Z`);
+  if (Number.isNaN(date.getTime())) return isoDate;
+
+  date.setUTCDate(date.getUTCDate() + days);
+  return date.toISOString().slice(0, 10);
 }
 
 function getCellWarnings(

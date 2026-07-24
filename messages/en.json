@@ -961,6 +961,18 @@
       "copyPreviousDay": "Copy entries from the day before {date}.",
       "duplicatePreviousWeek": "Copy entries from the previous week into this week."
     },
+    "quickActionConfirm": {
+      "confirm": "Copy entries",
+      "skipExisting": "Existing entries in the target cells are kept and skipped.",
+      "copyPreviousDay": {
+        "title": "Copy yesterday?",
+        "description": "Copy entries from {sourceDate} to {targetDate}."
+      },
+      "duplicatePreviousWeek": {
+        "title": "Duplicate previous week?",
+        "description": "Copy entries from {sourceWeekStart} - {sourceWeekEnd} to {targetWeekStart} - {targetWeekEnd}."
+      }
+    },
     "locked": {
       "title": "Locked period.",
       "description": "Some days in this week belong to a submitted timesheet and are read-only."
