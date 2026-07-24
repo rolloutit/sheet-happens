@@ -342,13 +342,15 @@ Expected result:
 6. Enter start `09:00`, end `10:30`, and `{TIME_ENTRY_DESCRIPTION}`.
 7. Save.
 8. Create another interval on the same day that overlaps the first interval.
-9. Create or edit entries so the day total exceeds 24 hours.
+9. Create or edit entries so the day total exceeds 8 hours.
+10. Try to create or edit entries so the day total exceeds 24 hours.
 
 Expected result:
 
 - Interval entries save with the correct calculated duration.
 - Overlaps show a warning but do not block saving.
-- More than 24 hours in one day shows a warning but does not block saving.
+- More than 8 hours in one day shows a warning but does not block saving.
+- More than 24 hours in one day is blocked.
 
 ### Timer Start And Stop
 

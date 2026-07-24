@@ -46,6 +46,7 @@ import {
   DialogTitle,
 } from "@/src/components/ui/Dialog";
 import { parseDurationToMinutes } from "@/src/lib/duration";
+import { DAILY_HARD_LIMIT_MINUTES, DAILY_SOFT_WARNING_MINUTES } from "@/src/lib/time-entry-limits";
 import { cn } from "@/src/lib/utils";
 import type {
   TimeGridAssignedProject,
@@ -221,6 +222,11 @@ export function TimeGridClient({ week }: TimeGridClientProps) {
       if (cell.entries.length === 1 && !cell.entries[0].locked) {
         runAction(() => deleteTimeEntryAction({ timeEntryId: cell.entries[0].id }));
       }
+      return;
+    }
+
+    if (parsedMinutes > DAILY_HARD_LIMIT_MINUTES) {
+      setNotice({ tone: "error", message: t("warnings.durationOver24Blocked") });
       return;
     }
 
@@ -680,7 +686,7 @@ export function TimeGridClient({ week }: TimeGridClientProps) {
                   </div>
                   {week.days.map((day, dayIndex) => {
                     const total = dailyTotals[dayIndex] ?? 0;
-                    const over = total > 1440;
+                    const over = total > DAILY_SOFT_WARNING_MINUTES;
 
                     return (
                       <div
@@ -1270,7 +1276,7 @@ function DayView({
           <span
             className={cn(
               "text-[26px] font-semibold",
-              dailyTotalMinutes > 1440 ? "text-warning" : "text-foreground",
+              dailyTotalMinutes > DAILY_SOFT_WARNING_MINUTES ? "text-warning" : "text-foreground",
             )}
           >
             {formatMinutesAsHours(dailyTotalMinutes) || "0"}
@@ -1286,10 +1292,10 @@ function DayView({
         </div>
       ) : null}
 
-      {dailyTotalMinutes > 1440 ? (
+      {dailyTotalMinutes > DAILY_SOFT_WARNING_MINUTES ? (
         <div className="flex items-start gap-3 rounded-[var(--radius-md)] border border-warning/30 bg-warning/12 px-4 py-3 text-sm text-warning">
           <AlertTriangle className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
-          {t("warnings.dayOver24")}
+          {t("warnings.dayOver8")}
         </div>
       ) : null}
 
@@ -1573,6 +1579,8 @@ function EntryModal({ state, week, projects, onClose, onDone, t }: EntryModalPro
   const project = projects.find((item) => item.projectId === projectId) ?? projects[0];
   const parsedMinutes = parseDurationToMinutes(durationText);
   const intervalMinutes = calculateIntervalMinutes(startTime, endTime);
+  const durationOverHardLimit =
+    timingMode === "DURATION" && parsedMinutes !== null && parsedMinutes > DAILY_HARD_LIMIT_MINUTES;
   const createDraftKey =
     state.mode === "create" ? (state.draftKey ?? TIME_ENTRY_FORM_DRAFT_KEY) : null;
   const createDraftSource = state.mode === "create" ? state.source : null;
@@ -1581,6 +1589,7 @@ function EntryModal({ state, week, projects, onClose, onDone, t }: EntryModalPro
     projectId &&
     localDate &&
     description.trim() &&
+    !durationOverHardLimit &&
     (timingMode === "INTERVAL" ? intervalMinutes > 0 : parsedMinutes && parsedMinutes > 0),
   );
 
@@ -1896,10 +1905,10 @@ function EntryModal({ state, week, projects, onClose, onDone, t }: EntryModalPro
             </div>
           )}
 
-          {timingMode === "DURATION" && parsedMinutes && parsedMinutes > 1440 ? (
-            <div className="flex items-center gap-2 text-sm text-warning">
+          {durationOverHardLimit ? (
+            <div className="flex items-center gap-2 text-sm text-destructive">
               <AlertTriangle className="size-4" aria-hidden="true" />
-              {t("warnings.moreThan24NotBlocked")}
+              {t("warnings.durationOver24Blocked")}
             </div>
           ) : null}
 
@@ -2223,7 +2232,9 @@ function getCellWarnings(
   if (input.day.state === "future" && input.cell.totalMinutes > 0) {
     warnings.push(t("warnings.futureDay"));
   }
-  if (input.dayTotalMinutes > 1440) warnings.push(t("warnings.dailyTotalOver24"));
+  if (input.dayTotalMinutes > DAILY_SOFT_WARNING_MINUTES) {
+    warnings.push(t("warnings.dailyTotalOver8"));
+  }
   if (hasOverlaps(input.entriesByDay.get(input.day.isoDate) ?? [])) {
     warnings.push(t("warnings.dayHasOverlaps"));
   }
@@ -2277,7 +2288,7 @@ function calculateIntervalMinutes(startTime: string, endTime: string) {
 
   if (start === null || end === null) return 0;
 
-  const minutes = end > start ? end - start : end + 1440 - start;
+  const minutes = end > start ? end - start : end + DAILY_HARD_LIMIT_MINUTES - start;
   return minutes > 0 ? minutes : 0;
 }
 

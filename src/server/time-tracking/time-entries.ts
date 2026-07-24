@@ -1,4 +1,5 @@
 import { isProjectColorToken, projectColorValues } from "@/src/lib/project-colors";
+import { DAILY_HARD_LIMIT_MINUTES } from "@/src/lib/time-entry-limits";
 import { prisma } from "@/src/server/db/client";
 import { Prisma } from "@/src/server/db/generated/client";
 
@@ -498,6 +499,12 @@ export async function createTimeEntry(input: TimeEntryMutationInput) {
       endTime: input.endTime,
     });
 
+    await assertDailyTotalWithinHardLimit(tx, {
+      memberId: input.memberId,
+      localDate: normalized.localDate,
+      addedMinutes: timing.durationMinutes,
+    });
+
     const created = await tx.timeEntry.create({
       data: {
         memberId: input.memberId,
@@ -608,6 +615,12 @@ export async function updateTimeEntry(input: TimeEntryUpdateInput) {
         };
 
     await assertDateOpen(tx, input.memberId, nextLocalDate);
+    await assertDailyTotalWithinHardLimit(tx, {
+      memberId: input.memberId,
+      localDate: nextLocalDate,
+      addedMinutes: nextTiming.durationMinutes,
+      excludingTimeEntryId: current.id,
+    });
 
     const needsAssignment =
       nextProjectId !== current.projectId ||
@@ -838,6 +851,49 @@ export async function stopRunningTimer(input: RunningTimerStopInput) {
     );
     const description = timer.description.trim() || "Tracked with timer";
 
+    const currentDailyMinutes = await getDailyLoggedMinutes(tx, {
+      memberId: input.memberId,
+      localDate,
+    });
+
+    if (currentDailyMinutes + durationMinutes > DAILY_HARD_LIMIT_MINUTES) {
+      await tx.runningTimer.delete({
+        where: {
+          id: timer.id,
+        },
+        select: {
+          id: true,
+        },
+      });
+
+      await tx.auditLog.create({
+        data: {
+          actorMemberId: input.actorMemberId,
+          action: "running_timer.discarded_daily_limit",
+          targetType: "running_timer",
+          targetId: timer.id,
+          before: {
+            projectId: timer.projectId,
+            projectAssignmentId: timer.projectAssignmentId,
+            startedAt: timer.startedAt.toISOString(),
+            endedAt: endedAt.toISOString(),
+            durationMinutes,
+            currentDailyMinutes,
+          },
+          after: {
+            saved: false,
+            reason: "daily_total_limit",
+          },
+          ...input.requestMetadata,
+        },
+      });
+
+      return {
+        discarded: true as const,
+        reason: "DAILY_LIMIT" as const,
+      };
+    }
+
     const entry = await tx.timeEntry.create({
       data: {
         memberId: input.memberId,
@@ -891,6 +947,7 @@ export async function stopRunningTimer(input: RunningTimerStopInput) {
 
     return {
       id: entry.id,
+      saved: true as const,
     };
   });
 }
@@ -1148,6 +1205,7 @@ async function copyEntriesByDateShift(input: {
       select: {
         projectId: true,
         localDate: true,
+        durationMinutes: true,
       },
     });
     const occupiedTargetCells = new Set(
@@ -1155,6 +1213,15 @@ async function copyEntriesByDateShift(input: {
         copiedEntryCellKey(entry.projectId, formatDateOnly(entry.localDate)),
       ),
     );
+    const targetDailyMinutes = new Map<string, number>();
+
+    for (const entry of existingTargetEntries) {
+      const localDate = formatDateOnly(entry.localDate);
+      targetDailyMinutes.set(
+        localDate,
+        (targetDailyMinutes.get(localDate) ?? 0) + entry.durationMinutes,
+      );
+    }
 
     for (const targetDate of targetDates) {
       await assertDateOpen(tx, input.memberId, parseDateOnly(targetDate));
@@ -1185,6 +1252,15 @@ async function copyEntriesByDateShift(input: {
       }
 
       const copiedTiming = getCopiedEntryTiming(sourceEntry, targetDate, timezone);
+      const nextDailyTotal =
+        (targetDailyMinutes.get(targetDateIso) ?? 0) + copiedTiming.durationMinutes;
+
+      if (nextDailyTotal > DAILY_HARD_LIMIT_MINUTES) {
+        throw new TimeTrackingError("Daily total cannot exceed 24 hours.");
+      }
+
+      targetDailyMinutes.set(targetDateIso, nextDailyTotal);
+
       const created = await tx.timeEntry.create({
         data: {
           memberId: input.memberId,
@@ -1301,8 +1377,8 @@ function normalizeDurationMinutes(value: number) {
     throw new TimeTrackingError("Duration must be greater than zero.");
   }
 
-  if (value > 10_080) {
-    throw new TimeTrackingError("Duration is too large.");
+  if (value > DAILY_HARD_LIMIT_MINUTES) {
+    throw new TimeTrackingError("Daily total cannot exceed 24 hours.");
   }
 
   return value;
@@ -1371,6 +1447,53 @@ async function assertDateOpen(tx: TimeTrackingTransaction, memberId: string, loc
   if (lockedPeriod) {
     throw new TimeTrackingError("This period is locked by a submitted timesheet.");
   }
+}
+
+async function assertDailyTotalWithinHardLimit(
+  tx: TimeTrackingTransaction,
+  input: {
+    memberId: string;
+    localDate: Date;
+    addedMinutes: number;
+    excludingTimeEntryId?: string;
+  },
+) {
+  if (input.addedMinutes > DAILY_HARD_LIMIT_MINUTES) {
+    throw new TimeTrackingError("Daily total cannot exceed 24 hours.");
+  }
+
+  const currentMinutes = await getDailyLoggedMinutes(tx, {
+    memberId: input.memberId,
+    localDate: input.localDate,
+    excludingTimeEntryId: input.excludingTimeEntryId,
+  });
+
+  if (currentMinutes + input.addedMinutes > DAILY_HARD_LIMIT_MINUTES) {
+    throw new TimeTrackingError("Daily total cannot exceed 24 hours.");
+  }
+}
+
+async function getDailyLoggedMinutes(
+  tx: TimeTrackingTransaction,
+  input: {
+    memberId: string;
+    localDate: Date;
+    excludingTimeEntryId?: string;
+  },
+) {
+  const aggregate = await tx.timeEntry.aggregate({
+    where: {
+      memberId: input.memberId,
+      deletedAt: null,
+      localDate: input.localDate,
+      ...(input.excludingTimeEntryId ? { NOT: { id: input.excludingTimeEntryId } } : {}),
+    },
+    _sum: {
+      durationMinutes: true,
+    },
+  });
+
+  return aggregate._sum.durationMinutes ?? 0;
 }
 
 async function assertWeekOpen(
