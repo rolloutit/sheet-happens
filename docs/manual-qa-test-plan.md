@@ -611,17 +611,41 @@ Expected result:
 ### Project Directory Filters
 
 1. Open `https://{DOMAIN_NAME}/admin/projects`.
-2. Search by project name.
+2. Search by project name, slug, group name, assigned member name, and assigned member email.
 3. Filter by project status.
-4. Filter by internal/non-internal project type.
-5. Filter by project group.
-6. Clear filters.
+4. Filter by internal/external project type.
+5. Filter by timeline: active today, future, and ended.
+6. Filter by project group and ungrouped projects.
+7. Filter by assigned today and unassigned today.
+8. Combine search with multiple filters.
+9. Use the pager when more than one page is available.
+10. Refresh the browser while filters are applied.
+11. Clear filters.
 
 Expected result:
 
 - The directory updates to match each filter.
-- Clearing filters restores the full active directory.
+- The selected filters are represented in the URL and survive refresh.
+- Pagination keeps the same filters while moving between pages.
+- Clearing filters restores the full project directory.
 - The layout remains responsive on laptop width.
+
+### Project Group Filters
+
+1. Open `https://{DOMAIN_NAME}/admin/projects`.
+2. In the project groups section, search by group name.
+3. Search by a project name that belongs to a group.
+4. Filter groups by active and inactive state.
+5. Filter groups by empty and with projects.
+6. Combine group search with state and project-count filters.
+7. Clear the group filters.
+
+Expected result:
+
+- The group list updates to match each filter.
+- Empty results show a factual empty state.
+- Clearing group filters restores the full group list.
+- Adding or removing projects from a group still works while filters exist.
 
 ### Assign Member To Project
 

@@ -12,8 +12,10 @@ import { mapMemberToShellUser, requireAdminAppMember } from "@/src/server/auth/a
 import {
   listProjectAssignableMembersForAdmin,
   listProjectAssignmentsForAdmin,
+  listProjectDirectoryForAdmin,
   listProjectGroupsForAdmin,
-  listProjectsForAdmin,
+  listProjectOptionsForAdmin,
+  type ProjectListSearchParams,
 } from "@/src/server/projects";
 import { listAssignmentRatesForAdmin } from "@/src/server/rates";
 import { AdminProjectGroupsPanel } from "./AdminProjectGroupsPanel";
@@ -22,18 +24,32 @@ import { ProjectCreateForm } from "./ProjectCreateForm";
 
 export const dynamic = "force-dynamic";
 
-export default async function AdminProjectsPage() {
+type AdminProjectsPageProps = {
+  searchParams?: Promise<ProjectListSearchParams>;
+};
+
+export default async function AdminProjectsPage({ searchParams }: AdminProjectsPageProps) {
   const { member: admin } = await requireAdminAppMember("/admin/projects");
   const t = await getTranslations("AdminProjects");
-  const [projects, groups, assignments, assignmentRates, assignableMembers] = await Promise.all([
-    listProjectsForAdmin(),
+  const resolvedSearchParams = (await searchParams) ?? {};
+  const [
+    projectDirectory,
+    projectOptions,
+    groups,
+    assignments,
+    assignmentRates,
+    assignableMembers,
+  ] = await Promise.all([
+    listProjectDirectoryForAdmin(resolvedSearchParams),
+    listProjectOptionsForAdmin(),
     listProjectGroupsForAdmin(),
     listProjectAssignmentsForAdmin(),
     listAssignmentRatesForAdmin(),
     listProjectAssignableMembersForAdmin(),
   ]);
-  const activeProjects = projects.filter((project) => project.status === "ACTIVE").length;
-  const internalProjects = projects.filter((project) => project.isInternal).length;
+  const activeProjects = projectDirectory.stats.activeProjects;
+  const internalProjects = projectDirectory.stats.internalProjects;
+  const totalProjects = projectDirectory.stats.totalProjects;
   const todayDate = new Date().toISOString().slice(0, 10);
 
   return (
@@ -52,7 +68,7 @@ export default async function AdminProjectsPage() {
             </div>
             <div className="grid min-w-72 grid-cols-3 gap-2 rounded-[var(--radius-lg)] border border-border bg-card/70 p-3 text-center">
               <div>
-                <p className="text-2xl font-semibold text-foreground">{projects.length}</p>
+                <p className="text-2xl font-semibold text-foreground">{totalProjects}</p>
                 <p className="font-ui text-[11px] font-medium uppercase tracking-[0.12em] text-muted-foreground">
                   {t("stats.projects")}
                 </p>
@@ -91,7 +107,8 @@ export default async function AdminProjectsPage() {
             </CardHeader>
             <CardContent>
               <AdminProjectsTable
-                rows={projects}
+                result={projectDirectory}
+                projectOptions={projectOptions}
                 groups={groups}
                 assignments={assignments}
                 assignmentRates={assignmentRates}
@@ -107,7 +124,7 @@ export default async function AdminProjectsPage() {
               <CardDescription>{t("groups.description")}</CardDescription>
             </CardHeader>
             <CardContent>
-              <AdminProjectGroupsPanel groups={groups} projects={projects} />
+              <AdminProjectGroupsPanel groups={groups} projects={projectOptions} />
             </CardContent>
           </Card>
         </div>

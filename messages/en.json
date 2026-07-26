@@ -574,6 +574,7 @@
       "inactive": "Inactive",
       "archived": "Archived",
       "internal": "Internal",
+      "external": "External",
       "ungrouped": "Ungrouped",
       "invited": "Invited",
       "deleted": "Deleted"
@@ -592,10 +593,31 @@
     },
     "filters": {
       "search": "Search projects",
-      "searchPlaceholder": "Search projects...",
+      "searchPlaceholder": "Project, group, assignee, email...",
       "state": "State",
+      "type": "Type",
+      "timeline": "Timeline",
       "group": "Group",
-      "all": "All"
+      "assignment": "Assignment",
+      "all": "All",
+      "current": "Active today",
+      "future": "Future",
+      "ended": "Ended",
+      "assigned": "Assigned today",
+      "unassigned": "Unassigned today",
+      "showing": "Showing {start}-{end} of {total} projects",
+      "apply": "Apply filters",
+      "clear": "Clear"
+    },
+    "pager": {
+      "navigation": "Project pages",
+      "previous": "Previous",
+      "next": "Next",
+      "previousPage": "Go to page {page}",
+      "nextPage": "Go to page {page}",
+      "page": "Go to page {page}",
+      "currentPage": "Current page, page {page}",
+      "summary": "Page {page} of {totalPages}, {totalItems} projects"
     },
     "table": {
       "caption": "Project management table",
@@ -618,6 +640,7 @@
       "description": "Description",
       "descriptionPlaceholder": "Optional grouping note",
       "empty": "No project groups have been created yet.",
+      "emptyFiltered": "No project groups match the current filters.",
       "projectCount": "{count, plural, one {# project} other {# projects}}",
       "noProjects": "No projects in this group.",
       "removeProjectLabel": "Remove {project} from {group}",
@@ -628,7 +651,16 @@
       "archiveTitle": "Archive project group?",
       "archiveTitleNamed": "Archive {name}?",
       "archiveDescription": "Archived groups are removed from filters and organization helpers. The projects stay unchanged.",
-      "archiveWarning": "This is a soft delete for the group only."
+      "archiveWarning": "This is a soft delete for the group only.",
+      "filters": {
+        "search": "Search groups",
+        "searchPlaceholder": "Group or project name...",
+        "state": "State",
+        "projects": "Projects",
+        "withProjects": "With projects",
+        "empty": "Empty",
+        "showing": "Showing {count} of {total} groups"
+      }
     },
     "actions": {
       "createProject": "Create project",
@@ -642,6 +674,7 @@
       "menuLabel": "Actions",
       "openDetails": "Open details",
       "editProject": "Edit project",
+      "editGroup": "Edit group",
       "activate": "Activate",
       "deactivate": "Deactivate",
       "archive": "Archive",

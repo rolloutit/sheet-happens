@@ -29,7 +29,7 @@ import { IconButton } from "@/src/components/ui/IconButton";
 import { Input } from "@/src/components/ui/Input";
 import { Textarea } from "@/src/components/ui/Textarea";
 import { cn } from "@/src/lib/utils";
-import type { AdminProjectGroupRow, AdminProjectRow } from "@/src/server/projects";
+import type { AdminProjectGroupRow, AdminProjectOptionRow } from "@/src/server/projects";
 import {
   addProjectToGroupAction,
   archiveProjectGroupAction,
@@ -47,7 +47,7 @@ import { ProjectColorSwatch } from "./ProjectColorField";
 
 export type AdminProjectGroupsPanelProps = {
   groups: AdminProjectGroupRow[];
-  projects: AdminProjectRow[];
+  projects: AdminProjectOptionRow[];
 };
 
 const initialGroupState: ProjectGroupActionState = {
@@ -60,9 +60,16 @@ const initialGroupProjectState: ProjectGroupProjectActionState = {
   message: "",
 };
 
+type ProjectGroupStateFilter = "all" | "active" | "inactive";
+type ProjectGroupOccupancyFilter = "all" | "empty" | "withProjects";
+
 export function AdminProjectGroupsPanel({ groups, projects }: AdminProjectGroupsPanelProps) {
   const t = useTranslations("AdminProjects");
   const router = useRouter();
+  const [groupQuery, setGroupQuery] = useState("");
+  const [groupStateFilter, setGroupStateFilter] = useState<ProjectGroupStateFilter>("all");
+  const [groupOccupancyFilter, setGroupOccupancyFilter] =
+    useState<ProjectGroupOccupancyFilter>("all");
   const [createState, setCreateState] = useState<ProjectGroupActionState>(initialGroupState);
   const [linkState, setLinkState] =
     useState<ProjectGroupProjectActionState>(initialGroupProjectState);
@@ -71,6 +78,26 @@ export function AdminProjectGroupsPanel({ groups, projects }: AdminProjectGroups
   const [editState, setEditState] = useState<ProjectGroupActionState>(initialGroupState);
   const [archivingGroup, setArchivingGroup] = useState<AdminProjectGroupRow | null>(null);
   const [, startTransition] = useTransition();
+  const filteredGroups = groups.filter((group) => {
+    const normalizedQuery = groupQuery.trim().toLowerCase();
+
+    if (
+      normalizedQuery &&
+      !group.name.toLowerCase().includes(normalizedQuery) &&
+      !group.slug.toLowerCase().includes(normalizedQuery) &&
+      !(group.description ?? "").toLowerCase().includes(normalizedQuery) &&
+      !group.projects.some((project) => project.name.toLowerCase().includes(normalizedQuery))
+    ) {
+      return false;
+    }
+
+    if (groupStateFilter === "active" && !group.active) return false;
+    if (groupStateFilter === "inactive" && group.active) return false;
+    if (groupOccupancyFilter === "empty" && group.projectCount > 0) return false;
+    if (groupOccupancyFilter === "withProjects" && group.projectCount === 0) return false;
+
+    return true;
+  });
 
   function runGroupAction(
     key: string,
@@ -210,13 +237,79 @@ export function AdminProjectGroupsPanel({ groups, projects }: AdminProjectGroups
         </div>
       </form>
 
+      <div className="grid gap-3 rounded-[var(--radius-lg)] border border-border bg-background/45 p-4">
+        <div className="grid gap-3 md:grid-cols-[minmax(14rem,1fr)_minmax(10rem,14rem)_minmax(10rem,14rem)]">
+          <Field label={t("groupsPanel.filters.search")} htmlFor="project-group-search">
+            <Input
+              id="project-group-search"
+              type="search"
+              value={groupQuery}
+              placeholder={t("groupsPanel.filters.searchPlaceholder")}
+              onChange={(event) => setGroupQuery(event.currentTarget.value)}
+            />
+          </Field>
+          <Field label={t("groupsPanel.filters.state")} htmlFor="project-group-state">
+            <select
+              id="project-group-state"
+              value={groupStateFilter}
+              className={nativeSelectClassName}
+              onChange={(event) =>
+                setGroupStateFilter(event.currentTarget.value as ProjectGroupStateFilter)
+              }
+            >
+              <option value="all">{t("filters.all")}</option>
+              <option value="active">{t("states.active")}</option>
+              <option value="inactive">{t("states.inactive")}</option>
+            </select>
+          </Field>
+          <Field label={t("groupsPanel.filters.projects")} htmlFor="project-group-occupancy">
+            <select
+              id="project-group-occupancy"
+              value={groupOccupancyFilter}
+              className={nativeSelectClassName}
+              onChange={(event) =>
+                setGroupOccupancyFilter(event.currentTarget.value as ProjectGroupOccupancyFilter)
+              }
+            >
+              <option value="all">{t("filters.all")}</option>
+              <option value="withProjects">{t("groupsPanel.filters.withProjects")}</option>
+              <option value="empty">{t("groupsPanel.filters.empty")}</option>
+            </select>
+          </Field>
+        </div>
+        <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
+          <p className="text-sm font-medium text-muted-foreground" aria-live="polite">
+            {t("groupsPanel.filters.showing", {
+              count: filteredGroups.length,
+              total: groups.length,
+            })}
+          </p>
+          <Button
+            type="button"
+            variant="ghost"
+            icon={X}
+            onClick={() => {
+              setGroupQuery("");
+              setGroupStateFilter("all");
+              setGroupOccupancyFilter("all");
+            }}
+          >
+            {t("filters.clear")}
+          </Button>
+        </div>
+      </div>
+
       <div className="grid gap-3">
         {groups.length === 0 ? (
           <div className="rounded-[var(--radius-lg)] border border-border bg-card p-6 text-center text-sm text-muted-foreground">
             {t("groupsPanel.empty")}
           </div>
+        ) : filteredGroups.length === 0 ? (
+          <div className="rounded-[var(--radius-lg)] border border-border bg-card p-6 text-center text-sm text-muted-foreground">
+            {t("groupsPanel.emptyFiltered")}
+          </div>
         ) : (
-          groups.map((group) => (
+          filteredGroups.map((group) => (
             <ProjectGroupCard
               key={group.id}
               group={group}
@@ -300,7 +393,7 @@ function ProjectGroupCard({
   onRemoveProject,
 }: {
   group: AdminProjectGroupRow;
-  projects: AdminProjectRow[];
+  projects: AdminProjectOptionRow[];
   pendingKey: string | null;
   onEdit: () => void;
   onArchive: () => void;

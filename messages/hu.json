@@ -574,6 +574,7 @@
       "inactive": "Inaktív",
       "archived": "Archivált",
       "internal": "Belső",
+      "external": "Külső",
       "ungrouped": "Csoport nélkül",
       "invited": "Meghívva",
       "deleted": "Törölt"
@@ -592,10 +593,31 @@
     },
     "filters": {
       "search": "Projektek keresése",
-      "searchPlaceholder": "Projektek keresése...",
+      "searchPlaceholder": "Projekt, csoport, hozzárendelt személy, email...",
       "state": "Állapot",
+      "type": "Típus",
+      "timeline": "Időszak",
       "group": "Csoport",
-      "all": "Mind"
+      "assignment": "Hozzárendelés",
+      "all": "Mind",
+      "current": "Ma aktív",
+      "future": "Jövőbeli",
+      "ended": "Lezárt",
+      "assigned": "Ma hozzárendelve",
+      "unassigned": "Ma nincs hozzárendelve",
+      "showing": "{start}-{end} / {total} projekt megjelenítve",
+      "apply": "Szűrés",
+      "clear": "Törlés"
+    },
+    "pager": {
+      "navigation": "Projektlista oldalak",
+      "previous": "Előző",
+      "next": "Következő",
+      "previousPage": "Ugrás a(z) {page}. oldalra",
+      "nextPage": "Ugrás a(z) {page}. oldalra",
+      "page": "Ugrás a(z) {page}. oldalra",
+      "currentPage": "Aktuális oldal: {page}. oldal",
+      "summary": "{page}. oldal / {totalPages}, összesen {totalItems} projekt"
     },
     "table": {
       "caption": "Projektkezelési táblázat",
@@ -618,6 +640,7 @@
       "description": "Leírás",
       "descriptionPlaceholder": "Opcionális csoportosítási megjegyzés",
       "empty": "Még nincs létrehozott projektcsoport.",
+      "emptyFiltered": "Nincs a jelenlegi szűrőknek megfelelő projektcsoport.",
       "projectCount": "{count, plural, one {# projekt} other {# projekt}}",
       "noProjects": "Nincs projekt ebben a csoportban.",
       "removeProjectLabel": "{project} eltávolítása innen: {group}",
@@ -628,7 +651,16 @@
       "archiveTitle": "Projektcsoport archiválása?",
       "archiveTitleNamed": "{name} archiválása?",
       "archiveDescription": "Az archivált csoportok eltűnnek a szűrőkből és szervezési segédekből. A projektek változatlanok maradnak.",
-      "archiveWarning": "Ez csak a csoport soft delete művelete."
+      "archiveWarning": "Ez csak a csoport soft delete művelete.",
+      "filters": {
+        "search": "Csoportok keresése",
+        "searchPlaceholder": "Csoport vagy projekt neve...",
+        "state": "Állapot",
+        "projects": "Projektek",
+        "withProjects": "Projektekkel",
+        "empty": "Üres",
+        "showing": "{count} / {total} csoport megjelenítve"
+      }
     },
     "actions": {
       "createProject": "Projekt létrehozása",
@@ -642,6 +674,7 @@
       "menuLabel": "Műveletek",
       "openDetails": "Részletek megnyitása",
       "editProject": "Projekt szerkesztése",
+      "editGroup": "Csoport szerkesztése",
       "activate": "Aktiválás",
       "deactivate": "Deaktiválás",
       "archive": "Archiválás",
