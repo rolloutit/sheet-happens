@@ -1576,6 +1576,7 @@ function EntryModal({ state, week, projects, onClose, onDone, t }: EntryModalPro
   );
   const [draftStatus, setDraftStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
   const [fieldErrors, setFieldErrors] = useState<TimeTrackingActionState["fieldErrors"]>();
+  const [submitError, setSubmitError] = useState<string | null>(null);
   const project = projects.find((item) => item.projectId === projectId) ?? projects[0];
   const parsedMinutes = parseDurationToMinutes(durationText);
   const intervalMinutes = calculateIntervalMinutes(startTime, endTime);
@@ -1656,6 +1657,11 @@ function EntryModal({ state, week, projects, onClose, onDone, t }: EntryModalPro
     setDraftStatus(nextDescription.trim() ? "saving" : "idle");
   }
 
+  function clearSubmitFeedback() {
+    setFieldErrors(undefined);
+    setSubmitError(null);
+  }
+
   function saveCurrentDraft() {
     if (!createDraftKey || !createDraftSource || !description.trim()) return;
 
@@ -1686,6 +1692,8 @@ function EntryModal({ state, week, projects, onClose, onDone, t }: EntryModalPro
 
   function submit() {
     const durationMinutes = parseDurationToMinutes(durationText);
+
+    setSubmitError(null);
 
     if (timingMode === "DURATION" && (!durationMinutes || durationMinutes <= 0)) {
       setFieldErrors({ durationMinutes: t("fieldErrors.durationPositive") });
@@ -1730,6 +1738,7 @@ function EntryModal({ state, week, projects, onClose, onDone, t }: EntryModalPro
             });
 
       setFieldErrors(result.fieldErrors);
+      setSubmitError(result.status === "error" ? result.message : null);
 
       if (result.status === "success" && createDraftKey) {
         await clearTimeEntryDraftAction({ draftKey: createDraftKey });
@@ -1797,6 +1806,16 @@ function EntryModal({ state, week, projects, onClose, onDone, t }: EntryModalPro
             </div>
           ) : null}
 
+          {submitError ? (
+            <div
+              role="alert"
+              className="flex items-start gap-2 rounded-[var(--radius-md)] border border-destructive/35 bg-destructive/12 px-3 py-2 text-sm font-medium text-destructive"
+            >
+              <AlertTriangle className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
+              <span>{submitError}</span>
+            </div>
+          ) : null}
+
           <Field label={t("fields.description")} required error={fieldErrors?.description}>
             <textarea
               rows={3}
@@ -1804,6 +1823,7 @@ function EntryModal({ state, week, projects, onClose, onDone, t }: EntryModalPro
               placeholder={t("fields.descriptionPlaceholder")}
               className={inputClassName(Boolean(fieldErrors?.description))}
               onChange={(event) => {
+                clearSubmitFeedback();
                 setDescription(event.target.value);
                 markDraftDirty(event.target.value);
               }}
@@ -1815,6 +1835,7 @@ function EntryModal({ state, week, projects, onClose, onDone, t }: EntryModalPro
               value={projectId}
               className={inputClassName(Boolean(fieldErrors?.projectId))}
               onChange={(event) => {
+                clearSubmitFeedback();
                 setProjectId(event.target.value);
                 markDraftDirty();
               }}
@@ -1836,6 +1857,7 @@ function EntryModal({ state, week, projects, onClose, onDone, t }: EntryModalPro
                 max={week.weekEnd}
                 className={inputClassName(Boolean(fieldErrors?.localDate))}
                 onChange={(event) => {
+                  clearSubmitFeedback();
                   setLocalDate(event.target.value);
                   markDraftDirty();
                 }}
@@ -1852,6 +1874,7 @@ function EntryModal({ state, week, projects, onClose, onDone, t }: EntryModalPro
                       : "text-muted-foreground",
                   )}
                   onClick={() => {
+                    clearSubmitFeedback();
                     setTimingMode("DURATION");
                     markDraftDirty();
                   }}
@@ -1867,6 +1890,7 @@ function EntryModal({ state, week, projects, onClose, onDone, t }: EntryModalPro
                       : "text-muted-foreground",
                   )}
                   onClick={() => {
+                    clearSubmitFeedback();
                     setTimingMode("INTERVAL");
                     markDraftDirty();
                   }}
@@ -1885,6 +1909,7 @@ function EntryModal({ state, week, projects, onClose, onDone, t }: EntryModalPro
                 placeholder="3h 20m"
                 className={inputClassName(Boolean(fieldErrors?.durationMinutes))}
                 onChange={(event) => {
+                  clearSubmitFeedback();
                   setDurationText(event.target.value);
                   markDraftDirty();
                 }}
@@ -1898,6 +1923,7 @@ function EntryModal({ state, week, projects, onClose, onDone, t }: EntryModalPro
                   value={startTime}
                   className={inputClassName(Boolean(fieldErrors?.startTime))}
                   onChange={(event) => {
+                    clearSubmitFeedback();
                     setStartTime(event.target.value);
                     markDraftDirty();
                   }}
@@ -1909,6 +1935,7 @@ function EntryModal({ state, week, projects, onClose, onDone, t }: EntryModalPro
                   value={endTime}
                   className={inputClassName(Boolean(fieldErrors?.endTime))}
                   onChange={(event) => {
+                    clearSubmitFeedback();
                     setEndTime(event.target.value);
                     markDraftDirty();
                   }}
