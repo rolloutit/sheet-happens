@@ -4,8 +4,29 @@ import {
   isProjectColorToken,
   type ProjectColorToken,
 } from "@/src/lib/project-colors";
+import type { Prisma } from "@/src/server/db/generated/client";
+
+const DEFAULT_PAGE = 1;
+const DEFAULT_PAGE_SIZE = 20;
+const MAX_PAGE_SIZE = 100;
 
 export type ProjectLifecycleStatus = "ACTIVE" | "INACTIVE" | "ARCHIVED";
+export type ProjectListSearchParams = Record<string, string | string[] | undefined>;
+export type ProjectStatusFilter = Exclude<ProjectLifecycleStatus, "ARCHIVED"> | "";
+export type ProjectTypeFilter = "internal" | "external" | "";
+export type ProjectTimelineFilter = "current" | "future" | "ended" | "";
+export type ProjectAssignmentFilter = "assigned" | "unassigned" | "";
+
+export type ProjectFilters = {
+  query: string;
+  status: ProjectStatusFilter;
+  type: ProjectTypeFilter;
+  timeline: ProjectTimelineFilter;
+  group: string;
+  assignment: ProjectAssignmentFilter;
+  page: number;
+  pageSize: number;
+};
 
 export type ProjectInput = {
   name: string;
@@ -62,6 +83,27 @@ export type AdminProjectRow = {
   updatedAt: string;
 };
 
+export type AdminProjectOptionRow = Pick<
+  AdminProjectRow,
+  "id" | "name" | "slug" | "colorToken" | "status" | "startsOn" | "endsOn" | "isInternal"
+>;
+
+export type ProjectStats = {
+  totalProjects: number;
+  activeProjects: number;
+  internalProjects: number;
+};
+
+export type ProjectListResult = {
+  rows: AdminProjectRow[];
+  filters: ProjectFilters;
+  totalItems: number;
+  totalPages: number;
+  pageStart: number;
+  pageEnd: number;
+  stats: ProjectStats;
+};
+
 export type AdminProjectGroupSummary = {
   id: string;
   name: string;
@@ -71,11 +113,14 @@ export type AdminProjectGroupSummary = {
 type ProjectManagementDb = {
   $transaction<T>(callback: (tx: ProjectManagementTransaction) => Promise<T>): Promise<T>;
   project: {
+    count(args: { where?: Prisma.ProjectWhereInput }): Promise<number>;
     findMany(args: {
-      where: { deletedAt: null };
+      where: Prisma.ProjectWhereInput;
       orderBy: Array<Record<string, "asc" | "desc">>;
-      select: ProjectListSelect;
-    }): Promise<ProjectListRecord[]>;
+      select: ProjectListSelect | ProjectOptionSelect;
+      skip?: number;
+      take?: number;
+    }): Promise<Array<ProjectListRecord | ProjectOptionRecord>>;
   };
 };
 
@@ -180,6 +225,11 @@ type ProjectListSelect = ProjectSelect & {
   };
 };
 
+type ProjectOptionSelect = Pick<
+  ProjectSelect,
+  "id" | "name" | "slug" | "colorToken" | "status" | "startsOn" | "endsOn" | "isInternal"
+>;
+
 type ProjectListRecord = ProjectRecord & {
   updatedAt: Date;
   groupProjects: Array<{
@@ -189,6 +239,11 @@ type ProjectListRecord = ProjectRecord & {
     assignments: number;
   };
 };
+
+type ProjectOptionRecord = Pick<
+  ProjectRecord,
+  "id" | "name" | "slug" | "colorToken" | "status" | "startsOn" | "endsOn" | "isInternal"
+>;
 
 type ProjectGroupSummarySelect = {
   id: true;
@@ -233,6 +288,44 @@ const projectSelect = {
   deletedAt: true,
 } satisfies ProjectSelect;
 
+const projectListSelect = {
+  ...projectSelect,
+  updatedAt: true,
+  groupProjects: {
+    orderBy: {
+      projectGroup: {
+        name: "asc",
+      },
+    },
+    select: {
+      projectGroup: {
+        select: {
+          id: true,
+          name: true,
+          slug: true,
+          deletedAt: true,
+        },
+      },
+    },
+  },
+  _count: {
+    select: {
+      assignments: true,
+    },
+  },
+} satisfies ProjectListSelect;
+
+const projectOptionSelect = {
+  id: true,
+  name: true,
+  slug: true,
+  colorToken: true,
+  status: true,
+  startsOn: true,
+  endsOn: true,
+  isInternal: true,
+} satisfies ProjectOptionSelect;
+
 export class ProjectManagementError extends Error {
   constructor(message: string) {
     super(message);
@@ -249,35 +342,220 @@ export async function listProjectsForAdmin(
       deletedAt: null,
     },
     orderBy: [{ status: "asc" }, { name: "asc" }],
-    select: {
-      ...projectSelect,
-      updatedAt: true,
-      groupProjects: {
-        orderBy: {
-          projectGroup: {
-            name: "asc",
-          },
-        },
-        select: {
-          projectGroup: {
-            select: {
-              id: true,
-              name: true,
-              slug: true,
-              deletedAt: true,
+    select: projectListSelect,
+  });
+
+  return (projects as ProjectListRecord[]).map(mapProjectToAdminRow);
+}
+
+export async function listProjectDirectoryForAdmin(
+  searchParams: ProjectListSearchParams = {},
+  deps: { db?: ProjectManagementDb; today?: Date } = {},
+): Promise<ProjectListResult> {
+  const db = deps.db ?? (prisma as unknown as ProjectManagementDb);
+  const today = toDateOnly(deps.today ?? new Date());
+  const filters = normalizeProjectFilters(searchParams);
+  const where = buildProjectWhere(filters, today);
+  const baseWhere: Prisma.ProjectWhereInput = {
+    deletedAt: null,
+  };
+
+  const [totalItems, totalProjects, activeProjects, internalProjects] = await Promise.all([
+    db.project.count({ where }),
+    db.project.count({ where: baseWhere }),
+    db.project.count({
+      where: {
+        ...baseWhere,
+        status: "ACTIVE",
+      },
+    }),
+    db.project.count({
+      where: {
+        ...baseWhere,
+        isInternal: true,
+      },
+    }),
+  ]);
+  const totalPages = Math.max(1, Math.ceil(totalItems / filters.pageSize));
+  const safeFilters = {
+    ...filters,
+    page: Math.min(filters.page, totalPages),
+  };
+  const skip = (safeFilters.page - 1) * safeFilters.pageSize;
+  const projects = await db.project.findMany({
+    where,
+    orderBy: [{ status: "asc" }, { name: "asc" }],
+    select: projectListSelect,
+    skip,
+    take: safeFilters.pageSize,
+  });
+
+  return {
+    rows: (projects as ProjectListRecord[]).map(mapProjectToAdminRow),
+    filters: safeFilters,
+    totalItems,
+    totalPages,
+    pageStart: totalItems === 0 ? 0 : skip + 1,
+    pageEnd: Math.min(skip + projects.length, totalItems),
+    stats: {
+      totalProjects,
+      activeProjects,
+      internalProjects,
+    },
+  };
+}
+
+export async function listProjectOptionsForAdmin(
+  deps: { db?: ProjectManagementDb } = {},
+): Promise<AdminProjectOptionRow[]> {
+  const db = deps.db ?? (prisma as unknown as ProjectManagementDb);
+  const projects = await db.project.findMany({
+    where: {
+      deletedAt: null,
+    },
+    orderBy: [{ status: "asc" }, { name: "asc" }],
+    select: projectOptionSelect,
+  });
+
+  return (projects as ProjectOptionRecord[]).map(mapProjectToOptionRow);
+}
+
+export function normalizeProjectFilters(
+  searchParams: ProjectListSearchParams = {},
+): ProjectFilters {
+  return {
+    query: firstString(searchParams.q).trim().slice(0, 120),
+    status: normalizeProjectStatusFilter(firstString(searchParams.status)),
+    type: normalizeProjectTypeFilter(firstString(searchParams.type)),
+    timeline: normalizeProjectTimelineFilter(firstString(searchParams.timeline)),
+    group: normalizeProjectGroupFilter(firstString(searchParams.group)),
+    assignment: normalizeProjectAssignmentFilter(firstString(searchParams.assignment)),
+    page: parsePositiveInteger(firstString(searchParams.page), DEFAULT_PAGE),
+    pageSize: Math.min(
+      parsePositiveInteger(firstString(searchParams.pageSize), DEFAULT_PAGE_SIZE),
+      MAX_PAGE_SIZE,
+    ),
+  };
+}
+
+export function buildProjectWhere(
+  filters: ProjectFilters,
+  today: Date = toDateOnly(new Date()),
+): Prisma.ProjectWhereInput {
+  const and: Prisma.ProjectWhereInput[] = [
+    {
+      deletedAt: null,
+    },
+  ];
+
+  if (filters.query) {
+    const containsFilter = {
+      contains: filters.query,
+      mode: "insensitive" as const,
+    };
+
+    and.push({
+      OR: [
+        { name: containsFilter },
+        { slug: containsFilter },
+        { notes: containsFilter },
+        {
+          groupProjects: {
+            some: {
+              projectGroup: {
+                deletedAt: null,
+                OR: [{ name: containsFilter }, { slug: containsFilter }],
+              },
             },
           },
         },
+        {
+          assignments: {
+            some: {
+              member: {
+                deletedAt: null,
+                OR: [
+                  { email: containsFilter },
+                  { firstName: containsFilter },
+                  { lastName: containsFilter },
+                  { displayName: containsFilter },
+                ],
+              },
+            },
+          },
+        },
+      ],
+    });
+  }
+
+  if (filters.status) {
+    and.push({
+      status: filters.status,
+    });
+  }
+
+  if (filters.type) {
+    and.push({
+      isInternal: filters.type === "internal",
+    });
+  }
+
+  if (filters.timeline === "current") {
+    and.push(buildCurrentProjectDateWhere(today));
+  } else if (filters.timeline === "future") {
+    and.push({
+      startsOn: {
+        gt: today,
       },
-      _count: {
-        select: {
-          assignments: true,
+    });
+  } else if (filters.timeline === "ended") {
+    and.push({
+      endsOn: {
+        lt: today,
+      },
+    });
+  }
+
+  if (filters.group === "ungrouped") {
+    and.push({
+      groupProjects: {
+        none: {
+          projectGroup: {
+            deletedAt: null,
+          },
         },
       },
-    },
-  });
+    });
+  } else if (filters.group) {
+    and.push({
+      groupProjects: {
+        some: {
+          projectGroupId: filters.group,
+          projectGroup: {
+            deletedAt: null,
+          },
+        },
+      },
+    });
+  }
 
-  return projects.map(mapProjectToAdminRow);
+  if (filters.assignment === "assigned") {
+    and.push({
+      assignments: {
+        some: buildCurrentAssignmentWhere(today),
+      },
+    });
+  } else if (filters.assignment === "unassigned") {
+    and.push({
+      assignments: {
+        none: buildCurrentAssignmentWhere(today),
+      },
+    });
+  }
+
+  return {
+    AND: and,
+  };
 }
 
 export async function createProject(
@@ -628,6 +906,110 @@ function mapProjectToAdminRow(project: ProjectListRecord): AdminProjectRow {
     groups,
     updatedAt: project.updatedAt.toISOString(),
   };
+}
+
+function mapProjectToOptionRow(project: ProjectOptionRecord): AdminProjectOptionRow {
+  return {
+    id: project.id,
+    name: project.name,
+    slug: project.slug,
+    colorToken: project.colorToken,
+    status: project.status,
+    startsOn: project.startsOn ? formatDateOnly(project.startsOn) : null,
+    endsOn: project.endsOn ? formatDateOnly(project.endsOn) : null,
+    isInternal: project.isInternal,
+  };
+}
+
+function buildCurrentProjectDateWhere(today: Date): Prisma.ProjectWhereInput {
+  return {
+    AND: [
+      {
+        OR: [
+          {
+            startsOn: null,
+          },
+          {
+            startsOn: {
+              lte: today,
+            },
+          },
+        ],
+      },
+      {
+        OR: [
+          {
+            endsOn: null,
+          },
+          {
+            endsOn: {
+              gte: today,
+            },
+          },
+        ],
+      },
+    ],
+  };
+}
+
+function buildCurrentAssignmentWhere(today: Date): Prisma.ProjectAssignmentWhereInput {
+  return {
+    active: true,
+    validFrom: {
+      lte: today,
+    },
+    OR: [
+      {
+        validTo: null,
+      },
+      {
+        validTo: {
+          gte: today,
+        },
+      },
+    ],
+    member: {
+      deletedAt: null,
+      status: {
+        not: "DELETED",
+      },
+    },
+  };
+}
+
+function firstString(value: string | string[] | undefined) {
+  if (Array.isArray(value)) return value[0] ?? "";
+  return value ?? "";
+}
+
+function parsePositiveInteger(value: string, fallback: number) {
+  const parsed = Number.parseInt(value, 10);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
+}
+
+function normalizeProjectStatusFilter(value: string): ProjectStatusFilter {
+  if (value === "ACTIVE" || value === "INACTIVE") return value;
+  return "";
+}
+
+function normalizeProjectTypeFilter(value: string): ProjectTypeFilter {
+  if (value === "internal" || value === "external") return value;
+  return "";
+}
+
+function normalizeProjectTimelineFilter(value: string): ProjectTimelineFilter {
+  if (value === "current" || value === "future" || value === "ended") return value;
+  return "";
+}
+
+function normalizeProjectGroupFilter(value: string) {
+  const normalized = value.trim().slice(0, 80);
+  return normalized || "";
+}
+
+function normalizeProjectAssignmentFilter(value: string): ProjectAssignmentFilter {
+  if (value === "assigned" || value === "unassigned") return value;
+  return "";
 }
 
 function serializeAuditValue(value: unknown) {
