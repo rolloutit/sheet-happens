@@ -155,6 +155,16 @@ textarea {
   outline-offset: 0;
 }
 
+[data-auth-input]:-webkit-autofill,
+[data-auth-input]:-webkit-autofill:hover,
+[data-auth-input]:-webkit-autofill:focus,
+[data-auth-input]:-webkit-autofill:active {
+  -webkit-text-fill-color: var(--foreground);
+  caret-color: var(--foreground);
+  -webkit-box-shadow: 0 0 0 1000px var(--card) inset;
+  box-shadow: 0 0 0 1000px var(--card) inset;
+}
+
 .font-ui {
   font-family: var(--font-poppins);
 }
