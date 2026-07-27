@@ -69,11 +69,39 @@
       "stop": "Stop timer"
     }
   },
+  "AuthShell": {
+    "brandSubtitle": "Rollout IT · internal",
+    "panelFooter": "Time tracking, timesheets and invoice checks — in one place.",
+    "panelTip": "Tip: passkeys get you in two seconds flat.",
+    "language": "Language",
+    "themeDark": "Dark theme",
+    "themeLight": "Light theme",
+    "moods": {
+      "back": {
+        "title": "Welcome back.",
+        "subtitle": "Sheet happens — let's log it."
+      },
+      "aboard": {
+        "title": "Welcome aboard.",
+        "subtitle": "A few clicks and your account is live."
+      },
+      "fresh": {
+        "title": "Fresh start, fresh password.",
+        "subtitle": "A minute, and you're back to work."
+      },
+      "secure": {
+        "title": "One step more — for safety.",
+        "subtitle": "Just making sure it's really you."
+      }
+    }
+  },
   "Login": {
     "brandSubtitle": "Rollout IT · internal",
     "badge": "Welcome back",
-    "title": "Sign in to Sheet Happens",
-    "description": "Use a registered method for an already activated Sheet Happens account.",
+    "title": "Welcome back",
+    "description": "Sign in to Sheet Happens.",
+    "recommended": "Recommended",
+    "or": "or",
     "side": {
       "timeTracking": "Time tracking",
       "timesheets": "Timesheets",
@@ -82,18 +110,22 @@
     },
     "fields": {
       "email": "Email",
-      "emailPlaceholder": "you@company.com",
-      "password": "Password"
+      "emailPlaceholder": "you@example.com",
+      "password": "Password",
+      "passwordPlaceholder": "••••••••••••"
     },
     "actions": {
-      "passkey": "Continue with passkey",
-      "google": "Continue with company Google",
-      "forgotPassword": "Forgot password?",
+      "passkey": "Sign in with passkey",
+      "passkeyHint": "Passwordless, with your device",
+      "google": "Continue with Google",
+      "forgotPassword": "Forgot?",
+      "showPassword": "Show password",
+      "hidePassword": "Hide password",
       "passwordSignIn": "Sign in",
-      "emailLink": "Email sign-in link"
+      "emailLink": "Email me a sign-in link instead"
     },
     "passwordlessHint": "Passwordless email sign-in remains available for activated accounts.",
-    "inviteActivationHint": "Invited users must activate their invitation link once before normal sign-in works.",
+    "inviteActivationHint": "Invite-only — no public sign-up. Need access? Ask your admin.",
     "status": {
       "magicLinkSent": "If {email} belongs to an active Sheet Happens member, a sign-in link is on its way.",
       "passwordSetupSent": "If {email} belongs to an active Sheet Happens member, a password setup link is on its way."
@@ -111,6 +143,7 @@
     }
   },
   "AcceptInvite": {
+    "eyebrow": "Invitation",
     "title": "Accept invitation",
     "description": "You have been invited to Sheet Happens as {email}.",
     "descriptionNamed": "{name}, you have been invited to Sheet Happens as {email}.",
@@ -176,7 +209,9 @@
     "actions": {
       "updatePassword": "Update password",
       "sendSetupLink": "Send password setup link",
-      "returnToSignIn": "Return to sign-in"
+      "returnToSignIn": "Return to sign-in",
+      "showPassword": "Show password",
+      "hidePassword": "Hide password"
     },
     "footer": {
       "activationSeparate": "Invitation activation is still separate."

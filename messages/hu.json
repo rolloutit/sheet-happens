@@ -69,11 +69,39 @@
       "stop": "Időmérő leállítása"
     }
   },
+  "AuthShell": {
+    "brandSubtitle": "Rollout IT · belső",
+    "panelFooter": "Időkövetés, timesheet és számlaellenőrzés — egy helyen.",
+    "panelTip": "Tipp: passkey-vel két másodperc a belépés.",
+    "language": "Nyelv",
+    "themeDark": "Sötét téma",
+    "themeLight": "Világos téma",
+    "moods": {
+      "back": {
+        "title": "Üdv újra.",
+        "subtitle": "Sheet happens — rögzítsük."
+      },
+      "aboard": {
+        "title": "Üdv a fedélzeten.",
+        "subtitle": "Pár kattintás, és kész a fiókod."
+      },
+      "fresh": {
+        "title": "Új kezdet, új jelszó.",
+        "subtitle": "Egy perc, és visszatérhetsz a munkához."
+      },
+      "secure": {
+        "title": "Még egy lépés — a biztonságért.",
+        "subtitle": "Csak hogy biztosan te vagy az."
+      }
+    }
+  },
   "Login": {
     "brandSubtitle": "Rollout IT · belső",
     "badge": "Üdv újra",
-    "title": "Bejelentkezés a Sheet Happensbe",
-    "description": "Használj egy regisztrált bejelentkezési módot egy már aktivált Sheet Happens fiókhoz.",
+    "title": "Üdv újra",
+    "description": "Jelentkezz be a Sheet Happensbe.",
+    "recommended": "Ajánlott",
+    "or": "vagy",
     "side": {
       "timeTracking": "Időkövetés",
       "timesheets": "Timesheet",
@@ -81,19 +109,23 @@
       "protected": "Védett munkafolyamat-hozzáférés"
     },
     "fields": {
-      "email": "Email",
-      "emailPlaceholder": "nev@ceg.hu",
-      "password": "Jelszó"
+      "email": "E-mail cím",
+      "emailPlaceholder": "te@example.com",
+      "password": "Jelszó",
+      "passwordPlaceholder": "••••••••••••"
     },
     "actions": {
-      "passkey": "Folytatás passkey-jel",
-      "google": "Folytatás céges Google-fiókkal",
-      "forgotPassword": "Elfelejtett jelszó?",
+      "passkey": "Belépés passkey-vel",
+      "passkeyHint": "Jelszó nélkül, az eszközöddel",
+      "google": "Folytatás Google-fiókkal",
+      "forgotPassword": "Elfelejtetted?",
+      "showPassword": "Jelszó mutatása",
+      "hidePassword": "Jelszó elrejtése",
       "passwordSignIn": "Bejelentkezés",
-      "emailLink": "Emailes bejelentkezési link"
+      "emailLink": "Inkább küldj egy belépési linket"
     },
     "passwordlessHint": "Az emailes jelszó nélküli bejelentkezés továbbra is elérhető az aktivált fiókoknál.",
-    "inviteActivationHint": "A meghívott felhasználóknak egyszer aktiválniuk kell a meghívólinket, mielőtt a normál bejelentkezés működik.",
+    "inviteActivationHint": "Csak meghívással. Nincs nyilvános regisztráció — ha hozzáférés kell, szólj az adminodnak.",
     "status": {
       "magicLinkSent": "Ha a(z) {email} egy aktív Sheet Happens taghoz tartozik, a bejelentkezési link úton van.",
       "passwordSetupSent": "Ha a(z) {email} egy aktív Sheet Happens taghoz tartozik, a jelszóbeállító link úton van."
@@ -111,6 +143,7 @@
     }
   },
   "AcceptInvite": {
+    "eyebrow": "Meghívó",
     "title": "Meghívó elfogadása",
     "description": "Meghívást kaptál a Sheet Happensbe ezzel az email címmel: {email}.",
     "descriptionNamed": "{name}, meghívást kaptál a Sheet Happensbe ezzel az email címmel: {email}.",
@@ -176,7 +209,9 @@
     "actions": {
       "updatePassword": "Jelszó frissítése",
       "sendSetupLink": "Jelszóbeállító link küldése",
-      "returnToSignIn": "Vissza a bejelentkezéshez"
+      "returnToSignIn": "Vissza a bejelentkezéshez",
+      "showPassword": "Jelszó mutatása",
+      "hidePassword": "Jelszó elrejtése"
     },
     "footer": {
       "activationSeparate": "A meghívó aktiválása ettől külön lépés."

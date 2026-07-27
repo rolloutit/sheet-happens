@@ -149,6 +149,12 @@ textarea {
   outline-offset: 2px;
 }
 
+[data-auth-input]:focus,
+[data-auth-input]:focus-visible {
+  outline: none;
+  outline-offset: 0;
+}
+
 .font-ui {
   font-family: var(--font-poppins);
 }
@@ -157,6 +163,32 @@ textarea {
   border: 1px solid var(--border);
   background: color-mix(in srgb, var(--card) 92%, transparent);
   box-shadow: var(--shadow-soft);
+}
+
+.auth-shell-orbit-ring {
+  transform-origin: 280px 280px;
+  animation: auth-shell-orbit-spin 60s linear infinite;
+}
+
+.auth-shell-float {
+  animation: auth-shell-float 7s var(--ease-standard) infinite;
+}
+
+@keyframes auth-shell-orbit-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes auth-shell-float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+
+  50% {
+    transform: translateY(-8px);
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {

@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { getTranslations } from "next-intl/server";
 
 import { AccountStatusActions } from "./AccountStatusActions";
+import { AuthShell } from "@/src/components/layout/AuthShell";
 import { ErrorState } from "@/src/components/ui/ErrorState";
 import {
   getAppAccessState,
@@ -52,7 +53,7 @@ export default async function AccountStatusPage({ searchParams }: AccountStatusP
   const content = getAccountStatusContent(access.status, reason, t);
 
   return (
-    <main className="grid min-h-screen place-items-center bg-background px-4 py-10 text-foreground sm:px-6 lg:px-8">
+    <AuthShell mood="secure">
       <ErrorState
         icon={content.tone === "error" ? UserX : ShieldAlert}
         title={content.title}
@@ -61,7 +62,7 @@ export default async function AccountStatusPage({ searchParams }: AccountStatusP
         action={<AccountStatusActions />}
         className="w-full max-w-xl"
       />
-    </main>
+    </AuthShell>
   );
 }
 

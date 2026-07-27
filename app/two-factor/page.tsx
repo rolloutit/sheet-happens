@@ -2,6 +2,7 @@ import type { Route } from "next";
 import { redirect } from "next/navigation";
 
 import { TwoFactorChallengePanel } from "./TwoFactorChallengePanel";
+import { AuthShell } from "@/src/components/layout/AuthShell";
 import {
   accountStatusRoute,
   getAppAccessState,
@@ -40,9 +41,9 @@ export default async function TwoFactorPage({ searchParams }: TwoFactorPageProps
   }
 
   return (
-    <main className="grid min-h-screen place-items-center bg-background px-4 py-10 text-foreground sm:px-6 lg:px-8">
+    <AuthShell mood="secure">
       <TwoFactorChallengePanel callbackURL={callbackURL} />
-    </main>
+    </AuthShell>
   );
 }
 
