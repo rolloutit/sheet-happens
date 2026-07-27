@@ -1,4 +1,4 @@
-import { AppShell } from "@/src/components/layout/AppShell";
+import { AuthShell } from "@/src/components/layout/AuthShell";
 import { ErrorState } from "@/src/components/ui/ErrorState";
 import { getSession } from "@/src/server/auth/session";
 import { getInvitationAcceptanceDetails } from "@/src/server/users";
@@ -23,27 +23,25 @@ export default async function AcceptInvitePage({ searchParams }: AcceptInvitePag
   ]);
 
   return (
-    <AppShell role="contractor" current="dashboard" notifications={[]}>
-      <section className="mx-auto grid min-h-[calc(100vh-4rem)] w-full max-w-4xl place-items-center px-4 py-10 sm:px-6 lg:px-8">
-        {token && invitation ? (
-          <AcceptInvitationPanel
-            token={token}
-            email={invitation.email}
-            name={invitation.name}
-            available={invitation.available}
-            expired={invitation.expired}
-            status={invitation.status}
-            sessionUser={session ? { email: session.user.email } : null}
-          />
-        ) : (
-          <ErrorState
-            title={t("error.invalidTitle")}
-            message={t("error.invalidMessage")}
-            tone="error"
-          />
-        )}
-      </section>
-    </AppShell>
+    <AuthShell mood="aboard">
+      {token && invitation ? (
+        <AcceptInvitationPanel
+          token={token}
+          email={invitation.email}
+          name={invitation.name}
+          available={invitation.available}
+          expired={invitation.expired}
+          status={invitation.status}
+          sessionUser={session ? { email: session.user.email } : null}
+        />
+      ) : (
+        <ErrorState
+          title={t("error.invalidTitle")}
+          message={t("error.invalidMessage")}
+          tone="error"
+        />
+      )}
+    </AuthShell>
   );
 }
 

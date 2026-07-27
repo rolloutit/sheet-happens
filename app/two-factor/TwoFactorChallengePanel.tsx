@@ -6,22 +6,12 @@ import type { Route } from "next";
 import Link from "next/link";
 import { useMemo, useState, useTransition } from "react";
 
-import { Badge } from "@/src/components/ui/Badge";
-import { Button } from "@/src/components/ui/Button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "@/src/components/ui/Card";
+import { AuthButton, AuthNotice, AuthScreenHead } from "@/src/components/layout/AuthForm";
 import { Checkbox } from "@/src/components/ui/Checkbox";
 import { CodeInput } from "@/src/components/ui/CodeInput";
 import { Field } from "@/src/components/ui/Field";
 import { Input } from "@/src/components/ui/Input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/src/components/ui/Tabs";
-import { cn } from "@/src/lib/utils";
 import { verifySecondFactorAction } from "./actions";
 import type { VerifySecondFactorActionState } from "./actions.types";
 
@@ -66,15 +56,11 @@ export function TwoFactorChallengePanel({ callbackURL }: TwoFactorChallengePanel
   const canSubmit = method === "totp" ? totpCode.length === 6 : backupCode.trim().length > 0;
 
   return (
-    <Card density="lg" variant="elevated" className="w-full max-w-xl">
-      <CardHeader className="block">
-        <Badge tone="info">{t("badge")}</Badge>
-        <CardTitle className="mt-4 text-2xl">{t("title")}</CardTitle>
-        <CardDescription>{t("description")}</CardDescription>
-      </CardHeader>
-      <CardContent className="gap-5">
-        {state ? <SecondFactorStatus state={state} /> : null}
+    <div>
+      <AuthScreenHead eyebrow={t("badge")} title={t("title")} description={t("description")} />
+      {state ? <SecondFactorStatus state={state} /> : null}
 
+      <div className="grid gap-5">
         <Tabs value={method} onValueChange={(value) => setMethod(value as SecondFactorMethod)}>
           <TabsList className="grid w-full grid-cols-2">
             <TabsTrigger value="totp">{t("tabs.authenticator")}</TabsTrigger>
@@ -129,39 +115,40 @@ export function TwoFactorChallengePanel({ callbackURL }: TwoFactorChallengePanel
             <span className="block leading-6">{t("trust.description")}</span>
           </span>
         </label>
-      </CardContent>
-      <CardFooter className="justify-between">
-        <Button asChild variant="ghost">
-          <Link href={loginHref as Route}>
-            <LifeBuoy aria-hidden="true" />
-            {t("actions.useAnotherSignIn")}
-          </Link>
-        </Button>
-        <Button
+
+        <AuthButton
           type="button"
-          icon={method === "totp" ? ShieldCheck : KeyRound}
+          variant="hero"
+          icon={
+            method === "totp" ? (
+              <ShieldCheck className="size-4" aria-hidden="true" />
+            ) : (
+              <KeyRound className="size-4" aria-hidden="true" />
+            )
+          }
           loading={isPending}
           disabled={!canSubmit}
           onClick={submitSecondFactor}
         >
           {t("actions.verify")}
-        </Button>
-      </CardFooter>
-    </Card>
+        </AuthButton>
+
+        <Link
+          href={loginHref as Route}
+          className="inline-flex items-center justify-center gap-2 rounded-[var(--radius-md)] px-3 py-2 text-sm font-semibold text-muted-foreground transition hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        >
+          <LifeBuoy className="size-4" aria-hidden="true" />
+          {t("actions.useAnotherSignIn")}
+        </Link>
+      </div>
+    </div>
   );
 }
 
 function SecondFactorStatus({ state }: { state: VerifySecondFactorActionState }) {
   return (
-    <p
-      role={state.status === "error" ? "alert" : "status"}
-      className={cn(
-        "rounded-[var(--radius-md)] border px-3 py-2 text-sm",
-        state.status === "success" && "border-success/40 bg-success/10 text-success",
-        state.status === "error" && "border-destructive/40 bg-destructive/10 text-destructive",
-      )}
-    >
+    <AuthNotice tone={state.status} className="mb-4">
       {state.message}
-    </p>
+    </AuthNotice>
   );
 }

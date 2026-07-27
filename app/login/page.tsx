@@ -2,6 +2,7 @@ import type { Route } from "next";
 import { redirect } from "next/navigation";
 
 import { LoginPanel } from "./LoginPanel";
+import { AuthShell } from "@/src/components/layout/AuthShell";
 import {
   accountStatusRoute,
   getAppAccessState,
@@ -44,14 +45,14 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
   }
 
   return (
-    <main className="grid min-h-dvh place-items-center bg-background px-4 py-4 text-foreground sm:px-6 lg:px-8 lg:py-6">
+    <AuthShell mood="back">
       <LoginPanel
         callbackURL={callbackURL}
         googleEnabled={googleAuthSettings.enabled}
         initialEmail={getSingleParam(params.email)}
         initialError={getSingleParam(params.error)}
       />
-    </main>
+    </AuthShell>
   );
 }
 

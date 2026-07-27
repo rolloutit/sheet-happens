@@ -5,20 +5,15 @@ import { useTranslations } from "next-intl";
 import Link from "next/link";
 import { useState } from "react";
 
-import { Badge } from "@/src/components/ui/Badge";
-import { Button } from "@/src/components/ui/Button";
 import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "@/src/components/ui/Card";
-import { Field } from "@/src/components/ui/Field";
-import { Input } from "@/src/components/ui/Input";
+  AuthButton,
+  AuthField,
+  AuthInput,
+  AuthNotice,
+  AuthPasswordInput,
+  AuthScreenHead,
+} from "@/src/components/layout/AuthForm";
 import { authClient } from "@/src/lib/auth-client";
-import { cn } from "@/src/lib/utils";
 
 export type ResetPasswordPanelProps = {
   callbackURL: string;
@@ -129,126 +124,123 @@ export function ResetPasswordPanel({ callbackURL, initialError, token }: ResetPa
   }
 
   return (
-    <Card variant="elevated" className="w-full max-w-md">
-      <CardHeader className="block">
-        <Badge tone="info">{t("badge")}</Badge>
-        <CardTitle className="mt-4 text-2xl">{token ? t("titleSet") : t("titleRequest")}</CardTitle>
-        <CardDescription>{token ? t("descriptionSet") : t("descriptionRequest")}</CardDescription>
-      </CardHeader>
-      <CardContent className="gap-5">
-        {notice ? <NoticeMessage notice={notice} /> : null}
+    <div>
+      <AuthScreenHead
+        eyebrow={t("badge")}
+        title={token ? t("titleSet") : t("titleRequest")}
+        description={token ? t("descriptionSet") : t("descriptionRequest")}
+      />
+      {notice ? <NoticeMessage notice={notice} /> : null}
 
-        {token ? (
-          <div className="grid gap-3">
-            <Field label={t("fields.newPassword")} hint={t("fields.newPasswordHint")}>
-              {({ id, describedBy }) => (
-                <Input
-                  id={id}
-                  type="password"
-                  autoComplete="new-password"
-                  aria-describedby={describedBy}
-                  value={newPassword}
-                  onChange={(event) => setNewPassword(event.target.value)}
-                  onKeyDown={(event) => {
-                    if (event.key === "Enter") {
-                      event.preventDefault();
-                      void resetPassword();
-                    }
-                  }}
-                />
-              )}
-            </Field>
-            <Field label={t("fields.confirmPassword")}>
-              {({ id }) => (
-                <Input
-                  id={id}
-                  type="password"
-                  autoComplete="new-password"
-                  value={confirmPassword}
-                  onChange={(event) => setConfirmPassword(event.target.value)}
-                  onKeyDown={(event) => {
-                    if (event.key === "Enter") {
-                      event.preventDefault();
-                      void resetPassword();
-                    }
-                  }}
-                />
-              )}
-            </Field>
-            <Button
-              type="button"
-              icon={LockKeyhole}
-              loading={pendingAction === "reset"}
-              disabled={busy}
-              onClick={() => void resetPassword()}
-            >
-              {t("actions.updatePassword")}
-            </Button>
-          </div>
-        ) : (
-          <div className="grid gap-3">
-            <Field label={t("fields.email")}>
-              {({ id }) => (
-                <Input
-                  id={id}
-                  type="email"
-                  autoComplete="email"
-                  placeholder={t("fields.emailPlaceholder")}
-                  value={email}
-                  onChange={(event) => setEmail(event.target.value)}
-                  onKeyDown={(event) => {
-                    if (event.key === "Enter") {
-                      event.preventDefault();
-                      void requestResetLink();
-                    }
-                  }}
-                />
-              )}
-            </Field>
-            <Button
-              type="button"
+      {token ? (
+        <div className="grid gap-3.5">
+          <AuthField label={t("fields.newPassword")} htmlFor="reset-new-password">
+            <AuthPasswordInput
+              id="reset-new-password"
+              autoComplete="new-password"
+              value={newPassword}
+              labels={{
+                hide: t("actions.hidePassword"),
+                show: t("actions.showPassword"),
+              }}
+              onChange={(event) => setNewPassword(event.target.value)}
+              onKeyDown={(event) => {
+                if (event.key === "Enter") {
+                  event.preventDefault();
+                  void resetPassword();
+                }
+              }}
+            />
+            <span className="text-xs leading-5 text-muted-foreground">
+              {t("fields.newPasswordHint")}
+            </span>
+          </AuthField>
+          <AuthField label={t("fields.confirmPassword")} htmlFor="reset-confirm-password">
+            <AuthPasswordInput
+              id="reset-confirm-password"
+              autoComplete="new-password"
+              value={confirmPassword}
+              labels={{
+                hide: t("actions.hidePassword"),
+                show: t("actions.showPassword"),
+              }}
+              onChange={(event) => setConfirmPassword(event.target.value)}
+              onKeyDown={(event) => {
+                if (event.key === "Enter") {
+                  event.preventDefault();
+                  void resetPassword();
+                }
+              }}
+            />
+          </AuthField>
+          <AuthButton
+            type="button"
+            variant="hero"
+            icon={<LockKeyhole className="size-4" aria-hidden="true" />}
+            loading={pendingAction === "reset"}
+            disabled={busy}
+            onClick={() => void resetPassword()}
+          >
+            {t("actions.updatePassword")}
+          </AuthButton>
+        </div>
+      ) : (
+        <div className="grid gap-3.5">
+          <AuthField label={t("fields.email")} htmlFor="reset-email">
+            <AuthInput
+              id="reset-email"
               icon={Mail}
-              loading={pendingAction === "request"}
-              disabled={busy}
-              onClick={() => void requestResetLink()}
-            >
-              {t("actions.sendSetupLink")}
-            </Button>
-          </div>
-        )}
-      </CardContent>
-      <CardFooter className="justify-start">
-        <p className="flex items-start gap-2 text-sm leading-6 text-muted-foreground">
-          <ShieldCheck className="mt-0.5 size-4 shrink-0 text-accent" aria-hidden="true" />
-          <span>
-            {t("footer.activationSeparate")}{" "}
-            <Link
-              href="/login"
-              className="font-semibold text-accent underline-offset-4 hover:underline"
-            >
-              {t("actions.returnToSignIn")}
-            </Link>
-            .
-          </span>
-        </p>
-      </CardFooter>
-    </Card>
+              type="email"
+              autoComplete="email"
+              placeholder={t("fields.emailPlaceholder")}
+              value={email}
+              onChange={(event) => setEmail(event.target.value)}
+              onKeyDown={(event) => {
+                if (event.key === "Enter") {
+                  event.preventDefault();
+                  void requestResetLink();
+                }
+              }}
+            />
+          </AuthField>
+          <AuthButton
+            type="button"
+            variant="hero"
+            icon={<Mail className="size-4" aria-hidden="true" />}
+            loading={pendingAction === "request"}
+            disabled={busy}
+            onClick={() => void requestResetLink()}
+          >
+            {t("actions.sendSetupLink")}
+          </AuthButton>
+        </div>
+      )}
+
+      <p className="mt-[22px] flex items-start gap-2 border-t border-border pt-[18px] text-[12.5px] leading-6 text-muted-foreground">
+        <ShieldCheck
+          className="mt-0.5 size-[15px] shrink-0 text-muted-foreground"
+          aria-hidden="true"
+        />
+        <span>
+          {t("footer.activationSeparate")}{" "}
+          <Link
+            href="/login"
+            className="font-semibold text-accent underline-offset-4 hover:underline"
+          >
+            {t("actions.returnToSignIn")}
+          </Link>
+          .
+        </span>
+      </p>
+    </div>
   );
 }
 
 function NoticeMessage({ notice }: { notice: Notice }) {
   return (
-    <p
-      role={notice.tone === "error" ? "alert" : "status"}
-      className={cn(
-        "rounded-[var(--radius-md)] border px-3 py-2 text-sm",
-        notice.tone === "success" && "border-success/40 bg-success/10 text-success",
-        notice.tone === "error" && "border-destructive/40 bg-destructive/10 text-destructive",
-        notice.tone === "info" && "border-accent/40 bg-accent/10 text-accent",
-      )}
-    >
+    <AuthNotice tone={notice.tone} className="mb-4">
       {notice.message}
-    </p>
+    </AuthNotice>
   );
 }
 
