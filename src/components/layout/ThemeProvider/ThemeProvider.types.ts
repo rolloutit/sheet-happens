@@ -1,3 +1,16 @@
-import type { ThemeProviderProps as NextThemeProviderProps } from "next-themes";
+import type { ReactNode } from "react";
 
-export type ThemeProviderProps = NextThemeProviderProps;
+export type ThemeName = "dark" | "light";
+
+export type ThemeProviderProps = {
+  attribute?: "class";
+  children: ReactNode;
+  defaultTheme?: ThemeName;
+  enableSystem?: boolean;
+  storageKey?: string;
+};
+
+export type ThemeContextValue = {
+  setTheme: (theme: ThemeName) => void;
+  theme: ThemeName;
+};

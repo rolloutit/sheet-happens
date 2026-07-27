@@ -13,11 +13,13 @@ import {
   SquareStack,
   UserPlus,
   WalletCards,
+  X,
 } from "lucide-react";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
-import { useRouter } from "next/navigation";
-import { Children, useState, useTransition, type ReactNode } from "react";
+import type { Route } from "next";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { Children, type FormEvent, useState, useTransition, type ReactNode } from "react";
 
 import { Badge } from "@/src/components/ui/Badge";
 import type { BadgeProps } from "@/src/components/ui/Badge";
@@ -49,6 +51,7 @@ import {
 import { Field } from "@/src/components/ui/Field";
 import { IconButton } from "@/src/components/ui/IconButton";
 import { Input } from "@/src/components/ui/Input";
+import { Pager } from "@/src/components/ui/Pager";
 import { SegmentedControl } from "@/src/components/ui/SegmentedControl";
 import { DataTable } from "@/src/components/ui/Table";
 import { Textarea } from "@/src/components/ui/Textarea";
@@ -61,10 +64,12 @@ import { cn } from "@/src/lib/utils";
 import type {
   AdminProjectAssignmentRow,
   AdminProjectGroupRow,
+  AdminProjectOptionRow,
   AdminProjectRow,
   ProjectAssignableMemberRow,
   ProjectAssignmentMemberProfile,
   ProjectAssignmentMemberStatus,
+  ProjectListResult,
   ProjectLifecycleStatus,
 } from "@/src/server/projects";
 import type { AdminAssignmentRateRow } from "@/src/server/rates";
@@ -92,7 +97,8 @@ import { nativeCheckboxClassName, nativeSelectClassName } from "./formStyles";
 import { ProjectColorField, ProjectColorSwatch } from "./ProjectColorField";
 
 export type AdminProjectsTableProps = {
-  rows: AdminProjectRow[];
+  result: ProjectListResult;
+  projectOptions: AdminProjectOptionRow[];
   groups: AdminProjectGroupRow[];
   assignments: AdminProjectAssignmentRow[];
   assignmentRates: AdminAssignmentRateRow[];
@@ -102,8 +108,15 @@ export type AdminProjectsTableProps = {
 
 type ProjectTableRow = AdminProjectRow & Record<string, unknown>;
 type PendingAction = "edit" | "status" | "archive";
-type ProjectStatusFilter = "all" | "ACTIVE" | "INACTIVE" | "internal";
 type AdminProjectsTranslator = ReturnType<typeof useTranslations>;
+type ProjectFilterFormState = {
+  assignment: ProjectListResult["filters"]["assignment"];
+  group: string;
+  query: string;
+  status: ProjectListResult["filters"]["status"];
+  timeline: ProjectListResult["filters"]["timeline"];
+  type: ProjectListResult["filters"]["type"];
+};
 
 const statusTone: Record<ProjectLifecycleStatus, BadgeProps["tone"]> = {
   ACTIVE: "success",
@@ -124,7 +137,8 @@ const assignmentProfileTone: Record<ProjectAssignmentMemberProfile, BadgeProps["
 };
 
 export function AdminProjectsTable({
-  rows,
+  result,
+  projectOptions,
   groups,
   assignments,
   assignmentRates,
@@ -133,9 +147,9 @@ export function AdminProjectsTable({
 }: AdminProjectsTableProps) {
   const t = useTranslations("AdminProjects");
   const router = useRouter();
-  const [query, setQuery] = useState("");
-  const [statusFilter, setStatusFilter] = useState<ProjectStatusFilter>("all");
-  const [groupFilter, setGroupFilter] = useState("all");
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const rows = result.rows;
   const [message, setMessage] = useState<ProjectActionState | null>(null);
   const [pendingKey, setPendingKey] = useState<string | null>(null);
   const [editingProject, setEditingProject] = useState<AdminProjectRow | null>(null);
@@ -150,36 +164,7 @@ export function AdminProjectsTable({
   const [assignmentPendingKey, setAssignmentPendingKey] = useState<string | null>(null);
   const [bulkPending, setBulkPending] = useState(false);
   const [, startTransition] = useTransition();
-  const filteredRows = rows.filter((row) => {
-    const normalizedQuery = query.trim().toLowerCase();
-
-    if (
-      normalizedQuery &&
-      !row.name.toLowerCase().includes(normalizedQuery) &&
-      !row.slug.toLowerCase().includes(normalizedQuery) &&
-      !(row.notes ?? "").toLowerCase().includes(normalizedQuery) &&
-      !row.groups.some((group) => group.name.toLowerCase().includes(normalizedQuery))
-    ) {
-      return false;
-    }
-
-    if (statusFilter === "internal" && !row.isInternal) return false;
-    if (statusFilter !== "all" && statusFilter !== "internal" && row.status !== statusFilter) {
-      return false;
-    }
-
-    if (groupFilter === "ungrouped" && row.groups.length > 0) return false;
-    if (
-      groupFilter !== "all" &&
-      groupFilter !== "ungrouped" &&
-      !row.groups.some((group) => group.id === groupFilter)
-    ) {
-      return false;
-    }
-
-    return true;
-  });
-  const tableRows = filteredRows as ProjectTableRow[];
+  const tableRows = rows as ProjectTableRow[];
 
   function runAction(
     row: AdminProjectRow,
@@ -208,6 +193,35 @@ export function AdminProjectsTable({
 
   function isPending(row: AdminProjectRow, action: PendingAction) {
     return pendingKey === `${row.id}:${action}`;
+  }
+
+  function updatePage(page: number) {
+    const params = new URLSearchParams(searchParams.toString());
+
+    if (page <= 1) params.delete("page");
+    else params.set("page", String(page));
+
+    router.push(buildUrl(pathname, params) as Route);
+  }
+
+  function applyFilters(filters: ProjectFilterFormState) {
+    const params = new URLSearchParams(searchParams.toString());
+
+    setParam(params, "q", filters.query);
+    setParam(params, "status", filters.status);
+    setParam(params, "type", filters.type);
+    setParam(params, "timeline", filters.timeline);
+    setParam(params, "group", filters.group);
+    setParam(params, "assignment", filters.assignment);
+    params.delete("page");
+    setMessage(null);
+
+    router.push(buildUrl(pathname, params) as Route);
+  }
+
+  function clearFilters() {
+    setMessage(null);
+    router.push(pathname as Route);
   }
 
   function runAssignmentAction(
@@ -275,53 +289,13 @@ export function AdminProjectsTable({
         </Button>
       </div>
 
-      <div className="grid gap-3 rounded-[var(--radius-lg)] border border-border bg-background/45 p-3 lg:grid-cols-[minmax(16rem,1fr)_auto_auto]">
-        <label className="flex h-10 items-center gap-2 rounded-[var(--radius-md)] border border-border bg-card px-3 shadow-soft">
-          <Search className="size-4 text-muted-foreground" aria-hidden="true" />
-          <span className="sr-only">{t("filters.search")}</span>
-          <input
-            value={query}
-            onChange={(event) => setQuery(event.target.value)}
-            placeholder={t("filters.searchPlaceholder")}
-            className="min-w-0 flex-1 bg-transparent text-sm text-foreground outline-none placeholder:text-muted-foreground"
-          />
-        </label>
-
-        <label className="grid h-10 grid-cols-[auto_1fr] items-center gap-2 rounded-[var(--radius-md)] border border-border bg-card px-3 shadow-soft">
-          <span className="font-ui text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
-            {t("filters.state")}
-          </span>
-          <select
-            value={statusFilter}
-            onChange={(event) => setStatusFilter(event.target.value as ProjectStatusFilter)}
-            className="min-w-28 bg-transparent text-sm font-semibold text-foreground outline-none"
-          >
-            <option value="all">{t("filters.all")}</option>
-            <option value="ACTIVE">{t("states.active")}</option>
-            <option value="INACTIVE">{t("states.inactive")}</option>
-            <option value="internal">{t("states.internal")}</option>
-          </select>
-        </label>
-
-        <label className="grid h-10 grid-cols-[auto_1fr] items-center gap-2 rounded-[var(--radius-md)] border border-border bg-card px-3 shadow-soft">
-          <span className="font-ui text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
-            {t("filters.group")}
-          </span>
-          <select
-            value={groupFilter}
-            onChange={(event) => setGroupFilter(event.target.value)}
-            className="min-w-36 bg-transparent text-sm font-semibold text-foreground outline-none"
-          >
-            <option value="all">{t("filters.all")}</option>
-            <option value="ungrouped">{t("states.ungrouped")}</option>
-            {groups.map((group) => (
-              <option key={group.id} value={group.id}>
-                {group.name}
-              </option>
-            ))}
-          </select>
-        </label>
-      </div>
+      <ProjectDirectoryFilters
+        key={getProjectFilterKey(result.filters)}
+        result={result}
+        groups={groups}
+        onApply={applyFilters}
+        onClear={clearFilters}
+      />
 
       <DataTable
         caption={t("table.caption")}
@@ -431,6 +405,25 @@ export function AdminProjectsTable({
         }}
       />
 
+      <Pager
+        page={result.filters.page}
+        totalPages={result.totalPages}
+        totalItems={result.totalItems}
+        showPageNumbers
+        onPageChange={updatePage}
+        labels={{
+          navigation: t("pager.navigation"),
+          previous: t("pager.previous"),
+          next: t("pager.next"),
+          previousPage: (page) => t("pager.previousPage", { page }),
+          nextPage: (page) => t("pager.nextPage", { page }),
+          page: (page) => t("pager.page", { page }),
+          currentPage: (page) => t("pager.currentPage", { page }),
+          summary: (page, totalPages, totalItems) =>
+            t("pager.summary", { page, totalPages, totalItems: totalItems ?? 0 }),
+        }}
+      />
+
       <ProjectDetailDrawer
         project={detailProject}
         assignments={assignments.filter((assignment) => assignment.projectId === detailProject?.id)}
@@ -479,7 +472,7 @@ export function AdminProjectsTable({
 
       <BulkAssignmentDialog
         open={bulkDialogOpen}
-        projects={rows}
+        projects={projectOptions}
         members={assignableMembers}
         assignments={assignments}
         todayDate={todayDate}
@@ -529,6 +522,213 @@ export function AdminProjectsTable({
       />
     </div>
   );
+}
+
+function ProjectDirectoryFilters({
+  result,
+  groups,
+  onApply,
+  onClear,
+}: {
+  result: ProjectListResult;
+  groups: AdminProjectGroupRow[];
+  onApply: (filters: ProjectFilterFormState) => void;
+  onClear: () => void;
+}) {
+  const t = useTranslations("AdminProjects");
+  const [filterForm, setFilterForm] = useState<ProjectFilterFormState>(() => ({
+    query: result.filters.query,
+    status: result.filters.status,
+    type: result.filters.type,
+    timeline: result.filters.timeline,
+    group: result.filters.group,
+    assignment: result.filters.assignment,
+  }));
+
+  function submitFilters(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    onApply(filterForm);
+  }
+
+  function clearFilters() {
+    setFilterForm({
+      query: "",
+      status: "",
+      type: "",
+      timeline: "",
+      group: "",
+      assignment: "",
+    });
+    onClear();
+  }
+
+  return (
+    <form
+      className="grid gap-3 rounded-[var(--radius-lg)] border border-border bg-background/45 p-4"
+      onSubmit={submitFilters}
+    >
+      <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-[minmax(16rem,1.4fr)_repeat(5,minmax(8.5rem,1fr))]">
+        <Field label={t("filters.search")} htmlFor="project-search">
+          <Input
+            id="project-search"
+            name="q"
+            type="search"
+            value={filterForm.query}
+            placeholder={t("filters.searchPlaceholder")}
+            onChange={(event) => {
+              const query = event.currentTarget.value;
+              setFilterForm((current) => ({
+                ...current,
+                query,
+              }));
+            }}
+          />
+        </Field>
+        <Field label={t("filters.state")} htmlFor="project-status">
+          <select
+            id="project-status"
+            name="status"
+            value={filterForm.status}
+            className={nativeSelectClassName}
+            onChange={(event) => {
+              const status = event.currentTarget.value as ProjectFilterFormState["status"];
+              setFilterForm((current) => ({
+                ...current,
+                status,
+              }));
+            }}
+          >
+            <option value="">{t("filters.all")}</option>
+            <option value="ACTIVE">{t("states.active")}</option>
+            <option value="INACTIVE">{t("states.inactive")}</option>
+          </select>
+        </Field>
+        <Field label={t("filters.type")} htmlFor="project-type">
+          <select
+            id="project-type"
+            name="type"
+            value={filterForm.type}
+            className={nativeSelectClassName}
+            onChange={(event) => {
+              const type = event.currentTarget.value as ProjectFilterFormState["type"];
+              setFilterForm((current) => ({
+                ...current,
+                type,
+              }));
+            }}
+          >
+            <option value="">{t("filters.all")}</option>
+            <option value="external">{t("states.external")}</option>
+            <option value="internal">{t("states.internal")}</option>
+          </select>
+        </Field>
+        <Field label={t("filters.timeline")} htmlFor="project-timeline">
+          <select
+            id="project-timeline"
+            name="timeline"
+            value={filterForm.timeline}
+            className={nativeSelectClassName}
+            onChange={(event) => {
+              const timeline = event.currentTarget.value as ProjectFilterFormState["timeline"];
+              setFilterForm((current) => ({
+                ...current,
+                timeline,
+              }));
+            }}
+          >
+            <option value="">{t("filters.all")}</option>
+            <option value="current">{t("filters.current")}</option>
+            <option value="future">{t("filters.future")}</option>
+            <option value="ended">{t("filters.ended")}</option>
+          </select>
+        </Field>
+        <Field label={t("filters.group")} htmlFor="project-group">
+          <select
+            id="project-group"
+            name="group"
+            value={filterForm.group}
+            className={nativeSelectClassName}
+            onChange={(event) => {
+              const group = event.currentTarget.value;
+              setFilterForm((current) => ({
+                ...current,
+                group,
+              }));
+            }}
+          >
+            <option value="">{t("filters.all")}</option>
+            <option value="ungrouped">{t("states.ungrouped")}</option>
+            {groups.map((group) => (
+              <option key={group.id} value={group.id}>
+                {group.name}
+              </option>
+            ))}
+          </select>
+        </Field>
+        <Field label={t("filters.assignment")} htmlFor="project-assignment">
+          <select
+            id="project-assignment"
+            name="assignment"
+            value={filterForm.assignment}
+            className={nativeSelectClassName}
+            onChange={(event) => {
+              const assignment = event.currentTarget.value as ProjectFilterFormState["assignment"];
+              setFilterForm((current) => ({
+                ...current,
+                assignment,
+              }));
+            }}
+          >
+            <option value="">{t("filters.all")}</option>
+            <option value="assigned">{t("filters.assigned")}</option>
+            <option value="unassigned">{t("filters.unassigned")}</option>
+          </select>
+        </Field>
+      </div>
+      <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
+        <p className="text-sm font-medium text-muted-foreground" aria-live="polite">
+          {t("filters.showing", {
+            start: result.pageStart,
+            end: result.pageEnd,
+            total: result.totalItems,
+          })}
+        </p>
+        <div className="flex flex-wrap gap-2 sm:justify-end">
+          <Button type="submit" icon={Search}>
+            {t("filters.apply")}
+          </Button>
+          <Button type="button" variant="ghost" icon={X} onClick={clearFilters}>
+            {t("filters.clear")}
+          </Button>
+        </div>
+      </div>
+    </form>
+  );
+}
+
+function getProjectFilterKey(filters: ProjectListResult["filters"]) {
+  return [
+    filters.query,
+    filters.status,
+    filters.type,
+    filters.timeline,
+    filters.group,
+    filters.assignment,
+    filters.page,
+    filters.pageSize,
+  ].join(":");
+}
+
+function setParam(params: URLSearchParams, key: string, value: string | null | undefined) {
+  const normalized = typeof value === "string" ? value.trim() : "";
+
+  if (normalized) params.set(key, normalized);
+  else params.delete(key);
+}
+
+function buildUrl(pathname: string, params: URLSearchParams) {
+  const query = params.toString();
+  return query ? `${pathname}?${query}` : pathname;
 }
 
 function ProjectActionsMenu({
@@ -601,7 +801,7 @@ function BulkAssignmentDialog({
   onSubmit,
 }: {
   open: boolean;
-  projects: AdminProjectRow[];
+  projects: AdminProjectOptionRow[];
   members: ProjectAssignableMemberRow[];
   assignments: AdminProjectAssignmentRow[];
   todayDate: string;
@@ -1749,7 +1949,7 @@ function filterMembers(members: ProjectAssignableMemberRow[], query: string) {
   );
 }
 
-function filterProjects(projects: AdminProjectRow[], query: string) {
+function filterProjects(projects: AdminProjectOptionRow[], query: string) {
   const normalizedQuery = query.trim().toLowerCase();
 
   if (!normalizedQuery) return projects;
@@ -1758,9 +1958,8 @@ function filterProjects(projects: AdminProjectRow[], query: string) {
     [
       project.name,
       project.slug,
-      project.notes ?? "",
+      formatStatus(project.status),
       project.isInternal ? "internal" : "",
-      ...project.groups.map((group) => group.name),
     ].some((value) => value.toLowerCase().includes(normalizedQuery)),
   );
 }
@@ -1876,7 +2075,10 @@ function getAssignmentProfileLabel(
   return profile === "CONTRACTOR" ? t("profiles.contractor") : t("profiles.employee");
 }
 
-function formatProjectTimeline(project: AdminProjectRow, t: AdminProjectsTranslator) {
+function formatProjectTimeline(
+  project: Pick<AdminProjectRow, "startsOn" | "endsOn">,
+  t: AdminProjectsTranslator,
+) {
   if (project.startsOn && project.endsOn) {
     return t("timeline.range", { from: project.startsOn, to: project.endsOn });
   }

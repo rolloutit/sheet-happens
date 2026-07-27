@@ -7,20 +7,15 @@ import Link from "next/link";
 import { useActionState, useMemo, useState } from "react";
 import { useFormStatus } from "react-dom";
 
-import { Button } from "@/src/components/ui/Button";
 import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "@/src/components/ui/Card";
+  AuthButton,
+  AuthField,
+  AuthInput,
+  AuthNotice,
+  AuthScreenHead,
+} from "@/src/components/layout/AuthForm";
 import { ErrorState } from "@/src/components/ui/ErrorState";
-import { Field } from "@/src/components/ui/Field";
-import { Input } from "@/src/components/ui/Input";
 import { authClient } from "@/src/lib/auth-client";
-import { cn } from "@/src/lib/utils";
 import { activateInvitationAction } from "./actions";
 import type { ActivateInvitationActionState } from "./actions.types";
 
@@ -97,7 +92,6 @@ export function AcceptInvitationPanel({
         icon={CheckCircle2}
         title={t("result.activatedTitle")}
         message={t("result.activatedMessage")}
-        tone="success"
       />
     );
   }
@@ -109,7 +103,6 @@ export function AcceptInvitationPanel({
           icon={CheckCircle2}
           title={t("result.acceptedTitle")}
           message={t("result.acceptedMessage")}
-          tone="success"
         />
       );
     }
@@ -129,57 +122,50 @@ export function AcceptInvitationPanel({
   }
 
   return (
-    <Card density="lg" className="w-full max-w-xl">
-      <CardHeader className="block">
-        <CardTitle>{t("title")}</CardTitle>
-        <CardDescription>
-          {name ? t("descriptionNamed", { name, email }) : t("description", { email })}
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
-        {sessionUser ? (
-          <form action={activationAction} className="grid gap-4">
-            <input type="hidden" name="token" value={token} />
-            <div className="rounded-[var(--radius-md)] border border-border bg-secondary/60 px-3 py-2 text-sm text-muted-foreground">
-              {t.rich("signedInAs", {
-                email: sessionUser.email,
-                strong: (chunks) => <span className="font-medium text-foreground">{chunks}</span>,
-              })}
-            </div>
-            {!signedInWithInvitedEmail ? (
-              <p className="rounded-[var(--radius-md)] border border-warning/40 bg-warning/10 px-3 py-2 text-sm text-warning">
-                {t("wrongEmail", { email })}
-              </p>
-            ) : null}
-            {activationState.message ? <StatusMessage state={activationState} /> : null}
-            <div className="flex justify-end">
-              <ActivateButton disabled={!signedInWithInvitedEmail} />
-            </div>
-          </form>
-        ) : (
-          <div className="grid gap-4">
-            <Field label={t("fields.invitedEmail")} hint={t("fields.invitedEmailHint")}>
-              {({ id, describedBy }) => (
-                <Input id={id} value={email} aria-describedby={describedBy} readOnly />
-              )}
-            </Field>
-            {magicLinkState.message ? <StatusMessage state={magicLinkState} /> : null}
+    <div>
+      <AuthScreenHead
+        eyebrow={t("eyebrow")}
+        title={t("title")}
+        description={name ? t("descriptionNamed", { name, email }) : t("description", { email })}
+      />
+      <InviteIdentity name={name} email={email} />
+
+      {sessionUser ? (
+        <form action={activationAction} className="mt-5 grid gap-4">
+          <input type="hidden" name="token" value={token} />
+          <div className="rounded-[var(--radius-md)] border border-border bg-secondary/60 px-3 py-2 text-sm text-muted-foreground">
+            {t.rich("signedInAs", {
+              email: sessionUser.email,
+              strong: (chunks) => <span className="font-medium text-foreground">{chunks}</span>,
+            })}
           </div>
-        )}
-      </CardContent>
-      {!sessionUser ? (
-        <CardFooter>
-          <Button
+          {!signedInWithInvitedEmail ? (
+            <AuthNotice tone="warning">{t("wrongEmail", { email })}</AuthNotice>
+          ) : null}
+          {activationState.message ? <StatusMessage state={activationState} /> : null}
+          <ActivateButton disabled={!signedInWithInvitedEmail} />
+        </form>
+      ) : (
+        <div className="mt-5 grid gap-4">
+          <AuthField label={t("fields.invitedEmail")} htmlFor="accept-invite-email">
+            <AuthInput id="accept-invite-email" icon={Mail} value={email} readOnly />
+            <span className="text-xs leading-5 text-muted-foreground">
+              {t("fields.invitedEmailHint")}
+            </span>
+          </AuthField>
+          {magicLinkState.message ? <StatusMessage state={magicLinkState} /> : null}
+          <AuthButton
             type="button"
-            icon={Mail}
+            variant="hero"
+            icon={<Mail className="size-4" aria-hidden="true" />}
             loading={sendingMagicLink}
             onClick={handleSendMagicLink}
           >
             {t("actions.emailLink")}
-          </Button>
-        </CardFooter>
-      ) : null}
-    </Card>
+          </AuthButton>
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -187,30 +173,27 @@ function InvitationResult({
   icon: Icon,
   title,
   message,
-  tone,
 }: {
   icon: typeof CheckCircle2;
   title: string;
   message: string;
-  tone: "success";
 }) {
   const t = useTranslations("AcceptInvite");
 
   return (
-    <Card density="lg" className="w-full max-w-xl">
-      <CardHeader className="block">
-        <span className="mb-4 inline-flex size-12 items-center justify-center rounded-full bg-success/16 text-success">
-          <Icon className="size-6" aria-hidden="true" />
-        </span>
-        <CardTitle>{title}</CardTitle>
-        <CardDescription>{message}</CardDescription>
-      </CardHeader>
-      <CardFooter>
-        <Button asChild variant={tone === "success" ? "primary" : "soft"}>
-          <Link href={"/dashboard" as Route}>{t("actions.continue")}</Link>
-        </Button>
-      </CardFooter>
-    </Card>
+    <div className="text-center">
+      <span className="mb-5 inline-flex size-[74px] items-center justify-center rounded-full bg-success/15 text-success">
+        <Icon className="size-6" aria-hidden="true" />
+      </span>
+      <h2 className="font-ui text-[30px] font-semibold leading-tight text-foreground">{title}</h2>
+      <p className="mx-auto mt-3 max-w-xs text-[15px] leading-6 text-muted-foreground">{message}</p>
+      <Link
+        href={"/dashboard" as Route}
+        className="mt-6 inline-flex w-full items-center justify-center rounded-[var(--radius-md)] bg-[linear-gradient(135deg,var(--primary),var(--accent))] px-[18px] py-[13px] text-[14.5px] font-semibold text-accent-foreground shadow-[0_10px_26px_-10px_var(--ring)] transition hover:shadow-[0_14px_32px_-10px_var(--ring)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+      >
+        {t("actions.continue")}
+      </Link>
+    </div>
   );
 }
 
@@ -219,24 +202,47 @@ function ActivateButton({ disabled }: { disabled?: boolean }) {
   const { pending } = useFormStatus();
 
   return (
-    <Button type="submit" icon={Send} loading={pending} disabled={disabled}>
+    <AuthButton
+      type="submit"
+      variant="hero"
+      icon={<Send className="size-4" aria-hidden="true" />}
+      loading={pending}
+      disabled={disabled}
+    >
       {t("actions.activate")}
-    </Button>
+    </AuthButton>
   );
 }
 
 function StatusMessage({ state }: { state: ActivateInvitationActionState }) {
   return (
-    <p
-      role={state.status === "error" ? "alert" : "status"}
-      className={cn(
-        "rounded-[var(--radius-md)] border px-3 py-2 text-sm",
-        state.status === "error"
-          ? "border-destructive/40 bg-destructive/10 text-destructive"
-          : "border-success/40 bg-success/10 text-success",
-      )}
-    >
-      {state.message}
-    </p>
+    <AuthNotice tone={state.status === "error" ? "error" : "success"}>{state.message}</AuthNotice>
   );
+}
+
+function InviteIdentity({ email, name }: { email: string; name: string }) {
+  const initials = getInitials(name || email);
+
+  return (
+    <div className="flex items-center gap-3 rounded-[var(--radius-md)] border border-border bg-secondary/70 p-3.5">
+      <span className="grid size-11 shrink-0 place-items-center rounded-full bg-[linear-gradient(150deg,var(--primary),var(--accent))] font-ui text-sm font-semibold text-accent-foreground">
+        {initials}
+      </span>
+      <div className="min-w-0">
+        <p className="truncate font-ui text-[15px] font-semibold text-foreground">
+          {name || email}
+        </p>
+        <p className="truncate text-[12.5px] text-muted-foreground">{email}</p>
+      </div>
+    </div>
+  );
+}
+
+function getInitials(value: string) {
+  return value
+    .split(/[\s@.]+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase())
+    .join("");
 }

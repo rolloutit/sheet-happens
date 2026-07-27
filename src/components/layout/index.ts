@@ -1,5 +1,25 @@
 export { AppShell } from "./AppShell";
 export type { AppShellProps } from "./AppShell";
+export {
+  AuthButton,
+  AuthField,
+  AuthInput,
+  AuthNotice,
+  AuthPasswordInput,
+  AuthScreenHead,
+} from "./AuthForm";
+export type {
+  AuthButtonProps,
+  AuthButtonVariant,
+  AuthFieldProps,
+  AuthInputProps,
+  AuthNoticeProps,
+  AuthNoticeTone,
+  AuthPasswordInputProps,
+  AuthScreenHeadProps,
+} from "./AuthForm";
+export { AuthShell } from "./AuthShell";
+export type { AuthShellMood, AuthShellProps } from "./AuthShell";
 export { CommandPill } from "./CommandPill";
 export type { CommandPillProps } from "./CommandPill";
 export { CommandPalette } from "./CommandPalette";
@@ -19,7 +39,7 @@ export type {
   NotificationTone,
   ShellNotification,
 } from "./NotificationButton";
-export { ThemeProvider } from "./ThemeProvider";
-export type { ThemeProviderProps } from "./ThemeProvider";
+export { ThemeProvider, useTheme } from "./ThemeProvider";
+export type { ThemeContextValue, ThemeName, ThemeProviderProps } from "./ThemeProvider";
 export { UserMenu } from "./UserMenu";
 export type { UserMenuAction, UserMenuActionTone, UserMenuProps, UserMenuUser } from "./UserMenu";

@@ -2,9 +2,12 @@ import { describe, expect, it, vi } from "vitest";
 
 import {
   archiveProject,
+  buildProjectWhere,
   changeProjectStatus,
   createProject,
+  listProjectDirectoryForAdmin,
   listProjectsForAdmin,
+  normalizeProjectFilters,
   ProjectManagementError,
   updateProject,
 } from "./projects";
@@ -39,6 +42,7 @@ function createProjectDb(
   overrides: {
     project?: TestProject | null;
     slugProject?: TestProject | null;
+    counts?: number[];
     projects?: Array<
       TestProject & {
         updatedAt: Date;
@@ -77,6 +81,7 @@ function createProjectDb(
     db: {
       $transaction: vi.fn((callback) => callback(tx)),
       project: {
+        count: vi.fn().mockImplementation(() => Promise.resolve(overrides.counts?.shift() ?? 0)),
         findMany: vi.fn().mockResolvedValue(overrides.projects ?? []),
       },
     },
@@ -373,5 +378,170 @@ describe("project management services", () => {
         updatedAt: "2026-07-12T10:15:00.000Z",
       },
     ]);
+  });
+
+  it("normalizes project directory filters", () => {
+    expect(
+      normalizeProjectFilters({
+        q: "  Anna  ",
+        status: "ACTIVE",
+        type: "external",
+        timeline: "current",
+        group: "ungrouped",
+        assignment: "assigned",
+        page: "3",
+        pageSize: "500",
+      }),
+    ).toEqual({
+      query: "Anna",
+      status: "ACTIVE",
+      type: "external",
+      timeline: "current",
+      group: "ungrouped",
+      assignment: "assigned",
+      page: 3,
+      pageSize: 100,
+    });
+
+    expect(
+      normalizeProjectFilters({
+        status: "ARCHIVED",
+        type: "client",
+        timeline: "old",
+        assignment: "all",
+        page: "-1",
+        pageSize: "0",
+      }),
+    ).toMatchObject({
+      status: "",
+      type: "",
+      timeline: "",
+      assignment: "",
+      page: 1,
+      pageSize: 20,
+    });
+  });
+
+  it("builds relational project search filters", () => {
+    const where = buildProjectWhere(
+      normalizeProjectFilters({
+        q: "Anna",
+        status: "ACTIVE",
+        type: "external",
+        timeline: "current",
+        group: "ungrouped",
+        assignment: "unassigned",
+      }),
+      new Date("2026-07-26T00:00:00.000Z"),
+    );
+
+    expect(where).toEqual({
+      AND: expect.arrayContaining([
+        {
+          deletedAt: null,
+        },
+        {
+          status: "ACTIVE",
+        },
+        {
+          isInternal: false,
+        },
+        {
+          groupProjects: {
+            none: {
+              projectGroup: {
+                deletedAt: null,
+              },
+            },
+          },
+        },
+        {
+          assignments: {
+            none: expect.objectContaining({
+              active: true,
+              member: expect.objectContaining({
+                deletedAt: null,
+              }),
+            }),
+          },
+        },
+        expect.objectContaining({
+          OR: expect.arrayContaining([
+            {
+              name: {
+                contains: "Anna",
+                mode: "insensitive",
+              },
+            },
+            {
+              assignments: {
+                some: {
+                  member: expect.objectContaining({
+                    OR: expect.arrayContaining([
+                      {
+                        email: {
+                          contains: "Anna",
+                          mode: "insensitive",
+                        },
+                      },
+                    ]),
+                  }),
+                },
+              },
+            },
+          ]),
+        }),
+      ]),
+    });
+  });
+
+  it("returns a paginated project directory result with stats", async () => {
+    const { db } = createProjectDb({
+      counts: [42, 60, 25, 5],
+      projects: [
+        {
+          ...baseProject,
+          updatedAt: new Date("2026-07-12T10:15:00.000Z"),
+          groupProjects: [],
+          _count: {
+            assignments: 3,
+          },
+        },
+      ],
+    });
+
+    const result = await listProjectDirectoryForAdmin(
+      {
+        page: "3",
+      },
+      {
+        db,
+        today: new Date("2026-07-26T00:00:00.000Z"),
+      },
+    );
+
+    expect(db.project.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        skip: 40,
+        take: 20,
+      }),
+    );
+    expect(result).toMatchObject({
+      totalItems: 42,
+      totalPages: 3,
+      pageStart: 41,
+      pageEnd: 41,
+      stats: {
+        totalProjects: 60,
+        activeProjects: 25,
+        internalProjects: 5,
+      },
+      rows: [
+        expect.objectContaining({
+          id: "project-1",
+          name: "Existing Project",
+        }),
+      ],
+    });
   });
 });

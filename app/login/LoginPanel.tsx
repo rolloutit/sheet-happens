@@ -1,23 +1,18 @@
 "use client";
 
-import { Building2, KeyRound, LockKeyhole, Mail, ShieldCheck } from "lucide-react";
+import { ArrowRight, Fingerprint, Link2, Mail, ShieldCheck } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useMemo, useState } from "react";
 
-import { Badge } from "@/src/components/ui/Badge";
-import { Button } from "@/src/components/ui/Button";
 import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "@/src/components/ui/Card";
-import { Field } from "@/src/components/ui/Field";
-import { Input } from "@/src/components/ui/Input";
+  AuthButton,
+  AuthField,
+  AuthInput,
+  AuthNotice,
+  AuthPasswordInput,
+  AuthScreenHead,
+} from "@/src/components/layout/AuthForm";
 import { authClient } from "@/src/lib/auth-client";
-import { cn } from "@/src/lib/utils";
 
 export type LoginPanelProps = {
   callbackURL: string;
@@ -218,152 +213,128 @@ export function LoginPanel({
   const busy = pendingAction !== null;
 
   return (
-    <div className="grid w-full max-w-5xl overflow-hidden rounded-[var(--radius-xl)] border border-border bg-background shadow-panel lg:grid-cols-[0.9fr_1.1fr]">
-      <aside className="relative hidden overflow-hidden border-r border-border bg-[#0a1917] p-6 lg:block">
-        <div className="relative z-10 grid h-full min-h-[27rem] content-between gap-8">
-          <div className="flex items-center gap-3">
-            <span className="grid size-10 place-items-center rounded-[var(--radius-md)] bg-accent text-sm font-bold text-accent-foreground shadow-soft">
-              SH
-            </span>
-            <div>
-              <p className="font-ui text-sm font-semibold text-[#eafbfa]">Sheet Happens</p>
-              <p className="font-ui text-[10px] font-medium uppercase tracking-[0.12em] text-[#9fbfbb]">
-                {t("brandSubtitle")}
-              </p>
-            </div>
-          </div>
-          <div className="grid gap-3">
-            {[t("side.timeTracking"), t("side.timesheets"), t("side.invoices")].map((label) => (
-              <div
-                key={label}
-                className="rounded-[var(--radius-lg)] border border-white/10 bg-white/8 p-3 backdrop-blur"
-              >
-                <p className="font-ui text-sm font-semibold text-[#eafbfa]">{label}</p>
-                <p className="mt-1 text-xs text-[#9fbfbb]">{t("side.protected")}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </aside>
+    <div>
+      <AuthScreenHead title={t("title")} description={t("description")} />
+      {status ? <LoginStatusMessage status={status} /> : null}
 
-      <section className="grid place-items-center p-4 sm:p-6">
-        <Card variant="elevated" className="w-full max-w-md p-4 sm:p-5">
-          <CardHeader className="mb-3 block">
-            <Badge tone="info">{t("badge")}</Badge>
-            <CardTitle className="mt-3 text-xl">{t("title")}</CardTitle>
-            <CardDescription className="leading-5">{t("description")}</CardDescription>
-          </CardHeader>
-          <CardContent className="gap-4">
-            {status ? <LoginStatusMessage status={status} /> : null}
+      <AuthButton
+        type="button"
+        variant="hero"
+        loading={pendingAction === "passkey"}
+        disabled={busy}
+        icon={<Fingerprint className="size-[19px]" aria-hidden="true" />}
+        trailing={
+          <span className="rounded-md bg-white/20 px-2 py-1 font-ui text-[9.5px] font-bold uppercase tracking-[0.06em]">
+            {t("recommended")}
+          </span>
+        }
+        onClick={() => void signInWithPasskey()}
+      >
+        <span className="flex flex-col items-start leading-[1.15]">
+          {t("actions.passkey")}
+          <span className="text-[11.5px] font-medium opacity-85">{t("actions.passkeyHint")}</span>
+        </span>
+      </AuthButton>
 
-            <div className="grid gap-2">
-              <Button
-                type="button"
-                variant="cta"
-                icon={KeyRound}
-                loading={pendingAction === "passkey"}
-                disabled={busy}
-                onClick={() => void signInWithPasskey()}
-              >
-                {t("actions.passkey")}
-              </Button>
-              {googleEnabled ? (
-                <Button
-                  type="button"
-                  variant="soft"
-                  icon={Building2}
-                  loading={pendingAction === "google"}
-                  disabled={busy}
-                  onClick={() => void signInWithGoogle()}
-                >
-                  {t("actions.google")}
-                </Button>
-              ) : null}
-            </div>
+      <div className="my-5 flex items-center gap-3.5 font-ui text-xs text-muted-foreground before:h-px before:flex-1 before:bg-border after:h-px after:flex-1 after:bg-border">
+        {t("or")}
+      </div>
 
-            <div className="grid gap-3">
-              <Field label={t("fields.email")}>
-                {({ id }) => (
-                  <Input
-                    id={id}
-                    type="email"
-                    autoComplete="email"
-                    placeholder={t("fields.emailPlaceholder")}
-                    value={email}
-                    onChange={(event) => setEmail(event.target.value)}
-                    onKeyDown={(event) => {
-                      if (event.key === "Enter") {
-                        event.preventDefault();
-                        void signInWithPassword();
-                      }
-                    }}
-                  />
-                )}
-              </Field>
-              <div className="grid gap-2">
-                <div className="flex items-center justify-between gap-3">
-                  <label
-                    className="font-ui text-sm font-semibold text-foreground"
-                    htmlFor="login-password"
-                  >
-                    {t("fields.password")}
-                  </label>
-                  <button
-                    type="button"
-                    className="font-ui text-sm font-semibold text-accent underline-offset-4 hover:underline disabled:pointer-events-none disabled:opacity-50"
-                    disabled={busy}
-                    onClick={() => void requestPasswordReset()}
-                  >
-                    {t("actions.forgotPassword")}
-                  </button>
-                </div>
-                <Input
-                  id="login-password"
-                  type="password"
-                  autoComplete="current-password"
-                  value={password}
-                  onChange={(event) => setPassword(event.target.value)}
-                  onKeyDown={(event) => {
-                    if (event.key === "Enter") {
-                      event.preventDefault();
-                      void signInWithPassword();
-                    }
-                  }}
-                />
-              </div>
-              <Button
-                type="button"
-                icon={LockKeyhole}
-                loading={pendingAction === "password"}
-                disabled={busy}
-                onClick={() => void signInWithPassword()}
-              >
-                {t("actions.passwordSignIn")}
-              </Button>
-            </div>
+      <div className="grid gap-3.5">
+        <AuthField label={t("fields.email")} htmlFor="login-email">
+          <AuthInput
+            id="login-email"
+            icon={Mail}
+            type="email"
+            autoComplete="email"
+            placeholder={t("fields.emailPlaceholder")}
+            value={email}
+            onChange={(event) => setEmail(event.target.value)}
+            onKeyDown={(event) => {
+              if (event.key === "Enter") {
+                event.preventDefault();
+                void signInWithPassword();
+              }
+            }}
+          />
+        </AuthField>
 
-            <div className="grid gap-3 border-t border-border pt-4">
-              <p className="text-sm text-muted-foreground">{t("passwordlessHint")}</p>
-              <Button
-                type="button"
-                variant="soft"
-                icon={Mail}
-                loading={pendingAction === "magic-link"}
-                disabled={busy}
-                onClick={() => void sendMagicLink()}
-              >
-                {t("actions.emailLink")}
-              </Button>
-            </div>
-          </CardContent>
-          <CardFooter className="mt-4 justify-start">
-            <p className="flex items-start gap-2 text-sm leading-6 text-muted-foreground">
-              <ShieldCheck className="mt-0.5 size-4 shrink-0 text-accent" aria-hidden="true" />
-              {t("inviteActivationHint")}
-            </p>
-          </CardFooter>
-        </Card>
-      </section>
+        <AuthField
+          label={t("fields.password")}
+          htmlFor="login-password"
+          right={
+            <button
+              type="button"
+              className="font-ui text-[13px] font-medium text-accent underline-offset-4 hover:underline disabled:pointer-events-none disabled:opacity-50"
+              disabled={busy}
+              onClick={() => void requestPasswordReset()}
+            >
+              {t("actions.forgotPassword")}
+            </button>
+          }
+        >
+          <AuthPasswordInput
+            id="login-password"
+            autoComplete="current-password"
+            placeholder={t("fields.passwordPlaceholder")}
+            value={password}
+            labels={{
+              hide: t("actions.hidePassword"),
+              show: t("actions.showPassword"),
+            }}
+            onChange={(event) => setPassword(event.target.value)}
+            onKeyDown={(event) => {
+              if (event.key === "Enter") {
+                event.preventDefault();
+                void signInWithPassword();
+              }
+            }}
+          />
+        </AuthField>
+
+        <AuthButton
+          type="button"
+          variant="outline"
+          loading={pendingAction === "password"}
+          disabled={busy}
+          onClick={() => void signInWithPassword()}
+        >
+          {t("actions.passwordSignIn")}
+          <ArrowRight className="size-[17px]" aria-hidden="true" />
+        </AuthButton>
+
+        {googleEnabled ? (
+          <AuthButton
+            type="button"
+            variant="outline"
+            loading={pendingAction === "google"}
+            disabled={busy}
+            icon={<GoogleIcon />}
+            onClick={() => void signInWithGoogle()}
+          >
+            {t("actions.google")}
+          </AuthButton>
+        ) : null}
+
+        <AuthButton
+          type="button"
+          variant="ghost"
+          loading={pendingAction === "magic-link"}
+          disabled={busy}
+          icon={<Link2 className="size-4" aria-hidden="true" />}
+          onClick={() => void sendMagicLink()}
+        >
+          {t("actions.emailLink")}
+        </AuthButton>
+      </div>
+
+      <div className="mt-[22px] flex items-start gap-2 border-t border-border pt-[18px] text-[12.5px] leading-6 text-muted-foreground">
+        <ShieldCheck
+          className="mt-0.5 size-[15px] shrink-0 text-muted-foreground"
+          aria-hidden="true"
+        />
+        <span>{t("inviteActivationHint")}</span>
+      </div>
     </div>
   );
 }
@@ -374,17 +345,9 @@ function getNormalizedEmail(value: string) {
 
 function LoginStatusMessage({ status }: { status: LoginStatus }) {
   return (
-    <p
-      role={status.tone === "error" ? "alert" : "status"}
-      className={cn(
-        "rounded-[var(--radius-md)] border px-3 py-2 text-sm",
-        status.tone === "success" && "border-success/40 bg-success/10 text-success",
-        status.tone === "error" && "border-destructive/40 bg-destructive/10 text-destructive",
-        status.tone === "info" && "border-accent/40 bg-accent/10 text-accent",
-      )}
-    >
+    <AuthNotice tone={status.tone} className="mb-4">
       {status.message}
-    </p>
+    </AuthNotice>
   );
 }
 
@@ -394,4 +357,27 @@ function getLoginErrorMessage(error: string, t: ReturnType<typeof useTranslation
   }
 
   return t("errors.genericSignIn");
+}
+
+function GoogleIcon() {
+  return (
+    <svg className="size-[18px] shrink-0" viewBox="0 0 48 48" aria-hidden="true">
+      <path
+        fill="#ffc107"
+        d="M43.6 20.5H42V20H24v8h11.3C33.7 32.9 29.3 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.9 1.2 8 3.1l5.7-5.7C34.3 6.1 29.4 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.3-.1-2.3-.4-3.5z"
+      />
+      <path
+        fill="#ff3d00"
+        d="m6.3 14.7 6.6 4.8C14.7 16 19 13 24 13c3.1 0 5.9 1.2 8 3.1l5.7-5.7C34.3 6.1 29.4 4 24 4 16.3 4 9.7 8.3 6.3 14.7z"
+      />
+      <path
+        fill="#4caf50"
+        d="M24 44c5.2 0 10-2 13.6-5.2l-6.3-5.3C29.2 35 26.7 36 24 36c-5.3 0-9.7-3.1-11.3-7.6l-6.5 5C9.5 39.6 16.2 44 24 44z"
+      />
+      <path
+        fill="#1976d2"
+        d="M43.6 20.5H42V20H24v8h11.3c-.8 2.2-2.2 4.1-4 5.5l6.3 5.3C41.4 36.2 44 30.6 44 24c0-1.3-.1-2.3-.4-3.5z"
+      />
+    </svg>
+  );
 }

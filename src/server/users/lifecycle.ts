@@ -11,6 +11,7 @@ import { createInvitationToken, hashInvitationToken } from "@/src/server/users/i
 export type MemberLifecycleRole = "ADMIN" | "MEMBER";
 export type MemberLifecycleStatus = "INVITED" | "ACTIVE" | "INACTIVE" | "DELETED";
 export type SessionRevocationReason = "admin_revoke" | "member_deactivated" | "member_deleted";
+type MemberLifecycleProfile = "CONTRACTOR" | "EMPLOYEE";
 
 export type MemberLifecycleInput = {
   memberId: string;
@@ -38,6 +39,7 @@ type MemberLifecycleTransaction = {
         displayName: true;
         role: true;
         status: true;
+        currentProfile: true;
         locale: true;
         deletedAt: true;
       };
@@ -50,6 +52,7 @@ type MemberLifecycleTransaction = {
       displayName: string;
       role: MemberLifecycleRole;
       status: MemberLifecycleStatus;
+      currentProfile: MemberLifecycleProfile;
       locale: string;
       deletedAt: Date | null;
     } | null>;
@@ -81,6 +84,21 @@ type MemberLifecycleTransaction = {
       where: { id: string };
       data: Record<string, unknown>;
       select?: { id: true };
+    }): Promise<{ id: string }>;
+    create(args: {
+      data: {
+        email: string;
+        firstName: string;
+        lastName: string;
+        role: MemberLifecycleRole;
+        profile: MemberLifecycleProfile;
+        status: "PENDING";
+        memberId: string;
+        tokenHash: string;
+        expiresAt: Date;
+        invitedByMemberId: string;
+      };
+      select: { id: true };
     }): Promise<{ id: string }>;
     updateMany(args: {
       where: {
@@ -166,9 +184,6 @@ export async function resendMemberInvitation(
       where: {
         memberId: member.id,
         status: "PENDING",
-        expiresAt: {
-          gt: now,
-        },
       },
       select: { id: true },
       orderBy: { createdAt: "desc" },
@@ -602,6 +617,103 @@ export async function reactivateMember(
   });
 }
 
+export async function restoreArchivedMember(
+  input: MemberLifecycleInput,
+  deps: MemberLifecycleDeps = {},
+) {
+  const db: MemberLifecycleDb = deps.db ?? (prisma as unknown as MemberLifecycleDb);
+  const sendEmail = deps.sendEmail ?? sendInvitationEmail;
+  const createToken = deps.createToken ?? createInvitationToken;
+  const now = deps.now?.() ?? new Date();
+  const expiresAt = getDefaultInvitationExpiresAt(now);
+  const token = createToken();
+  const tokenHash = hashInvitationToken(token);
+
+  const result = await db.$transaction(async (tx) => {
+    const member = await findMember(tx, input.memberId);
+
+    if (!member.deletedAt && member.status !== "DELETED") {
+      throw new MemberLifecycleError("Only archived members can be restored.");
+    }
+
+    const restoredStatus: MemberLifecycleStatus = member.authUserId ? "ACTIVE" : "INVITED";
+
+    await tx.member.update({
+      where: { id: member.id },
+      data: {
+        status: restoredStatus,
+        inactivatedAt: null,
+        deletedAt: null,
+      },
+      select: { id: true },
+    });
+
+    let invitationId: string | null = null;
+
+    if (!member.authUserId) {
+      const invitation = await tx.invitation.create({
+        data: {
+          email: normalizeInvitationEmail(member.email),
+          firstName: member.firstName,
+          lastName: member.lastName,
+          role: member.role,
+          profile: member.currentProfile,
+          status: "PENDING",
+          memberId: member.id,
+          tokenHash,
+          expiresAt,
+          invitedByMemberId: input.actorMemberId,
+        },
+        select: { id: true },
+      });
+
+      invitationId = invitation.id;
+    }
+
+    await tx.auditLog.create({
+      data: {
+        actorMemberId: input.actorMemberId,
+        action: "member.restored",
+        targetType: "member",
+        targetId: member.id,
+        before: {
+          status: member.status,
+          deletedAt: member.deletedAt,
+        },
+        after: {
+          status: restoredStatus,
+          deletedAt: null,
+          invitationId,
+        },
+      },
+    });
+
+    return {
+      memberId: member.id,
+      status: restoredStatus,
+      invitationId,
+      email: normalizeInvitationEmail(member.email),
+      name: getDisplayName(member.firstName, member.lastName) || member.displayName,
+      locale: member.locale,
+    };
+  });
+
+  if (result.invitationId) {
+    await sendEmail({
+      email: result.email,
+      name: result.name,
+      acceptUrl: buildInvitationAcceptUrl(undefined, token),
+      locale: result.locale,
+    });
+  }
+
+  return {
+    ...result,
+    invitationSent: Boolean(result.invitationId),
+    expiresAt: result.invitationId ? expiresAt : null,
+  };
+}
+
 export async function changeMemberRole(
   input: ChangeMemberRoleInput,
   deps: MemberLifecycleDeps = {},
@@ -658,6 +770,7 @@ async function findMember(tx: MemberLifecycleTransaction, memberId: string) {
       displayName: true,
       role: true,
       status: true,
+      currentProfile: true,
       locale: true,
       deletedAt: true,
     },

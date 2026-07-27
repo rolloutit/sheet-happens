@@ -69,11 +69,39 @@
       "stop": "Időmérő leállítása"
     }
   },
+  "AuthShell": {
+    "brandSubtitle": "Rollout IT · belső",
+    "panelFooter": "Időkövetés, timesheet és számlaellenőrzés — egy helyen.",
+    "panelTip": "Tipp: passkey-vel két másodperc a belépés.",
+    "language": "Nyelv",
+    "themeDark": "Sötét téma",
+    "themeLight": "Világos téma",
+    "moods": {
+      "back": {
+        "title": "Üdv újra.",
+        "subtitle": "Sheet happens — rögzítsük."
+      },
+      "aboard": {
+        "title": "Üdv a fedélzeten.",
+        "subtitle": "Pár kattintás, és kész a fiókod."
+      },
+      "fresh": {
+        "title": "Új kezdet, új jelszó.",
+        "subtitle": "Egy perc, és visszatérhetsz a munkához."
+      },
+      "secure": {
+        "title": "Még egy lépés — a biztonságért.",
+        "subtitle": "Csak hogy biztosan te vagy az."
+      }
+    }
+  },
   "Login": {
     "brandSubtitle": "Rollout IT · belső",
     "badge": "Üdv újra",
-    "title": "Bejelentkezés a Sheet Happensbe",
-    "description": "Használj egy regisztrált bejelentkezési módot egy már aktivált Sheet Happens fiókhoz.",
+    "title": "Üdv újra",
+    "description": "Jelentkezz be a Sheet Happensbe.",
+    "recommended": "Ajánlott",
+    "or": "vagy",
     "side": {
       "timeTracking": "Időkövetés",
       "timesheets": "Timesheet",
@@ -81,19 +109,23 @@
       "protected": "Védett munkafolyamat-hozzáférés"
     },
     "fields": {
-      "email": "Email",
-      "emailPlaceholder": "nev@ceg.hu",
-      "password": "Jelszó"
+      "email": "E-mail cím",
+      "emailPlaceholder": "te@example.com",
+      "password": "Jelszó",
+      "passwordPlaceholder": "••••••••••••"
     },
     "actions": {
-      "passkey": "Folytatás passkey-jel",
-      "google": "Folytatás céges Google-fiókkal",
-      "forgotPassword": "Elfelejtett jelszó?",
+      "passkey": "Belépés passkey-vel",
+      "passkeyHint": "Jelszó nélkül, az eszközöddel",
+      "google": "Folytatás Google-fiókkal",
+      "forgotPassword": "Elfelejtetted?",
+      "showPassword": "Jelszó mutatása",
+      "hidePassword": "Jelszó elrejtése",
       "passwordSignIn": "Bejelentkezés",
-      "emailLink": "Emailes bejelentkezési link"
+      "emailLink": "Inkább küldj egy belépési linket"
     },
     "passwordlessHint": "Az emailes jelszó nélküli bejelentkezés továbbra is elérhető az aktivált fiókoknál.",
-    "inviteActivationHint": "A meghívott felhasználóknak egyszer aktiválniuk kell a meghívólinket, mielőtt a normál bejelentkezés működik.",
+    "inviteActivationHint": "Csak meghívással. Nincs nyilvános regisztráció — ha hozzáférés kell, szólj az adminodnak.",
     "status": {
       "magicLinkSent": "Ha a(z) {email} egy aktív Sheet Happens taghoz tartozik, a bejelentkezési link úton van.",
       "passwordSetupSent": "Ha a(z) {email} egy aktív Sheet Happens taghoz tartozik, a jelszóbeállító link úton van."
@@ -111,6 +143,7 @@
     }
   },
   "AcceptInvite": {
+    "eyebrow": "Meghívó",
     "title": "Meghívó elfogadása",
     "description": "Meghívást kaptál a Sheet Happensbe ezzel az email címmel: {email}.",
     "descriptionNamed": "{name}, meghívást kaptál a Sheet Happensbe ezzel az email címmel: {email}.",
@@ -176,7 +209,9 @@
     "actions": {
       "updatePassword": "Jelszó frissítése",
       "sendSetupLink": "Jelszóbeállító link küldése",
-      "returnToSignIn": "Vissza a bejelentkezéshez"
+      "returnToSignIn": "Vissza a bejelentkezéshez",
+      "showPassword": "Jelszó mutatása",
+      "hidePassword": "Jelszó elrejtése"
     },
     "footer": {
       "activationSeparate": "A meghívó aktiválása ettől külön lépés."
@@ -225,6 +260,10 @@
       "title": "Admin jogosultság szükséges",
       "message": "A fiókod aktív, de nincs jogosultságod megnyitni ezt az admin területet."
     },
+    "contractorRequired": {
+      "title": "Kontraktori profil szükséges",
+      "message": "A timesheetek csak kontraktori profilok számára érhetők el."
+    },
     "invited": {
       "title": "A fiók nincs aktiválva",
       "message": "Használd egyszer a meghívólinkedet a tagprofil aktiválásához."
@@ -258,6 +297,61 @@
       "settings": "Beállítások megnyitása",
       "people": "Emberek megnyitása",
       "projects": "Projektek megnyitása"
+    }
+  },
+  "Timesheets": {
+    "eyebrow": "Kontraktori folyamat",
+    "title": "Timesheetek",
+    "subtitle": "Havi kontraktori timesheet előnézet a rögzített idő alapján.",
+    "revision": "{number}. revízió",
+    "summary": {
+      "hours": "Óra",
+      "amount": "Összeg",
+      "entries": "Bejegyzés"
+    },
+    "status": {
+      "not_created": "Nincs beküldve",
+      "submitted": "Beküldve",
+      "rejected": "Elutasítva",
+      "approved": "Jóváhagyva",
+      "invoiced": "Számlázva",
+      "invoice_rejected": "Számla elutasítva",
+      "accepted": "Elfogadva",
+      "paid": "Kifizetve",
+      "missing": "Hiányzik"
+    },
+    "warnings": {
+      "mixedCurrency": "A kiválasztott hónap több pénznemet tartalmaz.",
+      "missingRates": "{count} bejegyzéshez nincs óradíj.",
+      "rejected": "Elutasítva: {reason}"
+    },
+    "breakdown": {
+      "title": "Projekt bontás",
+      "caption": "Havi timesheet projekt bontás",
+      "currentSource": "Az aktuális időbejegyzésekből számolva.",
+      "snapshotSource": "A beküldött timesheet snapshotból számolva.",
+      "empty": "Nincs időbejegyzés ebben a hónapban."
+    },
+    "table": {
+      "project": "Projekt",
+      "hours": "Óra",
+      "rate": "Óradíj",
+      "amount": "Összeg",
+      "entries": "Bejegyzés"
+    },
+    "rate": {
+      "missing": "Hiányzó óradíj",
+      "mixed": "Vegyes óradíjak",
+      "none": "-"
+    },
+    "rateSource": {
+      "MEMBER_DEFAULT": "központi",
+      "PROJECT_OVERRIDE": "projekt felülírás"
+    },
+    "amount": {
+      "mixedCurrency": "Vegyes pénznem",
+      "missingRate": "Hiányzó óradíj",
+      "none": "-"
     }
   },
   "DashboardCards": {
@@ -320,6 +414,29 @@
       "title": "Taglista",
       "description": "Kezeld a meghívott, aktív, inaktív és archivált tagokat."
     },
+    "filters": {
+      "search": "Keresés",
+      "searchPlaceholder": "Név vagy email keresése",
+      "state": "Állapot",
+      "role": "Szerepkör",
+      "profile": "Profil",
+      "allStates": "Minden állapot",
+      "allRoles": "Minden szerepkör",
+      "allProfiles": "Minden profil",
+      "showing": "{start}-{end} / {total} tag megjelenítve",
+      "apply": "Szűrés",
+      "clear": "Törlés"
+    },
+    "pager": {
+      "navigation": "Taglista oldalak",
+      "previous": "Előző",
+      "next": "Következő",
+      "previousPage": "Ugrás a(z) {page}. oldalra",
+      "nextPage": "Ugrás a(z) {page}. oldalra",
+      "page": "Ugrás a(z) {page}. oldalra",
+      "currentPage": "Aktuális oldal: {page}. oldal",
+      "summary": "{page}. oldal / {totalPages}, összesen {totalItems} tag"
+    },
     "form": {
       "firstName": "Keresztnév",
       "lastName": "Vezetéknév",
@@ -352,6 +469,7 @@
       "ariaLabel": "Tagkezelési táblázat",
       "rowActions": "Tagműveletek",
       "emptyInvited": "Még nincs meghívott tag.",
+      "emptyFiltered": "Nincs a szűrőknek megfelelő tag.",
       "scheduledProfile": "Ütemezve: {profile}, dátum: {validFrom}",
       "editMember": "{name} szerkesztése",
       "columns": {
@@ -374,6 +492,7 @@
       "resetAuthenticator": "Authenticator visszaállítása",
       "deactivate": "Deaktiválás",
       "reactivate": "Újraaktiválás",
+      "restoreAccount": "Fiók visszaállítása",
       "archive": "Archiválás",
       "cancel": "Mégse",
       "archiveMember": "Tag archiválása",
@@ -426,6 +545,8 @@
       "invitationRevoked": "Meghívó visszavonva.",
       "memberDeactivated": "Tag deaktiválva. Visszavonva: {sessions}.",
       "memberReactivated": "Tag újraaktiválva.",
+      "memberRestored": "Tag visszaállítva.",
+      "memberRestoredWithInvitation": "Tag visszaállítva, a meghívó elküldve ide: {email}.",
       "memberArchived": "Tag archiválva. Visszavonva: {sessions}. Visszavonva: {invitations}.",
       "sessionsRevoked": "Visszavonva: {sessions}.",
       "authenticatorReset": "Authenticator app visszaállítva.",
@@ -435,6 +556,7 @@
     },
     "errors": {
       "fixFields": "Javítsd a kiemelt mezőket, majd próbáld újra.",
+      "invitationConflict": "A meghívó ezekkel az adatokkal nem küldhető el.",
       "invitationFailed": "A meghívót nem sikerült elküldeni. Próbáld újra később.",
       "memberUpdateFailed": "A tag adatait nem sikerült frissíteni. Próbáld újra később.",
       "profileTransitionFailed": "A profilváltást nem sikerült ütemezni. Próbáld újra később.",
@@ -446,6 +568,8 @@
       "lastNameRequired": "A vezetéknév megadása kötelező.",
       "validProfile": "Válassz érvényes profilt.",
       "validRole": "Válassz érvényes szerepkört.",
+      "emailPendingInvitation": "Ehhez az email címhez már van függő meghívó.",
+      "emailAlreadyMember": "Ehhez az email címhez már létezik tag.",
       "supportedCurrency": "Válassz támogatott pénznemet.",
       "supportedTimezone": "Válassz támogatott időzónát.",
       "supportedLanguage": "Válassz támogatott nyelvet.",
@@ -485,6 +609,7 @@
       "inactive": "Inaktív",
       "archived": "Archivált",
       "internal": "Belső",
+      "external": "Külső",
       "ungrouped": "Csoport nélkül",
       "invited": "Meghívva",
       "deleted": "Törölt"
@@ -503,10 +628,31 @@
     },
     "filters": {
       "search": "Projektek keresése",
-      "searchPlaceholder": "Projektek keresése...",
+      "searchPlaceholder": "Projekt, csoport, hozzárendelt személy, email...",
       "state": "Állapot",
+      "type": "Típus",
+      "timeline": "Időszak",
       "group": "Csoport",
-      "all": "Mind"
+      "assignment": "Hozzárendelés",
+      "all": "Mind",
+      "current": "Ma aktív",
+      "future": "Jövőbeli",
+      "ended": "Lezárt",
+      "assigned": "Ma hozzárendelve",
+      "unassigned": "Ma nincs hozzárendelve",
+      "showing": "{start}-{end} / {total} projekt megjelenítve",
+      "apply": "Szűrés",
+      "clear": "Törlés"
+    },
+    "pager": {
+      "navigation": "Projektlista oldalak",
+      "previous": "Előző",
+      "next": "Következő",
+      "previousPage": "Ugrás a(z) {page}. oldalra",
+      "nextPage": "Ugrás a(z) {page}. oldalra",
+      "page": "Ugrás a(z) {page}. oldalra",
+      "currentPage": "Aktuális oldal: {page}. oldal",
+      "summary": "{page}. oldal / {totalPages}, összesen {totalItems} projekt"
     },
     "table": {
       "caption": "Projektkezelési táblázat",
@@ -529,6 +675,7 @@
       "description": "Leírás",
       "descriptionPlaceholder": "Opcionális csoportosítási megjegyzés",
       "empty": "Még nincs létrehozott projektcsoport.",
+      "emptyFiltered": "Nincs a jelenlegi szűrőknek megfelelő projektcsoport.",
       "projectCount": "{count, plural, one {# projekt} other {# projekt}}",
       "noProjects": "Nincs projekt ebben a csoportban.",
       "removeProjectLabel": "{project} eltávolítása innen: {group}",
@@ -539,7 +686,16 @@
       "archiveTitle": "Projektcsoport archiválása?",
       "archiveTitleNamed": "{name} archiválása?",
       "archiveDescription": "Az archivált csoportok eltűnnek a szűrőkből és szervezési segédekből. A projektek változatlanok maradnak.",
-      "archiveWarning": "Ez csak a csoport soft delete művelete."
+      "archiveWarning": "Ez csak a csoport soft delete művelete.",
+      "filters": {
+        "search": "Csoportok keresése",
+        "searchPlaceholder": "Csoport vagy projekt neve...",
+        "state": "Állapot",
+        "projects": "Projektek",
+        "withProjects": "Projektekkel",
+        "empty": "Üres",
+        "showing": "{count} / {total} csoport megjelenítve"
+      }
     },
     "actions": {
       "createProject": "Projekt létrehozása",
@@ -553,6 +709,7 @@
       "menuLabel": "Műveletek",
       "openDetails": "Részletek megnyitása",
       "editProject": "Projekt szerkesztése",
+      "editGroup": "Csoport szerkesztése",
       "activate": "Aktiválás",
       "deactivate": "Deaktiválás",
       "archive": "Archiválás",
@@ -896,6 +1053,18 @@
       "copyPreviousDay": "Bejegyzések másolása a(z) {date} előtti napról.",
       "duplicatePreviousWeek": "Az előző hét bejegyzéseinek másolása erre a hétre."
     },
+    "quickActionConfirm": {
+      "confirm": "Bejegyzések másolása",
+      "skipExisting": "A célcellákban lévő meglévő bejegyzések megmaradnak, és kimaradnak a másolásból.",
+      "copyPreviousDay": {
+        "title": "Tegnapi bejegyzések másolása?",
+        "description": "Bejegyzések másolása innen: {sourceDate}, ide: {targetDate}."
+      },
+      "duplicatePreviousWeek": {
+        "title": "Előző hét duplikálása?",
+        "description": "Bejegyzések másolása innen: {sourceWeekStart} - {sourceWeekEnd}, ide: {targetWeekStart} - {targetWeekEnd}."
+      }
+    },
     "locked": {
       "title": "Zárolt időszak.",
       "description": "A hét néhány napja beküldött timesheethez tartozik, ezért csak olvasható."
@@ -963,13 +1132,16 @@
       "futureDay": "Jövőbeli nap.",
       "futureDate": "Jövőbeli dátum",
       "futureDateAllowed": "Ez jövőbeli dátum. A bejegyzés engedélyezett, de jelölve marad.",
-      "dailyTotalOver24": "A napi összesen több mint 24 óra.",
+      "dailyTotalOver8": "A napi összesen több mint 8 óra.",
       "dailyTotalExact": "Ez {hours} óra egy nap alatt.",
+      "dailyTotalOver24Blocked": "A napi összesen nem lehet több 24 óránál.",
+      "dailyTotalOver24Projected": "A napi összesen nem lehet több 24 óránál, az összesen {hours} óra lenne.",
       "dayHasOverlaps": "A napon átfedő bejegyzések vannak.",
-      "dayOver24": "A kiválasztott napon több mint 24 óra van rögzítve.",
+      "dayOver8": "A kiválasztott napon több mint 8 óra van rögzítve.",
+      "dayOver8Projected": "A kiválasztott napon több mint 8 óra van rögzítve, az összesen {hours} óra.",
       "longContinuousSession": "Hosszú egybefüggő munka",
       "overlapsAnotherEntry": "Átfed egy másik bejegyzéssel",
-      "moreThan24NotBlocked": "Ez több mint 24 óra. Ez figyelmeztetés, nem blokkoló hiba.",
+      "durationOver24Blocked": "Az időtartam nem lehet több 24 óránál.",
       "longSessionNotBlocked": "Ez hosszú egybefüggő munkamenet. Ez figyelmeztetés, nem blokkoló hiba."
     },
     "source": {
@@ -1012,6 +1184,7 @@
       "timeEntryDeleteFailed": "Az időbejegyzést nem sikerült törölni.",
       "timerStartFailed": "Az időmérőt nem sikerült elindítani.",
       "timerStopFailed": "Az időmérőt nem sikerült leállítani.",
+      "timerDiscardedDailyLimit": "Az időmérő mentés nélkül leállt, mert a nap meghaladná a 24 órát.",
       "previousDayCopyFailed": "Az előző napot nem sikerült másolni.",
       "previousWeekDuplicateFailed": "Az előző hetet nem sikerült duplikálni.",
       "draftSaveFailed": "A piszkozatot nem sikerült menteni.",
@@ -1043,6 +1216,7 @@
       "durationPositive": "Az időtartamnak nullánál nagyobbnak kell lennie.",
       "durationTooLong": "Az időtartam túl hosszú.",
       "durationTooLarge": "Az időtartam túl nagy.",
+      "dailyTotalTooLarge": "A napi összesen nem lehet több 24 óránál.",
       "descriptionRequired": "A leírás kötelező.",
       "descriptionMax": "A leírás legfeljebb 1000 karakter lehet.",
       "timeEntryMissing": "Hiányzik az időbejegyzés azonosítója.",

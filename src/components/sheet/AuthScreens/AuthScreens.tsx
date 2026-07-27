@@ -1,18 +1,20 @@
 "use client";
 
-import { CheckCircle2, KeyRound, Mail, ShieldCheck, Sparkles } from "lucide-react";
+import { CheckCircle2, Fingerprint, Link2, Mail, ShieldCheck } from "lucide-react";
 import { useState, type FormEvent } from "react";
 
-import { Badge } from "@/src/components/ui/Badge";
-import { Button } from "@/src/components/ui/Button";
-import { Card } from "@/src/components/ui/Card";
+import {
+  AuthButton,
+  AuthField,
+  AuthInput,
+  AuthPasswordInput,
+  AuthScreenHead,
+  AuthShell,
+} from "@/src/components/layout";
 import { CodeInput } from "@/src/components/ui/CodeInput";
-import { Field } from "@/src/components/ui/Field";
-import { Input } from "@/src/components/ui/Input";
-import { PasswordInput } from "@/src/components/ui/PasswordInput";
 import { SegmentedControl } from "@/src/components/ui/SegmentedControl";
 import { StrengthMeter, evaluatePasswordStrength } from "@/src/components/ui/StrengthMeter";
-import { cn } from "@/src/lib/utils";
+import type { AuthShellMood } from "@/src/components/layout";
 import type {
   AuthPasswordSetupPayload,
   AuthScreenMode,
@@ -24,8 +26,8 @@ import type {
 const headings: Record<AuthScreenMode, { eyebrow: string; title: string; subtitle: string }> = {
   "sign-in": {
     eyebrow: "Welcome back",
-    title: "Sign in to Sheet Happens",
-    subtitle: "Use passkey, Google, or email credentials to continue.",
+    title: "Welcome back",
+    subtitle: "Sign in to Sheet Happens.",
   },
   "two-factor": {
     eyebrow: "Verification",
@@ -59,6 +61,22 @@ const headings: Record<AuthScreenMode, { eyebrow: string; title: string; subtitl
   },
 };
 
+function authMoodForMode(mode: AuthScreenMode): AuthShellMood {
+  if (mode === "invite" || mode === "password-setup" || mode === "passkey") {
+    return "aboard";
+  }
+
+  if (mode === "reset-sent") {
+    return "fresh";
+  }
+
+  if (mode === "two-factor") {
+    return "secure";
+  }
+
+  return "back";
+}
+
 export function AuthScreens({
   mode = "sign-in",
   email = "lena@example.com",
@@ -77,76 +95,42 @@ export function AuthScreens({
   onContinue,
 }: AuthScreensProps) {
   const head = headings[mode];
+  const mood = authMoodForMode(mode);
 
   return (
-    <div
-      className={cn(
-        "grid min-h-[36rem] overflow-hidden rounded-[var(--radius-xl)] border border-border bg-background md:grid-cols-[0.9fr_1.1fr]",
-        className,
-      )}
-    >
-      <aside className="relative hidden overflow-hidden bg-[radial-gradient(circle_at_25%_20%,rgb(55_227_222_/_0.26),transparent_16rem),linear-gradient(145deg,rgb(18_55_50),rgb(8_24_23))] p-8 md:block">
-        <div className="relative z-10 grid h-full content-between">
-          <div className="flex items-center gap-3">
-            <span className="inline-flex size-10 items-center justify-center rounded-full bg-primary text-primary-foreground">
-              <Sparkles className="size-5" aria-hidden="true" />
-            </span>
-            <div>
-              <p className="font-ui text-sm font-semibold">Sheet Happens</p>
-              <p className="text-xs text-muted-foreground">Internal time tracking</p>
-            </div>
-          </div>
-          <div className="grid gap-4">
-            {["Timesheets", "Invoices", "Reports"].map((label) => (
-              <div
-                key={label}
-                className="rounded-[var(--radius-lg)] border border-white/10 bg-white/8 p-4 backdrop-blur"
-              >
-                <p className="font-ui text-sm font-semibold">{label}</p>
-                <p className="mt-1 text-xs text-muted-foreground">Protected workflow access</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </aside>
-      <main className="grid place-items-center p-5 md:p-8">
-        <Card variant="elevated" className="w-full max-w-md">
-          <div className="mb-6 grid gap-2">
-            <Badge tone="info">{head.eyebrow}</Badge>
-            <h2 className="text-2xl font-semibold">{head.title}</h2>
-            <p className="text-sm leading-6 text-muted-foreground">{head.subtitle}</p>
-          </div>
-          {mode === "sign-in" ? (
-            <SignInForm
-              email={email}
-              onSignIn={onSignIn}
-              onMagicLink={onMagicLink}
-              onResetPassword={onResetPassword}
-            />
-          ) : null}
-          {mode === "two-factor" ? (
-            <TwoFactor
-              onVerifyCode={onVerifyCode}
-              onVerificationModeChange={onVerificationModeChange}
-            />
-          ) : null}
-          {mode === "invite" ? (
-            <InviteIdentity
-              onInvitePasswordSetup={onInvitePasswordSetup}
-              onInviteGoogle={onInviteGoogle}
-            />
-          ) : null}
-          {mode === "password-setup" ? <PasswordSetup onPasswordSave={onPasswordSave} /> : null}
-          {mode === "passkey" ? (
-            <PasskeyUpsell onPasskeySetup={onPasskeySetup} onPasskeySkip={onPasskeySkip} />
-          ) : null}
-          {mode === "reset-sent" ? (
-            <ResetSent email={email} onBackToSignIn={onBackToSignIn} />
-          ) : null}
-          {mode === "done" ? <DoneState onContinue={onContinue} /> : null}
-        </Card>
-      </main>
-    </div>
+    <AuthShell mood={mood} className={className}>
+      <AuthScreenHead
+        eyebrow={mode === "sign-in" ? undefined : head.eyebrow}
+        title={head.title}
+        description={head.subtitle}
+      />
+      {mode === "sign-in" ? (
+        <SignInForm
+          email={email}
+          onSignIn={onSignIn}
+          onMagicLink={onMagicLink}
+          onResetPassword={onResetPassword}
+        />
+      ) : null}
+      {mode === "two-factor" ? (
+        <TwoFactor
+          onVerifyCode={onVerifyCode}
+          onVerificationModeChange={onVerificationModeChange}
+        />
+      ) : null}
+      {mode === "invite" ? (
+        <InviteIdentity
+          onInvitePasswordSetup={onInvitePasswordSetup}
+          onInviteGoogle={onInviteGoogle}
+        />
+      ) : null}
+      {mode === "password-setup" ? <PasswordSetup onPasswordSave={onPasswordSave} /> : null}
+      {mode === "passkey" ? (
+        <PasskeyUpsell onPasskeySetup={onPasskeySetup} onPasskeySkip={onPasskeySkip} />
+      ) : null}
+      {mode === "reset-sent" ? <ResetSent email={email} onBackToSignIn={onBackToSignIn} /> : null}
+      {mode === "done" ? <DoneState onContinue={onContinue} /> : null}
+    </AuthShell>
   );
 }
 
@@ -170,44 +154,72 @@ function SignInForm({
   }
 
   return (
-    <form className="grid gap-4" onSubmit={submit}>
-      <Button type="button" variant="cta" icon={KeyRound}>
-        Continue with passkey
-      </Button>
-      <Field label="Email" htmlFor="auth-email">
-        <Input
+    <form className="grid gap-3.5" onSubmit={submit}>
+      <AuthButton
+        type="button"
+        variant="hero"
+        icon={<Fingerprint className="size-[19px]" aria-hidden="true" />}
+        trailing={
+          <span className="rounded-md bg-white/20 px-2 py-1 font-ui text-[9.5px] font-bold uppercase tracking-[0.06em]">
+            Recommended
+          </span>
+        }
+      >
+        <span className="flex flex-col items-start leading-[1.15]">
+          Sign in with passkey
+          <span className="text-[11.5px] font-medium opacity-85">
+            Passwordless, with your device
+          </span>
+        </span>
+      </AuthButton>
+      <div className="my-1 flex items-center gap-3.5 font-ui text-xs text-muted-foreground before:h-px before:flex-1 before:bg-border after:h-px after:flex-1 after:bg-border">
+        or
+      </div>
+      <AuthField label="Email" htmlFor="auth-email">
+        <AuthInput
           id="auth-email"
+          icon={Mail}
           type="email"
           placeholder="you@company.com"
           value={emailValue}
           onChange={(event) => setEmailValue(event.target.value)}
         />
-      </Field>
-      <Field label="Password" htmlFor="auth-password">
-        <PasswordInput
+      </AuthField>
+      <AuthField
+        label="Password"
+        htmlFor="auth-password"
+        right={
+          <button
+            type="button"
+            className="font-ui text-[13px] font-medium text-accent underline-offset-4 hover:underline"
+            onClick={() => onResetPassword?.(emailValue)}
+          >
+            Forgot?
+          </button>
+        }
+      >
+        <AuthPasswordInput
           id="auth-password"
-          placeholder="Password"
+          placeholder="••••••••••••"
           value={password}
+          labels={{
+            hide: "Hide password",
+            show: "Show password",
+          }}
           onChange={(event) => setPassword(event.target.value)}
         />
-      </Field>
-      <Button type="submit">Sign in</Button>
-      <div className="flex justify-between text-sm">
-        <button
-          type="button"
-          className="text-accent hover:underline"
-          onClick={() => onMagicLink?.(emailValue)}
-        >
-          Send magic link
-        </button>
-        <button
-          type="button"
-          className="text-muted-foreground hover:text-foreground"
-          onClick={() => onResetPassword?.(emailValue)}
-        >
-          Reset password
-        </button>
-      </div>
+      </AuthField>
+      <AuthButton type="submit" variant="outline">
+        Sign in
+      </AuthButton>
+      <AuthButton
+        type="button"
+        variant="ghost"
+        icon={<Link2 className="size-4" aria-hidden="true" />}
+        onClick={() => onMagicLink?.(emailValue)}
+      >
+        Email me a sign-in link instead
+      </AuthButton>
     </form>
   );
 }
@@ -244,13 +256,14 @@ function TwoFactor({
         Backup codes are the fallback when the authenticator app is unavailable. Email magic links
         are used for sign-in, not for bypassing 2FA.
       </p>
-      <Button
+      <AuthButton
         type="button"
+        variant="hero"
         disabled={verificationMode === "totp" ? code.length < 6 : code.trim().length === 0}
         onClick={() => onVerifyCode?.(code, verificationMode)}
       >
         Verify code
-      </Button>
+      </AuthButton>
     </div>
   );
 }
@@ -268,12 +281,12 @@ function InviteIdentity({
         <p className="font-ui text-sm font-semibold">Lena Kovacs</p>
         <p className="text-sm text-muted-foreground">Contractor · Apollo Migration</p>
       </div>
-      <Button type="button" variant="cta" onClick={onInvitePasswordSetup}>
+      <AuthButton type="button" variant="hero" onClick={onInvitePasswordSetup}>
         Set up password
-      </Button>
-      <Button type="button" variant="soft" onClick={onInviteGoogle}>
+      </AuthButton>
+      <AuthButton type="button" variant="outline" onClick={onInviteGoogle}>
         Continue with Google
-      </Button>
+      </AuthButton>
     </div>
   );
 }
@@ -294,17 +307,21 @@ function PasswordSetup({
         onPasswordSave?.({ password });
       }}
     >
-      <Field label="Password" htmlFor="new-password">
-        <PasswordInput
+      <AuthField label="Password" htmlFor="new-password">
+        <AuthPasswordInput
           id="new-password"
           value={password}
+          labels={{
+            hide: "Hide password",
+            show: "Show password",
+          }}
           onChange={(event) => setPassword(event.target.value)}
         />
-      </Field>
+      </AuthField>
       <StrengthMeter score={strength.score} requirements={strength.requirements} />
-      <Button type="submit" variant="cta">
+      <AuthButton type="submit" variant="hero">
         Save password
-      </Button>
+      </AuthButton>
     </form>
   );
 }
@@ -329,12 +346,12 @@ function PasskeyUpsell({
           </div>
         ),
       )}
-      <Button type="button" variant="cta" onClick={onPasskeySetup}>
+      <AuthButton type="button" variant="hero" onClick={onPasskeySetup}>
         Set up passkey
-      </Button>
-      <Button type="button" variant="ghost" onClick={onPasskeySkip}>
+      </AuthButton>
+      <AuthButton type="button" variant="ghost" onClick={onPasskeySkip}>
         Skip for now
-      </Button>
+      </AuthButton>
     </div>
   );
 }
@@ -346,9 +363,9 @@ function ResetSent({ email, onBackToSignIn }: { email: string; onBackToSignIn?: 
         <Mail className="size-6" aria-hidden="true" />
       </span>
       <p className="text-sm text-muted-foreground">We sent instructions to {email}.</p>
-      <Button type="button" variant="soft" onClick={onBackToSignIn}>
+      <AuthButton type="button" variant="outline" onClick={onBackToSignIn}>
         Back to sign in
-      </Button>
+      </AuthButton>
     </div>
   );
 }
@@ -359,9 +376,9 @@ function DoneState({ onContinue }: { onContinue?: () => void }) {
       <span className="inline-flex size-16 items-center justify-center rounded-full bg-success/16 text-success">
         <CheckCircle2 className="size-8" aria-hidden="true" />
       </span>
-      <Button type="button" variant="cta" onClick={onContinue}>
+      <AuthButton type="button" variant="hero" onClick={onContinue}>
         Continue to dashboard
-      </Button>
+      </AuthButton>
     </div>
   );
 }

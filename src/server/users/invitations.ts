@@ -18,7 +18,7 @@ export type InviteMemberInput = {
   role?: "ADMIN" | "MEMBER";
   profile: "CONTRACTOR" | "EMPLOYEE";
   timezone: string;
-  locale: string;
+  locale?: string;
   defaultCurrencyCode?: string;
   validFrom?: Date;
   invitedByMemberId: string;
@@ -133,8 +133,17 @@ export type InviteMemberDeps = {
   now?: () => Date;
 };
 
+export type InvitationConflictCode =
+  | "EXISTING_MEMBER"
+  | "INVALID_INVITATION_DETAILS"
+  | "PENDING_INVITATION"
+  | "UNSUPPORTED_PREFERENCES";
+
 export class InvitationConflictError extends Error {
-  constructor(message: string) {
+  constructor(
+    message: string,
+    readonly code: InvitationConflictCode,
+  ) {
     super(message);
     this.name = "InvitationConflictError";
   }
@@ -163,6 +172,9 @@ export function buildInvitationAcceptUrl(appUrl: string | undefined, token: stri
   return url.toString();
 }
 
+const defaultInvitationCurrencyCode = "HUF";
+const defaultInvitationLocale = "hu";
+
 export async function inviteMember(input: InviteMemberInput, deps: InviteMemberDeps = {}) {
   const db: InviteMemberDb = deps.db ?? (prisma as unknown as InviteMemberDb);
   const sendEmail = deps.sendEmail ?? sendInvitationEmail;
@@ -174,16 +186,21 @@ export async function inviteMember(input: InviteMemberInput, deps: InviteMemberD
   const lastName = input.lastName.trim();
   const displayName = getDisplayName(firstName, lastName);
   const role = input.role ?? "MEMBER";
-  const defaultCurrencyCode = normalizeCurrencyCode(input.defaultCurrencyCode ?? "EUR");
+  const defaultCurrencyCode = normalizeCurrencyCode(
+    input.defaultCurrencyCode ?? defaultInvitationCurrencyCode,
+  );
   const timezone = normalizeTimeZone(input.timezone);
-  const locale = normalizeLocale(input.locale);
+  const locale = normalizeLocale(input.locale ?? defaultInvitationLocale);
   const validFrom = input.validFrom ?? now;
   const expiresAt = input.expiresAt ?? getDefaultInvitationExpiresAt(now);
   const token = createToken();
   const tokenHash = hashInvitationToken(token);
 
   if (!email || !firstName || !lastName || !displayName) {
-    throw new InvitationConflictError("Invitation requires email, first name, and last name.");
+    throw new InvitationConflictError(
+      "Invitation requires email, first name, and last name.",
+      "INVALID_INVITATION_DETAILS",
+    );
   }
 
   if (
@@ -193,6 +210,7 @@ export async function inviteMember(input: InviteMemberInput, deps: InviteMemberD
   ) {
     throw new InvitationConflictError(
       "Invitation requires supported currency, timezone, and locale.",
+      "UNSUPPORTED_PREFERENCES",
     );
   }
 
@@ -208,7 +226,10 @@ export async function inviteMember(input: InviteMemberInput, deps: InviteMemberD
     });
 
     if (existingMember && !canInviteExistingMember(existingMember)) {
-      throw new InvitationConflictError("A non-invited member already exists for this email.");
+      throw new InvitationConflictError(
+        "A non-invited member already exists for this email.",
+        "EXISTING_MEMBER",
+      );
     }
 
     const pendingInvitation = await tx.invitation.findFirst({
@@ -225,7 +246,10 @@ export async function inviteMember(input: InviteMemberInput, deps: InviteMemberD
     });
 
     if (pendingInvitation) {
-      throw new InvitationConflictError("A pending invitation already exists for this email.");
+      throw new InvitationConflictError(
+        "A pending invitation already exists for this email.",
+        "PENDING_INVITATION",
+      );
     }
 
     const member = existingMember

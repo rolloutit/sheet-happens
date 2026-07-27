@@ -7,6 +7,7 @@ import {
   securitySetupRoute,
   secondFactorRoute,
 } from "@/src/server/auth/app-access";
+import { AuthShell } from "@/src/components/layout/AuthShell";
 import { ResetPasswordPanel } from "./ResetPasswordPanel";
 
 type ResetPasswordPageProps = {
@@ -39,9 +40,9 @@ export default async function ResetPasswordPage({ searchParams }: ResetPasswordP
   }
 
   return (
-    <main className="grid min-h-screen place-items-center bg-background px-4 py-10 text-foreground sm:px-6 lg:px-8">
+    <AuthShell mood="fresh">
       <ResetPasswordPanel callbackURL={callbackURL} initialError={error} token={token} />
-    </main>
+    </AuthShell>
   );
 }
 

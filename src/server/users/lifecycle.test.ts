@@ -5,6 +5,7 @@ import {
   deactivateMember,
   MemberLifecycleError,
   reactivateMember,
+  restoreArchivedMember,
   resetMemberTotp,
   revokeMemberSessions,
   resendMemberInvitation,
@@ -20,7 +21,9 @@ type TestMember = {
   lastName: string;
   displayName: string;
   role: "ADMIN" | "MEMBER";
+  currentProfile: "CONTRACTOR" | "EMPLOYEE";
   status: string;
+  locale: string;
   deletedAt: Date | null;
 };
 
@@ -32,7 +35,9 @@ const baseMember: TestMember = {
   lastName: "Example",
   displayName: "Member Example",
   role: "MEMBER" as const,
+  currentProfile: "CONTRACTOR" as const,
   status: "ACTIVE",
+  locale: "hu",
   deletedAt: null,
 };
 
@@ -55,6 +60,7 @@ function createLifecycleDb(
     invitation: {
       findFirst: vi.fn().mockResolvedValue(overrides.invitation ?? { id: "invitation-1" }),
       update: vi.fn().mockResolvedValue({ id: "invitation-1" }),
+      create: vi.fn().mockResolvedValue({ id: "new-invitation-1" }),
       updateMany: vi.fn().mockResolvedValue({ count: overrides.revokedInvitationCount ?? 0 }),
     },
     auditLog: {
@@ -108,6 +114,14 @@ describe("member lifecycle services", () => {
       },
     );
 
+    expect(tx.invitation.findFirst).toHaveBeenCalledWith({
+      where: {
+        memberId: "member-1",
+        status: "PENDING",
+      },
+      select: { id: true },
+      orderBy: { createdAt: "desc" },
+    });
     expect(tx.invitation.update).toHaveBeenCalledWith(
       expect.objectContaining({
         where: { id: "invitation-1" },
@@ -123,6 +137,129 @@ describe("member lifecycle services", () => {
         acceptUrl: "http://localhost:3000/accept-invite?token=new-token",
       }),
     );
+  });
+
+  it("restores archived linked members as active without restoring sessions", async () => {
+    const archivedAt = new Date("2026-07-04T00:00:00.000Z");
+    const { db, tx } = createLifecycleDb({
+      member: {
+        ...baseMember,
+        status: "DELETED",
+        deletedAt: archivedAt,
+      },
+    });
+    const sendEmail = vi.fn().mockResolvedValue(undefined);
+
+    const result = await restoreArchivedMember(
+      {
+        memberId: "member-1",
+        actorMemberId: "admin-1",
+      },
+      {
+        db,
+        sendEmail,
+      },
+    );
+
+    expect(tx.member.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: {
+          status: "ACTIVE",
+          inactivatedAt: null,
+          deletedAt: null,
+        },
+      }),
+    );
+    expect(tx.invitation.create).not.toHaveBeenCalled();
+    expect(tx.session.deleteMany).not.toHaveBeenCalled();
+    expect(sendEmail).not.toHaveBeenCalled();
+    expect(tx.auditLog.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          action: "member.restored",
+          before: {
+            status: "DELETED",
+            deletedAt: archivedAt,
+          },
+          after: {
+            status: "ACTIVE",
+            deletedAt: null,
+            invitationId: null,
+          },
+        }),
+      }),
+    );
+    expect(result).toMatchObject({
+      memberId: "member-1",
+      status: "ACTIVE",
+      invitationSent: false,
+    });
+  });
+
+  it("restores archived unlinked members as invited and sends a new invitation", async () => {
+    const archivedAt = new Date("2026-07-04T00:00:00.000Z");
+    const now = new Date("2026-07-05T00:00:00.000Z");
+    const { db, tx } = createLifecycleDb({
+      member: {
+        ...baseMember,
+        authUserId: null,
+        status: "DELETED",
+        deletedAt: archivedAt,
+      },
+    });
+    const sendEmail = vi.fn().mockResolvedValue(undefined);
+
+    const result = await restoreArchivedMember(
+      {
+        memberId: "member-1",
+        actorMemberId: "admin-1",
+      },
+      {
+        db,
+        sendEmail,
+        createToken: () => "restore-token",
+        now: () => now,
+      },
+    );
+
+    expect(tx.member.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: {
+          status: "INVITED",
+          inactivatedAt: null,
+          deletedAt: null,
+        },
+      }),
+    );
+    expect(tx.invitation.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          email: "member@example.com",
+          firstName: "Member",
+          lastName: "Example",
+          role: "MEMBER",
+          profile: "CONTRACTOR",
+          status: "PENDING",
+          memberId: "member-1",
+          expiresAt: new Date("2026-07-08T00:00:00.000Z"),
+          invitedByMemberId: "admin-1",
+        }),
+      }),
+    );
+    expect(sendEmail).toHaveBeenCalledWith(
+      expect.objectContaining({
+        email: "member@example.com",
+        acceptUrl: "http://localhost:3000/accept-invite?token=restore-token",
+        locale: "hu",
+      }),
+    );
+    expect(result).toMatchObject({
+      memberId: "member-1",
+      status: "INVITED",
+      invitationSent: true,
+      email: "member@example.com",
+      expiresAt: new Date("2026-07-08T00:00:00.000Z"),
+    });
   });
 
   it("revokes a pending invitation and inactivates the unaccepted member", async () => {

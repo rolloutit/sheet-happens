@@ -35,6 +35,7 @@ Replace placeholder values before sharing a concrete test run:
 - `{TIME_TRACKING_PROJECT_B}`: second active project assigned to the time-tracking test user.
 - `{TIME_ENTRY_DESCRIPTION}`: description text used for test time entries.
 - `{TIME_ENTRY_UPDATED_DESCRIPTION}`: edited description text used for test time entries.
+- `{TIMESHEET_MONTH}`: contractor timesheet month formatted as `YYYY-MM`.
 - `{PROJECT_NAME}`: name for a newly created project.
 - `{PROJECT_UPDATED_NAME}`: updated project name.
 - `{PROJECT_SLUG}`: URL-safe or code-like project slug.
@@ -341,13 +342,15 @@ Expected result:
 6. Enter start `09:00`, end `10:30`, and `{TIME_ENTRY_DESCRIPTION}`.
 7. Save.
 8. Create another interval on the same day that overlaps the first interval.
-9. Create or edit entries so the day total exceeds 24 hours.
+9. Create or edit entries so the day total exceeds 8 hours.
+10. Try to create or edit entries so the day total exceeds 24 hours.
 
 Expected result:
 
 - Interval entries save with the correct calculated duration.
 - Overlaps show a warning but do not block saving.
-- More than 24 hours in one day shows a warning but does not block saving.
+- More than 8 hours in one day shows a warning but does not block saving.
+- More than 24 hours in one day is blocked.
 
 ### Timer Start And Stop
 
@@ -371,11 +374,16 @@ Expected result:
 2. Create one entry for `{TIME_TRACKING_PROJECT_A}` on a test day.
 3. Select the next day.
 4. Click `Same as yesterday`.
-5. Confirm the copied entry appears on the selected day.
-6. Click `Same as yesterday` again for the same selected day.
+5. Cancel the confirmation dialog.
+6. Confirm no copied entry appears on the selected day.
+7. Click `Same as yesterday` again.
+8. Confirm the dialog.
+9. Confirm the copied entry appears on the selected day.
+10. Click `Same as yesterday` again for the same selected day and confirm the dialog.
 
 Expected result:
 
+- The quick action does not run until the confirmation dialog is confirmed.
 - The first copy creates entries from the previous day.
 - The second copy does not create duplicate entries in project/date cells that already contain time.
 - The success message reports skipped entries when applicable.
@@ -386,11 +394,16 @@ Expected result:
 2. Create entries for `{TIME_TRACKING_PROJECT_A}` and `{TIME_TRACKING_PROJECT_B}`.
 3. Open `https://{DOMAIN_NAME}/time?week={TIME_TRACKING_WEEK_START}`.
 4. Click `Duplicate last week`.
-5. Confirm the previous week's entries appear in the matching days of the current week.
-6. Click `Duplicate last week` again.
+5. Cancel the confirmation dialog.
+6. Confirm no previous-week entries appear in the current week.
+7. Click `Duplicate last week` again.
+8. Confirm the dialog.
+9. Confirm the previous week's entries appear in the matching days of the current week.
+10. Click `Duplicate last week` again and confirm the dialog.
 
 Expected result:
 
+- The quick action does not run until the confirmation dialog is confirmed.
 - Entries are copied from the previous week into matching current-week days.
 - Repeating the action skips project/date cells that already contain entries.
 - Existing current-week entries are not overwritten.
@@ -444,6 +457,37 @@ Expected result:
 - Keyboard focus stays inside the open dialog.
 - `Escape` closes the dialog.
 - Focus returns to the control that opened the dialog.
+
+## Contractor Timesheets
+
+Run these tests as `{CONTRACTOR_EMAIL}` unless the scenario says otherwise.
+
+### Contractor Can Open Monthly Preview
+
+1. Open `https://{DOMAIN_NAME}/timesheets?month={TIMESHEET_MONTH}`.
+2. Confirm the Timesheets page opens in the app shell.
+3. Confirm the current and previous month controls are visible.
+4. Confirm the selected month shows a status.
+5. Confirm the summary shows hours, amount, and entry count.
+6. Confirm the project breakdown is grouped by project.
+
+Expected result:
+
+- Contractors can access `/timesheets`.
+- The preview is calculated from current time entries when no submitted snapshot exists.
+- Projects show total hours, rate state, currency, and amount.
+- Missing rates or mixed currencies are shown as warnings instead of hidden.
+
+### Employee Cannot Open Timesheets
+
+1. Sign in as `{EMPLOYEE_EMAIL}`.
+2. Open `https://{DOMAIN_NAME}/timesheets`.
+3. Check the sidebar and mobile navigation.
+
+Expected result:
+
+- The employee is shown an account-status message that contractor profile is required.
+- The Timesheets navigation item is not visible for the employee.
 
 ## Admin Projects
 
@@ -567,17 +611,41 @@ Expected result:
 ### Project Directory Filters
 
 1. Open `https://{DOMAIN_NAME}/admin/projects`.
-2. Search by project name.
+2. Search by project name, slug, group name, assigned member name, and assigned member email.
 3. Filter by project status.
-4. Filter by internal/non-internal project type.
-5. Filter by project group.
-6. Clear filters.
+4. Filter by internal/external project type.
+5. Filter by timeline: active today, future, and ended.
+6. Filter by project group and ungrouped projects.
+7. Filter by assigned today and unassigned today.
+8. Combine search with multiple filters.
+9. Use the pager when more than one page is available.
+10. Refresh the browser while filters are applied.
+11. Clear filters.
 
 Expected result:
 
 - The directory updates to match each filter.
-- Clearing filters restores the full active directory.
+- The selected filters are represented in the URL and survive refresh.
+- Pagination keeps the same filters while moving between pages.
+- Clearing filters restores the full project directory.
 - The layout remains responsive on laptop width.
+
+### Project Group Filters
+
+1. Open `https://{DOMAIN_NAME}/admin/projects`.
+2. In the project groups section, search by group name.
+3. Search by a project name that belongs to a group.
+4. Filter groups by active and inactive state.
+5. Filter groups by empty and with projects.
+6. Combine group search with state and project-count filters.
+7. Clear the group filters.
+
+Expected result:
+
+- The group list updates to match each filter.
+- Empty results show a factual empty state.
+- Clearing group filters restores the full group list.
+- Adding or removing projects from a group still works while filters exist.
 
 ### Assign Member To Project
 
@@ -763,6 +831,23 @@ Expected result:
 - The member directory table is visible.
 - The app shell user menu shows the admin user.
 
+### Search, Filter, And Page Members
+
+1. Sign in as `{ADMIN_EMAIL}` with TOTP enabled and verified.
+2. Open `https://{DOMAIN_NAME}/admin/people`.
+3. Search for a known member name or email.
+4. Filter by state, role, and profile.
+5. Move to the next page if more than one page is available.
+6. Clear the filters.
+
+Expected result:
+
+- The member list shows 20 members per page by default.
+- Search matches member name and email.
+- State, role, and profile filters update the URL query string.
+- Pagination keeps the selected filters.
+- Clearing filters returns to the unfiltered first page.
+
 ### Invite Member
 
 1. Sign in as `{ADMIN_EMAIL}` with TOTP enabled and verified.
@@ -795,6 +880,20 @@ Expected result:
 
 - A success message confirms the invitation was resent.
 - The invited email receives a new invitation link.
+
+### Resend Expired Invitation
+
+1. Sign in as `{ADMIN_EMAIL}` with TOTP enabled and verified.
+2. Open `https://{DOMAIN_NAME}/admin/people`.
+3. Find a member with state `invited` whose previous invitation link has expired.
+4. Click the resend invitation action.
+
+Expected result:
+
+- A success message confirms the invitation was resent.
+- The invited email receives a new invitation link.
+- The old expired invitation link remains unavailable.
+- The new invitation link can be accepted.
 
 ### Edit Member Details
 
@@ -875,6 +974,23 @@ Expected result:
 - An audit row is recorded for `member.deleted`.
 - For linked auth users, an audit row is recorded for `member.session_revoked`.
 - For pending invitations, an audit row is recorded for `member.pending_invitations_revoked`.
+
+### Restore Archived Member
+
+1. Sign in as `{ADMIN_EMAIL}` with TOTP enabled and verified.
+2. Open `https://{DOMAIN_NAME}/admin/people`.
+3. Find an archived member.
+4. Click the restore account action.
+5. Refresh `https://{DOMAIN_NAME}/admin/people`.
+
+Expected result:
+
+- A success message confirms that the member was restored.
+- If the archived member had a linked auth account, the member becomes active and can sign in again.
+- If the archived member had no linked auth account, the member becomes invited and receives a new invitation email.
+- Previously revoked sessions are not restored.
+- Historical records remain attached to the restored member.
+- An audit row is recorded for `member.restored`.
 
 ### Archive Safety Guards
 
@@ -1269,7 +1385,7 @@ Expected result:
 - Non-admin users cannot open admin routes.
 - Users without passkey or TOTP are redirected to the security setup gate.
 - Admin users without TOTP are redirected to the admin TOTP gate.
-- Admin people page can invite, resend, edit, deactivate, reactivate, and archive members.
+- Admin people page can invite, resend, edit, deactivate, reactivate, archive, and restore members.
 - Admin people page can revoke member sessions.
 - Passkey add, login, rename, and remove still work.
 - TOTP setup, challenge, invalid-code handling, trusted device, backup-code fallback, and disable

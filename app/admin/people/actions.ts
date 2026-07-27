@@ -24,6 +24,7 @@ import {
   MemberProfileTransitionError,
   reactivateMember,
   resetMemberTotp,
+  restoreArchivedMember,
   revokeMemberSessions,
   scheduleMemberProfileTransition,
   resendMemberInvitation,
@@ -145,11 +146,11 @@ export async function inviteMemberAction(
       message: t("success.invitationSent", { email: invitation.email }),
     };
   } catch (error) {
-    if (
-      error instanceof InvitationConflictError ||
-      error instanceof AuthenticationError ||
-      error instanceof AuthorizationError
-    ) {
+    if (error instanceof InvitationConflictError) {
+      return getInvitationConflictState(error, t);
+    }
+
+    if (error instanceof AuthenticationError || error instanceof AuthorizationError) {
       return {
         status: "error",
         message: error.message,
@@ -311,6 +312,23 @@ export async function reactivateMemberAction(memberId: string): Promise<AdminPeo
   });
 }
 
+export async function restoreArchivedMemberAction(
+  memberId: string,
+): Promise<AdminPeopleActionState> {
+  const t = await getTranslations("AdminPeopleActions");
+
+  return runAdminPeopleAction(async (adminId) => {
+    const result = await restoreArchivedMember({
+      memberId,
+      actorMemberId: adminId,
+    });
+
+    return result.invitationSent
+      ? t("success.memberRestoredWithInvitation", { email: result.email })
+      : t("success.memberRestored");
+  });
+}
+
 export async function softDeleteMemberAction(memberId: string): Promise<AdminPeopleActionState> {
   const t = await getTranslations("AdminPeopleActions");
 
@@ -400,6 +418,36 @@ function getFieldErrors(error: z.ZodError): InviteMemberActionState["fieldErrors
   }
 
   return fieldErrors;
+}
+
+function getInvitationConflictState(
+  error: InvitationConflictError,
+  t: AdminPeopleActionsTranslator,
+): InviteMemberActionState {
+  if (error.code === "PENDING_INVITATION") {
+    return {
+      status: "error",
+      message: t("errors.fixFields"),
+      fieldErrors: {
+        email: t("validation.emailPendingInvitation"),
+      },
+    };
+  }
+
+  if (error.code === "EXISTING_MEMBER") {
+    return {
+      status: "error",
+      message: t("errors.fixFields"),
+      fieldErrors: {
+        email: t("validation.emailAlreadyMember"),
+      },
+    };
+  }
+
+  return {
+    status: "error",
+    message: t("errors.invitationConflict"),
+  };
 }
 
 function getUpdateMemberDetailsFieldErrors(

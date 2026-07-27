@@ -52,7 +52,6 @@ describe("inviteMember", () => {
         lastName: "Contractor",
         profile: "CONTRACTOR",
         timezone: "Europe/Budapest",
-        locale: "en",
         invitedByMemberId: "admin-1",
         appUrl: "https://sheet.example.com",
       },
@@ -70,6 +69,8 @@ describe("inviteMember", () => {
           email: "contractor@example.com",
           status: "INVITED",
           currentProfile: "CONTRACTOR",
+          defaultCurrencyCode: "HUF",
+          locale: "hu",
         }),
       }),
     );
@@ -105,6 +106,7 @@ describe("inviteMember", () => {
         email: "contractor@example.com",
         name: "Zoe Contractor",
         acceptUrl: "https://sheet.example.com/accept-invite?token=token-1",
+        locale: "hu",
       }),
     );
     expect(result).toMatchObject({
@@ -190,7 +192,9 @@ describe("inviteMember", () => {
           sendEmail: vi.fn().mockResolvedValue(undefined),
         },
       ),
-    ).rejects.toBeInstanceOf(InvitationConflictError);
+    ).rejects.toMatchObject({
+      code: "EXISTING_MEMBER",
+    } satisfies Partial<InvitationConflictError>);
   });
 
   it("rejects duplicate pending invitations", async () => {
@@ -214,7 +218,9 @@ describe("inviteMember", () => {
           sendEmail: vi.fn().mockResolvedValue(undefined),
         },
       ),
-    ).rejects.toBeInstanceOf(InvitationConflictError);
+    ).rejects.toMatchObject({
+      code: "PENDING_INVITATION",
+    } satisfies Partial<InvitationConflictError>);
   });
 
   it("rejects unsupported member preference values", async () => {
@@ -238,7 +244,9 @@ describe("inviteMember", () => {
           sendEmail,
         },
       ),
-    ).rejects.toBeInstanceOf(InvitationConflictError);
+    ).rejects.toMatchObject({
+      code: "UNSUPPORTED_PREFERENCES",
+    } satisfies Partial<InvitationConflictError>);
     expect(db.$transaction).not.toHaveBeenCalled();
     expect(sendEmail).not.toHaveBeenCalled();
   });

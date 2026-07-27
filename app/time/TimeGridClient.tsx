@@ -36,7 +36,17 @@ import {
 } from "react";
 import { useTranslations } from "next-intl";
 
+import { Button } from "@/src/components/ui/Button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/src/components/ui/Dialog";
 import { parseDurationToMinutes } from "@/src/lib/duration";
+import { DAILY_HARD_LIMIT_MINUTES, DAILY_SOFT_WARNING_MINUTES } from "@/src/lib/time-entry-limits";
 import { cn } from "@/src/lib/utils";
 import type {
   TimeGridAssignedProject,
@@ -97,6 +107,20 @@ type BreakdownState = {
   localDate: string;
 } | null;
 
+type PendingQuickAction =
+  | {
+      type: "copyPreviousDay";
+      sourceDate: string;
+      targetDate: string;
+    }
+  | {
+      type: "duplicatePreviousWeek";
+      sourceWeekEnd: string;
+      sourceWeekStart: string;
+      targetWeekEnd: string;
+      targetWeekStart: string;
+    };
+
 type TimeGridClientProps = {
   week: TimeGridWeek;
 };
@@ -116,6 +140,7 @@ export function TimeGridClient({ week }: TimeGridClientProps) {
   const [notice, setNotice] = useState<Notice>(null);
   const [entryModal, setEntryModal] = useState<EntryModalState>(null);
   const [breakdown, setBreakdown] = useState<BreakdownState>(null);
+  const [pendingQuickAction, setPendingQuickAction] = useState<PendingQuickAction | null>(null);
 
   const inactiveProjectIds = useMemo(
     () => new Set(week.inactiveWeeks.map((inactiveWeek) => inactiveWeek.projectId)),
@@ -170,6 +195,20 @@ export function TimeGridClient({ week }: TimeGridClientProps) {
     });
   }
 
+  function confirmQuickAction() {
+    const action = pendingQuickAction;
+    if (!action) return;
+
+    setPendingQuickAction(null);
+
+    if (action.type === "copyPreviousDay") {
+      runAction(() => copyPreviousDayEntriesAction({ targetDate: action.targetDate }));
+      return;
+    }
+
+    runAction(() => duplicatePreviousWeekAction({ weekStartDate: action.targetWeekStart }));
+  }
+
   function handleCellCommit(project: TimeGridAssignedProject, day: TimeGridDay, rawValue: string) {
     const parsedMinutes = parseDurationToMinutes(rawValue);
     const cell = getCellEntries(entriesByCell, project.projectId, day.isoDate);
@@ -183,6 +222,11 @@ export function TimeGridClient({ week }: TimeGridClientProps) {
       if (cell.entries.length === 1 && !cell.entries[0].locked) {
         runAction(() => deleteTimeEntryAction({ timeEntryId: cell.entries[0].id }));
       }
+      return;
+    }
+
+    if (parsedMinutes > DAILY_HARD_LIMIT_MINUTES) {
+      setNotice({ tone: "error", message: t("warnings.durationOver24Blocked") });
       return;
     }
 
@@ -387,7 +431,13 @@ export function TimeGridClient({ week }: TimeGridClientProps) {
           title={
             selectedDay ? t("tooltips.copyPreviousDay", { date: selectedDay.isoDate }) : undefined
           }
-          onClick={() => runAction(() => copyPreviousDayEntriesAction({ targetDate }))}
+          onClick={() =>
+            setPendingQuickAction({
+              type: "copyPreviousDay",
+              sourceDate: shiftIsoDate(targetDate, -1),
+              targetDate,
+            })
+          }
         >
           <Copy className="size-4" aria-hidden="true" />
           {t("actions.sameAsYesterday")}
@@ -398,7 +448,13 @@ export function TimeGridClient({ week }: TimeGridClientProps) {
           className="inline-flex items-center gap-2 rounded-[var(--radius-pill)] border border-border bg-card px-3 py-2 text-sm font-medium text-foreground transition hover:bg-secondary disabled:cursor-not-allowed disabled:text-muted-foreground disabled:opacity-50"
           title={t("tooltips.duplicatePreviousWeek")}
           onClick={() =>
-            runAction(() => duplicatePreviousWeekAction({ weekStartDate: week.weekStart }))
+            setPendingQuickAction({
+              type: "duplicatePreviousWeek",
+              sourceWeekStart: shiftIsoDate(week.weekStart, -7),
+              sourceWeekEnd: shiftIsoDate(week.weekStart, -1),
+              targetWeekStart: week.weekStart,
+              targetWeekEnd: week.weekEnd,
+            })
           }
         >
           <Copy className="size-4" aria-hidden="true" />
@@ -630,7 +686,7 @@ export function TimeGridClient({ week }: TimeGridClientProps) {
                   </div>
                   {week.days.map((day, dayIndex) => {
                     const total = dailyTotals[dayIndex] ?? 0;
-                    const over = total > 1440;
+                    const over = total > DAILY_SOFT_WARNING_MINUTES;
 
                     return (
                       <div
@@ -802,7 +858,8 @@ export function TimeGridClient({ week }: TimeGridClientProps) {
           entries={breakdownEntries}
           entriesByDay={entriesByDay}
           project={breakdownProject}
-          onAdd={() =>
+          onAdd={() => {
+            setBreakdown(null);
             setEntryModal({
               mode: "create",
               source: "GRID",
@@ -810,14 +867,25 @@ export function TimeGridClient({ week }: TimeGridClientProps) {
               localDate: breakdownDay.isoDate,
               durationMinutes: 60,
               prefill: true,
-            })
-          }
+            });
+          }}
           onClose={() => setBreakdown(null)}
           onDelete={(entry) => runAction(() => deleteTimeEntryAction({ timeEntryId: entry.id }))}
-          onEdit={(entry) => setEntryModal({ mode: "edit", entry })}
+          onEdit={(entry) => {
+            setBreakdown(null);
+            setEntryModal({ mode: "edit", entry });
+          }}
           t={t}
         />
       ) : null}
+
+      <QuickActionConfirmDialog
+        action={pendingQuickAction}
+        pending={isPending}
+        onCancel={() => setPendingQuickAction(null)}
+        onConfirm={confirmQuickAction}
+        t={t}
+      />
     </div>
   );
 }
@@ -1068,6 +1136,61 @@ function DraftRestoreBanner({
   );
 }
 
+type QuickActionConfirmDialogProps = {
+  action: PendingQuickAction | null;
+  pending: boolean;
+  onCancel: () => void;
+  onConfirm: () => void;
+  t: TimeTrackingTranslator;
+};
+
+function QuickActionConfirmDialog({
+  action,
+  pending,
+  onCancel,
+  onConfirm,
+  t,
+}: QuickActionConfirmDialogProps) {
+  const isCopyPreviousDay = action?.type === "copyPreviousDay";
+  const title = isCopyPreviousDay
+    ? t("quickActionConfirm.copyPreviousDay.title")
+    : t("quickActionConfirm.duplicatePreviousWeek.title");
+  const description =
+    !action || isCopyPreviousDay
+      ? t("quickActionConfirm.copyPreviousDay.description", {
+          sourceDate: action?.type === "copyPreviousDay" ? action.sourceDate : "",
+          targetDate: action?.type === "copyPreviousDay" ? action.targetDate : "",
+        })
+      : t("quickActionConfirm.duplicatePreviousWeek.description", {
+          sourceWeekEnd: action.sourceWeekEnd,
+          sourceWeekStart: action.sourceWeekStart,
+          targetWeekEnd: action.targetWeekEnd,
+          targetWeekStart: action.targetWeekStart,
+        });
+
+  return (
+    <Dialog open={Boolean(action)} onOpenChange={(open) => !open && onCancel()}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>{title}</DialogTitle>
+          <DialogDescription>{description}</DialogDescription>
+        </DialogHeader>
+        <div className="rounded-[var(--radius-md)] border border-warning/35 bg-warning/10 px-3 py-2 text-sm text-warning">
+          {t("quickActionConfirm.skipExisting")}
+        </div>
+        <DialogFooter>
+          <Button type="button" variant="ghost" disabled={pending} onClick={onCancel}>
+            {t("actions.cancel")}
+          </Button>
+          <Button type="button" variant="cta" icon={Copy} loading={pending} onClick={onConfirm}>
+            {t("quickActionConfirm.confirm")}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 type DayViewProps = {
   day: TimeGridDay;
   days: TimeGridDay[];
@@ -1153,7 +1276,7 @@ function DayView({
           <span
             className={cn(
               "text-[26px] font-semibold",
-              dailyTotalMinutes > 1440 ? "text-warning" : "text-foreground",
+              dailyTotalMinutes > DAILY_SOFT_WARNING_MINUTES ? "text-warning" : "text-foreground",
             )}
           >
             {formatMinutesAsHours(dailyTotalMinutes) || "0"}
@@ -1169,10 +1292,10 @@ function DayView({
         </div>
       ) : null}
 
-      {dailyTotalMinutes > 1440 ? (
+      {dailyTotalMinutes > DAILY_SOFT_WARNING_MINUTES ? (
         <div className="flex items-start gap-3 rounded-[var(--radius-md)] border border-warning/30 bg-warning/12 px-4 py-3 text-sm text-warning">
           <AlertTriangle className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
-          {t("warnings.dayOver24")}
+          {t("warnings.dayOver8")}
         </div>
       ) : null}
 
@@ -1453,9 +1576,26 @@ function EntryModal({ state, week, projects, onClose, onDone, t }: EntryModalPro
   );
   const [draftStatus, setDraftStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
   const [fieldErrors, setFieldErrors] = useState<TimeTrackingActionState["fieldErrors"]>();
+  const [submitError, setSubmitError] = useState<string | null>(null);
   const project = projects.find((item) => item.projectId === projectId) ?? projects[0];
   const parsedMinutes = parseDurationToMinutes(durationText);
   const intervalMinutes = calculateIntervalMinutes(startTime, endTime);
+  const entryMinutes =
+    timingMode === "INTERVAL" ? intervalMinutes : parsedMinutes !== null ? parsedMinutes : 0;
+  const projectedDayTotalMinutes =
+    entryMinutes > 0
+      ? getDayLoggedMinutes(
+          week.entries,
+          localDate,
+          state.mode === "edit" ? state.entry.id : null,
+        ) + entryMinutes
+      : 0;
+  const durationOverHardLimit =
+    timingMode === "DURATION" && parsedMinutes !== null && parsedMinutes > DAILY_HARD_LIMIT_MINUTES;
+  const projectedDayOverHardLimit =
+    projectedDayTotalMinutes > DAILY_HARD_LIMIT_MINUTES && !durationOverHardLimit;
+  const projectedDayOverSoftLimit =
+    projectedDayTotalMinutes > DAILY_SOFT_WARNING_MINUTES && !projectedDayOverHardLimit;
   const createDraftKey =
     state.mode === "create" ? (state.draftKey ?? TIME_ENTRY_FORM_DRAFT_KEY) : null;
   const createDraftSource = state.mode === "create" ? state.source : null;
@@ -1464,6 +1604,8 @@ function EntryModal({ state, week, projects, onClose, onDone, t }: EntryModalPro
     projectId &&
     localDate &&
     description.trim() &&
+    !durationOverHardLimit &&
+    !projectedDayOverHardLimit &&
     (timingMode === "INTERVAL" ? intervalMinutes > 0 : parsedMinutes && parsedMinutes > 0),
   );
 
@@ -1515,6 +1657,11 @@ function EntryModal({ state, week, projects, onClose, onDone, t }: EntryModalPro
     setDraftStatus(nextDescription.trim() ? "saving" : "idle");
   }
 
+  function clearSubmitFeedback() {
+    setFieldErrors(undefined);
+    setSubmitError(null);
+  }
+
   function saveCurrentDraft() {
     if (!createDraftKey || !createDraftSource || !description.trim()) return;
 
@@ -1545,6 +1692,8 @@ function EntryModal({ state, week, projects, onClose, onDone, t }: EntryModalPro
 
   function submit() {
     const durationMinutes = parseDurationToMinutes(durationText);
+
+    setSubmitError(null);
 
     if (timingMode === "DURATION" && (!durationMinutes || durationMinutes <= 0)) {
       setFieldErrors({ durationMinutes: t("fieldErrors.durationPositive") });
@@ -1589,6 +1738,7 @@ function EntryModal({ state, week, projects, onClose, onDone, t }: EntryModalPro
             });
 
       setFieldErrors(result.fieldErrors);
+      setSubmitError(result.status === "error" ? result.message : null);
 
       if (result.status === "success" && createDraftKey) {
         await clearTimeEntryDraftAction({ draftKey: createDraftKey });
@@ -1656,6 +1806,16 @@ function EntryModal({ state, week, projects, onClose, onDone, t }: EntryModalPro
             </div>
           ) : null}
 
+          {submitError ? (
+            <div
+              role="alert"
+              className="flex items-start gap-2 rounded-[var(--radius-md)] border border-destructive/35 bg-destructive/12 px-3 py-2 text-sm font-medium text-destructive"
+            >
+              <AlertTriangle className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
+              <span>{submitError}</span>
+            </div>
+          ) : null}
+
           <Field label={t("fields.description")} required error={fieldErrors?.description}>
             <textarea
               rows={3}
@@ -1663,6 +1823,7 @@ function EntryModal({ state, week, projects, onClose, onDone, t }: EntryModalPro
               placeholder={t("fields.descriptionPlaceholder")}
               className={inputClassName(Boolean(fieldErrors?.description))}
               onChange={(event) => {
+                clearSubmitFeedback();
                 setDescription(event.target.value);
                 markDraftDirty(event.target.value);
               }}
@@ -1674,6 +1835,7 @@ function EntryModal({ state, week, projects, onClose, onDone, t }: EntryModalPro
               value={projectId}
               className={inputClassName(Boolean(fieldErrors?.projectId))}
               onChange={(event) => {
+                clearSubmitFeedback();
                 setProjectId(event.target.value);
                 markDraftDirty();
               }}
@@ -1695,6 +1857,7 @@ function EntryModal({ state, week, projects, onClose, onDone, t }: EntryModalPro
                 max={week.weekEnd}
                 className={inputClassName(Boolean(fieldErrors?.localDate))}
                 onChange={(event) => {
+                  clearSubmitFeedback();
                   setLocalDate(event.target.value);
                   markDraftDirty();
                 }}
@@ -1711,6 +1874,7 @@ function EntryModal({ state, week, projects, onClose, onDone, t }: EntryModalPro
                       : "text-muted-foreground",
                   )}
                   onClick={() => {
+                    clearSubmitFeedback();
                     setTimingMode("DURATION");
                     markDraftDirty();
                   }}
@@ -1726,6 +1890,7 @@ function EntryModal({ state, week, projects, onClose, onDone, t }: EntryModalPro
                       : "text-muted-foreground",
                   )}
                   onClick={() => {
+                    clearSubmitFeedback();
                     setTimingMode("INTERVAL");
                     markDraftDirty();
                   }}
@@ -1744,6 +1909,7 @@ function EntryModal({ state, week, projects, onClose, onDone, t }: EntryModalPro
                 placeholder="3h 20m"
                 className={inputClassName(Boolean(fieldErrors?.durationMinutes))}
                 onChange={(event) => {
+                  clearSubmitFeedback();
                   setDurationText(event.target.value);
                   markDraftDirty();
                 }}
@@ -1757,6 +1923,7 @@ function EntryModal({ state, week, projects, onClose, onDone, t }: EntryModalPro
                   value={startTime}
                   className={inputClassName(Boolean(fieldErrors?.startTime))}
                   onChange={(event) => {
+                    clearSubmitFeedback();
                     setStartTime(event.target.value);
                     markDraftDirty();
                   }}
@@ -1768,6 +1935,7 @@ function EntryModal({ state, week, projects, onClose, onDone, t }: EntryModalPro
                   value={endTime}
                   className={inputClassName(Boolean(fieldErrors?.endTime))}
                   onChange={(event) => {
+                    clearSubmitFeedback();
                     setEndTime(event.target.value);
                     markDraftDirty();
                   }}
@@ -1779,10 +1947,28 @@ function EntryModal({ state, week, projects, onClose, onDone, t }: EntryModalPro
             </div>
           )}
 
-          {timingMode === "DURATION" && parsedMinutes && parsedMinutes > 1440 ? (
+          {durationOverHardLimit ? (
+            <div className="flex items-center gap-2 text-sm text-destructive">
+              <AlertTriangle className="size-4" aria-hidden="true" />
+              {t("warnings.durationOver24Blocked")}
+            </div>
+          ) : null}
+
+          {projectedDayOverHardLimit ? (
+            <div className="flex items-center gap-2 text-sm text-destructive">
+              <AlertTriangle className="size-4" aria-hidden="true" />
+              {t("warnings.dailyTotalOver24Projected", {
+                hours: formatMinutesAsHours(projectedDayTotalMinutes),
+              })}
+            </div>
+          ) : null}
+
+          {projectedDayOverSoftLimit ? (
             <div className="flex items-center gap-2 text-sm text-warning">
               <AlertTriangle className="size-4" aria-hidden="true" />
-              {t("warnings.moreThan24NotBlocked")}
+              {t("warnings.dayOver8Projected", {
+                hours: formatMinutesAsHours(projectedDayTotalMinutes),
+              })}
             </div>
           ) : null}
 
@@ -2052,6 +2238,17 @@ function groupEntriesByDay(entries: TimeGridEntry[]) {
   return map;
 }
 
+function getDayLoggedMinutes(
+  entries: TimeGridEntry[],
+  localDate: string,
+  excludingEntryId: string | null,
+) {
+  return entries.reduce((sum, entry) => {
+    if (entry.localDate !== localDate || entry.id === excludingEntryId) return sum;
+    return sum + entry.durationMinutes;
+  }, 0);
+}
+
 function getCellEntries(
   map: Map<string, TimeGridEntry[]>,
   projectId: string,
@@ -2083,6 +2280,14 @@ function isProjectAssignableOnDate(project: TimeGridAssignedProject, localDate: 
   return true;
 }
 
+function shiftIsoDate(isoDate: string, days: number) {
+  const date = new Date(`${isoDate}T00:00:00.000Z`);
+  if (Number.isNaN(date.getTime())) return isoDate;
+
+  date.setUTCDate(date.getUTCDate() + days);
+  return date.toISOString().slice(0, 10);
+}
+
 function getCellWarnings(
   input: {
     day: TimeGridDay;
@@ -2098,7 +2303,9 @@ function getCellWarnings(
   if (input.day.state === "future" && input.cell.totalMinutes > 0) {
     warnings.push(t("warnings.futureDay"));
   }
-  if (input.dayTotalMinutes > 1440) warnings.push(t("warnings.dailyTotalOver24"));
+  if (input.dayTotalMinutes > DAILY_SOFT_WARNING_MINUTES) {
+    warnings.push(t("warnings.dailyTotalOver8"));
+  }
   if (hasOverlaps(input.entriesByDay.get(input.day.isoDate) ?? [])) {
     warnings.push(t("warnings.dayHasOverlaps"));
   }
@@ -2152,7 +2359,7 @@ function calculateIntervalMinutes(startTime: string, endTime: string) {
 
   if (start === null || end === null) return 0;
 
-  const minutes = end > start ? end - start : end + 1440 - start;
+  const minutes = end > start ? end - start : end + DAILY_HARD_LIMIT_MINUTES - start;
   return minutes > 0 ? minutes : 0;
 }
 

@@ -10,16 +10,21 @@ import {
 } from "@/src/components/ui/Card";
 import { getMemberPreferenceOptions } from "@/src/lib/member-preferences";
 import { mapMemberToShellUser, requireAdminAppMember } from "@/src/server/auth/app-access";
-import { listPeopleForAdmin } from "@/src/server/users";
+import { listPeopleForAdmin, type PeopleListSearchParams } from "@/src/server/users";
 import { AdminPeopleTable } from "./AdminPeopleTable";
 import { InviteMemberForm } from "./InviteMemberForm";
 
 export const dynamic = "force-dynamic";
 
-export default async function AdminPeoplePage() {
+type AdminPeoplePageProps = {
+  searchParams?: Promise<PeopleListSearchParams>;
+};
+
+export default async function AdminPeoplePage({ searchParams }: AdminPeoplePageProps) {
   const { member: admin } = await requireAdminAppMember("/admin/people");
   const t = await getTranslations("AdminPeople");
-  const people = await listPeopleForAdmin();
+  const resolvedSearchParams = (await searchParams) ?? {};
+  const people = await listPeopleForAdmin(resolvedSearchParams);
   const preferenceOptions = getMemberPreferenceOptions();
   const todayDate = new Date().toISOString().slice(0, 10);
 
@@ -39,15 +44,15 @@ export default async function AdminPeoplePage() {
             </div>
             <div className="grid min-w-48 grid-cols-2 gap-2 rounded-[var(--radius-lg)] border border-border bg-card/70 p-3 text-center">
               <div>
-                <p className="text-2xl font-semibold text-foreground">{people.length}</p>
+                <p className="text-2xl font-semibold text-foreground">
+                  {people.stats.totalMembers}
+                </p>
                 <p className="font-ui text-[11px] font-medium uppercase tracking-[0.12em] text-muted-foreground">
                   {t("stats.members")}
                 </p>
               </div>
               <div>
-                <p className="text-2xl font-semibold text-accent">
-                  {people.filter((person) => person.state === "invited").length}
-                </p>
+                <p className="text-2xl font-semibold text-accent">{people.stats.invitedMembers}</p>
                 <p className="font-ui text-[11px] font-medium uppercase tracking-[0.12em] text-muted-foreground">
                   {t("stats.invited")}
                 </p>
@@ -74,7 +79,7 @@ export default async function AdminPeoplePage() {
             </CardHeader>
             <CardContent>
               <AdminPeopleTable
-                rows={people}
+                result={people}
                 currentMemberId={admin.id}
                 preferenceOptions={preferenceOptions}
                 todayDate={todayDate}

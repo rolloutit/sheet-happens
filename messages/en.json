@@ -69,11 +69,39 @@
       "stop": "Stop timer"
     }
   },
+  "AuthShell": {
+    "brandSubtitle": "Rollout IT · internal",
+    "panelFooter": "Time tracking, timesheets and invoice checks — in one place.",
+    "panelTip": "Tip: passkeys get you in two seconds flat.",
+    "language": "Language",
+    "themeDark": "Dark theme",
+    "themeLight": "Light theme",
+    "moods": {
+      "back": {
+        "title": "Welcome back.",
+        "subtitle": "Sheet happens — let's log it."
+      },
+      "aboard": {
+        "title": "Welcome aboard.",
+        "subtitle": "A few clicks and your account is live."
+      },
+      "fresh": {
+        "title": "Fresh start, fresh password.",
+        "subtitle": "A minute, and you're back to work."
+      },
+      "secure": {
+        "title": "One step more — for safety.",
+        "subtitle": "Just making sure it's really you."
+      }
+    }
+  },
   "Login": {
     "brandSubtitle": "Rollout IT · internal",
     "badge": "Welcome back",
-    "title": "Sign in to Sheet Happens",
-    "description": "Use a registered method for an already activated Sheet Happens account.",
+    "title": "Welcome back",
+    "description": "Sign in to Sheet Happens.",
+    "recommended": "Recommended",
+    "or": "or",
     "side": {
       "timeTracking": "Time tracking",
       "timesheets": "Timesheets",
@@ -82,18 +110,22 @@
     },
     "fields": {
       "email": "Email",
-      "emailPlaceholder": "you@company.com",
-      "password": "Password"
+      "emailPlaceholder": "you@example.com",
+      "password": "Password",
+      "passwordPlaceholder": "••••••••••••"
     },
     "actions": {
-      "passkey": "Continue with passkey",
-      "google": "Continue with company Google",
-      "forgotPassword": "Forgot password?",
+      "passkey": "Sign in with passkey",
+      "passkeyHint": "Passwordless, with your device",
+      "google": "Continue with Google",
+      "forgotPassword": "Forgot?",
+      "showPassword": "Show password",
+      "hidePassword": "Hide password",
       "passwordSignIn": "Sign in",
-      "emailLink": "Email sign-in link"
+      "emailLink": "Email me a sign-in link instead"
     },
     "passwordlessHint": "Passwordless email sign-in remains available for activated accounts.",
-    "inviteActivationHint": "Invited users must activate their invitation link once before normal sign-in works.",
+    "inviteActivationHint": "Invite-only — no public sign-up. Need access? Ask your admin.",
     "status": {
       "magicLinkSent": "If {email} belongs to an active Sheet Happens member, a sign-in link is on its way.",
       "passwordSetupSent": "If {email} belongs to an active Sheet Happens member, a password setup link is on its way."
@@ -111,6 +143,7 @@
     }
   },
   "AcceptInvite": {
+    "eyebrow": "Invitation",
     "title": "Accept invitation",
     "description": "You have been invited to Sheet Happens as {email}.",
     "descriptionNamed": "{name}, you have been invited to Sheet Happens as {email}.",
@@ -176,7 +209,9 @@
     "actions": {
       "updatePassword": "Update password",
       "sendSetupLink": "Send password setup link",
-      "returnToSignIn": "Return to sign-in"
+      "returnToSignIn": "Return to sign-in",
+      "showPassword": "Show password",
+      "hidePassword": "Hide password"
     },
     "footer": {
       "activationSeparate": "Invitation activation is still separate."
@@ -225,6 +260,10 @@
       "title": "Admin access required",
       "message": "Your account is active, but it does not have permission to open this admin area."
     },
+    "contractorRequired": {
+      "title": "Contractor profile required",
+      "message": "Timesheets are available only for contractor profiles."
+    },
     "invited": {
       "title": "Account not activated",
       "message": "Use your invitation link once to activate this member profile."
@@ -258,6 +297,61 @@
       "settings": "Open settings",
       "people": "Open people",
       "projects": "Open projects"
+    }
+  },
+  "Timesheets": {
+    "eyebrow": "Contractor workflow",
+    "title": "Timesheets",
+    "subtitle": "Monthly contractor timesheet preview based on tracked time.",
+    "revision": "Revision {number}",
+    "summary": {
+      "hours": "Hours",
+      "amount": "Amount",
+      "entries": "Entries"
+    },
+    "status": {
+      "not_created": "Not submitted",
+      "submitted": "Submitted",
+      "rejected": "Rejected",
+      "approved": "Approved",
+      "invoiced": "Invoiced",
+      "invoice_rejected": "Invoice rejected",
+      "accepted": "Accepted",
+      "paid": "Paid",
+      "missing": "Missing"
+    },
+    "warnings": {
+      "mixedCurrency": "The selected month contains multiple currencies.",
+      "missingRates": "Missing rates for {count} entries.",
+      "rejected": "Rejected: {reason}"
+    },
+    "breakdown": {
+      "title": "Project breakdown",
+      "caption": "Monthly timesheet project breakdown",
+      "currentSource": "Calculated from current time entries.",
+      "snapshotSource": "Calculated from the submitted timesheet snapshot.",
+      "empty": "No time entries for this month."
+    },
+    "table": {
+      "project": "Project",
+      "hours": "Hours",
+      "rate": "Rate",
+      "amount": "Amount",
+      "entries": "Entries"
+    },
+    "rate": {
+      "missing": "Missing rate",
+      "mixed": "Mixed rates",
+      "none": "-"
+    },
+    "rateSource": {
+      "MEMBER_DEFAULT": "central",
+      "PROJECT_OVERRIDE": "project override"
+    },
+    "amount": {
+      "mixedCurrency": "Mixed currency",
+      "missingRate": "Missing rate",
+      "none": "-"
     }
   },
   "DashboardCards": {
@@ -320,6 +414,29 @@
       "title": "Member directory",
       "description": "Manage invited, active, inactive, and archived members."
     },
+    "filters": {
+      "search": "Search",
+      "searchPlaceholder": "Search name or email",
+      "state": "State",
+      "role": "Role",
+      "profile": "Profile",
+      "allStates": "All states",
+      "allRoles": "All roles",
+      "allProfiles": "All profiles",
+      "showing": "Showing {start}-{end} of {total} members",
+      "apply": "Apply filters",
+      "clear": "Clear"
+    },
+    "pager": {
+      "navigation": "People pages",
+      "previous": "Previous",
+      "next": "Next",
+      "previousPage": "Go to page {page}",
+      "nextPage": "Go to page {page}",
+      "page": "Go to page {page}",
+      "currentPage": "Current page, page {page}",
+      "summary": "Page {page} of {totalPages}, {totalItems} members"
+    },
     "form": {
       "firstName": "First name",
       "lastName": "Last name",
@@ -352,6 +469,7 @@
       "ariaLabel": "People management table",
       "rowActions": "Member actions",
       "emptyInvited": "No members have been invited yet.",
+      "emptyFiltered": "No members match the current filters.",
       "scheduledProfile": "Scheduled: {profile} on {validFrom}",
       "editMember": "Edit {name}",
       "columns": {
@@ -374,6 +492,7 @@
       "resetAuthenticator": "Reset authenticator",
       "deactivate": "Deactivate",
       "reactivate": "Reactivate",
+      "restoreAccount": "Restore account",
       "archive": "Archive",
       "cancel": "Cancel",
       "archiveMember": "Archive member",
@@ -426,6 +545,8 @@
       "invitationRevoked": "Invitation revoked.",
       "memberDeactivated": "Member deactivated. {sessions} revoked.",
       "memberReactivated": "Member reactivated.",
+      "memberRestored": "Member restored.",
+      "memberRestoredWithInvitation": "Member restored and invitation sent to {email}.",
       "memberArchived": "Member archived. {sessions} revoked. {invitations} revoked.",
       "sessionsRevoked": "{sessions} revoked.",
       "authenticatorReset": "Authenticator app reset.",
@@ -435,6 +556,7 @@
     },
     "errors": {
       "fixFields": "Fix the highlighted fields and try again.",
+      "invitationConflict": "The invitation cannot be sent with these details.",
       "invitationFailed": "The invitation could not be sent. Try again later.",
       "memberUpdateFailed": "The member details could not be updated. Try again later.",
       "profileTransitionFailed": "The profile transition could not be scheduled. Try again later.",
@@ -446,6 +568,8 @@
       "lastNameRequired": "Last name is required.",
       "validProfile": "Choose a valid profile.",
       "validRole": "Choose a valid role.",
+      "emailPendingInvitation": "A pending invitation already exists for this email.",
+      "emailAlreadyMember": "A member already exists for this email.",
       "supportedCurrency": "Choose a supported currency.",
       "supportedTimezone": "Choose a supported timezone.",
       "supportedLanguage": "Choose a supported language.",
@@ -485,6 +609,7 @@
       "inactive": "Inactive",
       "archived": "Archived",
       "internal": "Internal",
+      "external": "External",
       "ungrouped": "Ungrouped",
       "invited": "Invited",
       "deleted": "Deleted"
@@ -503,10 +628,31 @@
     },
     "filters": {
       "search": "Search projects",
-      "searchPlaceholder": "Search projects...",
+      "searchPlaceholder": "Project, group, assignee, email...",
       "state": "State",
+      "type": "Type",
+      "timeline": "Timeline",
       "group": "Group",
-      "all": "All"
+      "assignment": "Assignment",
+      "all": "All",
+      "current": "Active today",
+      "future": "Future",
+      "ended": "Ended",
+      "assigned": "Assigned today",
+      "unassigned": "Unassigned today",
+      "showing": "Showing {start}-{end} of {total} projects",
+      "apply": "Apply filters",
+      "clear": "Clear"
+    },
+    "pager": {
+      "navigation": "Project pages",
+      "previous": "Previous",
+      "next": "Next",
+      "previousPage": "Go to page {page}",
+      "nextPage": "Go to page {page}",
+      "page": "Go to page {page}",
+      "currentPage": "Current page, page {page}",
+      "summary": "Page {page} of {totalPages}, {totalItems} projects"
     },
     "table": {
       "caption": "Project management table",
@@ -529,6 +675,7 @@
       "description": "Description",
       "descriptionPlaceholder": "Optional grouping note",
       "empty": "No project groups have been created yet.",
+      "emptyFiltered": "No project groups match the current filters.",
       "projectCount": "{count, plural, one {# project} other {# projects}}",
       "noProjects": "No projects in this group.",
       "removeProjectLabel": "Remove {project} from {group}",
@@ -539,7 +686,16 @@
       "archiveTitle": "Archive project group?",
       "archiveTitleNamed": "Archive {name}?",
       "archiveDescription": "Archived groups are removed from filters and organization helpers. The projects stay unchanged.",
-      "archiveWarning": "This is a soft delete for the group only."
+      "archiveWarning": "This is a soft delete for the group only.",
+      "filters": {
+        "search": "Search groups",
+        "searchPlaceholder": "Group or project name...",
+        "state": "State",
+        "projects": "Projects",
+        "withProjects": "With projects",
+        "empty": "Empty",
+        "showing": "Showing {count} of {total} groups"
+      }
     },
     "actions": {
       "createProject": "Create project",
@@ -553,6 +709,7 @@
       "menuLabel": "Actions",
       "openDetails": "Open details",
       "editProject": "Edit project",
+      "editGroup": "Edit group",
       "activate": "Activate",
       "deactivate": "Deactivate",
       "archive": "Archive",
@@ -896,6 +1053,18 @@
       "copyPreviousDay": "Copy entries from the day before {date}.",
       "duplicatePreviousWeek": "Copy entries from the previous week into this week."
     },
+    "quickActionConfirm": {
+      "confirm": "Copy entries",
+      "skipExisting": "Existing entries in the target cells are kept and skipped.",
+      "copyPreviousDay": {
+        "title": "Copy yesterday?",
+        "description": "Copy entries from {sourceDate} to {targetDate}."
+      },
+      "duplicatePreviousWeek": {
+        "title": "Duplicate previous week?",
+        "description": "Copy entries from {sourceWeekStart} - {sourceWeekEnd} to {targetWeekStart} - {targetWeekEnd}."
+      }
+    },
     "locked": {
       "title": "Locked period.",
       "description": "Some days in this week belong to a submitted timesheet and are read-only."
@@ -963,13 +1132,16 @@
       "futureDay": "Future day.",
       "futureDate": "Future date",
       "futureDateAllowed": "This is a future date. Entries are allowed, but they stay flagged.",
-      "dailyTotalOver24": "Daily total is over 24h.",
+      "dailyTotalOver8": "Daily total is over 8h.",
       "dailyTotalExact": "That is {hours}h in one day.",
+      "dailyTotalOver24Blocked": "Daily total cannot exceed 24 hours.",
+      "dailyTotalOver24Projected": "Daily total cannot exceed 24 hours, the total would be {hours}h.",
       "dayHasOverlaps": "Day has overlapping entries.",
-      "dayOver24": "The selected day has more than 24 logged hours.",
+      "dayOver8": "The selected day has more than 8 logged hours.",
+      "dayOver8Projected": "The selected day has more than 8 logged hours, the total is {hours}h.",
       "longContinuousSession": "Long continuous session",
       "overlapsAnotherEntry": "Overlaps another entry",
-      "moreThan24NotBlocked": "That is more than 24h. This is a warning, not a blocker.",
+      "durationOver24Blocked": "Duration cannot exceed 24 hours.",
       "longSessionNotBlocked": "This is a long continuous session. This is a warning, not a blocker."
     },
     "source": {
@@ -1012,6 +1184,7 @@
       "timeEntryDeleteFailed": "The time entry could not be deleted.",
       "timerStartFailed": "The timer could not be started.",
       "timerStopFailed": "The timer could not be stopped.",
+      "timerDiscardedDailyLimit": "Timer stopped without saving because the day would exceed 24 hours.",
       "previousDayCopyFailed": "The previous day could not be copied.",
       "previousWeekDuplicateFailed": "The previous week could not be duplicated.",
       "draftSaveFailed": "The draft could not be saved.",
@@ -1043,6 +1216,7 @@
       "durationPositive": "Duration must be greater than zero.",
       "durationTooLong": "Duration is too long.",
       "durationTooLarge": "Duration is too large.",
+      "dailyTotalTooLarge": "Daily total cannot exceed 24 hours.",
       "descriptionRequired": "Description is required.",
       "descriptionMax": "Description must be 1000 characters or less.",
       "timeEntryMissing": "Time entry id is missing.",

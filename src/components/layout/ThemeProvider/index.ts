@@ -1,2 +1,2 @@
-export { ThemeProvider } from "./ThemeProvider";
-export type { ThemeProviderProps } from "./ThemeProvider.types";
+export { ThemeProvider, useTheme } from "./ThemeProvider";
+export type { ThemeContextValue, ThemeName, ThemeProviderProps } from "./ThemeProvider.types";
