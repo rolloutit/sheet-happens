@@ -2,7 +2,11 @@ import { getTranslations } from "next-intl/server";
 
 import { AppShell } from "@/src/components/layout/AppShell";
 import { getMemberPreferenceOptions } from "@/src/lib/member-preferences";
-import { mapMemberToShellUser, requireAdminAppMember } from "@/src/server/auth/app-access";
+import {
+  mapMemberToShellProfile,
+  mapMemberToShellUser,
+  requireAdminAppMember,
+} from "@/src/server/auth/app-access";
 import { listProjectsForAdmin } from "@/src/server/projects";
 import { listAssignmentRatesForAdmin, listMemberRatesForAdmin } from "@/src/server/rates";
 import { AdminRatesTable } from "./AdminRatesTable";
@@ -21,7 +25,12 @@ export default async function AdminRatesPage() {
   const todayDate = new Date().toISOString().slice(0, 10);
 
   return (
-    <AppShell current="rates" role="admin" user={mapMemberToShellUser(admin)}>
+    <AppShell
+      current="rates"
+      role="admin"
+      profile={mapMemberToShellProfile(admin)}
+      user={mapMemberToShellUser(admin)}
+    >
       <section className="mx-auto grid w-full max-w-[58.5rem] gap-6 px-4 py-8 sm:px-6 lg:px-8">
         <div className="flex flex-col gap-2">
           <p className="font-ui text-sm font-medium uppercase tracking-[0.18em] text-accent">

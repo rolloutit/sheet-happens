@@ -41,6 +41,7 @@ import type { AppShellProps, AppShellTimer } from "./AppShell.types";
 
 type AppShellTranslator = ReturnType<typeof useTranslations>;
 type AppShellRole = NonNullable<AppShellProps["role"]>;
+type AppShellProfile = NonNullable<AppShellProps["profile"]>;
 
 const navItems = [
   {
@@ -57,7 +58,7 @@ const navItems = [
     icon: CalendarDays,
     group: "main",
     href: "/timesheets",
-    roles: ["contractor"],
+    profiles: ["contractor"],
   },
   { id: "review", labelKey: "nav.review", icon: WalletCards, group: "admin", href: "#" },
   { id: "reports", labelKey: "nav.reports", icon: BarChart3, group: "admin", href: "#" },
@@ -85,6 +86,7 @@ export function AppShell({
   children,
   current = "dashboard",
   role = "admin",
+  profile,
   collapsed = false,
   mobileNavigationMode = "auto",
   language,
@@ -107,6 +109,7 @@ export function AppShell({
   const [mobileOpen, setMobileOpen] = useState(false);
   const [localLanguage, setLocalLanguage] = useState(language ?? locale);
   const [timerNotice, setTimerNotice] = useState<string | null>(null);
+  const resolvedProfile = profile ?? inferProfileFromLegacyRole(role);
   const selectedLanguage = language ?? localLanguage;
   const [isStoppingTimer, startStoppingTimerTransition] = useTransition();
   const [, startLanguageTransition] = useTransition();
@@ -214,7 +217,14 @@ export function AppShell({
           ) : null}
         </div>
         <nav className="flex-1 overflow-y-auto px-[18px] py-2" aria-label={t("primaryNavigation")}>
-          <NavGroup group="main" role={role} current={current} onNavigate={handleNavigate} t={t} />
+          <NavGroup
+            group="main"
+            role={role}
+            profile={resolvedProfile}
+            current={current}
+            onNavigate={handleNavigate}
+            t={t}
+          />
           {role === "admin" ? (
             <>
               <p className="mx-3 mb-2 mt-5 font-ui text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
@@ -223,6 +233,7 @@ export function AppShell({
               <NavGroup
                 group="admin"
                 role={role}
+                profile={resolvedProfile}
                 current={current}
                 onNavigate={handleNavigate}
                 t={t}
@@ -289,6 +300,7 @@ export function AppShell({
                     <NavGroup
                       group="main"
                       role={role}
+                      profile={resolvedProfile}
                       current={current}
                       t={t}
                       onNavigate={(itemId) => {
@@ -304,6 +316,7 @@ export function AppShell({
                         <NavGroup
                           group="admin"
                           role={role}
+                          profile={resolvedProfile}
                           current={current}
                           t={t}
                           onNavigate={(itemId) => {
@@ -374,7 +387,7 @@ export function AppShell({
       </div>
       <MobileBottomBar
         current={current}
-        items={bottomNavItems(role).map((item) => ({
+        items={bottomNavItems(role, resolvedProfile).map((item) => ({
           ...item,
           label: t(item.labelKey),
         }))}
@@ -485,12 +498,14 @@ function formatElapsed(milliseconds: number) {
 function NavGroup({
   group,
   role,
+  profile,
   current,
   onNavigate,
   t,
 }: {
   group: "main" | "admin";
   role: AppShellProps["role"];
+  profile: AppShellProfile;
   current: string;
   onNavigate?: (itemId: string) => void;
   t: AppShellTranslator;
@@ -499,7 +514,12 @@ function NavGroup({
     <div className="grid gap-1">
       {navItems
         .filter((item) => item.group === group)
-        .filter((item) => isNavItemVisibleForRole(item, role ?? "employee"))
+        .filter((item) =>
+          isNavItemVisibleForAccess(item, {
+            role: role ?? "employee",
+            profile,
+          }),
+        )
         .map((item) => {
           const active = item.id === current;
           return (
@@ -532,11 +552,16 @@ function pageTitle(current: string, t: AppShellTranslator) {
   return item ? t(item.labelKey) : t("nav.dashboard");
 }
 
-function bottomNavItems(role: AppShellProps["role"]) {
+function bottomNavItems(role: AppShellProps["role"], profile: AppShellProfile) {
   const resolvedRole = role ?? "employee";
   const baseItems = navItems
     .filter((item) => item.group === "main")
-    .filter((item) => isNavItemVisibleForRole(item, resolvedRole));
+    .filter((item) =>
+      isNavItemVisibleForAccess(item, {
+        role: resolvedRole,
+        profile,
+      }),
+    );
   const adminShortcut = navItems.find((item) => item.id === "reports");
 
   if (role === "admin" && adminShortcut) {
@@ -546,8 +571,23 @@ function bottomNavItems(role: AppShellProps["role"]) {
   return baseItems;
 }
 
-function isNavItemVisibleForRole(item: (typeof navItems)[number], role: AppShellRole) {
-  return !("roles" in item) || (item.roles as readonly AppShellRole[]).includes(role);
+function isNavItemVisibleForAccess(
+  item: (typeof navItems)[number],
+  access: {
+    role: AppShellRole;
+    profile: AppShellProfile;
+  },
+) {
+  const roleAllowed =
+    !("roles" in item) || (item.roles as readonly AppShellRole[]).includes(access.role);
+  const profileAllowed =
+    !("profiles" in item) || (item.profiles as readonly AppShellProfile[]).includes(access.profile);
+
+  return roleAllowed && profileAllowed;
+}
+
+function inferProfileFromLegacyRole(role: AppShellProps["role"]): AppShellProfile {
+  return role === "contractor" ? "contractor" : "employee";
 }
 
 function translateUserRole(t: AppShellTranslator, role: string | undefined) {
