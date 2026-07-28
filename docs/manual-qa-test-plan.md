@@ -36,6 +36,10 @@ Replace placeholder values before sharing a concrete test run:
 - `{TIME_ENTRY_DESCRIPTION}`: description text used for test time entries.
 - `{TIME_ENTRY_UPDATED_DESCRIPTION}`: edited description text used for test time entries.
 - `{TIMESHEET_MONTH}`: contractor timesheet month formatted as `YYYY-MM`.
+- `{TIMESHEET_PROJECT_A}`: first contractor project used in timesheet tests.
+- `{TIMESHEET_PROJECT_B}`: second contractor project used in timesheet tests.
+- `{TIMESHEET_CURRENCY_A}`: first currency used in mixed-currency timesheet tests.
+- `{TIMESHEET_CURRENCY_B}`: second currency used in mixed-currency timesheet tests.
 - `{PROJECT_NAME}`: name for a newly created project.
 - `{PROJECT_UPDATED_NAME}`: updated project name.
 - `{PROJECT_SLUG}`: URL-safe or code-like project slug.
@@ -477,6 +481,70 @@ Expected result:
 - The preview is calculated from current time entries when no submitted snapshot exists.
 - Projects show total hours, rate state, currency, and amount.
 - Missing rates or mixed currencies are shown as warnings instead of hidden.
+
+### Contractor Can Submit Monthly Timesheet
+
+1. Sign in as `{CONTRACTOR_EMAIL}`.
+2. Ensure `{TIMESHEET_MONTH}` has at least one time entry with a description.
+3. Ensure all projects in `{TIMESHEET_MONTH}` resolve to the same currency.
+4. Open `https://{DOMAIN_NAME}/timesheets?month={TIMESHEET_MONTH}`.
+5. Click `Submit timesheet`.
+6. Confirm the dialog explains that source time entries will be locked.
+7. Confirm the submit action.
+8. Open `https://{DOMAIN_NAME}/time` and navigate to a week inside `{TIMESHEET_MONTH}`.
+9. Try to edit or delete a submitted time entry.
+
+Expected result:
+
+- The timesheet status changes to submitted.
+- The monthly preview switches to the submitted snapshot source.
+- The selected month can no longer be submitted again.
+- Source time entries in that month are locked and cannot be edited or deleted.
+- The audit log contains a `timesheet.submitted` event for the submitted month.
+
+### Contractor Cannot Submit Invalid Monthly Timesheet
+
+1. Sign in as `{CONTRACTOR_EMAIL}`.
+2. Open a month with no entries, missing rates, or mixed currencies.
+3. Open `https://{DOMAIN_NAME}/timesheets?month={TIMESHEET_MONTH}`.
+4. Check the submit button state.
+
+Expected result:
+
+- The submit button is disabled when the month has no entries, missing rates, or mixed currencies.
+- The page shows a factual reason near the submit button.
+- Missing rates and mixed currencies are also visible as warnings.
+
+### Admin Can Fix Mixed-Currency Timesheet Blocking
+
+1. Sign in as `{ADMIN_EMAIL}`.
+2. Configure `{CONTRACTOR_EMAIL}` so `{TIMESHEET_PROJECT_A}` resolves to `{TIMESHEET_CURRENCY_A}` during `{TIMESHEET_MONTH}`.
+3. Configure `{CONTRACTOR_EMAIL}` so `{TIMESHEET_PROJECT_B}` resolves to `{TIMESHEET_CURRENCY_B}` during `{TIMESHEET_MONTH}`.
+4. Sign in as `{CONTRACTOR_EMAIL}`.
+5. Add time entries with descriptions for both `{TIMESHEET_PROJECT_A}` and `{TIMESHEET_PROJECT_B}` inside `{TIMESHEET_MONTH}`.
+6. Open `https://{DOMAIN_NAME}/timesheets?month={TIMESHEET_MONTH}`.
+7. Confirm the submit button is disabled because the month contains multiple currencies.
+8. Sign in again as `{ADMIN_EMAIL}`.
+9. Open the admin rates page.
+10. Open `{CONTRACTOR_EMAIL}` in the rate drawer.
+11. Find the central rate or project override that causes `{TIMESHEET_PROJECT_A}` or `{TIMESHEET_PROJECT_B}` to resolve to the wrong currency.
+12. Click `Replace` on that rate period.
+13. Set `Replace from` to the first day of `{TIMESHEET_MONTH}`.
+14. Enter the corrected rate amount and currency so every effective rate for `{CONTRACTOR_EMAIL}` in `{TIMESHEET_MONTH}` resolves to one currency.
+15. Submit the replacement.
+16. Confirm the rate is corrected for `{TIMESHEET_MONTH}`. If the selected date equals the period start, the same period is replaced in place; if it is later than the period start, the old period ends on that date and a replacement starts there.
+17. Confirm the audit log contains rate replacement entries.
+18. Sign in again as `{CONTRACTOR_EMAIL}`.
+19. Reopen `https://{DOMAIN_NAME}/timesheets?month={TIMESHEET_MONTH}`.
+20. Submit the timesheet.
+
+Expected result:
+
+- The mixed-currency month is blocked before the admin rate fix.
+- The project breakdown shows which projects resolve to different currencies.
+- Admin fixes the problem through rate period replacement, not by editing the timesheet amount directly.
+- After the fix, the preview recalculates from current time entries and shows a single currency.
+- The submit button becomes enabled and the timesheet can be submitted.
 
 ### Employee Cannot Open Timesheets
 
