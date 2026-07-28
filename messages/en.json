@@ -352,6 +352,45 @@
       "mixedCurrency": "Mixed currency",
       "missingRate": "Missing rate",
       "none": "-"
+    },
+    "submit": {
+      "trigger": "Submit timesheet",
+      "title": "Submit timesheet?",
+      "description": "Submitting locks the source time entries for this month. Edits require an admin rejection and unlock.",
+      "details": "{month} will be submitted for approval from the current time entries.",
+      "confirm": "Submit timesheet",
+      "cancel": "Cancel",
+      "submitting": "Submitting",
+      "disabled": {
+        "notOpen": "This month is already in a submitted workflow state.",
+        "noEntries": "Add at least one time entry before submitting.",
+        "missingRates": "Resolve missing rates before submitting.",
+        "mixedCurrency": "A submitted month must use a single currency.",
+        "notReady": "The timesheet amount is not ready for submission."
+      }
+    }
+  },
+  "TimesheetActions": {
+    "success": {
+      "submitted": "Timesheet submitted."
+    },
+    "errors": {
+      "invalidMonth": "Choose a valid month.",
+      "memberNotFound": "Member profile not found.",
+      "contractorRequired": "Only contractors can submit timesheets.",
+      "monthLocked": "This month is already locked by a submitted timesheet.",
+      "monthNotOpen": "This month is not open for submission.",
+      "noEntries": "Add at least one time entry before submitting.",
+      "entriesAlreadyLocked": "Some entries are already locked by another timesheet.",
+      "missingProjectAssignment": "Every entry must have a project assignment.",
+      "invalidDurations": "Every entry must have a positive duration.",
+      "missingDescriptions": "Every entry must have a description before submission.",
+      "missingRates": "Resolve missing rates before submitting.",
+      "mixedCurrency": "A submitted month must use a single currency.",
+      "entriesChanged": "Time entries changed during submission. Try again.",
+      "notAllowed": "You are not allowed to submit this timesheet.",
+      "databaseUnavailable": "Database unavailable. Try again later.",
+      "submitFailed": "The timesheet could not be submitted."
     }
   },
   "DashboardCards": {
@@ -929,16 +968,24 @@
       "addPeriod": "Add period",
       "addOverride": "Add override",
       "addOverridePeriod": "Add override period",
+      "replace": "Replace",
+      "replaceFromDate": "Replace from date",
+      "replaceOverrideFromDate": "Replace override from date",
       "cancel": "Cancel"
     },
     "fields": {
       "project": "Project",
       "validFrom": "Valid from",
+      "replaceFrom": "Replace from",
       "validTo": "Valid to",
       "hourlyRate": "Hourly rate",
       "currency": "Currency",
       "reason": "Reason / note",
       "reasonPlaceholder": "Why is this rate changing?"
+    },
+    "replaceForm": {
+      "title": "Replace this period from a date",
+      "description": "If the date is the period start, this period is replaced in place. Later dates split the period and start a replacement from that date."
     },
     "timeline": {
       "range": "{from} to {to}",
@@ -951,12 +998,16 @@
   "AdminRatesActions": {
     "success": {
       "memberRateCreated": "Member rate period created.",
-      "assignmentOverrideCreated": "Assignment override rate period created."
+      "assignmentOverrideCreated": "Assignment override rate period created.",
+      "memberRateReplaced": "Member rate period replaced.",
+      "assignmentOverrideReplaced": "Assignment override rate period replaced."
     },
     "errors": {
       "fixFields": "Fix the highlighted rate fields and try again.",
       "memberRateFailed": "The member rate could not be created.",
       "assignmentOverrideFailed": "The assignment override rate could not be created.",
+      "memberRateReplaceFailed": "The member rate could not be replaced.",
+      "assignmentOverrideReplaceFailed": "The assignment override rate could not be replaced.",
       "databaseUnavailable": "The database is not reachable. Try again later or contact support.",
       "rateLinkFailed": "The rate could not be linked to the selected member or assignment. Refresh and try again.",
       "ratesUnavailable": "Rates are temporarily unavailable. Try again later or contact support."
@@ -964,6 +1015,7 @@
     "validation": {
       "validDate": "Choose a valid date.",
       "rateStartRequired": "Rate start date is required.",
+      "replacementStartRequired": "Replacement start date is required.",
       "validStartDate": "Choose a valid start date.",
       "hourlyRateRequired": "Hourly rate is required.",
       "hourlyRateFormat": "Enter a non-negative amount with up to 2 decimals.",

@@ -352,6 +352,45 @@
       "mixedCurrency": "Vegyes pénznem",
       "missingRate": "Hiányzó óradíj",
       "none": "-"
+    },
+    "submit": {
+      "trigger": "Timesheet beküldése",
+      "title": "Beküldöd a timesheetet?",
+      "description": "A beküldés zárolja az adott hónap forrás időbejegyzéseit. Módosítani admin elutasítás és feloldás után lehet.",
+      "details": "{month} az aktuális időbejegyzések alapján kerül jóváhagyásra.",
+      "confirm": "Timesheet beküldése",
+      "cancel": "Mégse",
+      "submitting": "Beküldés",
+      "disabled": {
+        "notOpen": "Ez a hónap már beküldött workflow állapotban van.",
+        "noEntries": "Beküldés előtt legalább egy időbejegyzés szükséges.",
+        "missingRates": "Beküldés előtt pótolni kell a hiányzó óradíjakat.",
+        "mixedCurrency": "Egy beküldött hónap csak egy pénznemet tartalmazhat.",
+        "notReady": "A timesheet összege még nem áll készen beküldésre."
+      }
+    }
+  },
+  "TimesheetActions": {
+    "success": {
+      "submitted": "A timesheet beküldve."
+    },
+    "errors": {
+      "invalidMonth": "Válassz érvényes hónapot.",
+      "memberNotFound": "A tagprofil nem található.",
+      "contractorRequired": "Timesheetet csak kontraktor küldhet be.",
+      "monthLocked": "Ez a hónap már zárolva van egy beküldött timesheet miatt.",
+      "monthNotOpen": "Ez a hónap nem nyitott beküldésre.",
+      "noEntries": "Beküldés előtt legalább egy időbejegyzés szükséges.",
+      "entriesAlreadyLocked": "Néhány bejegyzés már másik timesheethez van zárolva.",
+      "missingProjectAssignment": "Minden bejegyzéshez projekt hozzárendelés szükséges.",
+      "invalidDurations": "Minden bejegyzés időtartamának pozitívnak kell lennie.",
+      "missingDescriptions": "Beküldés előtt minden bejegyzéshez leírás szükséges.",
+      "missingRates": "Beküldés előtt pótolni kell a hiányzó óradíjakat.",
+      "mixedCurrency": "Egy beküldött hónap csak egy pénznemet tartalmazhat.",
+      "entriesChanged": "Az időbejegyzések beküldés közben megváltoztak. Próbáld újra.",
+      "notAllowed": "Nincs jogosultságod beküldeni ezt a timesheetet.",
+      "databaseUnavailable": "Az adatbázis nem elérhető. Próbáld újra később.",
+      "submitFailed": "A timesheetet nem sikerült beküldeni."
     }
   },
   "DashboardCards": {
@@ -929,16 +968,24 @@
       "addPeriod": "Időszak hozzáadása",
       "addOverride": "Felülírás hozzáadása",
       "addOverridePeriod": "Felülírási időszak hozzáadása",
+      "replace": "Csere",
+      "replaceFromDate": "Csere dátumtól",
+      "replaceOverrideFromDate": "Felülírás cseréje dátumtól",
       "cancel": "Mégse"
     },
     "fields": {
       "project": "Projekt",
       "validFrom": "Érvényes ettől",
+      "replaceFrom": "Csere ettől",
       "validTo": "Érvényes eddig",
       "hourlyRate": "Óradíj",
       "currency": "Pénznem",
       "reason": "Indok / megjegyzés",
       "reasonPlaceholder": "Miért változik ez az óradíj?"
+    },
+    "replaceForm": {
+      "title": "Időszak cseréje adott dátumtól",
+      "description": "Ha a dátum az időszak kezdete, az időszak helyben cserélődik. Későbbi dátumnál az időszak lezárul, és új csereidőszak indul."
     },
     "timeline": {
       "range": "{from} - {to}",
@@ -951,12 +998,16 @@
   "AdminRatesActions": {
     "success": {
       "memberRateCreated": "Tag óradíj-időszak létrehozva.",
-      "assignmentOverrideCreated": "Hozzárendelési felülírási óradíj-időszak létrehozva."
+      "assignmentOverrideCreated": "Hozzárendelési felülírási óradíj-időszak létrehozva.",
+      "memberRateReplaced": "Tag óradíj-időszak cserélve.",
+      "assignmentOverrideReplaced": "Hozzárendelési óradíj-felülírás cserélve."
     },
     "errors": {
       "fixFields": "Javítsd a kiemelt óradíjmezőket, majd próbáld újra.",
       "memberRateFailed": "A tag óradíját nem sikerült létrehozni.",
       "assignmentOverrideFailed": "A hozzárendelési óradíj-felülírást nem sikerült létrehozni.",
+      "memberRateReplaceFailed": "A tag óradíját nem sikerült cserélni.",
+      "assignmentOverrideReplaceFailed": "A hozzárendelési óradíj-felülírást nem sikerült cserélni.",
       "databaseUnavailable": "Az adatbázis nem érhető el. Próbáld újra később, vagy keresd a supportot.",
       "rateLinkFailed": "Az óradíjat nem sikerült a kiválasztott taghoz vagy hozzárendeléshez kapcsolni. Frissítsd az oldalt és próbáld újra.",
       "ratesUnavailable": "Az óradíjak átmenetileg nem érhetők el. Próbáld újra később, vagy keresd a supportot."
@@ -964,6 +1015,7 @@
     "validation": {
       "validDate": "Válassz érvényes dátumot.",
       "rateStartRequired": "Az óradíj kezdési dátuma kötelező.",
+      "replacementStartRequired": "A csere kezdési dátuma kötelező.",
       "validStartDate": "Válassz érvényes kezdési dátumot.",
       "hourlyRateRequired": "Az óradíj megadása kötelező.",
       "hourlyRateFormat": "Nem negatív összeget adj meg, legfeljebb 2 tizedesjeggyel.",
