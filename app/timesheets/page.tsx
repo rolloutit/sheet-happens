@@ -18,6 +18,7 @@ import {
 import { SectionHead } from "@/src/components/ui/SectionHead";
 import {
   accountStatusRoute,
+  mapMemberToShellProfile,
   mapMemberToShellRole,
   mapMemberToShellUser,
   requireActiveAppMember,
@@ -30,6 +31,7 @@ import {
   type TimesheetPreviewRate,
   type TimesheetPreviewStatus,
 } from "@/src/server/timesheets";
+import { SubmitTimesheetButton } from "./SubmitTimesheetButton";
 
 export const dynamic = "force-dynamic";
 
@@ -60,10 +62,17 @@ export default async function TimesheetsPage({ searchParams }: TimesheetsPagePro
     getLocale(),
   ]);
   const shellRole = mapMemberToShellRole(member);
+  const shellProfile = mapMemberToShellProfile(member);
   const totalAmountLabel = formatPreviewAmount(preview, locale, t);
+  const submitReadiness = getSubmitReadiness(preview, t);
 
   return (
-    <AppShell current="timesheets" role={shellRole} user={mapMemberToShellUser(member)}>
+    <AppShell
+      current="timesheets"
+      role={shellRole}
+      profile={shellProfile}
+      user={mapMemberToShellUser(member)}
+    >
       <section className="mx-auto grid w-full max-w-[73.75rem] gap-6 px-4 py-8 sm:px-6 lg:px-8">
         <SectionHead eyebrow={t("eyebrow")} title={t("title")} subtitle={t("subtitle")} />
 
@@ -84,21 +93,39 @@ export default async function TimesheetsPage({ searchParams }: TimesheetsPagePro
                 {formatPeriodRange(preview.periodStart, preview.periodEnd, locale)}
               </p>
             </div>
-            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:min-w-[28rem]">
-              <SummaryMetric
-                icon={Clock3}
-                label={t("summary.hours")}
-                value={formatHours(preview.totalMinutes, locale)}
-              />
-              <SummaryMetric
-                icon={WalletCards}
-                label={t("summary.amount")}
-                value={totalAmountLabel}
-              />
-              <SummaryMetric
-                icon={FileText}
-                label={t("summary.entries")}
-                value={formatCount(preview.entryCount, locale)}
+            <div className="grid gap-4 lg:min-w-[28rem]">
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+                <SummaryMetric
+                  icon={Clock3}
+                  label={t("summary.hours")}
+                  value={formatHours(preview.totalMinutes, locale)}
+                />
+                <SummaryMetric
+                  icon={WalletCards}
+                  label={t("summary.amount")}
+                  value={totalAmountLabel}
+                />
+                <SummaryMetric
+                  icon={FileText}
+                  label={t("summary.entries")}
+                  value={formatCount(preview.entryCount, locale)}
+                />
+              </div>
+              <SubmitTimesheetButton
+                periodStart={preview.periodStart}
+                disabled={!submitReadiness.canSubmit}
+                disabledReason={submitReadiness.disabledReason}
+                labels={{
+                  trigger: t("submit.trigger"),
+                  title: t("submit.title"),
+                  description: t("submit.description"),
+                  details: t("submit.details", {
+                    month: formatMonthLabel(preview.periodStart, locale),
+                  }),
+                  confirm: t("submit.confirm"),
+                  cancel: t("submit.cancel"),
+                  submitting: t("submit.submitting"),
+                }}
               />
             </div>
           </div>
@@ -399,6 +426,48 @@ function formatPeriodRange(start: string, end: string, locale: string) {
 
 function getStatusLabel(status: TimesheetPreviewStatus, t: TimesheetsTranslator) {
   return t(`status.${status}`);
+}
+
+function getSubmitReadiness(preview: ContractorTimesheetMonthlyPreview, t: TimesheetsTranslator) {
+  if (preview.status !== "not_created" && preview.status !== "rejected") {
+    return {
+      canSubmit: false,
+      disabledReason: t("submit.disabled.notOpen"),
+    };
+  }
+
+  if (preview.entryCount === 0) {
+    return {
+      canSubmit: false,
+      disabledReason: t("submit.disabled.noEntries"),
+    };
+  }
+
+  if (preview.missingRateLineCount > 0) {
+    return {
+      canSubmit: false,
+      disabledReason: t("submit.disabled.missingRates"),
+    };
+  }
+
+  if (preview.mixedCurrency) {
+    return {
+      canSubmit: false,
+      disabledReason: t("submit.disabled.mixedCurrency"),
+    };
+  }
+
+  if (!preview.totalAmount || !preview.currencyCode) {
+    return {
+      canSubmit: false,
+      disabledReason: t("submit.disabled.notReady"),
+    };
+  }
+
+  return {
+    canSubmit: true,
+    disabledReason: null,
+  };
 }
 
 function getSingleParam(value: string | string[] | undefined) {
