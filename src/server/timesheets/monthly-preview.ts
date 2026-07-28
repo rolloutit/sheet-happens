@@ -26,6 +26,7 @@ export type TimesheetPreviewRate = {
   hourlyRate: string;
   currencyCode: string;
   source: TimesheetPreviewRateSource;
+  sourceRatePeriodId: string;
 };
 
 export type TimesheetMonthOption = {
@@ -135,7 +136,7 @@ export async function getContractorTimesheetMonthlyPreview(input: {
   const todayIso = getTodayIsoInTimezone(member.timezone, input.now);
   const currentMonthStart = getMonthStart(parseDateOnly(todayIso));
   const selectedMonthStart = getMonthStart(input.monthStart ?? currentMonthStart);
-  const selectedMonthEnd = getMonthEnd(selectedMonthStart);
+  const selectedMonthEnd = getTimesheetMonthEnd(selectedMonthStart);
   const monthStarts = getMonthOptionStarts(currentMonthStart, selectedMonthStart);
 
   const [optionTimesheets, selectedTimesheet] = await Promise.all([
@@ -194,6 +195,7 @@ export async function getContractorTimesheetMonthlyPreview(input: {
                 currencyCode: true,
                 lineAmount: true,
                 rateSource: true,
+                sourceRatePeriodId: true,
                 project: {
                   select: {
                     name: true,
@@ -220,6 +222,7 @@ export async function getContractorTimesheetMonthlyPreview(input: {
             hourlyRate: line.hourlyRate.toString(),
             currencyCode: line.currencyCode,
             source: line.rateSource,
+            sourceRatePeriodId: line.sourceRatePeriodId ?? "",
           };
 
           return {
@@ -255,7 +258,7 @@ export async function getContractorTimesheetMonthlyPreview(input: {
       return {
         month: formatMonthParam(monthStart),
         periodStart: formatDateOnly(monthStart),
-        periodEnd: formatDateOnly(getMonthEnd(monthStart)),
+        periodEnd: formatDateOnly(getTimesheetMonthEnd(monthStart)),
         status: timesheet ? mapTimesheetStatus(timesheet.status) : "not_created",
         totalMinutes: timesheet?.currentRevision?.totalMinutes ?? 0,
       };
@@ -307,6 +310,7 @@ export function resolveTimesheetLineRate(input: {
     hourlyRate: rate.hourlyRate.toString(),
     currencyCode: rate.currencyCode,
     source: assignmentRate ? "PROJECT_OVERRIDE" : "MEMBER_DEFAULT",
+    sourceRatePeriodId: rate.id,
   };
 }
 
@@ -513,7 +517,7 @@ function addMonths(date: Date, months: number) {
   return new Date(Date.UTC(normalized.getUTCFullYear(), normalized.getUTCMonth() + months, 1));
 }
 
-function getMonthEnd(monthStart: Date) {
+export function getTimesheetMonthEnd(monthStart: Date) {
   return addDays(addMonths(monthStart, 1), -1);
 }
 
@@ -537,7 +541,7 @@ function sameRate(left: TimesheetPreviewRate, right: TimesheetPreviewRate) {
   );
 }
 
-function calculateLineAmountCents(durationMinutes: number, hourlyRate: string) {
+export function calculateLineAmountCents(durationMinutes: number, hourlyRate: string) {
   const rateCents = moneyToCents(hourlyRate);
   return Math.round((rateCents * durationMinutes) / 60);
 }
@@ -546,6 +550,6 @@ function moneyToCents(value: DecimalLike | string | number) {
   return Math.round(Number(value.toString()) * 100);
 }
 
-function centsToMoney(cents: number) {
+export function centsToMoney(cents: number) {
   return (cents / 100).toFixed(2);
 }
