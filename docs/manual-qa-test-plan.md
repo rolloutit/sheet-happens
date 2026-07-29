@@ -44,6 +44,11 @@ Replace placeholder values before sharing a concrete test run:
 - `{INVOICE_NUMBER}`: invoice number used for contractor invoice upload testing.
 - `{INVOICE_AMOUNT}`: declared invoice amount used for contractor invoice upload testing.
 - `{INVOICE_PDF_FILE}`: local PDF file used for contractor invoice upload testing.
+- `{INVOICE_REJECTION_REASON}`: reason text used when rejecting an uploaded invoice.
+- `{CANCELLATION_INVOICE_NUMBER}`: invoice number used for the cancellation invoice.
+- `{CANCELLATION_INVOICE_PDF_FILE}`: local PDF file used for cancellation invoice testing.
+- `{CORRECTED_INVOICE_NUMBER}`: invoice number used for the corrected replacement invoice.
+- `{CORRECTED_INVOICE_PDF_FILE}`: local PDF file used for corrected invoice testing.
 - `{PROJECT_NAME}`: name for a newly created project.
 - `{PROJECT_UPDATED_NAME}`: updated project name.
 - `{PROJECT_SLUG}`: URL-safe or code-like project slug.
@@ -587,6 +592,84 @@ Expected result:
 - Invalid file, amount, and invoice number attempts show clear error messages.
 - Invalid attempts do not change the timesheet status.
 - Invalid attempts do not create invoice or document records.
+
+### Admin Can Review And Accept Uploaded Invoice
+
+1. Sign in as `{CONTRACTOR_EMAIL}`.
+2. Submit `{TIMESHEET_MONTH}` from `https://{DOMAIN_NAME}/timesheets?month={TIMESHEET_MONTH}`.
+3. Sign in as `{ADMIN_EMAIL}`.
+4. Open `https://{DOMAIN_NAME}/admin/timesheets`.
+5. Open the submitted timesheet review.
+6. Approve the timesheet.
+7. Sign in again as `{CONTRACTOR_EMAIL}`.
+8. Open `https://{DOMAIN_NAME}/timesheets?month={TIMESHEET_MONTH}`.
+9. Upload `{INVOICE_PDF_FILE}` with `{INVOICE_NUMBER}` and `{INVOICE_AMOUNT}`.
+10. Sign in again as `{ADMIN_EMAIL}`.
+11. Open `https://{DOMAIN_NAME}/admin/timesheets`.
+12. Filter by invoiced status, `{CONTRACTOR_EMAIL}`, or `{TIMESHEET_MONTH}`.
+13. Open the invoiced timesheet review.
+14. Confirm the uploaded PDF is rendered inside the invoice reconciliation section.
+15. Confirm the invoice metadata and declared amount are shown next to the system total.
+16. Open the PDF in a separate tab from the review page.
+17. Click `Accept invoice`.
+
+Expected result:
+
+- The uploaded PDF is visible to the admin before acceptance.
+- The admin can compare the PDF manually with the approved timesheet totals.
+- The review page shows whether the declared invoice amount matches the system amount.
+- Accepting the invoice changes the timesheet status to accepted.
+- The invoice status changes to accepted and can no longer be reviewed again.
+- The audit log contains an `invoice.accepted` row.
+- The timesheet event history contains an invoice accepted event.
+
+### Admin Can Reject Uploaded Invoice And Contractor Must Upload Cancellation Before Replacement
+
+1. Sign in as `{CONTRACTOR_EMAIL}`.
+2. Submit `{TIMESHEET_MONTH}` from `https://{DOMAIN_NAME}/timesheets?month={TIMESHEET_MONTH}`.
+3. Sign in as `{ADMIN_EMAIL}`.
+4. Open `https://{DOMAIN_NAME}/admin/timesheets`.
+5. Open the submitted timesheet review.
+6. Approve the timesheet.
+7. Sign in again as `{CONTRACTOR_EMAIL}`.
+8. Open `https://{DOMAIN_NAME}/timesheets?month={TIMESHEET_MONTH}`.
+9. Upload `{INVOICE_PDF_FILE}` with `{INVOICE_NUMBER}` and `{INVOICE_AMOUNT}`.
+10. Sign in again as `{ADMIN_EMAIL}`.
+11. Open the invoiced timesheet review.
+12. Confirm the uploaded PDF is rendered inside the invoice reconciliation section.
+13. Enter `{INVOICE_REJECTION_REASON}` in the invoice rejection reason field.
+14. Click `Reject invoice`.
+15. Sign in again as `{CONTRACTOR_EMAIL}`.
+16. Open `https://{DOMAIN_NAME}/timesheets?month={TIMESHEET_MONTH}`.
+17. Confirm the invoice rejection reason is visible.
+18. Confirm the page asks for a cancellation invoice before the corrected invoice.
+19. Confirm the cancellation amount is the negative amount of the rejected invoice and cannot be changed.
+20. Enter `{CANCELLATION_INVOICE_NUMBER}`.
+21. Choose `{CANCELLATION_INVOICE_PDF_FILE}`.
+22. Click `Upload cancellation invoice`.
+23. Confirm the page now asks for the corrected invoice.
+24. Enter `{CORRECTED_INVOICE_NUMBER}`.
+25. Choose `{CORRECTED_INVOICE_PDF_FILE}`.
+26. Confirm the corrected invoice amount and currency.
+27. Click `Upload replacement invoice`.
+28. Sign in again as `{ADMIN_EMAIL}`.
+29. Open the invoiced timesheet review again.
+30. Confirm the replacement PDF is rendered as the main invoice.
+31. Confirm the cancellation invoice is visible as a related invoice document and can be opened.
+32. Click `Accept invoice`.
+
+Expected result:
+
+- Rejecting an uploaded invoice changes the timesheet status to invoice rejected.
+- The contractor sees the rejection reason and cannot upload the corrected invoice before the cancellation invoice.
+- The cancellation invoice must be a PDF and must have the negative amount and same currency as the rejected invoice.
+- Uploading the cancellation invoice does not change the timesheet back to invoiced yet.
+- Uploading the corrected invoice moves the timesheet back to invoiced.
+- The old rejected invoice is not accepted by accident.
+- The admin can render the corrected PDF and open the related cancellation PDF before acceptance.
+- Accepting the corrected invoice also accepts the uploaded cancellation invoice.
+- The audit log contains `invoice.rejected`, cancellation `invoice.uploaded`, corrected `invoice.uploaded`, and `invoice.accepted` rows.
+- The timesheet event history contains invoice rejected, cancellation upload, corrected upload, and invoice accepted events.
 
 ### Admin Can Reject And Unlock Submitted Timesheet
 
