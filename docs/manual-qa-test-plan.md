@@ -623,6 +623,38 @@ Expected result:
 - The audit log contains an `invoice.accepted` row.
 - The timesheet event history contains an invoice accepted event.
 
+### Admin Can Mark Accepted Invoice As Paid
+
+1. Sign in as `{CONTRACTOR_EMAIL}`.
+2. Submit `{TIMESHEET_MONTH}` from `https://{DOMAIN_NAME}/timesheets?month={TIMESHEET_MONTH}`.
+3. Sign in as `{ADMIN_EMAIL}`.
+4. Open `https://{DOMAIN_NAME}/admin/timesheets`.
+5. Open the submitted timesheet review.
+6. Approve the timesheet.
+7. Sign in again as `{CONTRACTOR_EMAIL}`.
+8. Open `https://{DOMAIN_NAME}/timesheets?month={TIMESHEET_MONTH}`.
+9. Upload `{INVOICE_PDF_FILE}` with `{INVOICE_NUMBER}` and `{INVOICE_AMOUNT}`.
+10. Sign in again as `{ADMIN_EMAIL}`.
+11. Open the invoiced timesheet review.
+12. Accept the invoice.
+13. Confirm the invoice reconciliation section shows the paid action.
+14. Click `Mark as paid`.
+15. Reopen `https://{DOMAIN_NAME}/admin/timesheets`.
+16. Filter by paid status, `{CONTRACTOR_EMAIL}`, or `{TIMESHEET_MONTH}`.
+17. Open the paid timesheet review.
+18. Sign in again as `{CONTRACTOR_EMAIL}`.
+19. Open `https://{DOMAIN_NAME}/timesheets?month={TIMESHEET_MONTH}`.
+
+Expected result:
+
+- The paid action is only visible after the invoice has been accepted.
+- Marking as paid changes the timesheet status to paid.
+- The contractor monthly preview shows the paid status.
+- Source time entries remain locked.
+- The same timesheet cannot be marked as paid again.
+- The audit log contains a `timesheet.paid` row.
+- The timesheet event history contains a paid event.
+
 ### Admin Can Reject Uploaded Invoice And Contractor Must Upload Cancellation Before Replacement
 
 1. Sign in as `{CONTRACTOR_EMAIL}`.

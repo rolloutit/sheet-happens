@@ -7,7 +7,7 @@ type TimesheetStatusRecord =
   "SUBMITTED" | "REJECTED" | "APPROVED" | "INVOICED" | "INVOICE_REJECTED" | "ACCEPTED" | "PAID";
 
 type TimesheetEventTypeRecord =
-  "APPROVED" | "REJECTED" | "UNLOCKED" | "INVOICE_ACCEPTED" | "INVOICE_REJECTED";
+  "APPROVED" | "REJECTED" | "UNLOCKED" | "INVOICE_ACCEPTED" | "INVOICE_REJECTED" | "PAID";
 
 const DEFAULT_PAGE = 1;
 const DEFAULT_PAGE_SIZE = 20;
@@ -954,6 +954,145 @@ export async function rejectInvoiceForAdmin(
       invoiceId: invoice.id,
       timesheetId: invoice.timesheet.id,
       status: "REJECTED" as const,
+    };
+  });
+}
+
+export async function markTimesheetPaidForAdmin(
+  input: TimesheetReviewActionInput,
+  deps: { now?: Date } = {},
+) {
+  const now = deps.now ?? new Date();
+
+  return prisma.$transaction(async (tx) => {
+    const timesheet = await tx.timesheet.findUnique({
+      where: {
+        id: input.timesheetId,
+      },
+      select: {
+        id: true,
+        status: true,
+        periodStart: true,
+        periodEnd: true,
+        currentRevisionId: true,
+        currentRevision: {
+          select: {
+            id: true,
+            revisionNumber: true,
+            totalMinutes: true,
+            totalAmount: true,
+            currencyCode: true,
+            snapshotLines: {
+              select: {
+                id: true,
+                projectId: true,
+              },
+            },
+          },
+        },
+        invoices: {
+          where: {
+            role: {
+              in: ["ORIGINAL", "REPLACEMENT", "CORRECTED"],
+            },
+            status: "ACCEPTED",
+          },
+          orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+          take: 1,
+          select: {
+            id: true,
+            invoiceNumber: true,
+            declaredAmount: true,
+            currencyCode: true,
+            documentId: true,
+          },
+        },
+      },
+    });
+
+    if (!timesheet || !timesheet.currentRevisionId || !timesheet.currentRevision) {
+      throw new TimesheetReviewError("Timesheet not found.");
+    }
+
+    if (timesheet.status !== "ACCEPTED") {
+      throw new TimesheetReviewError("Only accepted timesheets can be marked as paid.");
+    }
+
+    const invoice = timesheet.invoices.at(0) ?? null;
+
+    if (!invoice) {
+      throw new TimesheetReviewError("Accepted invoice not found.");
+    }
+
+    const paidTimesheetUpdate = await tx.timesheet.updateMany({
+      where: {
+        id: timesheet.id,
+        status: "ACCEPTED",
+      },
+      data: {
+        status: "PAID",
+        paidAt: now,
+        updatedByMemberId: input.actorMemberId,
+      },
+    });
+
+    if (paidTimesheetUpdate.count !== 1) {
+      throw new TimesheetReviewError("Only accepted timesheets can be marked as paid.");
+    }
+
+    const paidRevisionUpdate = await tx.timesheetRevision.updateMany({
+      where: {
+        id: timesheet.currentRevisionId,
+        status: "ACCEPTED",
+      },
+      data: {
+        status: "PAID",
+        paidAt: now,
+      },
+    });
+
+    if (paidRevisionUpdate.count !== 1) {
+      throw new TimesheetReviewError("Only accepted timesheets can be marked as paid.");
+    }
+
+    const metadata = {
+      ...buildReviewMetadata({
+        periodStart: timesheet.periodStart,
+        periodEnd: timesheet.periodEnd,
+        revision: timesheet.currentRevision,
+      }),
+      invoiceId: invoice.id,
+      invoiceNumber: invoice.invoiceNumber,
+      invoiceDeclaredAmount: invoice.declaredAmount.toString(),
+      invoiceCurrencyCode: invoice.currencyCode,
+      documentId: invoice.documentId,
+    };
+
+    await createTimesheetEvent(tx, {
+      timesheetId: timesheet.id,
+      timesheetRevisionId: timesheet.currentRevisionId,
+      eventType: "PAID",
+      actorMemberId: input.actorMemberId,
+      reason: null,
+      metadata,
+      createdAt: now,
+    });
+
+    await createReviewAuditLog(tx, {
+      actorMemberId: input.actorMemberId,
+      action: "timesheet.paid",
+      targetId: timesheet.id,
+      after: {
+        ...metadata,
+        status: "PAID",
+      },
+      requestMetadata: input.requestMetadata,
+    });
+
+    return {
+      timesheetId: timesheet.id,
+      invoiceId: invoice.id,
+      status: "PAID" as const,
     };
   });
 }

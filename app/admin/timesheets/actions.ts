@@ -12,6 +12,7 @@ import { Prisma } from "@/src/server/db/generated/client";
 import {
   acceptInvoiceForAdmin,
   approveTimesheetForAdmin,
+  markTimesheetPaidForAdmin,
   rejectInvoiceForAdmin,
   rejectTimesheetForAdmin,
   TimesheetReviewError,
@@ -170,6 +171,33 @@ export async function rejectInvoiceReviewAction(formData: FormData) {
   redirect(`/admin/timesheets/${timesheetId}?result=${result}` as Route);
 }
 
+export async function markTimesheetPaidReviewAction(formData: FormData) {
+  const parsed = timesheetIdSchema.safeParse(formData.get("timesheetId"));
+
+  if (!parsed.success) {
+    redirect("/admin/timesheets?result=invalid" as Route);
+  }
+
+  const timesheetId = parsed.data;
+  let result = "paid";
+
+  try {
+    const { member: admin } = await requireAdminAppMemberForAction();
+
+    await markTimesheetPaidForAdmin({
+      timesheetId,
+      actorMemberId: admin.id,
+      requestMetadata: await getTimesheetReviewRequestMetadata(),
+    });
+
+    revalidateTimesheetReviewPaths(timesheetId);
+  } catch (error) {
+    result = mapTimesheetReviewActionError(error);
+  }
+
+  redirect(`/admin/timesheets/${timesheetId}?result=${result}` as Route);
+}
+
 async function getTimesheetReviewRequestMetadata(): Promise<TimesheetReviewRequestMetadata> {
   const requestHeaders = await headers();
 
@@ -192,8 +220,10 @@ function mapTimesheetReviewActionError(error: unknown) {
   if (error instanceof TimesheetReviewError) {
     if (error.message === "Timesheet not found.") return "notFound";
     if (error.message === "Invoice not found.") return "invoiceNotFound";
+    if (error.message === "Accepted invoice not found.") return "acceptedInvoiceNotFound";
     if (error.message === "Rejection reason is required.") return "reasonRequired";
     if (error.message === "Invoice rejection reason is required.") return "invoiceReasonRequired";
+    if (error.message.includes("accepted timesheets")) return "notAccepted";
     if (error.message.includes("Cancellation invoice must be paired"))
       return "invoicePackageIncomplete";
     if (error.message.includes("requires a cancellation invoice"))

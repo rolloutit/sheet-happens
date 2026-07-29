@@ -46,6 +46,7 @@ import {
 import {
   acceptInvoiceReviewAction,
   approveTimesheetReviewAction,
+  markTimesheetPaidReviewAction,
   rejectInvoiceReviewAction,
   rejectTimesheetReviewAction,
 } from "../actions";
@@ -356,6 +357,7 @@ function InvoiceReviewCard({
     review.status === "INVOICED" &&
     invoice?.status === "UPLOADED" &&
     invoice.role !== "CANCELLATION";
+  const canMarkPaid = review.status === "ACCEPTED" && invoice?.status === "ACCEPTED";
   const relatedInvoices = invoice
     ? review.invoices.filter((relatedInvoice) => relatedInvoice.id !== invoice.id)
     : [];
@@ -517,6 +519,23 @@ function InvoiceReviewCard({
                   </Field>
                   <Button type="submit" variant="danger" icon={XCircle} className="w-full">
                     {t("invoice.reject")}
+                  </Button>
+                </form>
+              </div>
+            ) : canMarkPaid ? (
+              <div className="grid gap-3 rounded-[var(--radius-lg)] border border-success/30 bg-success/10 p-4">
+                <div>
+                  <p className="text-sm font-semibold text-success">
+                    {t("invoice.readyForPayment")}
+                  </p>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    {t("invoice.markPaidDescription")}
+                  </p>
+                </div>
+                <form action={markTimesheetPaidReviewAction}>
+                  <input type="hidden" name="timesheetId" value={review.id} />
+                  <Button type="submit" icon={WalletCards} className="w-full sm:w-fit">
+                    {t("invoice.markPaid")}
                   </Button>
                 </form>
               </div>
@@ -772,7 +791,7 @@ function formatDateOnlyLabel(value: string, locale: string) {
 }
 
 function getEventTone(eventType: string) {
-  if (eventType === "APPROVED") return "success";
+  if (eventType === "APPROVED" || eventType === "PAID") return "success";
   if (eventType === "REJECTED" || eventType === "INVOICE_REJECTED") return "danger";
   if (eventType === "INVOICE_ACCEPTED") return "success";
   if (eventType === "UNLOCKED") return "warning";
@@ -820,6 +839,10 @@ function getInvoiceComparison(
 }
 
 function getInvoiceClosedMessage(review: AdminTimesheetReview, t: AdminTimesheetsTranslator) {
+  if (review.status === "PAID") {
+    return t("invoice.paidMessage");
+  }
+
   if (review.invoice?.status === "ACCEPTED" || review.status === "ACCEPTED") {
     return t("invoice.acceptedMessage");
   }

@@ -13,6 +13,7 @@ export {
   approveTimesheetForAdmin,
   getTimesheetReviewForAdmin,
   listTimesheetsForAdmin,
+  markTimesheetPaidForAdmin,
   rejectInvoiceForAdmin,
   rejectTimesheetForAdmin,
   TimesheetReviewError,
