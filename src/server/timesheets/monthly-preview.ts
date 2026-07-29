@@ -74,16 +74,21 @@ export type ContractorTimesheetMonthlyPreview = {
   totalAmount: string | null;
   projects: TimesheetProjectPreview[];
   invoice: ContractorTimesheetInvoicePreview | null;
+  invoices: ContractorTimesheetInvoicePreview[];
 };
 
 export type ContractorTimesheetInvoicePreview = {
   id: string;
   invoiceNumber: string;
   status: "uploaded" | "accepted" | "rejected" | "replaced" | "cancelled" | "deleted";
+  role: "original" | "replacement" | "cancellation" | "corrected";
   declaredAmount: string;
   currencyCode: string;
   originalFilename: string;
   uploadedAt: string;
+  rejectionReason: string | null;
+  referencesInvoiceId: string | null;
+  replacedByInvoiceId: string | null;
 };
 
 type DecimalLike = {
@@ -218,15 +223,18 @@ export async function getContractorTimesheetMonthlyPreview(input: {
           },
         },
         invoices: {
-          orderBy: [{ createdAt: "desc" }],
-          take: 1,
+          orderBy: [{ createdAt: "desc" }, { id: "desc" }],
           select: {
             id: true,
             status: true,
+            role: true,
             invoiceNumber: true,
             declaredAmount: true,
             currencyCode: true,
             createdAt: true,
+            rejectionReason: true,
+            referencesInvoiceId: true,
+            replacedByInvoiceId: true,
             document: {
               select: {
                 originalFilename: true,
@@ -277,6 +285,21 @@ export async function getContractorTimesheetMonthlyPreview(input: {
   const revision = selectedTimesheet?.currentRevision ?? null;
   const revisionNumber =
     revision?.revisionNumber ?? selectedTimesheet?.currentRevisionNumber ?? null;
+  const invoices = (selectedTimesheet?.invoices ?? []).map((invoice) => ({
+    id: invoice.id,
+    invoiceNumber: invoice.invoiceNumber,
+    status: mapInvoiceStatus(invoice.status),
+    role: mapInvoiceRole(invoice.role),
+    declaredAmount: invoice.declaredAmount.toString(),
+    currencyCode: invoice.currencyCode,
+    originalFilename: invoice.document.originalFilename,
+    uploadedAt: invoice.createdAt.toISOString(),
+    rejectionReason: invoice.rejectionReason,
+    referencesInvoiceId: invoice.referencesInvoiceId,
+    replacedByInvoiceId: invoice.replacedByInvoiceId,
+  }));
+  const latestMainInvoice =
+    invoices.find((invoice) => invoice.role !== "cancellation") ?? invoices.at(0) ?? null;
 
   return {
     memberId: member.id,
@@ -313,17 +336,8 @@ export async function getContractorTimesheetMonthlyPreview(input: {
     missingRateLineCount: aggregate.missingRateLineCount,
     totalAmount: aggregate.totalAmount,
     projects: aggregate.projects,
-    invoice: selectedTimesheet?.invoices.at(0)
-      ? {
-          id: selectedTimesheet.invoices[0].id,
-          invoiceNumber: selectedTimesheet.invoices[0].invoiceNumber,
-          status: mapInvoiceStatus(selectedTimesheet.invoices[0].status),
-          declaredAmount: selectedTimesheet.invoices[0].declaredAmount.toString(),
-          currencyCode: selectedTimesheet.invoices[0].currencyCode,
-          originalFilename: selectedTimesheet.invoices[0].document.originalFilename,
-          uploadedAt: selectedTimesheet.invoices[0].createdAt.toISOString(),
-        }
-      : null,
+    invoice: latestMainInvoice,
+    invoices,
   };
 }
 
@@ -573,6 +587,10 @@ function mapTimesheetStatus(status: TimesheetStatusRecord): TimesheetPreviewStat
 
 function mapInvoiceStatus(status: string): ContractorTimesheetInvoicePreview["status"] {
   return status.toLowerCase() as ContractorTimesheetInvoicePreview["status"];
+}
+
+function mapInvoiceRole(role: string): ContractorTimesheetInvoicePreview["role"] {
+  return role.toLowerCase() as ContractorTimesheetInvoicePreview["role"];
 }
 
 function resolveProjectColor(colorToken: string) {

@@ -37,11 +37,12 @@ const submitTimesheetSchema = z.object({
 
 const uploadInvoiceSchema = z.object({
   periodStart: z.string().trim().min(1),
+  invoiceRole: z.enum(["ORIGINAL", "CANCELLATION", "REPLACEMENT"]),
   invoiceNumber: z.string().trim().min(1).max(120),
   declaredAmount: z
     .string()
     .trim()
-    .regex(/^\d+(\.\d{1,2})?$/),
+    .regex(/^-?\d+(\.\d{1,2})?$/),
   currencyCode: z.string().trim().min(3).max(3),
 });
 
@@ -67,11 +68,22 @@ const invoiceUploadErrorResults: Record<string, string> = {
   "Timesheet must be approved before invoice upload.": "invoiceApprovedRequired",
   "Timesheet revision changed during upload.": "invoiceRevisionChanged",
   "Invoice already uploaded for this timesheet.": "invoiceAlreadyUploaded",
+  "Rejected invoice not found.": "invoiceRejectedNotFound",
+  "Cancellation invoice is required before replacement invoice.": "invoiceCancellationRequired",
+  "Replacement invoice is required after the cancellation invoice.": "invoiceReplacementRequired",
+  "Invoice upload step is invalid.": "invoiceInvalidStep",
   "Invoice PDF is required.": "invoiceFileRequired",
   "Invoice PDF is too large.": "invoiceFileTooLarge",
   "Invoice must be a PDF.": "invoicePdfRequired",
   "Invoice number is required.": "invoiceNumberRequired",
+  "Invoice amount is invalid.": "invoiceAmountInvalid",
   "Invoice amount must be positive.": "invoiceAmountInvalid",
+  "Cancellation invoice amount must be negative.": "invoiceCancellationAmountInvalid",
+  "Cancellation invoice amount must negate the rejected invoice amount.":
+    "invoiceCancellationAmountInvalid",
+  "Cancellation invoice currency must match the rejected invoice currency.":
+    "invoiceCancellationCurrencyInvalid",
+  "Invoice currency must match the approved timesheet currency.": "invoiceCurrencyMismatch",
   "Invoice currency is invalid.": "invoiceCurrencyInvalid",
 };
 
@@ -126,6 +138,7 @@ export async function submitTimesheetAction(input: {
 export async function uploadContractorInvoiceAction(formData: FormData): Promise<never> {
   const parsed = uploadInvoiceSchema.safeParse({
     periodStart: formData.get("periodStart"),
+    invoiceRole: formData.get("invoiceRole"),
     invoiceNumber: formData.get("invoiceNumber"),
     declaredAmount: formData.get("declaredAmount"),
     currencyCode: formData.get("currencyCode"),
@@ -166,7 +179,12 @@ export async function uploadContractorInvoiceAction(formData: FormData): Promise
     file.type === "application/pdf" || file.name.toLowerCase().endsWith(".pdf")
       ? "application/pdf"
       : file.type;
-  let result = "invoiceUploaded";
+  let result =
+    parsed.data.invoiceRole === "CANCELLATION"
+      ? "invoiceCancellationUploaded"
+      : parsed.data.invoiceRole === "REPLACEMENT"
+        ? "invoiceReplacementUploaded"
+        : "invoiceUploaded";
 
   try {
     const { member } = await requireActiveAppMemberForAction();
@@ -179,6 +197,7 @@ export async function uploadContractorInvoiceAction(formData: FormData): Promise
       memberId: member.id,
       actorMemberId: member.id,
       periodStart,
+      invoiceRole: parsed.data.invoiceRole,
       invoiceNumber: parsed.data.invoiceNumber,
       declaredAmount: parsed.data.declaredAmount,
       currencyCode,

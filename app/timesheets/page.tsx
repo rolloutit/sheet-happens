@@ -326,7 +326,9 @@ function InvoicePanel({
   locale: string;
   t: TimesheetsTranslator;
 }) {
-  if (!preview.invoice && preview.status !== "approved") {
+  const workflow = getInvoiceWorkflow(preview);
+
+  if (workflow.kind === "hidden") {
     return null;
   }
 
@@ -336,86 +338,156 @@ function InvoicePanel({
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
             <CardTitle>{t("invoice.title")}</CardTitle>
-            <CardDescription>
-              {preview.invoice ? t("invoice.uploadedDescription") : t("invoice.description")}
-            </CardDescription>
+            <CardDescription>{getInvoiceWorkflowDescription(workflow, t)}</CardDescription>
           </div>
-          {preview.invoice ? (
-            <Badge tone="success">{getInvoiceStatusLabel(preview.invoice.status, t)}</Badge>
+          {workflow.kind === "summary" ? (
+            <Badge tone="success">{getInvoiceStatusLabel(workflow.invoice.status, t)}</Badge>
           ) : null}
         </div>
       </CardHeader>
       <CardContent>
-        {preview.invoice ? (
-          <InvoiceSummary invoice={preview.invoice} locale={locale} t={t} />
+        {workflow.kind === "summary" ? (
+          <InvoiceSummary invoice={workflow.invoice} locale={locale} t={t} />
         ) : (
-          <form
-            action={uploadContractorInvoiceAction}
-            encType="multipart/form-data"
-            className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]"
-          >
-            <input type="hidden" name="periodStart" value={preview.periodStart} />
-            <Field label={t("invoice.invoiceNumber")} required>
-              {({ id, describedBy, invalid }) => (
-                <Input
-                  id={id}
-                  name="invoiceNumber"
-                  placeholder={t("invoice.invoiceNumberPlaceholder")}
-                  aria-describedby={describedBy}
-                  invalid={invalid}
-                  required
-                />
-              )}
-            </Field>
-            <Field label={t("invoice.file")} required hint={t("invoice.fileHint", { sizeMb: 10 })}>
-              {({ id, describedBy, invalid }) => (
-                <Input
-                  id={id}
-                  name="invoiceFile"
-                  type="file"
-                  accept="application/pdf,.pdf"
-                  aria-describedby={describedBy}
-                  invalid={invalid}
-                  required
-                  className="file:mr-3 file:rounded-[var(--radius-sm)] file:border-0 file:bg-secondary file:px-3 file:py-1 file:text-sm file:font-semibold file:text-foreground"
-                />
-              )}
-            </Field>
-            <Field label={t("invoice.declaredAmount")} required>
-              {({ id, describedBy, invalid }) => (
-                <Input
-                  id={id}
-                  name="declaredAmount"
-                  inputMode="decimal"
-                  defaultValue={preview.totalAmount ?? ""}
-                  aria-describedby={describedBy}
-                  invalid={invalid}
-                  required
-                />
-              )}
-            </Field>
-            <Field label={t("invoice.currency")} required>
-              {({ id, describedBy, invalid }) => (
-                <Input
-                  id={id}
-                  name="currencyCode"
-                  defaultValue={preview.currencyCode ?? ""}
-                  aria-describedby={describedBy}
-                  invalid={invalid}
-                  required
-                  readOnly
-                />
-              )}
-            </Field>
-            <div className="lg:col-span-2">
-              <Button type="submit" variant="cta" icon={Upload}>
-                {t("invoice.upload")}
-              </Button>
-            </div>
-          </form>
+          <div className="grid gap-4">
+            {workflow.kind === "cancellation" || workflow.kind === "replacement" ? (
+              <div className="flex items-start gap-3 rounded-[var(--radius-lg)] border border-destructive/35 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+                <AlertTriangle className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
+                <p>
+                  {t("invoice.rejectedReason", {
+                    reason: workflow.rejectedInvoice.rejectionReason ?? "-",
+                  })}
+                </p>
+              </div>
+            ) : null}
+
+            {workflow.kind === "replacement" ? (
+              <div className="grid gap-3">
+                <p className="text-sm font-semibold text-foreground">
+                  {t("invoice.cancellationUploaded")}
+                </p>
+                <InvoiceSummary invoice={workflow.cancellationInvoice} locale={locale} t={t} />
+              </div>
+            ) : null}
+
+            <InvoiceUploadForm workflow={workflow} preview={preview} t={t} />
+          </div>
         )}
       </CardContent>
     </Card>
+  );
+}
+
+type TimesheetInvoicePreview = ContractorTimesheetMonthlyPreview["invoices"][number];
+
+type InvoiceWorkflow =
+  | {
+      kind: "hidden";
+    }
+  | {
+      kind: "summary";
+      invoice: TimesheetInvoicePreview;
+    }
+  | {
+      kind: "original";
+      invoiceRole: "ORIGINAL";
+      defaultAmount: string;
+      defaultCurrency: string;
+    }
+  | {
+      kind: "cancellation";
+      invoiceRole: "CANCELLATION";
+      rejectedInvoice: TimesheetInvoicePreview;
+      defaultAmount: string;
+      defaultCurrency: string;
+    }
+  | {
+      kind: "replacement";
+      invoiceRole: "REPLACEMENT";
+      rejectedInvoice: TimesheetInvoicePreview;
+      cancellationInvoice: TimesheetInvoicePreview;
+      defaultAmount: string;
+      defaultCurrency: string;
+    };
+
+function InvoiceUploadForm({
+  workflow,
+  preview,
+  t,
+}: {
+  workflow: Extract<InvoiceWorkflow, { invoiceRole: string }>;
+  preview: ContractorTimesheetMonthlyPreview;
+  t: TimesheetsTranslator;
+}) {
+  const isCancellation = workflow.invoiceRole === "CANCELLATION";
+
+  return (
+    <form
+      action={uploadContractorInvoiceAction}
+      encType="multipart/form-data"
+      className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]"
+    >
+      <input type="hidden" name="periodStart" value={preview.periodStart} />
+      <input type="hidden" name="invoiceRole" value={workflow.invoiceRole} />
+      <Field label={t("invoice.invoiceNumber")} required>
+        {({ id, describedBy, invalid }) => (
+          <Input
+            id={id}
+            name="invoiceNumber"
+            placeholder={t("invoice.invoiceNumberPlaceholder")}
+            aria-describedby={describedBy}
+            invalid={invalid}
+            required
+          />
+        )}
+      </Field>
+      <Field label={t("invoice.file")} required hint={t("invoice.fileHint", { sizeMb: 10 })}>
+        {({ id, describedBy, invalid }) => (
+          <Input
+            id={id}
+            name="invoiceFile"
+            type="file"
+            accept="application/pdf,.pdf"
+            aria-describedby={describedBy}
+            invalid={invalid}
+            required
+            className="file:mr-3 file:rounded-[var(--radius-sm)] file:border-0 file:bg-secondary file:px-3 file:py-1 file:text-sm file:font-semibold file:text-foreground"
+          />
+        )}
+      </Field>
+      <Field label={t("invoice.declaredAmount")} required>
+        {({ id, describedBy, invalid }) => (
+          <Input
+            id={id}
+            name="declaredAmount"
+            inputMode="decimal"
+            defaultValue={workflow.defaultAmount}
+            aria-describedby={describedBy}
+            invalid={invalid}
+            required
+            readOnly={isCancellation}
+          />
+        )}
+      </Field>
+      <Field label={t("invoice.currency")} required>
+        {({ id, describedBy, invalid }) => (
+          <Input
+            id={id}
+            name="currencyCode"
+            defaultValue={workflow.defaultCurrency}
+            aria-describedby={describedBy}
+            invalid={invalid}
+            required
+            readOnly
+          />
+        )}
+      </Field>
+      <div className="lg:col-span-2">
+        <Button type="submit" variant="cta" icon={Upload}>
+          {getInvoiceUploadLabel(workflow, t)}
+        </Button>
+      </div>
+    </form>
   );
 }
 
@@ -429,8 +501,9 @@ function InvoiceSummary({
   t: TimesheetsTranslator;
 }) {
   return (
-    <div className="grid gap-3 rounded-[var(--radius-lg)] border border-border bg-card/70 p-4 sm:grid-cols-2 lg:grid-cols-4">
+    <div className="grid gap-3 rounded-[var(--radius-lg)] border border-border bg-card/70 p-4 sm:grid-cols-2 lg:grid-cols-5">
       <SummaryItem label={t("invoice.invoiceNumber")} value={invoice.invoiceNumber} />
+      <SummaryItem label={t("invoice.role.label")} value={getInvoiceRoleLabel(invoice.role, t)} />
       <SummaryItem
         label={t("invoice.declaredAmount")}
         value={formatMoney(invoice.declaredAmount, invoice.currencyCode, locale)}
@@ -442,6 +515,92 @@ function InvoiceSummary({
       />
     </div>
   );
+}
+
+function getInvoiceWorkflow(preview: ContractorTimesheetMonthlyPreview): InvoiceWorkflow {
+  const latestMainInvoice = preview.invoice;
+
+  if (preview.status === "approved") {
+    return {
+      kind: "original",
+      invoiceRole: "ORIGINAL",
+      defaultAmount: preview.totalAmount ?? "",
+      defaultCurrency: preview.currencyCode ?? "",
+    };
+  }
+
+  if (preview.status === "invoice_rejected") {
+    const rejectedInvoice = preview.invoices.find(
+      (invoice) => invoice.role !== "cancellation" && invoice.status === "rejected",
+    );
+
+    if (!rejectedInvoice) {
+      return latestMainInvoice
+        ? { kind: "summary", invoice: latestMainInvoice }
+        : { kind: "hidden" };
+    }
+
+    const cancellationInvoice = preview.invoices.find(
+      (invoice) =>
+        invoice.role === "cancellation" &&
+        invoice.referencesInvoiceId === rejectedInvoice.id &&
+        invoice.status !== "deleted",
+    );
+
+    if (!cancellationInvoice) {
+      return {
+        kind: "cancellation",
+        invoiceRole: "CANCELLATION",
+        rejectedInvoice,
+        defaultAmount: negateMoney(rejectedInvoice.declaredAmount),
+        defaultCurrency: rejectedInvoice.currencyCode,
+      };
+    }
+
+    return {
+      kind: "replacement",
+      invoiceRole: "REPLACEMENT",
+      rejectedInvoice,
+      cancellationInvoice,
+      defaultAmount: preview.totalAmount ?? "",
+      defaultCurrency: preview.currencyCode ?? rejectedInvoice.currencyCode,
+    };
+  }
+
+  if (latestMainInvoice) {
+    return {
+      kind: "summary",
+      invoice: latestMainInvoice,
+    };
+  }
+
+  return {
+    kind: "hidden",
+  };
+}
+
+function getInvoiceWorkflowDescription(workflow: InvoiceWorkflow, t: TimesheetsTranslator) {
+  if (workflow.kind === "summary") return t("invoice.uploadedDescription");
+  if (workflow.kind === "cancellation") return t("invoice.cancellationDescription");
+  if (workflow.kind === "replacement") return t("invoice.replacementDescription");
+  return t("invoice.description");
+}
+
+function getInvoiceUploadLabel(
+  workflow: Extract<InvoiceWorkflow, { invoiceRole: string }>,
+  t: TimesheetsTranslator,
+) {
+  if (workflow.invoiceRole === "CANCELLATION") return t("invoice.uploadCancellation");
+  if (workflow.invoiceRole === "REPLACEMENT") return t("invoice.uploadReplacement");
+  return t("invoice.upload");
+}
+
+function getInvoiceRoleLabel(role: TimesheetInvoicePreview["role"], t: TimesheetsTranslator) {
+  return t(`invoice.role.${role}`);
+}
+
+function negateMoney(value: string) {
+  return value.startsWith("-") ? value.slice(1) : `-${value}`;
 }
 
 function SummaryItem({ label, value }: { label: string; value: string }) {
@@ -618,20 +777,33 @@ function getInvoiceStatusLabel(
 function getActionResultMessage(result: string, t: TimesheetsTranslator) {
   if (!result) return null;
 
-  const successResults = new Set(["invoiceUploaded"]);
+  const successResults = new Set([
+    "invoiceUploaded",
+    "invoiceCancellationUploaded",
+    "invoiceReplacementUploaded",
+  ]);
   const knownResults = new Set([
     "invoiceUploaded",
+    "invoiceCancellationUploaded",
+    "invoiceReplacementUploaded",
     "invoiceInvalidInput",
     "invoiceInvalidMonth",
     "invoiceCurrencyInvalid",
+    "invoiceCurrencyMismatch",
     "invoiceApprovedRequired",
     "invoiceRevisionChanged",
     "invoiceAlreadyUploaded",
+    "invoiceRejectedNotFound",
+    "invoiceCancellationRequired",
+    "invoiceReplacementRequired",
+    "invoiceInvalidStep",
     "invoiceFileRequired",
     "invoiceFileTooLarge",
     "invoicePdfRequired",
     "invoiceNumberRequired",
     "invoiceAmountInvalid",
+    "invoiceCancellationAmountInvalid",
+    "invoiceCancellationCurrencyInvalid",
     "invoiceStorageMissing",
     "memberNotFound",
     "contractorRequired",

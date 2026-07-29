@@ -16,6 +16,7 @@ export type UploadContractorInvoiceInput = {
   memberId: string;
   actorMemberId: string;
   periodStart: Date;
+  invoiceRole: ContractorInvoiceUploadRole;
   invoiceNumber: string;
   declaredAmount: string;
   currencyCode: string;
@@ -34,8 +35,11 @@ export type UploadContractorInvoiceResult = {
   timesheetId: string;
   timesheetRevisionId: string;
   invoiceNumber: string;
+  invoiceRole: ContractorInvoiceUploadRole;
   status: "UPLOADED";
 };
+
+export type ContractorInvoiceUploadRole = "ORIGINAL" | "CANCELLATION" | "REPLACEMENT";
 
 export class ContractorInvoiceUploadError extends Error {
   constructor(message: string) {
@@ -103,14 +107,17 @@ export async function uploadContractorInvoice(
           invoices: {
             where: {
               timesheetRevisionId: uploadContext.timesheetRevisionId,
-              status: {
-                in: ["UPLOADED", "ACCEPTED"],
-              },
             },
+            orderBy: [{ createdAt: "desc" }, { id: "desc" }],
             select: {
               id: true,
+              role: true,
+              status: true,
+              declaredAmount: true,
+              currencyCode: true,
+              referencesInvoiceId: true,
+              replacedByInvoiceId: true,
             },
-            take: 1,
           },
         },
       });
@@ -119,7 +126,7 @@ export async function uploadContractorInvoice(
         throw new ContractorInvoiceUploadError("Approved timesheet not found.");
       }
 
-      if (timesheet.status !== "APPROVED") {
+      if (timesheet.status !== "APPROVED" && timesheet.status !== "INVOICE_REJECTED") {
         throw new ContractorInvoiceUploadError("Timesheet must be approved before invoice upload.");
       }
 
@@ -127,9 +134,22 @@ export async function uploadContractorInvoice(
         throw new ContractorInvoiceUploadError("Timesheet revision changed during upload.");
       }
 
-      if (timesheet.invoices.length > 0) {
-        throw new ContractorInvoiceUploadError("Invoice already uploaded for this timesheet.");
+      const workflow = resolveInvoiceUploadWorkflow({
+        status: timesheet.status,
+        invoices: timesheet.invoices,
+      });
+
+      if (input.invoiceRole !== workflow.invoiceRole) {
+        throw new ContractorInvoiceUploadError(getInvoiceRoleMismatchMessage(workflow.invoiceRole));
       }
+
+      validateInvoiceWorkflowInput({
+        invoiceRole: workflow.invoiceRole,
+        declaredAmount: input.declaredAmount,
+        currencyCode,
+        revisionCurrencyCode: timesheet.currentRevision.currencyCode,
+        targetInvoice: workflow.targetInvoice,
+      });
 
       const document = await tx.document.create({
         data: {
@@ -154,11 +174,12 @@ export async function uploadContractorInvoice(
           timesheetId: timesheet.id,
           timesheetRevisionId: timesheet.currentRevision.id,
           documentId: document.id,
-          role: "ORIGINAL",
+          role: workflow.invoiceRole,
           status: "UPLOADED",
           invoiceNumber,
           declaredAmount: input.declaredAmount,
           currencyCode,
+          referencesInvoiceId: workflow.referencesInvoiceId,
           uploadedByMemberId: input.actorMemberId,
         },
         select: {
@@ -167,30 +188,47 @@ export async function uploadContractorInvoice(
         },
       });
 
-      await tx.timesheet.update({
-        where: {
-          id: timesheet.id,
-        },
-        data: {
-          status: "INVOICED",
-          updatedByMemberId: input.actorMemberId,
-        },
-        select: {
-          id: true,
-        },
-      });
+      if (workflow.replacedInvoiceId) {
+        await tx.contractorInvoice.update({
+          where: {
+            id: workflow.replacedInvoiceId,
+          },
+          data: {
+            status: "REPLACED",
+            replacedByInvoiceId: invoice.id,
+          },
+          select: {
+            id: true,
+          },
+        });
+      }
 
-      await tx.timesheetRevision.update({
-        where: {
-          id: timesheet.currentRevision.id,
-        },
-        data: {
-          status: "INVOICED",
-        },
-        select: {
-          id: true,
-        },
-      });
+      if (workflow.movesTimesheetToInvoiced) {
+        await tx.timesheet.update({
+          where: {
+            id: timesheet.id,
+          },
+          data: {
+            status: "INVOICED",
+            updatedByMemberId: input.actorMemberId,
+          },
+          select: {
+            id: true,
+          },
+        });
+
+        await tx.timesheetRevision.update({
+          where: {
+            id: timesheet.currentRevision.id,
+          },
+          data: {
+            status: "INVOICED",
+          },
+          select: {
+            id: true,
+          },
+        });
+      }
 
       const eventMetadata = buildInvoiceUploadMetadata({
         invoiceId: invoice.id,
@@ -199,6 +237,9 @@ export async function uploadContractorInvoice(
         invoiceNumber: invoice.invoiceNumber,
         declaredAmount: input.declaredAmount,
         currencyCode,
+        invoiceRole: workflow.invoiceRole,
+        replacedInvoiceId: workflow.replacedInvoiceId,
+        referencesInvoiceId: workflow.referencesInvoiceId,
         byteSize: input.file.byteSize,
         checksumSha256,
         revision: timesheet.currentRevision,
@@ -238,6 +279,7 @@ export async function uploadContractorInvoice(
         timesheetId: timesheet.id,
         timesheetRevisionId: timesheet.currentRevision.id,
         invoiceNumber: invoice.invoiceNumber,
+        invoiceRole: workflow.invoiceRole,
         status: "UPLOADED" as const,
       };
     });
@@ -280,15 +322,12 @@ async function getApprovedTimesheetForInvoiceUpload(input: {
           },
         },
         invoices: {
-          where: {
-            status: {
-              in: ["UPLOADED", "ACCEPTED"],
-            },
-          },
           select: {
             id: true,
+            role: true,
+            status: true,
+            referencesInvoiceId: true,
           },
-          take: 1,
         },
       },
     }),
@@ -306,11 +345,17 @@ async function getApprovedTimesheetForInvoiceUpload(input: {
     throw new ContractorInvoiceUploadError("Approved timesheet not found.");
   }
 
-  if (timesheet.status !== "APPROVED") {
+  if (timesheet.status !== "APPROVED" && timesheet.status !== "INVOICE_REJECTED") {
     throw new ContractorInvoiceUploadError("Timesheet must be approved before invoice upload.");
   }
 
-  if (timesheet.invoices.length > 0) {
+  if (
+    timesheet.invoices.some(
+      (invoice) =>
+        isMainInvoiceRole(invoice.role) &&
+        (invoice.status === "UPLOADED" || invoice.status === "ACCEPTED"),
+    )
+  ) {
     throw new ContractorInvoiceUploadError("Invoice already uploaded for this timesheet.");
   }
 
@@ -331,8 +376,10 @@ function validateInvoiceUploadInput(input: {
     throw new ContractorInvoiceUploadError("Invoice number is required.");
   }
 
-  if (!/^\d+(\.\d{1,2})?$/.test(input.declaredAmount) || Number(input.declaredAmount) <= 0) {
-    throw new ContractorInvoiceUploadError("Invoice amount must be positive.");
+  const amountCents = parseMoneyToCents(input.declaredAmount);
+
+  if (amountCents === null || amountCents === 0) {
+    throw new ContractorInvoiceUploadError("Invoice amount is invalid.");
   }
 
   if (!/^[A-Z]{3}$/.test(input.currencyCode)) {
@@ -358,6 +405,164 @@ function validateInvoiceUploadInput(input: {
   if (!input.file.bytes.subarray(0, 5).equals(Buffer.from("%PDF-"))) {
     throw new ContractorInvoiceUploadError("Invoice must be a PDF.");
   }
+}
+
+type InvoiceWorkflowRecord = {
+  id: string;
+  role: "ORIGINAL" | "REPLACEMENT" | "CANCELLATION" | "CORRECTED";
+  status: "UPLOADED" | "ACCEPTED" | "REJECTED" | "REPLACED" | "CANCELLED" | "DELETED";
+  declaredAmount: Prisma.Decimal;
+  currencyCode: string;
+  referencesInvoiceId: string | null;
+  replacedByInvoiceId: string | null;
+};
+
+type InvoiceUploadWorkflow = {
+  invoiceRole: ContractorInvoiceUploadRole;
+  targetInvoice: InvoiceWorkflowRecord | null;
+  referencesInvoiceId: string | null;
+  replacedInvoiceId: string | null;
+  movesTimesheetToInvoiced: boolean;
+};
+
+function resolveInvoiceUploadWorkflow(input: {
+  status: "APPROVED" | "INVOICE_REJECTED" | string;
+  invoices: InvoiceWorkflowRecord[];
+}): InvoiceUploadWorkflow {
+  const activeMainInvoice = input.invoices.find(
+    (invoice) =>
+      isMainInvoiceRole(invoice.role) &&
+      (invoice.status === "UPLOADED" || invoice.status === "ACCEPTED"),
+  );
+
+  if (activeMainInvoice) {
+    throw new ContractorInvoiceUploadError("Invoice already uploaded for this timesheet.");
+  }
+
+  if (input.status === "APPROVED") {
+    return {
+      invoiceRole: "ORIGINAL",
+      targetInvoice: null,
+      referencesInvoiceId: null,
+      replacedInvoiceId: null,
+      movesTimesheetToInvoiced: true,
+    };
+  }
+
+  if (input.status !== "INVOICE_REJECTED") {
+    throw new ContractorInvoiceUploadError("Timesheet must be approved before invoice upload.");
+  }
+
+  const rejectedInvoice = input.invoices.find(
+    (invoice) => isMainInvoiceRole(invoice.role) && invoice.status === "REJECTED",
+  );
+
+  if (!rejectedInvoice) {
+    throw new ContractorInvoiceUploadError("Rejected invoice not found.");
+  }
+
+  const cancellationInvoice = input.invoices.find(
+    (invoice) =>
+      invoice.role === "CANCELLATION" &&
+      invoice.referencesInvoiceId === rejectedInvoice.id &&
+      invoice.status !== "DELETED",
+  );
+
+  if (!cancellationInvoice) {
+    return {
+      invoiceRole: "CANCELLATION",
+      targetInvoice: rejectedInvoice,
+      referencesInvoiceId: rejectedInvoice.id,
+      replacedInvoiceId: null,
+      movesTimesheetToInvoiced: false,
+    };
+  }
+
+  return {
+    invoiceRole: "REPLACEMENT",
+    targetInvoice: rejectedInvoice,
+    referencesInvoiceId: null,
+    replacedInvoiceId: rejectedInvoice.id,
+    movesTimesheetToInvoiced: true,
+  };
+}
+
+function validateInvoiceWorkflowInput(input: {
+  invoiceRole: ContractorInvoiceUploadRole;
+  declaredAmount: string;
+  currencyCode: string;
+  revisionCurrencyCode: string;
+  targetInvoice: InvoiceWorkflowRecord | null;
+}) {
+  const amountCents = parseMoneyToCents(input.declaredAmount);
+
+  if (amountCents === null || amountCents === 0) {
+    throw new ContractorInvoiceUploadError("Invoice amount is invalid.");
+  }
+
+  if (input.invoiceRole === "CANCELLATION") {
+    if (!input.targetInvoice) {
+      throw new ContractorInvoiceUploadError("Rejected invoice not found.");
+    }
+
+    if (amountCents >= 0) {
+      throw new ContractorInvoiceUploadError("Cancellation invoice amount must be negative.");
+    }
+
+    const rejectedAmountCents = parseMoneyToCents(input.targetInvoice.declaredAmount.toString());
+
+    if (rejectedAmountCents === null || amountCents !== -rejectedAmountCents) {
+      throw new ContractorInvoiceUploadError(
+        "Cancellation invoice amount must negate the rejected invoice amount.",
+      );
+    }
+
+    if (input.currencyCode !== input.targetInvoice.currencyCode) {
+      throw new ContractorInvoiceUploadError(
+        "Cancellation invoice currency must match the rejected invoice currency.",
+      );
+    }
+
+    return;
+  }
+
+  if (amountCents <= 0) {
+    throw new ContractorInvoiceUploadError("Invoice amount must be positive.");
+  }
+
+  if (input.currencyCode !== input.revisionCurrencyCode) {
+    throw new ContractorInvoiceUploadError(
+      "Invoice currency must match the approved timesheet currency.",
+    );
+  }
+}
+
+function getInvoiceRoleMismatchMessage(expectedRole: ContractorInvoiceUploadRole) {
+  if (expectedRole === "CANCELLATION") {
+    return "Cancellation invoice is required before replacement invoice.";
+  }
+
+  if (expectedRole === "REPLACEMENT") {
+    return "Replacement invoice is required after the cancellation invoice.";
+  }
+
+  return "Invoice upload step is invalid.";
+}
+
+function isMainInvoiceRole(role: InvoiceWorkflowRecord["role"]) {
+  return role === "ORIGINAL" || role === "REPLACEMENT" || role === "CORRECTED";
+}
+
+function parseMoneyToCents(value: string) {
+  const normalized = value.trim();
+  const match = /^(-?)(\d+)(?:\.(\d{1,2}))?$/.exec(normalized);
+
+  if (!match) return null;
+
+  const [, sign, whole, fraction = ""] = match;
+  const cents = Number.parseInt(whole, 10) * 100 + Number.parseInt(fraction.padEnd(2, "0"), 10);
+
+  return sign === "-" ? -cents : cents;
 }
 
 function buildContractorInvoiceObjectKey(input: {
@@ -389,6 +594,9 @@ function buildInvoiceUploadMetadata(input: {
   invoiceNumber: string;
   declaredAmount: string;
   currencyCode: string;
+  invoiceRole: ContractorInvoiceUploadRole;
+  replacedInvoiceId: string | null;
+  referencesInvoiceId: string | null;
   byteSize: number;
   checksumSha256: string;
   revision: {
@@ -406,6 +614,9 @@ function buildInvoiceUploadMetadata(input: {
     invoiceNumber: input.invoiceNumber,
     declaredAmount: input.declaredAmount,
     invoiceCurrencyCode: input.currencyCode,
+    invoiceRole: input.invoiceRole,
+    replacedInvoiceId: input.replacedInvoiceId,
+    referencesInvoiceId: input.referencesInvoiceId,
     byteSize: input.byteSize,
     checksumSha256: input.checksumSha256,
     revisionId: input.revision.id,

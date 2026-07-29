@@ -4,6 +4,7 @@ export {
   uploadContractorInvoice,
 } from "./contractor-invoices";
 export type {
+  ContractorInvoiceUploadRole,
   ContractorInvoiceUploadRequestMetadata,
   UploadContractorInvoiceInput,
   UploadContractorInvoiceResult,
