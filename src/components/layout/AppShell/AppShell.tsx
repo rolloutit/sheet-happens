@@ -60,7 +60,13 @@ const navItems = [
     href: "/timesheets",
     profiles: ["contractor"],
   },
-  { id: "review", labelKey: "nav.review", icon: WalletCards, group: "admin", href: "#" },
+  {
+    id: "review",
+    labelKey: "nav.review",
+    icon: WalletCards,
+    group: "admin",
+    href: "/admin/timesheets",
+  },
   { id: "reports", labelKey: "nav.reports", icon: BarChart3, group: "admin", href: "#" },
   {
     id: "projects",

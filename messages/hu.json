@@ -322,7 +322,7 @@
     },
     "warnings": {
       "mixedCurrency": "A kiválasztott hónap több pénznemet tartalmaz.",
-      "missingRates": "{count} bejegyzéshez nincs óradíj.",
+      "missingRates": "Kérj meg egy admint, hogy állítson be óradíjat {count} bejegyzéshez a beküldés előtt.",
       "rejected": "Elutasítva: {reason}"
     },
     "breakdown": {
@@ -364,7 +364,7 @@
       "disabled": {
         "notOpen": "Ez a hónap már beküldött workflow állapotban van.",
         "noEntries": "Beküldés előtt legalább egy időbejegyzés szükséges.",
-        "missingRates": "Beküldés előtt pótolni kell a hiányzó óradíjakat.",
+        "missingRates": "Beküldés előtt kérj meg egy admint a hiányzó óradíjak beállítására.",
         "mixedCurrency": "Egy beküldött hónap csak egy pénznemet tartalmazhat.",
         "notReady": "A timesheet összege még nem áll készen beküldésre."
       }
@@ -385,12 +385,148 @@
       "missingProjectAssignment": "Minden bejegyzéshez projekt hozzárendelés szükséges.",
       "invalidDurations": "Minden bejegyzés időtartamának pozitívnak kell lennie.",
       "missingDescriptions": "Beküldés előtt minden bejegyzéshez leírás szükséges.",
-      "missingRates": "Beküldés előtt pótolni kell a hiányzó óradíjakat.",
+      "missingRates": "Beküldés előtt kérj meg egy admint a hiányzó óradíjak beállítására.",
       "mixedCurrency": "Egy beküldött hónap csak egy pénznemet tartalmazhat.",
       "entriesChanged": "Az időbejegyzések beküldés közben megváltoztak. Próbáld újra.",
       "notAllowed": "Nincs jogosultságod beküldeni ezt a timesheetet.",
       "databaseUnavailable": "Az adatbázis nem elérhető. Próbáld újra később.",
       "submitFailed": "A timesheetet nem sikerült beküldeni."
+    }
+  },
+  "AdminTimesheets": {
+    "eyebrow": "Admin",
+    "title": "Timesheet jóváhagyás",
+    "subtitle": "Beküldött kontraktori timesheetek ellenőrzése havi snapshot alapján.",
+    "revision": "{number}. revízió",
+    "summary": {
+      "hours": "Óra",
+      "amount": "Összeg",
+      "entries": "Bejegyzés",
+      "revision": "Revízió"
+    },
+    "status": {
+      "submitted": "Beküldve",
+      "rejected": "Elutasítva",
+      "approved": "Jóváhagyva",
+      "invoiced": "Számlázva",
+      "invoice_rejected": "Számla elutasítva",
+      "accepted": "Elfogadva",
+      "paid": "Kifizetve"
+    },
+    "stats": {
+      "matching": "Találat",
+      "matchingCaption": "A jelenlegi szűrőknek megfelelő timesheetek.",
+      "page": "Aktuális oldal",
+      "pageCaption": "Ezen az oldalon látható tartomány.",
+      "pageSize": "Oldalméret",
+      "pageSizeCaption": "Betöltött sorok száma oldalanként."
+    },
+    "filters": {
+      "title": "Szűrők",
+      "description": "Keresés kontraktor név vagy e-mail alapján, majd szűkítés státusz, kontraktor, projekt vagy hónap szerint.",
+      "search": "Keresés",
+      "searchPlaceholder": "Név vagy e-mail...",
+      "status": "Státusz",
+      "allStatuses": "Minden státusz",
+      "contractor": "Kontraktor",
+      "allContractors": "Minden kontraktor",
+      "project": "Projekt",
+      "allProjects": "Minden projekt",
+      "month": "Hónap",
+      "apply": "Szűrők alkalmazása",
+      "clear": "Törlés"
+    },
+    "list": {
+      "title": "Beküldött timesheetek",
+      "showing": "{start}-{end} / {total} megjelenítve.",
+      "caption": "Admin timesheet ellenőrzési lista",
+      "empty": "Nincs a szűrőknek megfelelő timesheet.",
+      "review": "Ellenőrzés",
+      "entries": "{count} bejegyzés",
+      "projects": "{count} projekt"
+    },
+    "table": {
+      "contractor": "Kontraktor",
+      "month": "Hónap",
+      "status": "Státusz",
+      "hours": "Óra",
+      "amount": "Összeg",
+      "submitted": "Beküldve",
+      "snapshot": "Snapshot",
+      "action": "Művelet"
+    },
+    "pagination": {
+      "summary": "{page}. oldal / {totalPages}, összesen {totalItems}.",
+      "previous": "Előző",
+      "next": "Következő"
+    },
+    "detail": {
+      "back": "Vissza a jóváhagyáshoz",
+      "title": "{name} timesheetje",
+      "subtitle": "{month} beküldött snapshot.",
+      "rejectionReason": "Elutasítás oka: {reason}"
+    },
+    "snapshot": {
+      "title": "Beküldött snapshot",
+      "description": "Ezek a sorok a beküldés pillanatában kerültek másolásra a forrás időbejegyzésekből.",
+      "locked": "Zárolva",
+      "unlocked": "Feloldva",
+      "empty": "Ehhez a revízióhoz nincs snapshot sor.",
+      "projectSummary": "{hours} óra, {entries} bejegyzés",
+      "lineCaption": "Timesheet snapshot forrássorok"
+    },
+    "lineTable": {
+      "date": "Dátum",
+      "description": "Leírás",
+      "hours": "Óra",
+      "rate": "Óradíj",
+      "amount": "Összeg"
+    },
+    "rateSource": {
+      "MEMBER_DEFAULT": "központi",
+      "PROJECT_OVERRIDE": "projekt felülírás"
+    },
+    "events": {
+      "title": "Eseménytörténet",
+      "description": "Beküldési, ellenőrzési, elutasítási és feloldási események ehhez a timesheethez.",
+      "empty": "Ehhez a timesheethez nincs rögzített esemény.",
+      "types": {
+        "submitted": "Beküldve",
+        "approved": "Jóváhagyva",
+        "rejected": "Elutasítva",
+        "unlocked": "Feloldva",
+        "resubmitted": "Újra beküldve",
+        "correction_opened": "Korrekció megnyitva",
+        "cancellation_invoice_uploaded": "Sztornó számla feltöltve",
+        "corrected_revision_submitted": "Javított revízió beküldve",
+        "invoice_uploaded": "Számla feltöltve",
+        "invoice_accepted": "Számla elfogadva",
+        "invoice_rejected": "Számla elutasítva",
+        "correction_closed": "Korrekció lezárva",
+        "paid": "Kifizetve"
+      }
+    },
+    "actions": {
+      "title": "Ellenőrzési műveletek",
+      "description": "A helyes snapshot jóváhagyható, vagy elutasítással feloldható a hónap a kontraktori javításhoz.",
+      "approve": "Timesheet jóváhagyása",
+      "rejectReason": "Elutasítás oka",
+      "rejectPlaceholder": "Írd le, mit kell javítani az újrabeküldés előtt.",
+      "rejectAndUnlock": "Elutasítás és hónap feloldása",
+      "closed": "A timesheet jelenlegi állapota: {status}.",
+      "locked": "A forrás hónap zárolva marad.",
+      "unlocked": "A forrás hónap fel van oldva kontraktori javításra."
+    },
+    "actionResults": {
+      "approved": "A timesheet jóváhagyva.",
+      "rejected": "A timesheet elutasítva és feloldva.",
+      "invalid": "A kiválasztott timesheet érvénytelen.",
+      "notFound": "A timesheet nem található.",
+      "reasonRequired": "Elutasítás előtt add meg az elutasítás okát.",
+      "notSubmitted": "Csak beküldött timesheet ellenőrizhető.",
+      "notAllowed": "Nincs jogosultságod ellenőrizni ezt a timesheetet.",
+      "databaseUnavailable": "Az adatbázis nem elérhető. Próbáld újra később.",
+      "failed": "A timesheet ellenőrzési művelet sikertelen."
     }
   },
   "DashboardCards": {
