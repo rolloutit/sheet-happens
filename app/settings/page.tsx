@@ -16,6 +16,7 @@ import {
 } from "@/src/components/ui/Card";
 import { SectionHead } from "@/src/components/ui/SectionHead";
 import {
+  mapMemberToShellProfile,
   mapMemberToShellRole,
   mapMemberToShellUser,
   requireSecuritySettingsAppMember,
@@ -58,6 +59,7 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
     <AppShell
       current="settings"
       role={mapMemberToShellRole(member)}
+      profile={mapMemberToShellProfile(member)}
       user={mapMemberToShellUser(member)}
     >
       <section className="mx-auto grid w-full max-w-[86rem] gap-6 px-4 py-8 sm:px-6 lg:px-8">

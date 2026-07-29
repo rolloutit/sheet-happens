@@ -36,6 +36,19 @@ Replace placeholder values before sharing a concrete test run:
 - `{TIME_ENTRY_DESCRIPTION}`: description text used for test time entries.
 - `{TIME_ENTRY_UPDATED_DESCRIPTION}`: edited description text used for test time entries.
 - `{TIMESHEET_MONTH}`: contractor timesheet month formatted as `YYYY-MM`.
+- `{TIMESHEET_PROJECT_A}`: first contractor project used in timesheet tests.
+- `{TIMESHEET_PROJECT_B}`: second contractor project used in timesheet tests.
+- `{TIMESHEET_CURRENCY_A}`: first currency used in mixed-currency timesheet tests.
+- `{TIMESHEET_CURRENCY_B}`: second currency used in mixed-currency timesheet tests.
+- `{TIMESHEET_REJECTION_REASON}`: reason text used when rejecting a submitted timesheet.
+- `{INVOICE_NUMBER}`: invoice number used for contractor invoice upload testing.
+- `{INVOICE_AMOUNT}`: declared invoice amount used for contractor invoice upload testing.
+- `{INVOICE_PDF_FILE}`: local PDF file used for contractor invoice upload testing.
+- `{INVOICE_REJECTION_REASON}`: reason text used when rejecting an uploaded invoice.
+- `{CANCELLATION_INVOICE_NUMBER}`: invoice number used for the cancellation invoice.
+- `{CANCELLATION_INVOICE_PDF_FILE}`: local PDF file used for cancellation invoice testing.
+- `{CORRECTED_INVOICE_NUMBER}`: invoice number used for the corrected replacement invoice.
+- `{CORRECTED_INVOICE_PDF_FILE}`: local PDF file used for corrected invoice testing.
 - `{PROJECT_NAME}`: name for a newly created project.
 - `{PROJECT_UPDATED_NAME}`: updated project name.
 - `{PROJECT_SLUG}`: URL-safe or code-like project slug.
@@ -477,6 +490,275 @@ Expected result:
 - The preview is calculated from current time entries when no submitted snapshot exists.
 - Projects show total hours, rate state, currency, and amount.
 - Missing rates or mixed currencies are shown as warnings instead of hidden.
+
+### Contractor Can Submit Monthly Timesheet
+
+1. Sign in as `{CONTRACTOR_EMAIL}`.
+2. Ensure `{TIMESHEET_MONTH}` has at least one time entry with a description.
+3. Ensure all projects in `{TIMESHEET_MONTH}` resolve to the same currency.
+4. Open `https://{DOMAIN_NAME}/timesheets?month={TIMESHEET_MONTH}`.
+5. Click `Submit timesheet`.
+6. Confirm the dialog explains that source time entries will be locked.
+7. Confirm the submit action.
+8. Open `https://{DOMAIN_NAME}/time` and navigate to a week inside `{TIMESHEET_MONTH}`.
+9. Try to edit or delete a submitted time entry.
+
+Expected result:
+
+- The timesheet status changes to submitted.
+- The monthly preview switches to the submitted snapshot source.
+- The selected month can no longer be submitted again.
+- Source time entries in that month are locked and cannot be edited or deleted.
+- The audit log contains a `timesheet.submitted` event for the submitted month.
+
+### Contractor Cannot Submit Invalid Monthly Timesheet
+
+1. Sign in as `{CONTRACTOR_EMAIL}`.
+2. Open a month with no entries, missing rates, or mixed currencies.
+3. Open `https://{DOMAIN_NAME}/timesheets?month={TIMESHEET_MONTH}`.
+4. Check the submit button state.
+
+Expected result:
+
+- The submit button is disabled when the month has no entries, missing rates, or mixed currencies.
+- The page shows a factual reason near the submit button.
+- Missing rates and mixed currencies are also visible as warnings.
+
+### Admin Can Approve Submitted Timesheet
+
+1. Sign in as `{CONTRACTOR_EMAIL}`.
+2. Submit `{TIMESHEET_MONTH}` from `https://{DOMAIN_NAME}/timesheets?month={TIMESHEET_MONTH}`.
+3. Sign in as `{ADMIN_EMAIL}`.
+4. Open `https://{DOMAIN_NAME}/admin/timesheets`.
+5. Filter by `{CONTRACTOR_EMAIL}`, `{TIMESHEET_MONTH}`, or submitted status.
+6. Open the submitted timesheet review.
+7. Confirm the snapshot shows project totals, source lines, rates, currency, and amount.
+8. Click `Approve timesheet`.
+9. Reopen the contractor timesheet month.
+
+Expected result:
+
+- The admin review list is reachable from the sidebar approval menu.
+- The submitted timesheet appears in the filtered admin list.
+- The detail page reviews the immutable submitted snapshot, not live editable entries.
+- Approval changes the status to approved.
+- Source time entries remain locked after approval.
+- The audit log contains a `timesheet.approved` row.
+
+### Contractor Can Upload Invoice For Approved Timesheet
+
+1. Sign in as `{CONTRACTOR_EMAIL}`.
+2. Submit `{TIMESHEET_MONTH}` from `https://{DOMAIN_NAME}/timesheets?month={TIMESHEET_MONTH}`.
+3. Sign in as `{ADMIN_EMAIL}`.
+4. Open `https://{DOMAIN_NAME}/admin/timesheets`.
+5. Open the submitted timesheet review.
+6. Approve the timesheet.
+7. Sign in again as `{CONTRACTOR_EMAIL}`.
+8. Open `https://{DOMAIN_NAME}/timesheets?month={TIMESHEET_MONTH}`.
+9. Confirm the contractor invoice panel is visible.
+10. Enter `{INVOICE_NUMBER}`.
+11. Enter `{INVOICE_AMOUNT}`.
+12. Confirm the currency matches the approved timesheet currency.
+13. Choose `{INVOICE_PDF_FILE}`.
+14. Click `Upload invoice`.
+15. Reopen the same month.
+
+Expected result:
+
+- The invoice panel is only available after admin approval.
+- The PDF upload succeeds and the page confirms the invoice was uploaded.
+- The timesheet status changes to invoiced.
+- The invoice summary shows invoice number, amount, file name, upload time, and uploaded status.
+- Uploading a second invoice for the same approved revision is blocked.
+- The audit log contains an `invoice.uploaded` row.
+- The timesheet event history contains an invoice uploaded event.
+
+### Contractor Cannot Upload Invalid Invoice
+
+1. Sign in as `{CONTRACTOR_EMAIL}`.
+2. Open `https://{DOMAIN_NAME}/timesheets?month={TIMESHEET_MONTH}` for a month that is not yet approved.
+3. Confirm there is no invoice upload form.
+4. Submit and approve the month through the normal contractor and admin flow.
+5. Return to `https://{DOMAIN_NAME}/timesheets?month={TIMESHEET_MONTH}`.
+6. Try uploading without an invoice file.
+7. Try uploading a non-PDF file.
+8. Try uploading a PDF larger than 10 MB.
+9. Try uploading with an empty invoice number.
+10. Try uploading with a zero or negative amount.
+
+Expected result:
+
+- The contractor cannot upload an invoice before approval.
+- Invalid file, amount, and invoice number attempts show clear error messages.
+- Invalid attempts do not change the timesheet status.
+- Invalid attempts do not create invoice or document records.
+
+### Admin Can Review And Accept Uploaded Invoice
+
+1. Sign in as `{CONTRACTOR_EMAIL}`.
+2. Submit `{TIMESHEET_MONTH}` from `https://{DOMAIN_NAME}/timesheets?month={TIMESHEET_MONTH}`.
+3. Sign in as `{ADMIN_EMAIL}`.
+4. Open `https://{DOMAIN_NAME}/admin/timesheets`.
+5. Open the submitted timesheet review.
+6. Approve the timesheet.
+7. Sign in again as `{CONTRACTOR_EMAIL}`.
+8. Open `https://{DOMAIN_NAME}/timesheets?month={TIMESHEET_MONTH}`.
+9. Upload `{INVOICE_PDF_FILE}` with `{INVOICE_NUMBER}` and `{INVOICE_AMOUNT}`.
+10. Sign in again as `{ADMIN_EMAIL}`.
+11. Open `https://{DOMAIN_NAME}/admin/timesheets`.
+12. Filter by invoiced status, `{CONTRACTOR_EMAIL}`, or `{TIMESHEET_MONTH}`.
+13. Open the invoiced timesheet review.
+14. Confirm the uploaded PDF is rendered inside the invoice reconciliation section.
+15. Confirm the invoice metadata and declared amount are shown next to the system total.
+16. Open the PDF in a separate tab from the review page.
+17. Click `Accept invoice`.
+
+Expected result:
+
+- The uploaded PDF is visible to the admin before acceptance.
+- The admin can compare the PDF manually with the approved timesheet totals.
+- The review page shows whether the declared invoice amount matches the system amount.
+- Accepting the invoice changes the timesheet status to accepted.
+- The invoice status changes to accepted and can no longer be reviewed again.
+- The audit log contains an `invoice.accepted` row.
+- The timesheet event history contains an invoice accepted event.
+
+### Admin Can Mark Accepted Invoice As Paid
+
+1. Sign in as `{CONTRACTOR_EMAIL}`.
+2. Submit `{TIMESHEET_MONTH}` from `https://{DOMAIN_NAME}/timesheets?month={TIMESHEET_MONTH}`.
+3. Sign in as `{ADMIN_EMAIL}`.
+4. Open `https://{DOMAIN_NAME}/admin/timesheets`.
+5. Open the submitted timesheet review.
+6. Approve the timesheet.
+7. Sign in again as `{CONTRACTOR_EMAIL}`.
+8. Open `https://{DOMAIN_NAME}/timesheets?month={TIMESHEET_MONTH}`.
+9. Upload `{INVOICE_PDF_FILE}` with `{INVOICE_NUMBER}` and `{INVOICE_AMOUNT}`.
+10. Sign in again as `{ADMIN_EMAIL}`.
+11. Open the invoiced timesheet review.
+12. Accept the invoice.
+13. Confirm the invoice reconciliation section shows the paid action.
+14. Click `Mark as paid`.
+15. Reopen `https://{DOMAIN_NAME}/admin/timesheets`.
+16. Filter by paid status, `{CONTRACTOR_EMAIL}`, or `{TIMESHEET_MONTH}`.
+17. Open the paid timesheet review.
+18. Sign in again as `{CONTRACTOR_EMAIL}`.
+19. Open `https://{DOMAIN_NAME}/timesheets?month={TIMESHEET_MONTH}`.
+
+Expected result:
+
+- The paid action is only visible after the invoice has been accepted.
+- Marking as paid changes the timesheet status to paid.
+- The contractor monthly preview shows the paid status.
+- Source time entries remain locked.
+- The same timesheet cannot be marked as paid again.
+- The audit log contains a `timesheet.paid` row.
+- The timesheet event history contains a paid event.
+
+### Admin Can Reject Uploaded Invoice And Contractor Must Upload Cancellation Before Replacement
+
+1. Sign in as `{CONTRACTOR_EMAIL}`.
+2. Submit `{TIMESHEET_MONTH}` from `https://{DOMAIN_NAME}/timesheets?month={TIMESHEET_MONTH}`.
+3. Sign in as `{ADMIN_EMAIL}`.
+4. Open `https://{DOMAIN_NAME}/admin/timesheets`.
+5. Open the submitted timesheet review.
+6. Approve the timesheet.
+7. Sign in again as `{CONTRACTOR_EMAIL}`.
+8. Open `https://{DOMAIN_NAME}/timesheets?month={TIMESHEET_MONTH}`.
+9. Upload `{INVOICE_PDF_FILE}` with `{INVOICE_NUMBER}` and `{INVOICE_AMOUNT}`.
+10. Sign in again as `{ADMIN_EMAIL}`.
+11. Open the invoiced timesheet review.
+12. Confirm the uploaded PDF is rendered inside the invoice reconciliation section.
+13. Enter `{INVOICE_REJECTION_REASON}` in the invoice rejection reason field.
+14. Click `Reject invoice`.
+15. Sign in again as `{CONTRACTOR_EMAIL}`.
+16. Open `https://{DOMAIN_NAME}/timesheets?month={TIMESHEET_MONTH}`.
+17. Confirm the invoice rejection reason is visible.
+18. Confirm the page asks for a cancellation invoice before the corrected invoice.
+19. Confirm the cancellation amount is the negative amount of the rejected invoice and cannot be changed.
+20. Enter `{CANCELLATION_INVOICE_NUMBER}`.
+21. Choose `{CANCELLATION_INVOICE_PDF_FILE}`.
+22. Click `Upload cancellation invoice`.
+23. Confirm the page now asks for the corrected invoice.
+24. Enter `{CORRECTED_INVOICE_NUMBER}`.
+25. Choose `{CORRECTED_INVOICE_PDF_FILE}`.
+26. Confirm the corrected invoice amount and currency.
+27. Click `Upload replacement invoice`.
+28. Sign in again as `{ADMIN_EMAIL}`.
+29. Open the invoiced timesheet review again.
+30. Confirm the replacement PDF is rendered as the main invoice.
+31. Confirm the cancellation invoice is visible as a related invoice document and can be opened.
+32. Click `Accept invoice`.
+
+Expected result:
+
+- Rejecting an uploaded invoice changes the timesheet status to invoice rejected.
+- The contractor sees the rejection reason and cannot upload the corrected invoice before the cancellation invoice.
+- The cancellation invoice must be a PDF and must have the negative amount and same currency as the rejected invoice.
+- Uploading the cancellation invoice does not change the timesheet back to invoiced yet.
+- Uploading the corrected invoice moves the timesheet back to invoiced.
+- The old rejected invoice is not accepted by accident.
+- The admin can render the corrected PDF and open the related cancellation PDF before acceptance.
+- Accepting the corrected invoice also accepts the uploaded cancellation invoice.
+- The audit log contains `invoice.rejected`, cancellation `invoice.uploaded`, corrected `invoice.uploaded`, and `invoice.accepted` rows.
+- The timesheet event history contains invoice rejected, cancellation upload, corrected upload, and invoice accepted events.
+
+### Admin Can Reject And Unlock Submitted Timesheet
+
+1. Sign in as `{CONTRACTOR_EMAIL}`.
+2. Submit `{TIMESHEET_MONTH}` from `https://{DOMAIN_NAME}/timesheets?month={TIMESHEET_MONTH}`.
+3. Sign in as `{ADMIN_EMAIL}`.
+4. Open `https://{DOMAIN_NAME}/admin/timesheets`.
+5. Open the submitted timesheet review.
+6. Enter `{TIMESHEET_REJECTION_REASON}` in the rejection reason field.
+7. Click `Reject and unlock month`.
+8. Sign in again as `{CONTRACTOR_EMAIL}`.
+9. Open `https://{DOMAIN_NAME}/timesheets?month={TIMESHEET_MONTH}`.
+10. Confirm the rejection reason is visible.
+11. Open `https://{DOMAIN_NAME}/time` and navigate to a week inside `{TIMESHEET_MONTH}`.
+12. Edit one of the previously locked entries.
+13. Return to `https://{DOMAIN_NAME}/timesheets?month={TIMESHEET_MONTH}` and submit again.
+
+Expected result:
+
+- Rejection changes the status to rejected.
+- The rejected month is unlocked for contractor edits.
+- The contractor preview recalculates from current time entries after rejection.
+- The rejection reason remains visible until resubmission.
+- Resubmission creates a new revision.
+- The audit log contains `timesheet.rejected`, and the timesheet event history includes rejected
+  and unlocked events.
+
+### Admin Can Fix Mixed-Currency Timesheet Blocking
+
+1. Sign in as `{ADMIN_EMAIL}`.
+2. Configure `{CONTRACTOR_EMAIL}` so `{TIMESHEET_PROJECT_A}` resolves to `{TIMESHEET_CURRENCY_A}` during `{TIMESHEET_MONTH}`.
+3. Configure `{CONTRACTOR_EMAIL}` so `{TIMESHEET_PROJECT_B}` resolves to `{TIMESHEET_CURRENCY_B}` during `{TIMESHEET_MONTH}`.
+4. Sign in as `{CONTRACTOR_EMAIL}`.
+5. Add time entries with descriptions for both `{TIMESHEET_PROJECT_A}` and `{TIMESHEET_PROJECT_B}` inside `{TIMESHEET_MONTH}`.
+6. Open `https://{DOMAIN_NAME}/timesheets?month={TIMESHEET_MONTH}`.
+7. Confirm the submit button is disabled because the month contains multiple currencies.
+8. Sign in again as `{ADMIN_EMAIL}`.
+9. Open the admin rates page.
+10. Open `{CONTRACTOR_EMAIL}` in the rate drawer.
+11. Find the central rate or project override that causes `{TIMESHEET_PROJECT_A}` or `{TIMESHEET_PROJECT_B}` to resolve to the wrong currency.
+12. Click `Replace` on that rate period.
+13. Set `Replace from` to the first day of `{TIMESHEET_MONTH}`.
+14. Enter the corrected rate amount and currency so every effective rate for `{CONTRACTOR_EMAIL}` in `{TIMESHEET_MONTH}` resolves to one currency.
+15. Submit the replacement.
+16. Confirm the rate is corrected for `{TIMESHEET_MONTH}`. If the selected date equals the period start, the same period is replaced in place; if it is later than the period start, the old period ends on that date and a replacement starts there.
+17. Confirm the audit log contains rate replacement entries.
+18. Sign in again as `{CONTRACTOR_EMAIL}`.
+19. Reopen `https://{DOMAIN_NAME}/timesheets?month={TIMESHEET_MONTH}`.
+20. Submit the timesheet.
+
+Expected result:
+
+- The mixed-currency month is blocked before the admin rate fix.
+- The project breakdown shows which projects resolve to different currencies.
+- Admin fixes the problem through rate period replacement, not by editing the timesheet amount directly.
+- After the fix, the preview recalculates from current time entries and shows a single currency.
+- The submit button becomes enabled and the timesheet can be submitted.
 
 ### Employee Cannot Open Timesheets
 

@@ -342,6 +342,10 @@ export function mapMemberToShellRole(member: Pick<AppMember, "role" | "currentPr
   return member.currentProfile === "CONTRACTOR" ? "contractor" : "employee";
 }
 
+export function mapMemberToShellProfile(member: Pick<AppMember, "currentProfile">) {
+  return member.currentProfile === "CONTRACTOR" ? "contractor" : "employee";
+}
+
 export function mapMemberToShellUser(
   member: Pick<AppMember, "displayName" | "firstName" | "lastName" | "email" | "role">,
 ) {

@@ -1,6 +1,6 @@
 "use client";
 
-import { BadgeDollarSign, ChevronRight, MinusCircle, Plus, Search } from "lucide-react";
+import { BadgeDollarSign, ChevronRight, MinusCircle, Plus, RefreshCw, Search } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { useMemo, useState, useTransition } from "react";
@@ -29,12 +29,19 @@ import type {
   RateMemberProfile,
   RateMemberStatus,
 } from "@/src/server/rates";
-import { createAssignmentOverrideRateAction, createMemberDefaultRateAction } from "./actions";
+import {
+  createAssignmentOverrideRateAction,
+  createMemberDefaultRateAction,
+  replaceAssignmentOverrideRateAction,
+  replaceMemberDefaultRateAction,
+} from "./actions";
 import type {
   CreateAssignmentOverrideRateActionInput,
   CreateMemberDefaultRateActionInput,
   RateActionState,
   RateFormField,
+  ReplaceAssignmentOverrideRateActionInput,
+  ReplaceMemberDefaultRateActionInput,
 } from "./actions.types";
 import { nativeSelectClassName } from "./formStyles";
 
@@ -182,6 +189,16 @@ export function AdminRatesTable({
   function saveAssignmentOverride(input: CreateAssignmentOverrideRateActionInput) {
     runAction(`assignment:${input.projectAssignmentId}`, () =>
       createAssignmentOverrideRateAction(input),
+    );
+  }
+
+  function replaceCentralRate(input: ReplaceMemberDefaultRateActionInput) {
+    runAction(`member-replace:${input.ratePeriodId}`, () => replaceMemberDefaultRateAction(input));
+  }
+
+  function replaceAssignmentOverride(input: ReplaceAssignmentOverrideRateActionInput) {
+    runAction(`assignment-replace:${input.ratePeriodId}`, () =>
+      replaceAssignmentOverrideRateAction(input),
     );
   }
 
@@ -393,6 +410,8 @@ export function AdminRatesTable({
         }}
         onCreateCentralRate={saveCentralRate}
         onCreateAssignmentOverride={saveAssignmentOverride}
+        onReplaceCentralRate={replaceCentralRate}
+        onReplaceAssignmentOverride={replaceAssignmentOverride}
       />
     </div>
   );
@@ -440,6 +459,8 @@ function RateManagementDrawer({
   onOpenChange,
   onCreateCentralRate,
   onCreateAssignmentOverride,
+  onReplaceCentralRate,
+  onReplaceAssignmentOverride,
 }: {
   member: AdminMemberRateRow | null;
   assignments: AdminAssignmentRateRow[];
@@ -450,6 +471,8 @@ function RateManagementDrawer({
   onOpenChange: (open: boolean) => void;
   onCreateCentralRate: (input: CreateMemberDefaultRateActionInput) => void;
   onCreateAssignmentOverride: (input: CreateAssignmentOverrideRateActionInput) => void;
+  onReplaceCentralRate: (input: ReplaceMemberDefaultRateActionInput) => void;
+  onReplaceAssignmentOverride: (input: ReplaceAssignmentOverrideRateActionInput) => void;
 }) {
   const t = useTranslations("AdminRates");
   const profileLabels: Record<RateMemberProfile, string> = {
@@ -463,9 +486,11 @@ function RateManagementDrawer({
     DELETED: t("statuses.deleted"),
   };
   const [centralFormOpen, setCentralFormOpen] = useState(false);
+  const [centralReplacementRateId, setCentralReplacementRateId] = useState<string | null>(null);
   const [newOverrideOpen, setNewOverrideOpen] = useState(false);
   const [newOverrideAssignmentId, setNewOverrideAssignmentId] = useState<string | null>(null);
   const [overrideFormAssignmentId, setOverrideFormAssignmentId] = useState<string | null>(null);
+  const [overrideReplacementRateId, setOverrideReplacementRateId] = useState<string | null>(null);
   const defaultCurrency = member?.currentRate?.currencyCode ?? member?.defaultCurrencyCode ?? "EUR";
   const existingOverrides = assignments.filter(
     (assignment) => assignment.overrideRatePeriods.length > 0,
@@ -554,7 +579,31 @@ function RateManagementDrawer({
                   </p>
                 </div>
               ) : (
-                <RateTimeline periods={member.ratePeriods} />
+                <RateTimeline
+                  periods={member.ratePeriods}
+                  onReplace={(period) => setCentralReplacementRateId(period.id)}
+                  renderReplacementForm={(period) =>
+                    centralReplacementRateId === period.id ? (
+                      <RateReplacementForm
+                        period={period}
+                        defaultCurrency={period.currencyCode}
+                        todayDate={todayDate}
+                        currencyOptions={currencyOptions}
+                        actionState={actionState}
+                        pending={pendingKey === `member-replace:${period.id}`}
+                        submitLabel={t("actions.replaceFromDate")}
+                        onCancel={() => setCentralReplacementRateId(null)}
+                        onSubmit={(replacement) => {
+                          onReplaceCentralRate({
+                            memberId: member.memberId,
+                            ratePeriodId: period.id,
+                            ...replacement,
+                          });
+                        }}
+                      />
+                    ) : null
+                  }
+                />
               )}
 
               {centralFormOpen ? (
@@ -672,7 +721,31 @@ function RateManagementDrawer({
                             </Button>
                           ) : null}
                         </div>
-                        <RateTimeline periods={assignment.overrideRatePeriods} />
+                        <RateTimeline
+                          periods={assignment.overrideRatePeriods}
+                          onReplace={(period) => setOverrideReplacementRateId(period.id)}
+                          renderReplacementForm={(period) =>
+                            overrideReplacementRateId === period.id ? (
+                              <RateReplacementForm
+                                period={period}
+                                defaultCurrency={period.currencyCode}
+                                todayDate={todayDate}
+                                currencyOptions={currencyOptions}
+                                actionState={actionState}
+                                pending={pendingKey === `assignment-replace:${period.id}`}
+                                submitLabel={t("actions.replaceOverrideFromDate")}
+                                onCancel={() => setOverrideReplacementRateId(null)}
+                                onSubmit={(replacement) => {
+                                  onReplaceAssignmentOverride({
+                                    projectAssignmentId: assignment.assignmentId,
+                                    ratePeriodId: period.id,
+                                    ...replacement,
+                                  });
+                                }}
+                              />
+                            ) : null
+                          }
+                        />
                         {formOpen ? (
                           <RatePeriodForm
                             defaultCurrency={
@@ -996,7 +1069,153 @@ function RatePeriodForm({
   );
 }
 
-function RateTimeline({ periods }: { periods: AdminRatePeriodRow[] }) {
+type RateReplacementFormInput = Pick<
+  ReplaceMemberDefaultRateActionInput,
+  "validFrom" | "hourlyRate" | "currencyCode" | "note"
+>;
+
+function RateReplacementForm({
+  period,
+  defaultCurrency,
+  todayDate,
+  currencyOptions,
+  actionState,
+  pending,
+  submitLabel,
+  onCancel,
+  onSubmit,
+}: {
+  period: AdminRatePeriodRow;
+  defaultCurrency: string;
+  todayDate: string;
+  currencyOptions: readonly SelectOption[];
+  actionState: RateActionState;
+  pending: boolean;
+  submitLabel: string;
+  onCancel: () => void;
+  onSubmit: (input: RateReplacementFormInput) => void;
+}) {
+  const t = useTranslations("AdminRates");
+
+  return (
+    <form
+      className="grid gap-4 rounded-[var(--radius-lg)] border border-dashed border-border bg-background/45 p-4"
+      onSubmit={(event) => {
+        event.preventDefault();
+        const formData = new FormData(event.currentTarget);
+
+        onSubmit({
+          validFrom: getRateFormString(formData, "validFrom"),
+          hourlyRate: getRateFormString(formData, "hourlyRate"),
+          currencyCode: getRateFormString(formData, "currencyCode"),
+          note: getRateFormString(formData, "note"),
+        });
+      }}
+    >
+      <div className="grid gap-1">
+        <p className="font-ui text-sm font-semibold text-foreground">{t("replaceForm.title")}</p>
+        <p className="text-xs leading-5 text-muted-foreground">{t("replaceForm.description")}</p>
+      </div>
+      <div className="grid gap-4 sm:grid-cols-2">
+        <Field
+          label={t("fields.replaceFrom")}
+          required
+          reserveMessageSpace
+          error={actionState.fieldErrors?.validFrom}
+        >
+          {({ id, describedBy, invalid, required }) => (
+            <Input
+              id={id}
+              name="validFrom"
+              type="date"
+              min={period.validFrom}
+              max={period.validTo ?? undefined}
+              defaultValue={getDefaultReplacementStart(period, todayDate)}
+              aria-describedby={describedBy}
+              invalid={invalid}
+              required={required}
+            />
+          )}
+        </Field>
+        <Field
+          label={t("fields.hourlyRate")}
+          required
+          reserveMessageSpace
+          error={actionState.fieldErrors?.hourlyRate}
+        >
+          {({ id, describedBy, invalid, required }) => (
+            <Input
+              id={id}
+              name="hourlyRate"
+              type="number"
+              min="0"
+              step="0.01"
+              defaultValue={period.hourlyRate}
+              aria-describedby={describedBy}
+              invalid={invalid}
+              required={required}
+            />
+          )}
+        </Field>
+      </div>
+      <div className="grid gap-4 sm:grid-cols-2">
+        <Field
+          label={t("fields.currency")}
+          required
+          reserveMessageSpace
+          error={actionState.fieldErrors?.currencyCode}
+        >
+          {({ id, describedBy, invalid, required }) => (
+            <select
+              id={id}
+              name="currencyCode"
+              defaultValue={defaultCurrency}
+              aria-describedby={describedBy}
+              aria-invalid={invalid}
+              required={required}
+              className={nativeSelectClassName}
+            >
+              {currencyOptions.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          )}
+        </Field>
+        <Field label={t("fields.reason")} reserveMessageSpace error={actionState.fieldErrors?.note}>
+          {({ id, describedBy, invalid }) => (
+            <Input
+              id={id}
+              name="note"
+              placeholder={t("fields.reasonPlaceholder")}
+              aria-describedby={describedBy}
+              invalid={invalid}
+            />
+          )}
+        </Field>
+      </div>
+      <DrawerFooter className="mt-0">
+        <Button type="button" variant="ghost" disabled={pending} onClick={onCancel}>
+          {t("actions.cancel")}
+        </Button>
+        <Button type="submit" icon={RefreshCw} loading={pending}>
+          {submitLabel}
+        </Button>
+      </DrawerFooter>
+    </form>
+  );
+}
+
+function RateTimeline({
+  periods,
+  onReplace,
+  renderReplacementForm,
+}: {
+  periods: AdminRatePeriodRow[];
+  onReplace?: (period: AdminRatePeriodRow) => void;
+  renderReplacementForm?: (period: AdminRatePeriodRow) => React.ReactNode;
+}) {
   const t = useTranslations("AdminRates");
   const sortedPeriods = [...periods].sort((left, right) =>
     left.validFrom.localeCompare(right.validFrom),
@@ -1018,7 +1237,7 @@ function RateTimeline({ periods }: { periods: AdminRatePeriodRow[] }) {
                 <span className="absolute bottom-[-0.5rem] top-5 w-px bg-border" />
               ) : null}
             </div>
-            <div className="grid gap-2 rounded-[var(--radius-md)] border border-border bg-card px-3 py-2">
+            <div className="grid gap-3 rounded-[var(--radius-md)] border border-border bg-card px-3 py-2">
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <div>
                   <p className="font-ui text-sm font-semibold text-foreground">
@@ -1030,7 +1249,20 @@ function RateTimeline({ periods }: { periods: AdminRatePeriodRow[] }) {
                       : t("timeline.openEnded", { from: period.validFrom })}
                   </p>
                 </div>
-                {current ? <Badge tone="success">{t("labels.current")}</Badge> : null}
+                <div className="flex flex-wrap items-center justify-end gap-2">
+                  {current ? <Badge tone="success">{t("labels.current")}</Badge> : null}
+                  {onReplace ? (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      icon={RefreshCw}
+                      onClick={() => onReplace(period)}
+                    >
+                      {t("actions.replace")}
+                    </Button>
+                  ) : null}
+                </div>
               </div>
               <div className="grid gap-1 text-xs text-muted-foreground">
                 <span>
@@ -1045,6 +1277,7 @@ function RateTimeline({ periods }: { periods: AdminRatePeriodRow[] }) {
                     : t("timeline.noReason")}
                 </span>
               </div>
+              {renderReplacementForm?.(period)}
             </div>
           </div>
         );
@@ -1107,6 +1340,19 @@ function getInitials(name: string) {
   const first = parts[0]?.[0] ?? "?";
   const second = parts.length > 1 ? parts[parts.length - 1]?.[0] : "";
   return `${first}${second}`.toUpperCase();
+}
+
+function getDefaultReplacementStart(period: AdminRatePeriodRow, todayDate: string) {
+  const todayMonthStart = `${todayDate.slice(0, 7)}-01`;
+
+  if (
+    todayMonthStart >= period.validFrom &&
+    (!period.validTo || todayMonthStart < period.validTo)
+  ) {
+    return todayMonthStart;
+  }
+
+  return period.validFrom;
 }
 
 function getRateFormString(formData: FormData, name: RateFormField) {

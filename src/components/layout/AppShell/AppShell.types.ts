@@ -7,6 +7,7 @@ export type AppShellProps = {
   children: ReactNode;
   current?: string;
   role?: "employee" | "contractor" | "admin";
+  profile?: "employee" | "contractor";
   collapsed?: boolean;
   mobileNavigationMode?: "auto" | "always";
   language?: string;

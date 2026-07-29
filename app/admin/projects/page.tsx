@@ -8,7 +8,11 @@ import {
   CardHeader,
   CardTitle,
 } from "@/src/components/ui/Card";
-import { mapMemberToShellUser, requireAdminAppMember } from "@/src/server/auth/app-access";
+import {
+  mapMemberToShellProfile,
+  mapMemberToShellUser,
+  requireAdminAppMember,
+} from "@/src/server/auth/app-access";
 import {
   listProjectAssignableMembersForAdmin,
   listProjectAssignmentsForAdmin,
@@ -53,7 +57,12 @@ export default async function AdminProjectsPage({ searchParams }: AdminProjectsP
   const todayDate = new Date().toISOString().slice(0, 10);
 
   return (
-    <AppShell current="projects" role="admin" user={mapMemberToShellUser(admin)}>
+    <AppShell
+      current="projects"
+      role="admin"
+      profile={mapMemberToShellProfile(admin)}
+      user={mapMemberToShellUser(admin)}
+    >
       <section className="mx-auto grid w-full max-w-[92rem] gap-6 px-4 py-8 sm:px-6 lg:px-8">
         <div className="flex flex-col gap-2">
           <p className="font-ui text-sm font-medium uppercase tracking-[0.18em] text-accent">

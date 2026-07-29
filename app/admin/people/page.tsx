@@ -9,7 +9,11 @@ import {
   CardTitle,
 } from "@/src/components/ui/Card";
 import { getMemberPreferenceOptions } from "@/src/lib/member-preferences";
-import { mapMemberToShellUser, requireAdminAppMember } from "@/src/server/auth/app-access";
+import {
+  mapMemberToShellProfile,
+  mapMemberToShellUser,
+  requireAdminAppMember,
+} from "@/src/server/auth/app-access";
 import { listPeopleForAdmin, type PeopleListSearchParams } from "@/src/server/users";
 import { AdminPeopleTable } from "./AdminPeopleTable";
 import { InviteMemberForm } from "./InviteMemberForm";
@@ -29,7 +33,12 @@ export default async function AdminPeoplePage({ searchParams }: AdminPeoplePageP
   const todayDate = new Date().toISOString().slice(0, 10);
 
   return (
-    <AppShell current="people" role="admin" user={mapMemberToShellUser(admin)}>
+    <AppShell
+      current="people"
+      role="admin"
+      profile={mapMemberToShellProfile(admin)}
+      user={mapMemberToShellUser(admin)}
+    >
       <section className="mx-auto grid w-full max-w-[92rem] gap-6 px-4 py-8 sm:px-6 lg:px-8">
         <div className="flex flex-col gap-2">
           <p className="font-ui text-sm font-medium uppercase tracking-[0.18em] text-accent">

@@ -26,6 +26,7 @@ export type TimesheetPreviewRate = {
   hourlyRate: string;
   currencyCode: string;
   source: TimesheetPreviewRateSource;
+  sourceRatePeriodId: string;
 };
 
 export type TimesheetMonthOption = {
@@ -72,6 +73,22 @@ export type ContractorTimesheetMonthlyPreview = {
   missingRateLineCount: number;
   totalAmount: string | null;
   projects: TimesheetProjectPreview[];
+  invoice: ContractorTimesheetInvoicePreview | null;
+  invoices: ContractorTimesheetInvoicePreview[];
+};
+
+export type ContractorTimesheetInvoicePreview = {
+  id: string;
+  invoiceNumber: string;
+  status: "uploaded" | "accepted" | "rejected" | "replaced" | "cancelled" | "deleted";
+  role: "original" | "replacement" | "cancellation" | "corrected";
+  declaredAmount: string;
+  currencyCode: string;
+  originalFilename: string;
+  uploadedAt: string;
+  rejectionReason: string | null;
+  referencesInvoiceId: string | null;
+  replacedByInvoiceId: string | null;
 };
 
 type DecimalLike = {
@@ -135,7 +152,7 @@ export async function getContractorTimesheetMonthlyPreview(input: {
   const todayIso = getTodayIsoInTimezone(member.timezone, input.now);
   const currentMonthStart = getMonthStart(parseDateOnly(todayIso));
   const selectedMonthStart = getMonthStart(input.monthStart ?? currentMonthStart);
-  const selectedMonthEnd = getMonthEnd(selectedMonthStart);
+  const selectedMonthEnd = getTimesheetMonthEnd(selectedMonthStart);
   const monthStarts = getMonthOptionStarts(currentMonthStart, selectedMonthStart);
 
   const [optionTimesheets, selectedTimesheet] = await Promise.all([
@@ -194,12 +211,33 @@ export async function getContractorTimesheetMonthlyPreview(input: {
                 currencyCode: true,
                 lineAmount: true,
                 rateSource: true,
+                sourceRatePeriodId: true,
                 project: {
                   select: {
                     name: true,
                     colorToken: true,
                   },
                 },
+              },
+            },
+          },
+        },
+        invoices: {
+          orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+          select: {
+            id: true,
+            status: true,
+            role: true,
+            invoiceNumber: true,
+            declaredAmount: true,
+            currencyCode: true,
+            createdAt: true,
+            rejectionReason: true,
+            referencesInvoiceId: true,
+            replacedByInvoiceId: true,
+            document: {
+              select: {
+                originalFilename: true,
               },
             },
           },
@@ -212,37 +250,56 @@ export async function getContractorTimesheetMonthlyPreview(input: {
     optionTimesheets.map((timesheet) => [formatDateOnly(timesheet.periodStart), timesheet]),
   );
   const snapshotLines = selectedTimesheet?.currentRevision?.snapshotLines ?? [];
-  const lines =
-    snapshotLines.length > 0
-      ? snapshotLines.map((line): TimesheetPreviewLine => {
-          const projectColor = resolveProjectColor(line.project.colorToken);
-          const rate = {
-            hourlyRate: line.hourlyRate.toString(),
-            currencyCode: line.currencyCode,
-            source: line.rateSource,
-          };
+  const shouldUseSnapshot =
+    Boolean(selectedTimesheet) &&
+    selectedTimesheet?.status !== "REJECTED" &&
+    snapshotLines.length > 0;
+  const lines = shouldUseSnapshot
+    ? snapshotLines.map((line): TimesheetPreviewLine => {
+        const projectColor = resolveProjectColor(line.project.colorToken);
+        const rate = {
+          hourlyRate: line.hourlyRate.toString(),
+          currencyCode: line.currencyCode,
+          source: line.rateSource,
+          sourceRatePeriodId: line.sourceRatePeriodId ?? "",
+        };
 
-          return {
-            id: line.id,
-            projectId: line.projectId,
-            projectName: line.project.name,
-            projectColor,
-            localDate: line.localDate,
-            durationMinutes: line.durationMinutes,
-            rate,
-            amountCents: moneyToCents(line.lineAmount),
-          };
-        })
-      : await getCurrentTimeEntryPreviewLines({
-          memberId: member.id,
-          periodStart: selectedMonthStart,
-          periodEnd: selectedMonthEnd,
-        });
+        return {
+          id: line.id,
+          projectId: line.projectId,
+          projectName: line.project.name,
+          projectColor,
+          localDate: line.localDate,
+          durationMinutes: line.durationMinutes,
+          rate,
+          amountCents: moneyToCents(line.lineAmount),
+        };
+      })
+    : await getCurrentTimeEntryPreviewLines({
+        memberId: member.id,
+        periodStart: selectedMonthStart,
+        periodEnd: selectedMonthEnd,
+      });
 
   const aggregate = aggregateTimesheetPreviewLines(lines);
   const revision = selectedTimesheet?.currentRevision ?? null;
   const revisionNumber =
     revision?.revisionNumber ?? selectedTimesheet?.currentRevisionNumber ?? null;
+  const invoices = (selectedTimesheet?.invoices ?? []).map((invoice) => ({
+    id: invoice.id,
+    invoiceNumber: invoice.invoiceNumber,
+    status: mapInvoiceStatus(invoice.status),
+    role: mapInvoiceRole(invoice.role),
+    declaredAmount: invoice.declaredAmount.toString(),
+    currencyCode: invoice.currencyCode,
+    originalFilename: invoice.document.originalFilename,
+    uploadedAt: invoice.createdAt.toISOString(),
+    rejectionReason: invoice.rejectionReason,
+    referencesInvoiceId: invoice.referencesInvoiceId,
+    replacedByInvoiceId: invoice.replacedByInvoiceId,
+  }));
+  const latestMainInvoice =
+    invoices.find((invoice) => invoice.role !== "cancellation") ?? invoices.at(0) ?? null;
 
   return {
     memberId: member.id,
@@ -255,13 +312,13 @@ export async function getContractorTimesheetMonthlyPreview(input: {
       return {
         month: formatMonthParam(monthStart),
         periodStart: formatDateOnly(monthStart),
-        periodEnd: formatDateOnly(getMonthEnd(monthStart)),
+        periodEnd: formatDateOnly(getTimesheetMonthEnd(monthStart)),
         status: timesheet ? mapTimesheetStatus(timesheet.status) : "not_created",
         totalMinutes: timesheet?.currentRevision?.totalMinutes ?? 0,
       };
     }),
     status: selectedTimesheet ? mapTimesheetStatus(selectedTimesheet.status) : "not_created",
-    source: snapshotLines.length > 0 ? "timesheet_snapshot" : "current_time_entries",
+    source: shouldUseSnapshot ? "timesheet_snapshot" : "current_time_entries",
     revisionNumber,
     submittedAt:
       revision?.submittedAt?.toISOString() ?? selectedTimesheet?.submittedAt?.toISOString() ?? null,
@@ -279,6 +336,8 @@ export async function getContractorTimesheetMonthlyPreview(input: {
     missingRateLineCount: aggregate.missingRateLineCount,
     totalAmount: aggregate.totalAmount,
     projects: aggregate.projects,
+    invoice: latestMainInvoice,
+    invoices,
   };
 }
 
@@ -307,6 +366,7 @@ export function resolveTimesheetLineRate(input: {
     hourlyRate: rate.hourlyRate.toString(),
     currencyCode: rate.currencyCode,
     source: assignmentRate ? "PROJECT_OVERRIDE" : "MEMBER_DEFAULT",
+    sourceRatePeriodId: rate.id,
   };
 }
 
@@ -513,7 +573,7 @@ function addMonths(date: Date, months: number) {
   return new Date(Date.UTC(normalized.getUTCFullYear(), normalized.getUTCMonth() + months, 1));
 }
 
-function getMonthEnd(monthStart: Date) {
+export function getTimesheetMonthEnd(monthStart: Date) {
   return addDays(addMonths(monthStart, 1), -1);
 }
 
@@ -523,6 +583,14 @@ function formatMonthParam(monthStart: Date) {
 
 function mapTimesheetStatus(status: TimesheetStatusRecord): TimesheetPreviewStatus {
   return status.toLowerCase() as TimesheetPreviewStatus;
+}
+
+function mapInvoiceStatus(status: string): ContractorTimesheetInvoicePreview["status"] {
+  return status.toLowerCase() as ContractorTimesheetInvoicePreview["status"];
+}
+
+function mapInvoiceRole(role: string): ContractorTimesheetInvoicePreview["role"] {
+  return role.toLowerCase() as ContractorTimesheetInvoicePreview["role"];
 }
 
 function resolveProjectColor(colorToken: string) {
@@ -537,7 +605,7 @@ function sameRate(left: TimesheetPreviewRate, right: TimesheetPreviewRate) {
   );
 }
 
-function calculateLineAmountCents(durationMinutes: number, hourlyRate: string) {
+export function calculateLineAmountCents(durationMinutes: number, hourlyRate: string) {
   const rateCents = moneyToCents(hourlyRate);
   return Math.round((rateCents * durationMinutes) / 60);
 }
@@ -546,6 +614,6 @@ function moneyToCents(value: DecimalLike | string | number) {
   return Math.round(Number(value.toString()) * 100);
 }
 
-function centsToMoney(cents: number) {
+export function centsToMoney(cents: number) {
   return (cents / 100).toFixed(2);
 }

@@ -14,6 +14,7 @@ import {
 } from "@/src/components/ui/Card";
 import { SectionHead } from "@/src/components/ui/SectionHead";
 import {
+  mapMemberToShellProfile,
   mapMemberToShellRole,
   mapMemberToShellUser,
   requireActiveAppMember,
@@ -25,6 +26,7 @@ export default async function DashboardPage() {
   const { member } = await requireActiveAppMember("/dashboard");
   const t = await getTranslations("Dashboard");
   const shellRole = mapMemberToShellRole(member);
+  const shellProfile = mapMemberToShellProfile(member);
   const shellUser = mapMemberToShellUser(member);
   const links =
     shellRole === "admin"
@@ -54,7 +56,7 @@ export default async function DashboardPage() {
         ];
 
   return (
-    <AppShell current="dashboard" role={shellRole} user={shellUser}>
+    <AppShell current="dashboard" role={shellRole} profile={shellProfile} user={shellUser}>
       <section className="mx-auto grid w-full max-w-[92rem] gap-6 px-4 py-8 sm:px-6 lg:px-8">
         <SectionHead eyebrow={t("eyebrow")} title={t("title")} subtitle={t("subtitle")} />
         <Card variant="elevated" density="lg" className="max-w-3xl">
