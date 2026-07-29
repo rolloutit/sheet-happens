@@ -16,5 +16,30 @@ services:
     volumes:
       - sheet_happens_dev_db:/var/lib/postgresql/data
 
+  minio:
+    image: minio/minio:latest
+    container_name: sheet-happens-dev-minio
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: sheet_happens
+      MINIO_ROOT_PASSWORD: sheet_happens
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - sheet_happens_dev_minio:/data
+
+  minio-init:
+    image: minio/mc:latest
+    depends_on:
+      - minio
+    entrypoint:
+      [
+        "/bin/sh",
+        "-c",
+        "until mc alias set local http://minio:9000 sheet_happens sheet_happens; do sleep 1; done; mc mb -p local/sheet-happens-dev || true",
+      ]
+
 volumes:
   sheet_happens_dev_db:
+  sheet_happens_dev_minio:
