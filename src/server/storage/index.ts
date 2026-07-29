@@ -5,6 +5,7 @@ export {
 } from "./object-storage";
 export type {
   ObjectStorage,
+  ObjectStorageGetResult,
   ObjectStorageObjectRef,
   ObjectStoragePutInput,
 } from "./object-storage";

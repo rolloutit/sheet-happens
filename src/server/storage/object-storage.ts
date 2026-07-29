@@ -5,6 +5,7 @@ import {
   S3Client,
 } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
+import { Readable } from "node:stream";
 
 const DEFAULT_SIGNED_URL_TTL_SECONDS = 5 * 60;
 
@@ -21,8 +22,15 @@ export type ObjectStorageObjectRef = {
   key: string;
 };
 
+export type ObjectStorageGetResult = ObjectStorageObjectRef & {
+  body: Buffer;
+  contentType: string | null;
+  byteSize: number | null;
+};
+
 export type ObjectStorage = {
   putObject(input: ObjectStoragePutInput): Promise<ObjectStorageObjectRef>;
+  getObject(input: ObjectStorageObjectRef): Promise<ObjectStorageGetResult>;
   deleteObject(input: ObjectStorageObjectRef): Promise<void>;
   getSignedReadUrl(
     input: ObjectStorageObjectRef & {
@@ -81,6 +89,23 @@ export function createS3ObjectStorage(config: S3ObjectStorageConfig): ObjectStor
       return {
         bucket: config.bucket,
         key: input.key,
+      };
+    },
+
+    async getObject(input) {
+      const object = await client.send(
+        new GetObjectCommand({
+          Bucket: input.bucket,
+          Key: input.key,
+        }),
+      );
+
+      return {
+        bucket: input.bucket,
+        key: input.key,
+        body: await bodyToBuffer(object.Body),
+        contentType: object.ContentType ?? null,
+        byteSize: object.ContentLength ?? null,
       };
     },
 
@@ -144,4 +169,34 @@ function requireEnv(name: string) {
 
 function parseBoolean(value: string | undefined) {
   return ["1", "true", "yes", "on"].includes((value ?? "").trim().toLowerCase());
+}
+
+async function bodyToBuffer(body: unknown): Promise<Buffer> {
+  if (!body) {
+    return Buffer.alloc(0);
+  }
+
+  if (body instanceof Uint8Array) {
+    return Buffer.from(body);
+  }
+
+  const transformable = body as {
+    transformToByteArray?: () => Promise<Uint8Array>;
+  };
+
+  if (typeof transformable.transformToByteArray === "function") {
+    return Buffer.from(await transformable.transformToByteArray());
+  }
+
+  if (body instanceof Readable) {
+    const chunks: Buffer[] = [];
+
+    for await (const chunk of body) {
+      chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
+    }
+
+    return Buffer.concat(chunks);
+  }
+
+  throw new ObjectStorageConfigurationError("Unsupported object storage response body.");
 }
