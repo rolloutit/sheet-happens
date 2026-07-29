@@ -73,6 +73,17 @@ export type ContractorTimesheetMonthlyPreview = {
   missingRateLineCount: number;
   totalAmount: string | null;
   projects: TimesheetProjectPreview[];
+  invoice: ContractorTimesheetInvoicePreview | null;
+};
+
+export type ContractorTimesheetInvoicePreview = {
+  id: string;
+  invoiceNumber: string;
+  status: "uploaded" | "accepted" | "rejected" | "replaced" | "cancelled" | "deleted";
+  declaredAmount: string;
+  currencyCode: string;
+  originalFilename: string;
+  uploadedAt: string;
 };
 
 type DecimalLike = {
@@ -206,6 +217,23 @@ export async function getContractorTimesheetMonthlyPreview(input: {
             },
           },
         },
+        invoices: {
+          orderBy: [{ createdAt: "desc" }],
+          take: 1,
+          select: {
+            id: true,
+            status: true,
+            invoiceNumber: true,
+            declaredAmount: true,
+            currencyCode: true,
+            createdAt: true,
+            document: {
+              select: {
+                originalFilename: true,
+              },
+            },
+          },
+        },
       },
     }),
   ]);
@@ -285,6 +313,17 @@ export async function getContractorTimesheetMonthlyPreview(input: {
     missingRateLineCount: aggregate.missingRateLineCount,
     totalAmount: aggregate.totalAmount,
     projects: aggregate.projects,
+    invoice: selectedTimesheet?.invoices.at(0)
+      ? {
+          id: selectedTimesheet.invoices[0].id,
+          invoiceNumber: selectedTimesheet.invoices[0].invoiceNumber,
+          status: mapInvoiceStatus(selectedTimesheet.invoices[0].status),
+          declaredAmount: selectedTimesheet.invoices[0].declaredAmount.toString(),
+          currencyCode: selectedTimesheet.invoices[0].currencyCode,
+          originalFilename: selectedTimesheet.invoices[0].document.originalFilename,
+          uploadedAt: selectedTimesheet.invoices[0].createdAt.toISOString(),
+        }
+      : null,
   };
 }
 
@@ -530,6 +569,10 @@ function formatMonthParam(monthStart: Date) {
 
 function mapTimesheetStatus(status: TimesheetStatusRecord): TimesheetPreviewStatus {
   return status.toLowerCase() as TimesheetPreviewStatus;
+}
+
+function mapInvoiceStatus(status: string): ContractorTimesheetInvoicePreview["status"] {
+  return status.toLowerCase() as ContractorTimesheetInvoicePreview["status"];
 }
 
 function resolveProjectColor(colorToken: string) {

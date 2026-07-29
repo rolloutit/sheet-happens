@@ -32,6 +32,7 @@ export type {
 } from "./admin-review";
 export type {
   ContractorTimesheetMonthlyPreview,
+  ContractorTimesheetInvoicePreview,
   TimesheetMonthOption,
   TimesheetProjectPreview,
   TimesheetPreviewLine,

@@ -325,6 +325,26 @@
       "missingRates": "Ask your admin to add rates for {count} entries before submitting.",
       "rejected": "Rejected: {reason}"
     },
+    "actionResults": {
+      "invoiceUploaded": "Invoice uploaded. The timesheet is now marked as invoiced.",
+      "invoiceInvalidInput": "Check the invoice details and upload again.",
+      "invoiceInvalidMonth": "Choose a valid timesheet month.",
+      "invoiceCurrencyInvalid": "The invoice currency is not supported.",
+      "invoiceApprovedRequired": "The timesheet must be approved before an invoice can be uploaded.",
+      "invoiceRevisionChanged": "The timesheet changed during upload. Refresh and try again.",
+      "invoiceAlreadyUploaded": "An invoice has already been uploaded for this timesheet.",
+      "invoiceFileRequired": "Choose a PDF invoice file.",
+      "invoiceFileTooLarge": "The invoice PDF is too large.",
+      "invoicePdfRequired": "Only PDF invoices can be uploaded.",
+      "invoiceNumberRequired": "Enter the invoice number.",
+      "invoiceAmountInvalid": "Enter a positive invoice amount.",
+      "invoiceStorageMissing": "Invoice storage is not configured for this environment.",
+      "memberNotFound": "Member profile not found.",
+      "contractorRequired": "Only contractors can upload invoices.",
+      "notAllowed": "You are not allowed to upload this invoice.",
+      "databaseUnavailable": "Database unavailable. Try again later.",
+      "invoiceFailed": "The invoice could not be uploaded."
+    },
     "breakdown": {
       "title": "Project breakdown",
       "caption": "Monthly timesheet project breakdown",
@@ -368,6 +388,27 @@
         "mixedCurrency": "A submitted month must use a single currency.",
         "notReady": "The timesheet amount is not ready for submission."
       }
+    },
+    "invoice": {
+      "title": "Contractor invoice",
+      "description": "Upload the invoice PDF after admin approval.",
+      "uploadedDescription": "Uploaded invoice for the approved timesheet revision.",
+      "invoiceNumber": "Invoice number",
+      "invoiceNumberPlaceholder": "Invoice number",
+      "declaredAmount": "Invoice amount",
+      "currency": "Currency",
+      "file": "PDF invoice",
+      "fileHint": "PDF only, max {sizeMb} MB.",
+      "upload": "Upload invoice",
+      "uploadedAt": "Uploaded",
+      "status": {
+        "uploaded": "Uploaded",
+        "accepted": "Accepted",
+        "rejected": "Rejected",
+        "replaced": "Replaced",
+        "cancelled": "Cancelled",
+        "deleted": "Deleted"
+      }
     }
   },
   "TimesheetActions": {
@@ -390,7 +431,18 @@
       "entriesChanged": "Time entries changed during submission. Try again.",
       "notAllowed": "You are not allowed to submit this timesheet.",
       "databaseUnavailable": "Database unavailable. Try again later.",
-      "submitFailed": "The timesheet could not be submitted."
+      "submitFailed": "The timesheet could not be submitted.",
+      "invoiceApprovedRequired": "The timesheet must be approved before an invoice can be uploaded.",
+      "invoiceRevisionChanged": "The timesheet changed during upload. Refresh and try again.",
+      "invoiceAlreadyUploaded": "An invoice has already been uploaded for this timesheet.",
+      "invoiceFileRequired": "Choose a PDF invoice file.",
+      "invoiceFileTooLarge": "The invoice PDF is too large.",
+      "invoicePdfRequired": "Only PDF invoices can be uploaded.",
+      "invoiceNumberRequired": "Enter the invoice number.",
+      "invoiceAmountInvalid": "Enter a positive invoice amount.",
+      "invoiceCurrencyInvalid": "The invoice currency is not supported.",
+      "invoiceStorageMissing": "Invoice storage is not configured for this environment.",
+      "invoiceFailed": "The invoice could not be uploaded."
     }
   },
   "AdminTimesheets": {

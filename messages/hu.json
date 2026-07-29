@@ -325,6 +325,26 @@
       "missingRates": "Kérj meg egy admint, hogy állítson be óradíjat {count} bejegyzéshez a beküldés előtt.",
       "rejected": "Elutasítva: {reason}"
     },
+    "actionResults": {
+      "invoiceUploaded": "A számla feltöltve. A timesheet státusza számlázva lett.",
+      "invoiceInvalidInput": "Ellenőrizd a számla adatait, majd töltsd fel újra.",
+      "invoiceInvalidMonth": "Válassz érvényes timesheet hónapot.",
+      "invoiceCurrencyInvalid": "A számla pénzneme nem támogatott.",
+      "invoiceApprovedRequired": "Számlát csak jóváhagyott timesheethez lehet feltölteni.",
+      "invoiceRevisionChanged": "A timesheet feltöltés közben megváltozott. Frissíts és próbáld újra.",
+      "invoiceAlreadyUploaded": "Ehhez a timesheethez már van feltöltött számla.",
+      "invoiceFileRequired": "Válassz ki egy PDF számlafájlt.",
+      "invoiceFileTooLarge": "A PDF számla túl nagy.",
+      "invoicePdfRequired": "Csak PDF számla tölthető fel.",
+      "invoiceNumberRequired": "Add meg a számlaszámot.",
+      "invoiceAmountInvalid": "Adj meg pozitív számlaösszeget.",
+      "invoiceStorageMissing": "Ebben a környezetben nincs beállítva a számlatárolás.",
+      "memberNotFound": "A tagprofil nem található.",
+      "contractorRequired": "Számlát csak kontraktor tölthet fel.",
+      "notAllowed": "Nincs jogosultságod feltölteni ezt a számlát.",
+      "databaseUnavailable": "Az adatbázis nem elérhető. Próbáld újra később.",
+      "invoiceFailed": "A számlát nem sikerült feltölteni."
+    },
     "breakdown": {
       "title": "Projekt bontás",
       "caption": "Havi timesheet projekt bontás",
@@ -368,6 +388,27 @@
         "mixedCurrency": "Egy beküldött hónap csak egy pénznemet tartalmazhat.",
         "notReady": "A timesheet összege még nem áll készen beküldésre."
       }
+    },
+    "invoice": {
+      "title": "Kontraktori számla",
+      "description": "A számla PDF-et admin jóváhagyás után lehet feltölteni.",
+      "uploadedDescription": "A jóváhagyott timesheet revízióhoz feltöltött számla.",
+      "invoiceNumber": "Számlaszám",
+      "invoiceNumberPlaceholder": "Számlaszám",
+      "declaredAmount": "Számla összege",
+      "currency": "Pénznem",
+      "file": "PDF számla",
+      "fileHint": "Csak PDF, legfeljebb {sizeMb} MB.",
+      "upload": "Számla feltöltése",
+      "uploadedAt": "Feltöltve",
+      "status": {
+        "uploaded": "Feltöltve",
+        "accepted": "Elfogadva",
+        "rejected": "Elutasítva",
+        "replaced": "Cserélve",
+        "cancelled": "Sztornózva",
+        "deleted": "Törölve"
+      }
     }
   },
   "TimesheetActions": {
@@ -390,7 +431,18 @@
       "entriesChanged": "Az időbejegyzések beküldés közben megváltoztak. Próbáld újra.",
       "notAllowed": "Nincs jogosultságod beküldeni ezt a timesheetet.",
       "databaseUnavailable": "Az adatbázis nem elérhető. Próbáld újra később.",
-      "submitFailed": "A timesheetet nem sikerült beküldeni."
+      "submitFailed": "A timesheetet nem sikerült beküldeni.",
+      "invoiceApprovedRequired": "Számlát csak jóváhagyott timesheethez lehet feltölteni.",
+      "invoiceRevisionChanged": "A timesheet feltöltés közben megváltozott. Frissíts és próbáld újra.",
+      "invoiceAlreadyUploaded": "Ehhez a timesheethez már van feltöltött számla.",
+      "invoiceFileRequired": "Válassz ki egy PDF számlafájlt.",
+      "invoiceFileTooLarge": "A PDF számla túl nagy.",
+      "invoicePdfRequired": "Csak PDF számla tölthető fel.",
+      "invoiceNumberRequired": "Add meg a számlaszámot.",
+      "invoiceAmountInvalid": "Adj meg pozitív számlaösszeget.",
+      "invoiceCurrencyInvalid": "A számla pénzneme nem támogatott.",
+      "invoiceStorageMissing": "Ebben a környezetben nincs beállítva a számlatárolás.",
+      "invoiceFailed": "A számlát nem sikerült feltölteni."
     }
   },
   "AdminTimesheets": {

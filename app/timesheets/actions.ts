@@ -2,12 +2,21 @@
 
 import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
+import { redirect } from "next/navigation";
 import { getTranslations } from "next-intl/server";
 import { z } from "zod";
 
+import { isSupportedCurrencyCode, normalizeCurrencyCode } from "@/src/lib/member-preferences";
 import { requireActiveAppMemberForAction } from "@/src/server/auth/app-access";
 import { AuthenticationError, AuthorizationError } from "@/src/server/auth/session";
 import { Prisma } from "@/src/server/db/generated/client";
+import {
+  CONTRACTOR_INVOICE_MAX_BYTES,
+  ContractorInvoiceUploadError,
+  uploadContractorInvoice,
+  type ContractorInvoiceUploadRequestMetadata,
+} from "@/src/server/invoices";
+import { ObjectStorageConfigurationError } from "@/src/server/storage";
 import {
   parseTimesheetMonthParam,
   submitContractorTimesheet,
@@ -26,6 +35,16 @@ const submitTimesheetSchema = z.object({
   periodStart: z.string().trim().min(1),
 });
 
+const uploadInvoiceSchema = z.object({
+  periodStart: z.string().trim().min(1),
+  invoiceNumber: z.string().trim().min(1).max(120),
+  declaredAmount: z
+    .string()
+    .trim()
+    .regex(/^\d+(\.\d{1,2})?$/),
+  currencyCode: z.string().trim().min(3).max(3),
+});
+
 const submissionErrorKeys: Record<string, string> = {
   "Member not found.": "errors.memberNotFound",
   "Contractor profile required.": "errors.contractorRequired",
@@ -39,6 +58,21 @@ const submissionErrorKeys: Record<string, string> = {
   "Missing rates for one or more entries.": "errors.missingRates",
   "Timesheet month contains multiple currencies.": "errors.mixedCurrency",
   "Timesheet source entries changed during submission. Try again.": "errors.entriesChanged",
+};
+
+const invoiceUploadErrorResults: Record<string, string> = {
+  "Member not found.": "memberNotFound",
+  "Contractor profile required.": "contractorRequired",
+  "Approved timesheet not found.": "invoiceApprovedRequired",
+  "Timesheet must be approved before invoice upload.": "invoiceApprovedRequired",
+  "Timesheet revision changed during upload.": "invoiceRevisionChanged",
+  "Invoice already uploaded for this timesheet.": "invoiceAlreadyUploaded",
+  "Invoice PDF is required.": "invoiceFileRequired",
+  "Invoice PDF is too large.": "invoiceFileTooLarge",
+  "Invoice must be a PDF.": "invoicePdfRequired",
+  "Invoice number is required.": "invoiceNumberRequired",
+  "Invoice amount must be positive.": "invoiceAmountInvalid",
+  "Invoice currency is invalid.": "invoiceCurrencyInvalid",
 };
 
 export async function submitTimesheetAction(input: {
@@ -89,6 +123,96 @@ export async function submitTimesheetAction(input: {
   }
 }
 
+export async function uploadContractorInvoiceAction(formData: FormData): Promise<never> {
+  const parsed = uploadInvoiceSchema.safeParse({
+    periodStart: formData.get("periodStart"),
+    invoiceNumber: formData.get("invoiceNumber"),
+    declaredAmount: formData.get("declaredAmount"),
+    currencyCode: formData.get("currencyCode"),
+  });
+  const rawMonth = String(formData.get("periodStart") ?? "");
+  const month = rawMonth.slice(0, 7);
+
+  if (!parsed.success) {
+    redirectToTimesheetsWithResult(month, "invoiceInvalidInput");
+  }
+
+  const periodStart = parseTimesheetMonthParam(parsed.data.periodStart.slice(0, 7));
+  const currencyCode = normalizeCurrencyCode(parsed.data.currencyCode);
+
+  if (!periodStart) {
+    redirectToTimesheetsWithResult(month, "invoiceInvalidMonth");
+  }
+
+  if (!isSupportedCurrencyCode(currencyCode)) {
+    redirectToTimesheetsWithResult(month, "invoiceCurrencyInvalid");
+  }
+
+  const file = formData.get("invoiceFile");
+
+  if (!(file instanceof File)) {
+    redirectToTimesheetsWithResult(month, "invoiceFileRequired");
+  }
+
+  if (file.size <= 0) {
+    redirectToTimesheetsWithResult(month, "invoiceFileRequired");
+  }
+
+  if (file.size > CONTRACTOR_INVOICE_MAX_BYTES) {
+    redirectToTimesheetsWithResult(month, "invoiceFileTooLarge");
+  }
+
+  const normalizedContentType =
+    file.type === "application/pdf" || file.name.toLowerCase().endsWith(".pdf")
+      ? "application/pdf"
+      : file.type;
+  let result = "invoiceUploaded";
+
+  try {
+    const { member } = await requireActiveAppMemberForAction();
+
+    if (member.currentProfile !== "CONTRACTOR") {
+      throw new AuthorizationError("Contractor profile required.");
+    }
+
+    await uploadContractorInvoice({
+      memberId: member.id,
+      actorMemberId: member.id,
+      periodStart,
+      invoiceNumber: parsed.data.invoiceNumber,
+      declaredAmount: parsed.data.declaredAmount,
+      currencyCode,
+      file: {
+        bytes: Buffer.from(await file.arrayBuffer()),
+        originalFilename: file.name || "invoice.pdf",
+        contentType: normalizedContentType,
+        byteSize: file.size,
+      },
+      requestMetadata: await getInvoiceUploadRequestMetadata(),
+    });
+
+    revalidatePath("/timesheets");
+    revalidatePath("/admin/timesheets");
+    revalidatePath("/time");
+  } catch (error) {
+    console.error("[timesheets] invoice upload failed", error);
+
+    if (error instanceof ContractorInvoiceUploadError) {
+      result = invoiceUploadErrorResults[error.message] ?? "invoiceFailed";
+    } else if (error instanceof AuthenticationError || error instanceof AuthorizationError) {
+      result = "notAllowed";
+    } else if (error instanceof ObjectStorageConfigurationError) {
+      result = "invoiceStorageMissing";
+    } else if (error instanceof Prisma.PrismaClientInitializationError) {
+      result = "databaseUnavailable";
+    } else {
+      result = "invoiceFailed";
+    }
+  }
+
+  redirectToTimesheetsWithResult(month, result);
+}
+
 async function getTimesheetRequestMetadata(): Promise<TimesheetSubmissionRequestMetadata> {
   const requestHeaders = await headers();
 
@@ -96,6 +220,27 @@ async function getTimesheetRequestMetadata(): Promise<TimesheetSubmissionRequest
     ipAddress: requestHeaders.get("x-forwarded-for"),
     userAgent: requestHeaders.get("user-agent"),
   };
+}
+
+async function getInvoiceUploadRequestMetadata(): Promise<ContractorInvoiceUploadRequestMetadata> {
+  const requestHeaders = await headers();
+
+  return {
+    ipAddress: requestHeaders.get("x-forwarded-for"),
+    userAgent: requestHeaders.get("user-agent"),
+  };
+}
+
+function redirectToTimesheetsWithResult(month: string, result: string): never {
+  const params = new URLSearchParams();
+
+  if (month) {
+    params.set("month", month);
+  }
+
+  params.set("result", result);
+
+  redirect(`/timesheets?${params.toString()}`);
 }
 
 function mapTimesheetActionError(

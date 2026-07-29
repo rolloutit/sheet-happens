@@ -1,4 +1,12 @@
-import { AlertTriangle, CalendarDays, Clock3, FileText, WalletCards } from "lucide-react";
+import {
+  AlertTriangle,
+  CalendarDays,
+  CheckCircle2,
+  Clock3,
+  FileText,
+  Upload,
+  WalletCards,
+} from "lucide-react";
 import type { Route } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
@@ -15,6 +23,8 @@ import {
   CardHeader,
   CardTitle,
 } from "@/src/components/ui/Card";
+import { Field } from "@/src/components/ui/Field";
+import { Input } from "@/src/components/ui/Input";
 import { SectionHead } from "@/src/components/ui/SectionHead";
 import {
   accountStatusRoute,
@@ -32,12 +42,14 @@ import {
   type TimesheetPreviewStatus,
 } from "@/src/server/timesheets";
 import { SubmitTimesheetButton } from "./SubmitTimesheetButton";
+import { uploadContractorInvoiceAction } from "./actions";
 
 export const dynamic = "force-dynamic";
 
 type TimesheetsPageProps = {
   searchParams?: Promise<{
     month?: string | string[];
+    result?: string | string[];
   }>;
 };
 
@@ -65,6 +77,7 @@ export default async function TimesheetsPage({ searchParams }: TimesheetsPagePro
   const shellProfile = mapMemberToShellProfile(member);
   const totalAmountLabel = formatPreviewAmount(preview, locale, t);
   const submitReadiness = getSubmitReadiness(preview, t);
+  const actionResult = getActionResultMessage(getSingleParam(resolvedSearchParams?.result), t);
 
   return (
     <AppShell
@@ -77,6 +90,23 @@ export default async function TimesheetsPage({ searchParams }: TimesheetsPagePro
         <SectionHead eyebrow={t("eyebrow")} title={t("title")} subtitle={t("subtitle")} />
 
         <MonthSelector preview={preview} locale={locale} t={t} />
+
+        {actionResult ? (
+          <div
+            className={
+              actionResult.tone === "success"
+                ? "flex items-start gap-3 rounded-[var(--radius-lg)] border border-success/35 bg-success/10 px-4 py-3 text-sm text-success"
+                : "flex items-start gap-3 rounded-[var(--radius-lg)] border border-destructive/35 bg-destructive/10 px-4 py-3 text-sm text-destructive"
+            }
+          >
+            {actionResult.tone === "success" ? (
+              <CheckCircle2 className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
+            ) : (
+              <AlertTriangle className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
+            )}
+            <p>{actionResult.message}</p>
+          </div>
+        ) : null}
 
         <Card variant="featured" density="lg">
           <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-start">
@@ -159,6 +189,8 @@ export default async function TimesheetsPage({ searchParams }: TimesheetsPagePro
             )}
           </CardContent>
         </Card>
+
+        <InvoicePanel preview={preview} locale={locale} t={t} />
       </section>
     </AppShell>
   );
@@ -285,6 +317,146 @@ function ProjectBreakdownTable({
   );
 }
 
+function InvoicePanel({
+  preview,
+  locale,
+  t,
+}: {
+  preview: ContractorTimesheetMonthlyPreview;
+  locale: string;
+  t: TimesheetsTranslator;
+}) {
+  if (!preview.invoice && preview.status !== "approved") {
+    return null;
+  }
+
+  return (
+    <Card variant="elevated" density="lg">
+      <CardHeader className="block">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <CardTitle>{t("invoice.title")}</CardTitle>
+            <CardDescription>
+              {preview.invoice ? t("invoice.uploadedDescription") : t("invoice.description")}
+            </CardDescription>
+          </div>
+          {preview.invoice ? (
+            <Badge tone="success">{getInvoiceStatusLabel(preview.invoice.status, t)}</Badge>
+          ) : null}
+        </div>
+      </CardHeader>
+      <CardContent>
+        {preview.invoice ? (
+          <InvoiceSummary invoice={preview.invoice} locale={locale} t={t} />
+        ) : (
+          <form
+            action={uploadContractorInvoiceAction}
+            encType="multipart/form-data"
+            className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]"
+          >
+            <input type="hidden" name="periodStart" value={preview.periodStart} />
+            <Field label={t("invoice.invoiceNumber")} required>
+              {({ id, describedBy, invalid }) => (
+                <Input
+                  id={id}
+                  name="invoiceNumber"
+                  placeholder={t("invoice.invoiceNumberPlaceholder")}
+                  aria-describedby={describedBy}
+                  invalid={invalid}
+                  required
+                />
+              )}
+            </Field>
+            <Field label={t("invoice.file")} required hint={t("invoice.fileHint", { sizeMb: 10 })}>
+              {({ id, describedBy, invalid }) => (
+                <Input
+                  id={id}
+                  name="invoiceFile"
+                  type="file"
+                  accept="application/pdf,.pdf"
+                  aria-describedby={describedBy}
+                  invalid={invalid}
+                  required
+                  className="file:mr-3 file:rounded-[var(--radius-sm)] file:border-0 file:bg-secondary file:px-3 file:py-1 file:text-sm file:font-semibold file:text-foreground"
+                />
+              )}
+            </Field>
+            <Field label={t("invoice.declaredAmount")} required>
+              {({ id, describedBy, invalid }) => (
+                <Input
+                  id={id}
+                  name="declaredAmount"
+                  inputMode="decimal"
+                  defaultValue={preview.totalAmount ?? ""}
+                  aria-describedby={describedBy}
+                  invalid={invalid}
+                  required
+                />
+              )}
+            </Field>
+            <Field label={t("invoice.currency")} required>
+              {({ id, describedBy, invalid }) => (
+                <Input
+                  id={id}
+                  name="currencyCode"
+                  defaultValue={preview.currencyCode ?? ""}
+                  aria-describedby={describedBy}
+                  invalid={invalid}
+                  required
+                  readOnly
+                />
+              )}
+            </Field>
+            <div className="lg:col-span-2">
+              <Button type="submit" variant="cta" icon={Upload}>
+                {t("invoice.upload")}
+              </Button>
+            </div>
+          </form>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+function InvoiceSummary({
+  invoice,
+  locale,
+  t,
+}: {
+  invoice: NonNullable<ContractorTimesheetMonthlyPreview["invoice"]>;
+  locale: string;
+  t: TimesheetsTranslator;
+}) {
+  return (
+    <div className="grid gap-3 rounded-[var(--radius-lg)] border border-border bg-card/70 p-4 sm:grid-cols-2 lg:grid-cols-4">
+      <SummaryItem label={t("invoice.invoiceNumber")} value={invoice.invoiceNumber} />
+      <SummaryItem
+        label={t("invoice.declaredAmount")}
+        value={formatMoney(invoice.declaredAmount, invoice.currencyCode, locale)}
+      />
+      <SummaryItem label={t("invoice.file")} value={invoice.originalFilename} />
+      <SummaryItem
+        label={t("invoice.uploadedAt")}
+        value={formatDateTime(invoice.uploadedAt, locale)}
+      />
+    </div>
+  );
+}
+
+function SummaryItem({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="min-w-0">
+      <p className="font-ui text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+        {label}
+      </p>
+      <p className="mt-1 truncate text-sm font-semibold text-foreground" title={value}>
+        {value}
+      </p>
+    </div>
+  );
+}
+
 function RateCell({
   project,
   locale,
@@ -392,6 +564,14 @@ function formatMoney(amount: string, currencyCode: string, locale: string) {
   }).format(Number(amount));
 }
 
+function formatDateTime(value: string, locale: string) {
+  return new Intl.DateTimeFormat(locale, {
+    dateStyle: "medium",
+    timeStyle: "short",
+    timeZone: "UTC",
+  }).format(new Date(value));
+}
+
 function formatHours(minutes: number, locale: string) {
   const hours = minutes / 60;
 
@@ -426,6 +606,45 @@ function formatPeriodRange(start: string, end: string, locale: string) {
 
 function getStatusLabel(status: TimesheetPreviewStatus, t: TimesheetsTranslator) {
   return t(`status.${status}`);
+}
+
+function getInvoiceStatusLabel(
+  status: NonNullable<ContractorTimesheetMonthlyPreview["invoice"]>["status"],
+  t: TimesheetsTranslator,
+) {
+  return t(`invoice.status.${status}`);
+}
+
+function getActionResultMessage(result: string, t: TimesheetsTranslator) {
+  if (!result) return null;
+
+  const successResults = new Set(["invoiceUploaded"]);
+  const knownResults = new Set([
+    "invoiceUploaded",
+    "invoiceInvalidInput",
+    "invoiceInvalidMonth",
+    "invoiceCurrencyInvalid",
+    "invoiceApprovedRequired",
+    "invoiceRevisionChanged",
+    "invoiceAlreadyUploaded",
+    "invoiceFileRequired",
+    "invoiceFileTooLarge",
+    "invoicePdfRequired",
+    "invoiceNumberRequired",
+    "invoiceAmountInvalid",
+    "invoiceStorageMissing",
+    "memberNotFound",
+    "contractorRequired",
+    "notAllowed",
+    "databaseUnavailable",
+    "invoiceFailed",
+  ]);
+  const key = knownResults.has(result) ? result : "invoiceFailed";
+
+  return {
+    tone: successResults.has(result) ? "success" : "error",
+    message: t(`actionResults.${key}`),
+  };
 }
 
 function getSubmitReadiness(preview: ContractorTimesheetMonthlyPreview, t: TimesheetsTranslator) {
