@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  Activity,
   BarChart3,
   BookOpen,
   CalendarDays,
@@ -78,6 +79,7 @@ const navItems = [
   { id: "people", labelKey: "nav.people", icon: Users, group: "admin", href: "/admin/people" },
   { id: "rates", labelKey: "nav.rates", icon: WalletCards, group: "admin", href: "/admin/rates" },
   { id: "audit", labelKey: "nav.audit", icon: ScrollText, group: "admin", href: "/admin/audit" },
+  { id: "system", labelKey: "nav.system", icon: Activity, group: "admin", href: "/admin/system" },
   { id: "info", labelKey: "nav.info", icon: BookOpen, group: "admin", href: "#" },
 ] as const;
 

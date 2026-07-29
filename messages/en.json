@@ -39,6 +39,7 @@
       "people": "People",
       "rates": "Rates",
       "audit": "Audit log",
+      "system": "System",
       "info": "Information page",
       "settings": "Settings"
     },
@@ -1337,6 +1338,70 @@
       "after": "After",
       "noData": "No data"
     }
+  },
+  "AdminSystem": {
+    "eyebrow": "Admin",
+    "title": "System check",
+    "subtitle": "Verify deployment configuration and external services before manual testing.",
+    "actions": {
+      "refresh": "Refresh",
+      "openJson": "Open JSON"
+    },
+    "stats": {
+      "overall": "Overall",
+      "passing": "Passing",
+      "warnings": "Warnings",
+      "failing": "Failing"
+    },
+    "statuses": {
+      "pass": "Pass",
+      "warning": "Warning",
+      "fail": "Fail"
+    },
+    "checks": {
+      "title": "Environment readiness",
+      "description": "Last checked at {checkedAt}. Object storage is tested with a temporary write, read, and delete probe.",
+      "items": {
+        "application": {
+          "title": "Application configuration"
+        },
+        "database": {
+          "title": "Database"
+        },
+        "objectStorage": {
+          "title": "Object storage"
+        },
+        "email": {
+          "title": "Email delivery"
+        },
+        "googleOAuth": {
+          "title": "Google OAuth"
+        }
+      }
+    },
+    "messages": {
+      "ok": "The check completed successfully.",
+      "missingEnv": "One or more required environment variables are missing.",
+      "databaseUnavailable": "The database query failed.",
+      "storageUnsupportedProvider": "The configured object storage provider is not supported.",
+      "storageProbeFailed": "The object storage write, read, or delete probe failed.",
+      "emailConsole": "Email delivery is in console mode. This is useful locally, but deployed QA normally needs SMTP.",
+      "emailInvalidMode": "The email delivery mode is not recognized, so the app will fall back to console mode.",
+      "emailSmtpMissingHost": "SMTP mode is enabled, but SMTP_HOST is missing.",
+      "emailSmtpDefaultFrom": "SMTP is configured, but AUTH_EMAIL_FROM still uses the local default sender.",
+      "googleDisabled": "Google OAuth is not configured. This is acceptable only if Google sign-in is intentionally disabled for this environment.",
+      "googlePartialConfig": "Google OAuth is partially configured. Client id, client secret, and allowed domains must all be present."
+    },
+    "details": {
+      "checkedAt": "Checked at",
+      "mode": "Mode",
+      "from": "From",
+      "provider": "Provider",
+      "allowedDomains": "Allowed domains",
+      "probeObject": "Probe object"
+    },
+    "duration": "{durationMs} ms",
+    "missingEnv": "Missing: {names}"
   },
   "TimeTracking": {
     "view": {
