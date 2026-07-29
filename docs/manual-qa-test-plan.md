@@ -12,6 +12,7 @@ Replace placeholder values before sharing a concrete test run:
 - `{ADMIN_INVITE_TOKEN}`: pending admin invitation token.
 - `{CONTRACTOR_INVITE_TOKEN}`: pending contractor invitation token.
 - `{INVALID_INVITE_TOKEN}`: deliberately invalid invitation token for negative testing.
+- `{SYSTEM_CHECK_VIEW}`: admin system-check path, default `https://{DOMAIN_NAME}/admin/system`.
 - `{AUDIT_LOG_VIEW}`: audit-log viewer path, default `https://{DOMAIN_NAME}/admin/audit`.
 - `{INVITED_EMAIL}`: email address that owns the tested invitation.
 - `{INVITED_FIRST_NAME}`: first name used when creating a new invited member.
@@ -89,6 +90,26 @@ Replace placeholder values before sharing a concrete test run:
 
 - The app redirects unauthenticated users to `https://{DOMAIN_NAME}/login?callbackURL=%2Fdashboard`.
 - No blank page or server error is shown.
+
+## Smoke: Admin System Check Passes
+
+Run this after deployment configuration changes and before invoice testing.
+
+### Steps
+
+1. Sign in as `{ADMIN_EMAIL}`.
+2. Open `{SYSTEM_CHECK_VIEW}`.
+3. Confirm the page shows application configuration, database, object storage, email delivery, and Google OAuth checks.
+4. Confirm the object storage check completes a temporary write, read, and delete probe.
+5. Open `https://{DOMAIN_NAME}/api/admin/system-check` in a new tab.
+
+### Expected Result
+
+- Application configuration, database, and object storage are passing before invoice upload tests.
+- Email delivery is passing when SMTP is expected, or shows a clear warning when console mode is intentionally used.
+- Google OAuth is passing when Google sign-in is expected, or shows a clear warning when it is intentionally disabled.
+- The JSON endpoint returns the same check results without exposing secret values.
+- Non-admin users cannot open the system check page or endpoint.
 
 ## Invitation Activation
 

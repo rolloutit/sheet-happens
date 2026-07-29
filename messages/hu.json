@@ -39,6 +39,7 @@
       "people": "Emberek",
       "rates": "Óradíjak",
       "audit": "Napló",
+      "system": "Rendszer",
       "info": "Információs oldal",
       "settings": "Beállítások"
     },
@@ -1337,6 +1338,70 @@
       "after": "Utána",
       "noData": "Nincs adat"
     }
+  },
+  "AdminSystem": {
+    "eyebrow": "Admin",
+    "title": "Rendszerellenőrzés",
+    "subtitle": "Deployment konfiguráció és külső szolgáltatások ellenőrzése manuális tesztelés előtt.",
+    "actions": {
+      "refresh": "Frissítés",
+      "openJson": "JSON megnyitása"
+    },
+    "stats": {
+      "overall": "Összesített",
+      "passing": "Sikeres",
+      "warnings": "Figyelmeztetés",
+      "failing": "Hibás"
+    },
+    "statuses": {
+      "pass": "Sikeres",
+      "warning": "Figyelmeztetés",
+      "fail": "Hiba"
+    },
+    "checks": {
+      "title": "Környezet állapota",
+      "description": "Utolsó ellenőrzés: {checkedAt}. Az objektumtároló ideiglenes írás, olvasás és törlés próbával van ellenőrizve.",
+      "items": {
+        "application": {
+          "title": "Alkalmazás konfiguráció"
+        },
+        "database": {
+          "title": "Adatbázis"
+        },
+        "objectStorage": {
+          "title": "Objektumtároló"
+        },
+        "email": {
+          "title": "Email küldés"
+        },
+        "googleOAuth": {
+          "title": "Google OAuth"
+        }
+      }
+    },
+    "messages": {
+      "ok": "Az ellenőrzés sikeresen lefutott.",
+      "missingEnv": "Egy vagy több kötelező környezeti változó hiányzik.",
+      "databaseUnavailable": "Az adatbázis lekérdezés sikertelen.",
+      "storageUnsupportedProvider": "A beállított objektumtároló provider nem támogatott.",
+      "storageProbeFailed": "Az objektumtároló írás, olvasás vagy törlés próba sikertelen.",
+      "emailConsole": "Az email küldés console módban van. Lokálisan hasznos, de telepített QA környezetben általában SMTP szükséges.",
+      "emailInvalidMode": "Az email küldési mód ismeretlen, ezért az app console módra fog visszaállni.",
+      "emailSmtpMissingHost": "Az SMTP mód be van kapcsolva, de az SMTP_HOST hiányzik.",
+      "emailSmtpDefaultFrom": "Az SMTP be van állítva, de az AUTH_EMAIL_FROM még a lokális alapértelmezett feladót használja.",
+      "googleDisabled": "A Google OAuth nincs beállítva. Ez csak akkor elfogadható, ha ebben a környezetben szándékosan ki van kapcsolva a Google belépés.",
+      "googlePartialConfig": "A Google OAuth csak részben van beállítva. Client id, client secret és engedélyezett domainek mind szükségesek."
+    },
+    "details": {
+      "checkedAt": "Ellenőrizve",
+      "mode": "Mód",
+      "from": "Feladó",
+      "provider": "Provider",
+      "allowedDomains": "Engedélyezett domainek",
+      "probeObject": "Próba objektum"
+    },
+    "duration": "{durationMs} ms",
+    "missingEnv": "Hiányzik: {names}"
   },
   "TimeTracking": {
     "view": {
