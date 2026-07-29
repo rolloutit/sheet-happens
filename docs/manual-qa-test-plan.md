@@ -41,6 +41,9 @@ Replace placeholder values before sharing a concrete test run:
 - `{TIMESHEET_CURRENCY_A}`: first currency used in mixed-currency timesheet tests.
 - `{TIMESHEET_CURRENCY_B}`: second currency used in mixed-currency timesheet tests.
 - `{TIMESHEET_REJECTION_REASON}`: reason text used when rejecting a submitted timesheet.
+- `{INVOICE_NUMBER}`: invoice number used for contractor invoice upload testing.
+- `{INVOICE_AMOUNT}`: declared invoice amount used for contractor invoice upload testing.
+- `{INVOICE_PDF_FILE}`: local PDF file used for contractor invoice upload testing.
 - `{PROJECT_NAME}`: name for a newly created project.
 - `{PROJECT_UPDATED_NAME}`: updated project name.
 - `{PROJECT_SLUG}`: URL-safe or code-like project slug.
@@ -536,6 +539,54 @@ Expected result:
 - Approval changes the status to approved.
 - Source time entries remain locked after approval.
 - The audit log contains a `timesheet.approved` row.
+
+### Contractor Can Upload Invoice For Approved Timesheet
+
+1. Sign in as `{CONTRACTOR_EMAIL}`.
+2. Submit `{TIMESHEET_MONTH}` from `https://{DOMAIN_NAME}/timesheets?month={TIMESHEET_MONTH}`.
+3. Sign in as `{ADMIN_EMAIL}`.
+4. Open `https://{DOMAIN_NAME}/admin/timesheets`.
+5. Open the submitted timesheet review.
+6. Approve the timesheet.
+7. Sign in again as `{CONTRACTOR_EMAIL}`.
+8. Open `https://{DOMAIN_NAME}/timesheets?month={TIMESHEET_MONTH}`.
+9. Confirm the contractor invoice panel is visible.
+10. Enter `{INVOICE_NUMBER}`.
+11. Enter `{INVOICE_AMOUNT}`.
+12. Confirm the currency matches the approved timesheet currency.
+13. Choose `{INVOICE_PDF_FILE}`.
+14. Click `Upload invoice`.
+15. Reopen the same month.
+
+Expected result:
+
+- The invoice panel is only available after admin approval.
+- The PDF upload succeeds and the page confirms the invoice was uploaded.
+- The timesheet status changes to invoiced.
+- The invoice summary shows invoice number, amount, file name, upload time, and uploaded status.
+- Uploading a second invoice for the same approved revision is blocked.
+- The audit log contains an `invoice.uploaded` row.
+- The timesheet event history contains an invoice uploaded event.
+
+### Contractor Cannot Upload Invalid Invoice
+
+1. Sign in as `{CONTRACTOR_EMAIL}`.
+2. Open `https://{DOMAIN_NAME}/timesheets?month={TIMESHEET_MONTH}` for a month that is not yet approved.
+3. Confirm there is no invoice upload form.
+4. Submit and approve the month through the normal contractor and admin flow.
+5. Return to `https://{DOMAIN_NAME}/timesheets?month={TIMESHEET_MONTH}`.
+6. Try uploading without an invoice file.
+7. Try uploading a non-PDF file.
+8. Try uploading a PDF larger than 10 MB.
+9. Try uploading with an empty invoice number.
+10. Try uploading with a zero or negative amount.
+
+Expected result:
+
+- The contractor cannot upload an invoice before approval.
+- Invalid file, amount, and invoice number attempts show clear error messages.
+- Invalid attempts do not change the timesheet status.
+- Invalid attempts do not create invoice or document records.
 
 ### Admin Can Reject And Unlock Submitted Timesheet
 
