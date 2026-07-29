@@ -1,8 +1,10 @@
 import {
   AlertTriangle,
   ArrowLeft,
+  CheckCheck,
   CheckCircle2,
   Clock3,
+  Download,
   FileText,
   ShieldCheck,
   Unlock,
@@ -37,10 +39,16 @@ import {
   getTimesheetReviewForAdmin,
   type AdminTimesheetReview,
   type AdminTimesheetReviewEvent,
+  type AdminTimesheetReviewInvoice,
   type AdminTimesheetReviewLine,
   type AdminTimesheetReviewProject,
 } from "@/src/server/timesheets";
-import { approveTimesheetReviewAction, rejectTimesheetReviewAction } from "../actions";
+import {
+  acceptInvoiceReviewAction,
+  approveTimesheetReviewAction,
+  rejectInvoiceReviewAction,
+  rejectTimesheetReviewAction,
+} from "../actions";
 import {
   formatCount,
   formatHours,
@@ -126,6 +134,7 @@ export default async function AdminTimesheetReviewPage({
         <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_24rem]">
           <div className="grid gap-6">
             <ProjectSnapshot review={review} locale={locale} t={t} />
+            <InvoiceReviewCard review={review} locale={locale} t={t} />
             <EventHistory events={review.events} locale={locale} t={t} />
           </div>
           <ReviewActions review={review} t={t} />
@@ -324,6 +333,279 @@ function SnapshotLineRow({
   );
 }
 
+function InvoiceReviewCard({
+  review,
+  locale,
+  t,
+}: {
+  review: AdminTimesheetReview;
+  locale: string;
+  t: AdminTimesheetsTranslator;
+}) {
+  const invoice = review.invoice;
+
+  if (!invoice && review.status !== "APPROVED") {
+    return null;
+  }
+
+  const pdfHref = invoice
+    ? (`/admin/timesheets/${review.id}/invoice/${invoice.id}` as Route)
+    : null;
+  const comparison = invoice ? getInvoiceComparison(review, invoice, locale, t) : null;
+  const canReviewInvoice =
+    review.status === "INVOICED" &&
+    invoice?.status === "UPLOADED" &&
+    invoice.role !== "CANCELLATION";
+  const relatedInvoices = invoice
+    ? review.invoices.filter((relatedInvoice) => relatedInvoice.id !== invoice.id)
+    : [];
+
+  return (
+    <Card density="lg">
+      <CardHeader className="block">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <CardTitle>{t("invoice.title")}</CardTitle>
+            <CardDescription>
+              {invoice ? t("invoice.description") : t("invoice.awaitingDescription")}
+            </CardDescription>
+          </div>
+          {invoice ? (
+            <Badge tone={getInvoiceStatusTone(invoice.status)}>
+              {t(`invoice.status.${invoice.status.toLowerCase()}`)}
+            </Badge>
+          ) : null}
+        </div>
+      </CardHeader>
+      <CardContent>
+        {!invoice ? (
+          <div className="rounded-[var(--radius-lg)] border border-dashed border-border bg-secondary/45 px-5 py-8 text-center text-sm text-muted-foreground">
+            {t("invoice.empty")}
+          </div>
+        ) : (
+          <div className="grid gap-5">
+            <div className="grid gap-3 md:grid-cols-3">
+              <InvoiceMetric
+                label={t("invoice.systemTotal")}
+                value={comparison?.systemTotal ?? "-"}
+              />
+              <InvoiceMetric
+                label={t("invoice.invoiceTotal")}
+                value={comparison?.invoiceTotal ?? "-"}
+              />
+              <div className="rounded-[var(--radius-lg)] border border-border bg-card/70 p-3">
+                <div className="font-ui text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+                  {t("invoice.matchState")}
+                </div>
+                <div
+                  className={
+                    comparison?.matches
+                      ? "mt-2 inline-flex items-center gap-2 rounded-full bg-success/15 px-3 py-1 text-sm font-semibold text-success"
+                      : "mt-2 inline-flex items-center gap-2 rounded-full bg-warning/15 px-3 py-1 text-sm font-semibold text-warning"
+                  }
+                >
+                  {comparison?.matches ? (
+                    <CheckCircle2 className="size-4" aria-hidden="true" />
+                  ) : (
+                    <AlertTriangle className="size-4" aria-hidden="true" />
+                  )}
+                  {comparison?.matches ? t("invoice.match") : t("invoice.mismatch")}
+                </div>
+                {!comparison?.matches ? (
+                  <p className="mt-2 text-xs text-muted-foreground">
+                    {t("invoice.difference", { amount: comparison?.difference ?? "-" })}
+                  </p>
+                ) : null}
+              </div>
+            </div>
+
+            <div className="grid gap-4 xl:grid-cols-[minmax(0,0.72fr)_minmax(22rem,1fr)]">
+              <div className="grid gap-3 rounded-[var(--radius-lg)] border border-border bg-background/45 p-4">
+                <div>
+                  <p className="font-ui text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+                    {t("invoice.metadata")}
+                  </p>
+                  <h3 className="mt-2 text-lg font-semibold text-foreground">
+                    {invoice.invoiceNumber}
+                  </h3>
+                </div>
+                <dl className="grid gap-3 text-sm">
+                  <InvoiceDefinition
+                    label={t("invoice.role.label")}
+                    value={getInvoiceRoleLabel(invoice.role, t)}
+                  />
+                  <InvoiceDefinition label={t("invoice.file")} value={invoice.originalFilename} />
+                  <InvoiceDefinition
+                    label={t("invoice.uploadedAt")}
+                    value={formatTimestamp(invoice.uploadedAt, locale)}
+                  />
+                  <InvoiceDefinition
+                    label={t("invoice.fileSize")}
+                    value={formatBytes(invoice.byteSize, locale)}
+                  />
+                  {invoice.rejectionReason ? (
+                    <InvoiceDefinition
+                      label={t("invoice.rejectionReason")}
+                      value={invoice.rejectionReason}
+                    />
+                  ) : null}
+                </dl>
+                <p className="flex items-start gap-2 text-xs leading-5 text-muted-foreground">
+                  <AlertTriangle className="mt-0.5 size-3.5 shrink-0" aria-hidden="true" />
+                  {t("invoice.compareHint")}
+                </p>
+              </div>
+
+              <div className="overflow-hidden rounded-[var(--radius-lg)] border border-border bg-background">
+                <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border bg-secondary/45 px-4 py-3">
+                  <div className="flex min-w-0 items-center gap-2">
+                    <FileText className="size-4 shrink-0 text-destructive" aria-hidden="true" />
+                    <p className="truncate text-sm font-semibold text-foreground">
+                      {invoice.originalFilename}
+                    </p>
+                  </div>
+                  {pdfHref ? (
+                    <Button asChild variant="ghost" size="sm">
+                      <Link href={pdfHref} target="_blank">
+                        <Download className="size-4" aria-hidden="true" />
+                        {t("invoice.openPdf")}
+                      </Link>
+                    </Button>
+                  ) : null}
+                </div>
+                {pdfHref ? (
+                  <iframe
+                    src={pdfHref}
+                    title={t("invoice.pdfTitle", { filename: invoice.originalFilename })}
+                    className="h-[38rem] w-full bg-white"
+                  />
+                ) : null}
+              </div>
+            </div>
+
+            {relatedInvoices.length > 0 ? (
+              <RelatedInvoiceDocuments
+                timesheetId={review.id}
+                invoices={relatedInvoices}
+                locale={locale}
+                t={t}
+              />
+            ) : null}
+
+            {canReviewInvoice ? (
+              <div className="grid gap-4 rounded-[var(--radius-lg)] border border-border bg-secondary/35 p-4 lg:grid-cols-[minmax(0,0.7fr)_minmax(0,1fr)]">
+                <form action={acceptInvoiceReviewAction}>
+                  <input type="hidden" name="timesheetId" value={review.id} />
+                  <input type="hidden" name="invoiceId" value={invoice.id} />
+                  <Button type="submit" icon={CheckCheck} className="w-full">
+                    {t("invoice.accept")}
+                  </Button>
+                </form>
+
+                <form action={rejectInvoiceReviewAction} className="grid gap-3">
+                  <input type="hidden" name="timesheetId" value={review.id} />
+                  <input type="hidden" name="invoiceId" value={invoice.id} />
+                  <Field label={t("invoice.rejectReason")} htmlFor="invoice-reject-reason" required>
+                    <Textarea
+                      id="invoice-reject-reason"
+                      name="reason"
+                      required
+                      minLength={3}
+                      rows={4}
+                      placeholder={t("invoice.rejectPlaceholder")}
+                    />
+                  </Field>
+                  <Button type="submit" variant="danger" icon={XCircle} className="w-full">
+                    {t("invoice.reject")}
+                  </Button>
+                </form>
+              </div>
+            ) : (
+              <div className="rounded-[var(--radius-lg)] border border-border bg-secondary/35 p-4 text-sm text-muted-foreground">
+                {getInvoiceClosedMessage(review, t)}
+              </div>
+            )}
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+function InvoiceMetric({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-[var(--radius-lg)] border border-border bg-card/70 p-3">
+      <p className="font-ui text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+        {label}
+      </p>
+      <p className="mt-2 text-lg font-semibold text-foreground">{value}</p>
+    </div>
+  );
+}
+
+function InvoiceDefinition({ label, value }: { label: string; value: string }) {
+  return (
+    <div>
+      <dt className="text-xs text-muted-foreground">{label}</dt>
+      <dd className="mt-1 break-words font-medium text-foreground">{value}</dd>
+    </div>
+  );
+}
+
+function RelatedInvoiceDocuments({
+  timesheetId,
+  invoices,
+  locale,
+  t,
+}: {
+  timesheetId: string;
+  invoices: AdminTimesheetReviewInvoice[];
+  locale: string;
+  t: AdminTimesheetsTranslator;
+}) {
+  return (
+    <div className="grid gap-3 rounded-[var(--radius-lg)] border border-border bg-background/45 p-4">
+      <p className="font-ui text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+        {t("invoice.relatedDocuments")}
+      </p>
+      <div className="grid gap-2">
+        {invoices.map((invoice) => {
+          const pdfHref = `/admin/timesheets/${timesheetId}/invoice/${invoice.id}` as Route;
+
+          return (
+            <div
+              key={invoice.id}
+              className="flex flex-wrap items-center justify-between gap-3 rounded-[var(--radius-md)] border border-border bg-card/70 px-3 py-2"
+            >
+              <div className="min-w-0">
+                <div className="flex flex-wrap items-center gap-2">
+                  <Badge tone={getInvoiceStatusTone(invoice.status)}>
+                    {t(`invoice.status.${invoice.status.toLowerCase()}`)}
+                  </Badge>
+                  <Badge tone="neutral">{getInvoiceRoleLabel(invoice.role, t)}</Badge>
+                </div>
+                <p className="mt-2 truncate text-sm font-semibold text-foreground">
+                  {invoice.invoiceNumber} ·{" "}
+                  {formatMoney(invoice.declaredAmount, invoice.currencyCode, locale)}
+                </p>
+                <p className="mt-1 truncate text-xs text-muted-foreground">
+                  {invoice.originalFilename}
+                </p>
+              </div>
+              <Button asChild variant="ghost" size="sm">
+                <Link href={pdfHref} target="_blank">
+                  <Download className="size-4" aria-hidden="true" />
+                  {t("invoice.openPdf")}
+                </Link>
+              </Button>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 function EventHistory({
   events,
   locale,
@@ -491,10 +773,70 @@ function formatDateOnlyLabel(value: string, locale: string) {
 
 function getEventTone(eventType: string) {
   if (eventType === "APPROVED") return "success";
-  if (eventType === "REJECTED") return "danger";
+  if (eventType === "REJECTED" || eventType === "INVOICE_REJECTED") return "danger";
+  if (eventType === "INVOICE_ACCEPTED") return "success";
   if (eventType === "UNLOCKED") return "warning";
   if (eventType === "SUBMITTED" || eventType === "RESUBMITTED") return "info";
   return "neutral";
+}
+
+function getInvoiceStatusTone(status: NonNullable<AdminTimesheetReview["invoice"]>["status"]) {
+  if (status === "ACCEPTED") return "success";
+  if (status === "REJECTED" || status === "CANCELLED" || status === "DELETED") return "danger";
+  if (status === "REPLACED") return "warning";
+  return "info";
+}
+
+function getInvoiceRoleLabel(
+  role: NonNullable<AdminTimesheetReview["invoice"]>["role"],
+  t: AdminTimesheetsTranslator,
+) {
+  return t(`invoice.role.${role.toLowerCase()}`);
+}
+
+function getInvoiceComparison(
+  review: AdminTimesheetReview,
+  invoice: NonNullable<AdminTimesheetReview["invoice"]>,
+  locale: string,
+  t: AdminTimesheetsTranslator,
+) {
+  const systemAmount = Number(review.totalAmount);
+  const invoiceAmount = Number(invoice.declaredAmount);
+  const sameCurrency = review.currencyCode === invoice.currencyCode;
+  const difference = sameCurrency ? invoiceAmount - systemAmount : null;
+
+  return {
+    systemTotal: formatMoney(review.totalAmount, review.currencyCode, locale),
+    invoiceTotal: formatMoney(invoice.declaredAmount, invoice.currencyCode, locale),
+    matches: sameCurrency && Math.abs(difference ?? 0) < 0.005,
+    difference:
+      difference === null
+        ? t("invoice.currencyDifference", {
+            system: review.currencyCode,
+            invoice: invoice.currencyCode,
+          })
+        : formatMoney(difference.toFixed(2), review.currencyCode, locale),
+  };
+}
+
+function getInvoiceClosedMessage(review: AdminTimesheetReview, t: AdminTimesheetsTranslator) {
+  if (review.invoice?.status === "ACCEPTED" || review.status === "ACCEPTED") {
+    return t("invoice.acceptedMessage");
+  }
+
+  if (review.invoice?.status === "REJECTED" || review.status === "INVOICE_REJECTED") {
+    return t("invoice.rejectedMessage");
+  }
+
+  return t("invoice.notReviewable");
+}
+
+function formatBytes(value: number, locale: string) {
+  const formatted = new Intl.NumberFormat(locale, {
+    maximumFractionDigits: 1,
+  }).format(value / 1024);
+
+  return `${formatted} KB`;
 }
 
 function getSingleParam(value: string | string[] | undefined) {

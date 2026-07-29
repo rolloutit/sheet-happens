@@ -10,7 +10,9 @@ import { requireAdminAppMemberForAction } from "@/src/server/auth/app-access";
 import { AuthenticationError, AuthorizationError } from "@/src/server/auth/session";
 import { Prisma } from "@/src/server/db/generated/client";
 import {
+  acceptInvoiceForAdmin,
   approveTimesheetForAdmin,
+  rejectInvoiceForAdmin,
   rejectTimesheetForAdmin,
   TimesheetReviewError,
   type TimesheetReviewRequestMetadata,
@@ -20,6 +22,15 @@ const timesheetIdSchema = z.string().uuid();
 
 const rejectTimesheetSchema = z.object({
   timesheetId: timesheetIdSchema,
+  reason: z.string().trim().min(3).max(2000),
+});
+
+const reviewInvoiceSchema = z.object({
+  timesheetId: timesheetIdSchema,
+  invoiceId: z.string().uuid(),
+});
+
+const rejectInvoiceSchema = reviewInvoiceSchema.extend({
   reason: z.string().trim().min(3).max(2000),
 });
 
@@ -88,6 +99,77 @@ export async function rejectTimesheetReviewAction(formData: FormData) {
   redirect(`/admin/timesheets/${timesheetId}?result=${result}` as Route);
 }
 
+export async function acceptInvoiceReviewAction(formData: FormData) {
+  const parsed = reviewInvoiceSchema.safeParse({
+    timesheetId: formData.get("timesheetId"),
+    invoiceId: formData.get("invoiceId"),
+  });
+
+  if (!parsed.success) {
+    redirect("/admin/timesheets?result=invalid" as Route);
+  }
+
+  const { timesheetId, invoiceId } = parsed.data;
+  let result = "invoiceAccepted";
+
+  try {
+    const { member: admin } = await requireAdminAppMemberForAction();
+
+    await acceptInvoiceForAdmin({
+      timesheetId,
+      invoiceId,
+      actorMemberId: admin.id,
+      requestMetadata: await getTimesheetReviewRequestMetadata(),
+    });
+
+    revalidateTimesheetReviewPaths(timesheetId);
+  } catch (error) {
+    result = mapTimesheetReviewActionError(error);
+  }
+
+  redirect(`/admin/timesheets/${timesheetId}?result=${result}` as Route);
+}
+
+export async function rejectInvoiceReviewAction(formData: FormData) {
+  const parsed = rejectInvoiceSchema.safeParse({
+    timesheetId: formData.get("timesheetId"),
+    invoiceId: formData.get("invoiceId"),
+    reason: formData.get("reason"),
+  });
+
+  if (!parsed.success) {
+    const fallbackTimesheetId = formData.get("timesheetId");
+    const redirectTarget =
+      typeof fallbackTimesheetId === "string" &&
+      timesheetIdSchema.safeParse(fallbackTimesheetId).success
+        ? `/admin/timesheets/${fallbackTimesheetId}?result=invoiceReasonRequired`
+        : "/admin/timesheets?result=invalid";
+
+    redirect(redirectTarget as Route);
+  }
+
+  const { timesheetId, invoiceId, reason } = parsed.data;
+  let result = "invoiceRejected";
+
+  try {
+    const { member: admin } = await requireAdminAppMemberForAction();
+
+    await rejectInvoiceForAdmin({
+      timesheetId,
+      invoiceId,
+      reason,
+      actorMemberId: admin.id,
+      requestMetadata: await getTimesheetReviewRequestMetadata(),
+    });
+
+    revalidateTimesheetReviewPaths(timesheetId);
+  } catch (error) {
+    result = mapTimesheetReviewActionError(error);
+  }
+
+  redirect(`/admin/timesheets/${timesheetId}?result=${result}` as Route);
+}
+
 async function getTimesheetReviewRequestMetadata(): Promise<TimesheetReviewRequestMetadata> {
   const requestHeaders = await headers();
 
@@ -109,9 +191,18 @@ function mapTimesheetReviewActionError(error: unknown) {
 
   if (error instanceof TimesheetReviewError) {
     if (error.message === "Timesheet not found.") return "notFound";
+    if (error.message === "Invoice not found.") return "invoiceNotFound";
     if (error.message === "Rejection reason is required.") return "reasonRequired";
+    if (error.message === "Invoice rejection reason is required.") return "invoiceReasonRequired";
+    if (error.message.includes("Cancellation invoice must be paired"))
+      return "invoicePackageIncomplete";
+    if (error.message.includes("requires a cancellation invoice"))
+      return "invoicePackageIncomplete";
     if (error.message.includes("approved")) return "notSubmitted";
     if (error.message.includes("rejected")) return "notSubmitted";
+    if (error.message.includes("uploaded invoices")) return "notInvoiced";
+    if (error.message.includes("uploaded invoice")) return "notInvoiced";
+    if (error.message.includes("current timesheet revision")) return "invoiceRevisionChanged";
   }
 
   if (error instanceof AuthenticationError || error instanceof AuthorizationError) {

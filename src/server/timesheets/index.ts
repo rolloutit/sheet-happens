@@ -9,9 +9,11 @@ export {
   TimesheetPreviewError,
 } from "./monthly-preview";
 export {
+  acceptInvoiceForAdmin,
   approveTimesheetForAdmin,
   getTimesheetReviewForAdmin,
   listTimesheetsForAdmin,
+  rejectInvoiceForAdmin,
   rejectTimesheetForAdmin,
   TimesheetReviewError,
 } from "./admin-review";
@@ -22,11 +24,14 @@ export type {
   AdminTimesheetListResult,
   AdminTimesheetReview,
   AdminTimesheetReviewEvent,
+  AdminTimesheetReviewInvoice,
   AdminTimesheetReviewLine,
   AdminTimesheetReviewProject,
   AdminTimesheetRow,
   AdminTimesheetSearchParams,
+  RejectInvoiceReviewInput,
   RejectTimesheetReviewInput,
+  ReviewInvoiceInput,
   TimesheetReviewActionInput,
   TimesheetReviewRequestMetadata,
 } from "./admin-review";

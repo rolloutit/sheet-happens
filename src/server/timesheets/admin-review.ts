@@ -6,7 +6,8 @@ import { formatDateOnly, normalizeDateOnly, parseDateOnly } from "@/src/server/t
 type TimesheetStatusRecord =
   "SUBMITTED" | "REJECTED" | "APPROVED" | "INVOICED" | "INVOICE_REJECTED" | "ACCEPTED" | "PAID";
 
-type TimesheetEventTypeRecord = "APPROVED" | "REJECTED" | "UNLOCKED";
+type TimesheetEventTypeRecord =
+  "APPROVED" | "REJECTED" | "UNLOCKED" | "INVOICE_ACCEPTED" | "INVOICE_REJECTED";
 
 const DEFAULT_PAGE = 1;
 const DEFAULT_PAGE_SIZE = 20;
@@ -104,6 +105,23 @@ export type AdminTimesheetReviewEvent = {
   createdAt: string;
 };
 
+export type AdminTimesheetReviewInvoice = {
+  id: string;
+  invoiceNumber: string;
+  status: "UPLOADED" | "ACCEPTED" | "REJECTED" | "REPLACED" | "CANCELLED" | "DELETED";
+  role: "ORIGINAL" | "REPLACEMENT" | "CANCELLATION" | "CORRECTED";
+  declaredAmount: string;
+  currencyCode: string;
+  originalFilename: string;
+  contentType: string;
+  byteSize: number;
+  uploadedAt: string;
+  reviewedAt: string | null;
+  rejectionReason: string | null;
+  referencesInvoiceId: string | null;
+  replacedByInvoiceId: string | null;
+};
+
 export type AdminTimesheetReview = {
   id: string;
   contractorMemberId: string;
@@ -126,6 +144,8 @@ export type AdminTimesheetReview = {
   entryCount: number;
   projectCount: number;
   activeLockCount: number;
+  invoice: AdminTimesheetReviewInvoice | null;
+  invoices: AdminTimesheetReviewInvoice[];
   projects: AdminTimesheetReviewProject[];
   events: AdminTimesheetReviewEvent[];
 };
@@ -142,6 +162,14 @@ export type TimesheetReviewActionInput = {
 };
 
 export type RejectTimesheetReviewInput = TimesheetReviewActionInput & {
+  reason: string;
+};
+
+export type ReviewInvoiceInput = TimesheetReviewActionInput & {
+  invoiceId: string;
+};
+
+export type RejectInvoiceReviewInput = ReviewInvoiceInput & {
   reason: string;
 };
 
@@ -340,6 +368,29 @@ export async function getTimesheetReviewForAdmin(
           id: true,
         },
       },
+      invoices: {
+        orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+        select: {
+          id: true,
+          invoiceNumber: true,
+          status: true,
+          role: true,
+          declaredAmount: true,
+          currencyCode: true,
+          createdAt: true,
+          reviewedAt: true,
+          rejectionReason: true,
+          referencesInvoiceId: true,
+          replacedByInvoiceId: true,
+          document: {
+            select: {
+              originalFilename: true,
+              contentType: true,
+              byteSize: true,
+            },
+          },
+        },
+      },
       events: {
         orderBy: [{ createdAt: "desc" }, { id: "desc" }],
         select: {
@@ -363,6 +414,23 @@ export async function getTimesheetReviewForAdmin(
 
   const revision = timesheet.currentRevision;
   const projects = groupSnapshotLinesByProject(revision?.snapshotLines ?? []);
+  const invoices = timesheet.invoices.map((invoice) => ({
+    id: invoice.id,
+    invoiceNumber: invoice.invoiceNumber,
+    status: invoice.status,
+    role: invoice.role,
+    declaredAmount: invoice.declaredAmount.toString(),
+    currencyCode: invoice.currencyCode,
+    originalFilename: invoice.document.originalFilename,
+    contentType: invoice.document.contentType,
+    byteSize: Number(invoice.document.byteSize),
+    uploadedAt: invoice.createdAt.toISOString(),
+    reviewedAt: invoice.reviewedAt?.toISOString() ?? null,
+    rejectionReason: invoice.rejectionReason,
+    referencesInvoiceId: invoice.referencesInvoiceId,
+    replacedByInvoiceId: invoice.replacedByInvoiceId,
+  }));
+  const invoice = invoices.find((candidate) => candidate.role !== "CANCELLATION") ?? null;
 
   return {
     id: timesheet.id,
@@ -387,6 +455,8 @@ export async function getTimesheetReviewForAdmin(
     entryCount: revision?.snapshotLines.length ?? 0,
     projectCount: projects.length,
     activeLockCount: timesheet.locks.length,
+    invoice,
+    invoices,
     projects,
     events: timesheet.events.map((event) => ({
       id: event.id,
@@ -664,6 +734,314 @@ export async function rejectTimesheetForAdmin(
   });
 }
 
+export async function acceptInvoiceForAdmin(input: ReviewInvoiceInput, deps: { now?: Date } = {}) {
+  const now = deps.now ?? new Date();
+
+  return prisma.$transaction(async (tx) => {
+    const invoice = await getInvoiceForReview(tx, input);
+
+    if (invoice.status !== "UPLOADED" || invoice.timesheet.status !== "INVOICED") {
+      throw new TimesheetReviewError("Only uploaded invoices can be accepted.");
+    }
+
+    if (invoice.role === "CANCELLATION") {
+      throw new TimesheetReviewError(
+        "Cancellation invoice must be paired with a replacement invoice.",
+      );
+    }
+
+    if (invoice.timesheet.currentRevisionId !== invoice.timesheetRevisionId) {
+      throw new TimesheetReviewError("Invoice does not belong to the current timesheet revision.");
+    }
+
+    const cancellationInvoiceIds = getRequiredCancellationInvoiceIds(invoice);
+
+    if (invoice.role === "REPLACEMENT" && cancellationInvoiceIds.length === 0) {
+      throw new TimesheetReviewError(
+        "Replacement invoice requires a cancellation invoice for the rejected invoice.",
+      );
+    }
+
+    await tx.contractorInvoice.update({
+      where: {
+        id: invoice.id,
+      },
+      data: {
+        status: "ACCEPTED",
+        reviewedByMemberId: input.actorMemberId,
+        reviewedAt: now,
+        rejectionReason: null,
+      },
+      select: {
+        id: true,
+      },
+    });
+
+    if (cancellationInvoiceIds.length > 0) {
+      await tx.contractorInvoice.updateMany({
+        where: {
+          timesheetRevisionId: invoice.timesheetRevision.id,
+          role: "CANCELLATION",
+          status: "UPLOADED",
+        },
+        data: {
+          status: "ACCEPTED",
+          reviewedByMemberId: input.actorMemberId,
+          reviewedAt: now,
+          rejectionReason: null,
+        },
+      });
+    }
+
+    await tx.timesheet.update({
+      where: {
+        id: invoice.timesheet.id,
+      },
+      data: {
+        status: "ACCEPTED",
+        acceptedAt: now,
+        updatedByMemberId: input.actorMemberId,
+      },
+      select: {
+        id: true,
+      },
+    });
+
+    await tx.timesheetRevision.update({
+      where: {
+        id: invoice.timesheetRevision.id,
+      },
+      data: {
+        status: "ACCEPTED",
+        acceptedAt: now,
+      },
+      select: {
+        id: true,
+      },
+    });
+
+    const metadata = buildInvoiceReviewMetadata(invoice);
+
+    await createTimesheetEvent(tx, {
+      timesheetId: invoice.timesheet.id,
+      timesheetRevisionId: invoice.timesheetRevision.id,
+      eventType: "INVOICE_ACCEPTED",
+      actorMemberId: input.actorMemberId,
+      reason: null,
+      metadata,
+      createdAt: now,
+    });
+
+    await createReviewAuditLog(tx, {
+      actorMemberId: input.actorMemberId,
+      action: "invoice.accepted",
+      targetType: "contractor_invoice",
+      targetId: invoice.id,
+      after: {
+        ...metadata,
+        status: "ACCEPTED",
+      },
+      requestMetadata: input.requestMetadata,
+    });
+
+    return {
+      invoiceId: invoice.id,
+      timesheetId: invoice.timesheet.id,
+      status: "ACCEPTED" as const,
+    };
+  });
+}
+
+export async function rejectInvoiceForAdmin(
+  input: RejectInvoiceReviewInput,
+  deps: { now?: Date } = {},
+) {
+  const reason = input.reason.trim();
+
+  if (reason.length < 3) {
+    throw new TimesheetReviewError("Invoice rejection reason is required.");
+  }
+
+  const now = deps.now ?? new Date();
+
+  return prisma.$transaction(async (tx) => {
+    const invoice = await getInvoiceForReview(tx, input);
+
+    if (invoice.status !== "UPLOADED" || invoice.timesheet.status !== "INVOICED") {
+      throw new TimesheetReviewError("Only uploaded invoices can be rejected.");
+    }
+
+    if (invoice.role === "CANCELLATION") {
+      throw new TimesheetReviewError(
+        "Cancellation invoice must be paired with a replacement invoice.",
+      );
+    }
+
+    if (invoice.timesheet.currentRevisionId !== invoice.timesheetRevisionId) {
+      throw new TimesheetReviewError("Invoice does not belong to the current timesheet revision.");
+    }
+
+    await tx.contractorInvoice.update({
+      where: {
+        id: invoice.id,
+      },
+      data: {
+        status: "REJECTED",
+        reviewedByMemberId: input.actorMemberId,
+        reviewedAt: now,
+        rejectionReason: reason,
+      },
+      select: {
+        id: true,
+      },
+    });
+
+    await tx.timesheet.update({
+      where: {
+        id: invoice.timesheet.id,
+      },
+      data: {
+        status: "INVOICE_REJECTED",
+        acceptedAt: null,
+        paidAt: null,
+        updatedByMemberId: input.actorMemberId,
+      },
+      select: {
+        id: true,
+      },
+    });
+
+    await tx.timesheetRevision.update({
+      where: {
+        id: invoice.timesheetRevision.id,
+      },
+      data: {
+        status: "INVOICE_REJECTED",
+        acceptedAt: null,
+        paidAt: null,
+      },
+      select: {
+        id: true,
+      },
+    });
+
+    const metadata = buildInvoiceReviewMetadata(invoice);
+
+    await createTimesheetEvent(tx, {
+      timesheetId: invoice.timesheet.id,
+      timesheetRevisionId: invoice.timesheetRevision.id,
+      eventType: "INVOICE_REJECTED",
+      actorMemberId: input.actorMemberId,
+      reason,
+      metadata,
+      createdAt: now,
+    });
+
+    await createReviewAuditLog(tx, {
+      actorMemberId: input.actorMemberId,
+      action: "invoice.rejected",
+      targetType: "contractor_invoice",
+      targetId: invoice.id,
+      after: {
+        ...metadata,
+        status: "REJECTED",
+        rejectionReason: reason,
+      },
+      requestMetadata: input.requestMetadata,
+    });
+
+    return {
+      invoiceId: invoice.id,
+      timesheetId: invoice.timesheet.id,
+      status: "REJECTED" as const,
+    };
+  });
+}
+
+async function getInvoiceForReview(tx: Prisma.TransactionClient, input: ReviewInvoiceInput) {
+  const invoice = await tx.contractorInvoice.findFirst({
+    where: {
+      id: input.invoiceId,
+      timesheetId: input.timesheetId,
+    },
+    select: {
+      id: true,
+      status: true,
+      role: true,
+      timesheetRevisionId: true,
+      invoiceNumber: true,
+      declaredAmount: true,
+      currencyCode: true,
+      documentId: true,
+      replacesInvoice: {
+        select: {
+          id: true,
+          referencedBy: {
+            where: {
+              role: "CANCELLATION",
+              status: {
+                not: "DELETED",
+              },
+            },
+            select: {
+              id: true,
+              status: true,
+            },
+          },
+        },
+      },
+      timesheet: {
+        select: {
+          id: true,
+          status: true,
+          periodStart: true,
+          periodEnd: true,
+          currentRevisionId: true,
+        },
+      },
+      timesheetRevision: {
+        select: {
+          id: true,
+          revisionNumber: true,
+          totalMinutes: true,
+          totalAmount: true,
+          currencyCode: true,
+          snapshotLines: {
+            select: {
+              id: true,
+              projectId: true,
+            },
+          },
+        },
+      },
+    },
+  });
+
+  if (!invoice) {
+    throw new TimesheetReviewError("Invoice not found.");
+  }
+
+  return invoice;
+}
+
+function getRequiredCancellationInvoiceIds(input: {
+  role: "ORIGINAL" | "REPLACEMENT" | "CANCELLATION" | "CORRECTED";
+  replacesInvoice: {
+    referencedBy: Array<{
+      id: string;
+      status: "UPLOADED" | "ACCEPTED" | "REJECTED" | "REPLACED" | "CANCELLED" | "DELETED";
+    }>;
+  } | null;
+}) {
+  if (input.role !== "REPLACEMENT") return [];
+
+  return (
+    input.replacesInvoice?.referencedBy
+      .filter((invoice) => invoice.status === "UPLOADED" || invoice.status === "ACCEPTED")
+      .map((invoice) => invoice.id) ?? []
+  );
+}
+
 function normalizeAdminTimesheetFilters(
   searchParams: AdminTimesheetSearchParams,
 ): AdminTimesheetFilters {
@@ -834,6 +1212,45 @@ function buildReviewMetadata(input: {
   };
 }
 
+function buildInvoiceReviewMetadata(input: {
+  id: string;
+  invoiceNumber: string;
+  declaredAmount: Prisma.Decimal;
+  currencyCode: string;
+  documentId: string;
+  timesheet: {
+    id: string;
+    periodStart: Date;
+    periodEnd: Date;
+  };
+  timesheetRevision: {
+    id: string;
+    revisionNumber: number;
+    totalMinutes: number;
+    totalAmount: Prisma.Decimal;
+    currencyCode: string;
+    snapshotLines: Array<{ id: string; projectId: string }>;
+  };
+}): Prisma.InputJsonObject {
+  return {
+    invoiceId: input.id,
+    invoiceNumber: input.invoiceNumber,
+    invoiceDeclaredAmount: input.declaredAmount.toString(),
+    invoiceCurrencyCode: input.currencyCode,
+    documentId: input.documentId,
+    timesheetId: input.timesheet.id,
+    periodStart: formatDateOnly(normalizeDateOnly(input.timesheet.periodStart)),
+    periodEnd: formatDateOnly(normalizeDateOnly(input.timesheet.periodEnd)),
+    revisionId: input.timesheetRevision.id,
+    revisionNumber: input.timesheetRevision.revisionNumber,
+    entryCount: input.timesheetRevision.snapshotLines.length,
+    projectCount: new Set(input.timesheetRevision.snapshotLines.map((line) => line.projectId)).size,
+    timesheetTotalMinutes: input.timesheetRevision.totalMinutes,
+    timesheetTotalAmount: input.timesheetRevision.totalAmount.toString(),
+    timesheetCurrencyCode: input.timesheetRevision.currencyCode,
+  };
+}
+
 async function createTimesheetEvent(
   tx: Prisma.TransactionClient,
   input: {
@@ -864,6 +1281,7 @@ async function createReviewAuditLog(
   input: {
     actorMemberId: string;
     action: string;
+    targetType?: string;
     targetId: string;
     after: Prisma.InputJsonObject;
     requestMetadata?: TimesheetReviewRequestMetadata;
@@ -873,7 +1291,7 @@ async function createReviewAuditLog(
     data: {
       actorMemberId: input.actorMemberId,
       action: input.action,
-      targetType: "timesheet",
+      targetType: input.targetType ?? "timesheet",
       targetId: input.targetId,
       after: input.after,
       ...input.requestMetadata,
