@@ -40,6 +40,7 @@ Replace placeholder values before sharing a concrete test run:
 - `{TIMESHEET_PROJECT_B}`: second contractor project used in timesheet tests.
 - `{TIMESHEET_CURRENCY_A}`: first currency used in mixed-currency timesheet tests.
 - `{TIMESHEET_CURRENCY_B}`: second currency used in mixed-currency timesheet tests.
+- `{TIMESHEET_REJECTION_REASON}`: reason text used when rejecting a submitted timesheet.
 - `{PROJECT_NAME}`: name for a newly created project.
 - `{PROJECT_UPDATED_NAME}`: updated project name.
 - `{PROJECT_SLUG}`: URL-safe or code-like project slug.
@@ -514,6 +515,53 @@ Expected result:
 - The submit button is disabled when the month has no entries, missing rates, or mixed currencies.
 - The page shows a factual reason near the submit button.
 - Missing rates and mixed currencies are also visible as warnings.
+
+### Admin Can Approve Submitted Timesheet
+
+1. Sign in as `{CONTRACTOR_EMAIL}`.
+2. Submit `{TIMESHEET_MONTH}` from `https://{DOMAIN_NAME}/timesheets?month={TIMESHEET_MONTH}`.
+3. Sign in as `{ADMIN_EMAIL}`.
+4. Open `https://{DOMAIN_NAME}/admin/timesheets`.
+5. Filter by `{CONTRACTOR_EMAIL}`, `{TIMESHEET_MONTH}`, or submitted status.
+6. Open the submitted timesheet review.
+7. Confirm the snapshot shows project totals, source lines, rates, currency, and amount.
+8. Click `Approve timesheet`.
+9. Reopen the contractor timesheet month.
+
+Expected result:
+
+- The admin review list is reachable from the sidebar approval menu.
+- The submitted timesheet appears in the filtered admin list.
+- The detail page reviews the immutable submitted snapshot, not live editable entries.
+- Approval changes the status to approved.
+- Source time entries remain locked after approval.
+- The audit log contains a `timesheet.approved` row.
+
+### Admin Can Reject And Unlock Submitted Timesheet
+
+1. Sign in as `{CONTRACTOR_EMAIL}`.
+2. Submit `{TIMESHEET_MONTH}` from `https://{DOMAIN_NAME}/timesheets?month={TIMESHEET_MONTH}`.
+3. Sign in as `{ADMIN_EMAIL}`.
+4. Open `https://{DOMAIN_NAME}/admin/timesheets`.
+5. Open the submitted timesheet review.
+6. Enter `{TIMESHEET_REJECTION_REASON}` in the rejection reason field.
+7. Click `Reject and unlock month`.
+8. Sign in again as `{CONTRACTOR_EMAIL}`.
+9. Open `https://{DOMAIN_NAME}/timesheets?month={TIMESHEET_MONTH}`.
+10. Confirm the rejection reason is visible.
+11. Open `https://{DOMAIN_NAME}/time` and navigate to a week inside `{TIMESHEET_MONTH}`.
+12. Edit one of the previously locked entries.
+13. Return to `https://{DOMAIN_NAME}/timesheets?month={TIMESHEET_MONTH}` and submit again.
+
+Expected result:
+
+- Rejection changes the status to rejected.
+- The rejected month is unlocked for contractor edits.
+- The contractor preview recalculates from current time entries after rejection.
+- The rejection reason remains visible until resubmission.
+- Resubmission creates a new revision.
+- The audit log contains `timesheet.rejected`, and the timesheet event history includes rejected
+  and unlocked events.
 
 ### Admin Can Fix Mixed-Currency Timesheet Blocking
 
