@@ -8,7 +8,28 @@ export {
   resolveTimesheetLineRate,
   TimesheetPreviewError,
 } from "./monthly-preview";
+export {
+  approveTimesheetForAdmin,
+  getTimesheetReviewForAdmin,
+  listTimesheetsForAdmin,
+  rejectTimesheetForAdmin,
+  TimesheetReviewError,
+} from "./admin-review";
 export { submitContractorTimesheet, TimesheetSubmissionError } from "./submit-timesheet";
+export type {
+  AdminTimesheetFilterOption,
+  AdminTimesheetFilters,
+  AdminTimesheetListResult,
+  AdminTimesheetReview,
+  AdminTimesheetReviewEvent,
+  AdminTimesheetReviewLine,
+  AdminTimesheetReviewProject,
+  AdminTimesheetRow,
+  AdminTimesheetSearchParams,
+  RejectTimesheetReviewInput,
+  TimesheetReviewActionInput,
+  TimesheetReviewRequestMetadata,
+} from "./admin-review";
 export type {
   ContractorTimesheetMonthlyPreview,
   TimesheetMonthOption,

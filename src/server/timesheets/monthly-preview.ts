@@ -214,33 +214,36 @@ export async function getContractorTimesheetMonthlyPreview(input: {
     optionTimesheets.map((timesheet) => [formatDateOnly(timesheet.periodStart), timesheet]),
   );
   const snapshotLines = selectedTimesheet?.currentRevision?.snapshotLines ?? [];
-  const lines =
-    snapshotLines.length > 0
-      ? snapshotLines.map((line): TimesheetPreviewLine => {
-          const projectColor = resolveProjectColor(line.project.colorToken);
-          const rate = {
-            hourlyRate: line.hourlyRate.toString(),
-            currencyCode: line.currencyCode,
-            source: line.rateSource,
-            sourceRatePeriodId: line.sourceRatePeriodId ?? "",
-          };
+  const shouldUseSnapshot =
+    Boolean(selectedTimesheet) &&
+    selectedTimesheet?.status !== "REJECTED" &&
+    snapshotLines.length > 0;
+  const lines = shouldUseSnapshot
+    ? snapshotLines.map((line): TimesheetPreviewLine => {
+        const projectColor = resolveProjectColor(line.project.colorToken);
+        const rate = {
+          hourlyRate: line.hourlyRate.toString(),
+          currencyCode: line.currencyCode,
+          source: line.rateSource,
+          sourceRatePeriodId: line.sourceRatePeriodId ?? "",
+        };
 
-          return {
-            id: line.id,
-            projectId: line.projectId,
-            projectName: line.project.name,
-            projectColor,
-            localDate: line.localDate,
-            durationMinutes: line.durationMinutes,
-            rate,
-            amountCents: moneyToCents(line.lineAmount),
-          };
-        })
-      : await getCurrentTimeEntryPreviewLines({
-          memberId: member.id,
-          periodStart: selectedMonthStart,
-          periodEnd: selectedMonthEnd,
-        });
+        return {
+          id: line.id,
+          projectId: line.projectId,
+          projectName: line.project.name,
+          projectColor,
+          localDate: line.localDate,
+          durationMinutes: line.durationMinutes,
+          rate,
+          amountCents: moneyToCents(line.lineAmount),
+        };
+      })
+    : await getCurrentTimeEntryPreviewLines({
+        memberId: member.id,
+        periodStart: selectedMonthStart,
+        periodEnd: selectedMonthEnd,
+      });
 
   const aggregate = aggregateTimesheetPreviewLines(lines);
   const revision = selectedTimesheet?.currentRevision ?? null;
@@ -264,7 +267,7 @@ export async function getContractorTimesheetMonthlyPreview(input: {
       };
     }),
     status: selectedTimesheet ? mapTimesheetStatus(selectedTimesheet.status) : "not_created",
-    source: snapshotLines.length > 0 ? "timesheet_snapshot" : "current_time_entries",
+    source: shouldUseSnapshot ? "timesheet_snapshot" : "current_time_entries",
     revisionNumber,
     submittedAt:
       revision?.submittedAt?.toISOString() ?? selectedTimesheet?.submittedAt?.toISOString() ?? null,
