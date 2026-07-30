@@ -53,6 +53,7 @@ export type AppMember = {
   role: "ADMIN" | "MEMBER";
   status: "INVITED" | "ACTIVE" | "INACTIVE" | "DELETED";
   currentProfile: "CONTRACTOR" | "EMPLOYEE";
+  timezone: string;
   deletedAt: Date | null;
 };
 
@@ -91,6 +92,7 @@ export async function getAppAccessState(): Promise<AppAccessState> {
         role: true,
         status: true,
         currentProfile: true,
+        timezone: true,
         deletedAt: true,
       },
     }),

@@ -68,7 +68,13 @@ const navItems = [
     group: "admin",
     href: "/admin/timesheets",
   },
-  { id: "reports", labelKey: "nav.reports", icon: BarChart3, group: "admin", href: "#" },
+  {
+    id: "reports",
+    labelKey: "nav.reports",
+    icon: BarChart3,
+    group: "admin",
+    href: "/admin/reports",
+  },
   {
     id: "projects",
     labelKey: "nav.projects",

@@ -1785,6 +1785,74 @@
       "invalidPassword": "A jelenlegi jelszó kötelező vagy hibás."
     }
   },
+  "AdminReports": {
+    "eyebrow": "Admin",
+    "title": "Riportok és export",
+    "subtitle": "Szűrd a rögzített időt, ellenőrizd az összesítőket, és készíts elő megosztható riport exportot.",
+    "export": {
+      "action": "PDF export",
+      "disabledTitle": "A PDF export még nem elérhető."
+    },
+    "filters": {
+      "start": "Kezdő",
+      "end": "Záró",
+      "project": "Projekt",
+      "group": "Projektcsoport",
+      "member": "Tag",
+      "view": "Nézet",
+      "all": "Mind",
+      "projectAll": "Minden projekt",
+      "groupAll": "Minden csoport",
+      "memberAll": "Minden tag",
+      "apply": "Szűrés",
+      "clear": "Törlés"
+    },
+    "period": {
+      "month": "Hónap",
+      "week": "Hét",
+      "day": "Nap",
+      "year": "Év",
+      "custom": "Egyéni"
+    },
+    "views": {
+      "user": "Felhasználó nézet",
+      "project": "Projekt nézet"
+    },
+    "warnings": {
+      "timezone": "Tagonkénti helyi dátumhatárok. Időzónák: {timezones}",
+      "noTimezone": "nincs"
+    },
+    "stats": {
+      "totalHours": "Összes óra",
+      "period": "Időszak",
+      "people": "Fő",
+      "projects": "Projekt"
+    },
+    "charts": {
+      "time": "Órák az időszakban",
+      "timeDescription": "Hetek szerint csoportosítva a kiválasztott időszakból.",
+      "users": "Felhasználónkénti megoszlás",
+      "projects": "Projektenkénti megoszlás",
+      "breakdownDescription": "A kiválasztott rögzített idő aránya."
+    },
+    "detail": {
+      "title": "Tételes bontás",
+      "description": "Költségmentes riportadat az időbejegyzésekből. Az óradíjak és költségek a belső export módba kerülnek.",
+      "internalProject": "Belső"
+    },
+    "table": {
+      "date": "Dátum",
+      "project": "Projekt",
+      "member": "Tag",
+      "description": "Leírás",
+      "hours": "Óra",
+      "noDescription": "Nincs leírás"
+    },
+    "empty": {
+      "title": "Nincs rögzített idő ezekkel a szűrőkkel.",
+      "description": "Módosítsd az időszakot vagy törölj egy szűrőt."
+    }
+  },
   "SettingsActions": {
     "success": {
       "passkeyRenamed": "Passkey átnevezve.",
