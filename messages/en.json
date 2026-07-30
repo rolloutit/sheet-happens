@@ -1360,7 +1360,7 @@
     },
     "checks": {
       "title": "Environment readiness",
-      "description": "Last checked at {checkedAt}. Object storage is tested with a temporary write, read, and delete probe.",
+      "description": "Last checked at {checkedAt}. Object storage and PDF rendering are tested with temporary probes.",
       "items": {
         "application": {
           "title": "Application configuration"
@@ -1376,6 +1376,9 @@
         },
         "googleOAuth": {
           "title": "Google OAuth"
+        },
+        "typst": {
+          "title": "Typst PDF renderer"
         }
       }
     },
@@ -1390,7 +1393,8 @@
       "emailSmtpMissingHost": "SMTP mode is enabled, but SMTP_HOST is missing.",
       "emailSmtpDefaultFrom": "SMTP is configured, but AUTH_EMAIL_FROM still uses the local default sender.",
       "googleDisabled": "Google OAuth is not configured. This is acceptable only if Google sign-in is intentionally disabled for this environment.",
-      "googlePartialConfig": "Google OAuth is partially configured. Client id, client secret, and allowed domains must all be present."
+      "googlePartialConfig": "Google OAuth is partially configured. Client id, client secret, and allowed domains must all be present.",
+      "typstProbeFailed": "Typst could not compile the PDF probe. Report PDF exports will fail until the renderer is available."
     },
     "details": {
       "checkedAt": "Checked at",
@@ -1398,7 +1402,8 @@
       "from": "From",
       "provider": "Provider",
       "allowedDomains": "Allowed domains",
-      "probeObject": "Probe object"
+      "probeObject": "Probe object",
+      "probePdf": "PDF probe"
     },
     "duration": "{durationMs} ms",
     "missingEnv": "Missing: {names}"
@@ -1783,6 +1788,78 @@
       "copyFailed": "Could not copy {label}.",
       "currentPasswordRequired": "Enter your current password to manage authenticator-app verification.",
       "invalidPassword": "Current password is required or incorrect."
+    }
+  },
+  "AdminReports": {
+    "eyebrow": "Admin",
+    "title": "Reports & export",
+    "subtitle": "Filter tracked time, inspect totals, and prepare shareable report exports.",
+    "export": {
+      "action": "Export PDF",
+      "defaultTitle": "Time report",
+      "titleLabel": "Export title",
+      "modeLabel": "Content",
+      "modeCostFree": "Cost-free",
+      "modeInternal": "Internal"
+    },
+    "filters": {
+      "start": "From",
+      "end": "To",
+      "project": "Project",
+      "group": "Project group",
+      "member": "Member",
+      "view": "View",
+      "all": "All",
+      "projectAll": "All projects",
+      "groupAll": "All groups",
+      "memberAll": "All members",
+      "apply": "Apply filters",
+      "clear": "Clear"
+    },
+    "period": {
+      "month": "Month",
+      "week": "Week",
+      "day": "Day",
+      "year": "Year",
+      "custom": "Custom"
+    },
+    "views": {
+      "user": "User view",
+      "project": "Project view"
+    },
+    "warnings": {
+      "timezone": "Member-local date boundaries. Time zones: {timezones}",
+      "noTimezone": "none"
+    },
+    "stats": {
+      "totalHours": "Total hours",
+      "period": "Period",
+      "people": "People",
+      "projects": "Projects"
+    },
+    "charts": {
+      "time": "Hours over the period",
+      "timeDescription": "Grouped by week from the selected date range.",
+      "users": "User breakdown",
+      "projects": "Project breakdown",
+      "breakdownDescription": "Share of the selected tracked time."
+    },
+    "detail": {
+      "title": "Itemized breakdown",
+      "description": "Cost-free report data from time entries. Rates and costs are reserved for internal export mode.",
+      "internalProject": "Internal"
+    },
+    "table": {
+      "date": "Date",
+      "project": "Project",
+      "member": "Member",
+      "description": "Description",
+      "hours": "Hours",
+      "noDescription": "No description"
+    },
+    "empty": {
+      "title": "No tracked time matches these filters.",
+      "description": "Adjust the period or remove a filter."
     }
   },
   "SettingsActions": {

@@ -3,11 +3,13 @@ import { randomUUID } from "node:crypto";
 import { getGoogleAuthSettings } from "@/src/server/auth/sign-in-methods";
 import { prisma } from "@/src/server/db/client";
 import { getEmailDeliveryMode } from "@/src/server/email/mailer";
+import { renderTypstPdf } from "@/src/server/pdf/typst";
 import { getObjectStorage, type ObjectStorage } from "@/src/server/storage";
 
 export type SystemCheckStatus = "pass" | "warning" | "fail";
 
-export type SystemCheckId = "application" | "database" | "objectStorage" | "email" | "googleOAuth";
+export type SystemCheckId =
+  "application" | "database" | "objectStorage" | "email" | "googleOAuth" | "typst";
 
 export type SystemCheckCode =
   | "ok"
@@ -20,7 +22,8 @@ export type SystemCheckCode =
   | "emailSmtpMissingHost"
   | "emailSmtpDefaultFrom"
   | "googleDisabled"
-  | "googlePartialConfig";
+  | "googlePartialConfig"
+  | "typstProbeFailed";
 
 export type SystemCheckDetail = {
   label: string;
@@ -48,6 +51,7 @@ export type RunSystemChecksDeps = {
   env?: SystemCheckEnv;
   db?: Pick<typeof prisma, "$queryRawUnsafe">;
   storage?: ObjectStorage;
+  typstRenderer?: typeof renderTypstPdf;
   now?: Date;
 };
 
@@ -76,6 +80,12 @@ const SECRET_ENV_NAMES = [
   "S3_SECRET_ACCESS_KEY",
 ] as const;
 
+const TYPST_SYSTEM_CHECK_SOURCE = [
+  "#set page(width: 90mm, height: 40mm, margin: 8mm)",
+  "#set text(size: 10pt)",
+  "Sheet Happens Typst check",
+].join("\n");
+
 export async function runSystemChecks(deps: RunSystemChecksDeps = {}): Promise<SystemCheckSummary> {
   const env = deps.env ?? process.env;
   const now = deps.now ?? new Date();
@@ -87,6 +97,7 @@ export async function runSystemChecks(deps: RunSystemChecksDeps = {}): Promise<S
     runObjectStorageCheck({ env, checkedAt, storage: deps.storage, now }),
     runEmailCheck({ env, checkedAt, now }),
     runGoogleOAuthCheck({ env, checkedAt, now }),
+    runTypstCheck({ env, checkedAt, typstRenderer: deps.typstRenderer }),
   ]);
 
   return {
@@ -340,6 +351,48 @@ export async function runGoogleOAuthCheck(input: {
       code: "ok",
       details,
     };
+  });
+}
+
+export async function runTypstCheck(input: {
+  env: SystemCheckEnv;
+  checkedAt: string;
+  typstRenderer?: typeof renderTypstPdf;
+}): Promise<SystemCheckResult> {
+  return timeCheck("typst", input.checkedAt, async () => {
+    const binary = input.env.TYPST_BIN?.trim() || "typst";
+    const details = [envValueDetail("TYPST_BIN", binary)];
+
+    try {
+      const renderer = input.typstRenderer ?? renderTypstPdf;
+      const pdf = await renderer(
+        {
+          source: TYPST_SYSTEM_CHECK_SOURCE,
+          filename: "system-check",
+        },
+        {
+          typstBin: binary,
+          timeoutMs: 5_000,
+        },
+      );
+
+      if (pdf.subarray(0, 5).toString("ascii") !== "%PDF-") {
+        throw new Error("Typst probe did not return a PDF file.");
+      }
+
+      return {
+        status: "pass",
+        code: "ok",
+        details: [...details, { label: "probePdf", value: "rendered" }],
+      };
+    } catch (error) {
+      return {
+        status: "fail",
+        code: "typstProbeFailed",
+        error: safeErrorMessage(error, input.env),
+        details,
+      };
+    }
   });
 }
 

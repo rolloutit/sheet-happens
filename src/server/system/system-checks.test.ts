@@ -6,6 +6,7 @@ import {
   runGoogleOAuthCheck,
   runObjectStorageCheck,
   runSystemChecks,
+  runTypstCheck,
 } from "./system-checks";
 
 const checkedAt = "2026-07-30T00:00:00.000Z";
@@ -108,6 +109,45 @@ describe("system checks", () => {
     expect(result.missingEnv).toEqual(["AUTH_GOOGLE_CLIENT_SECRET"]);
   });
 
+  it("passes Typst checks when the probe renders a PDF", async () => {
+    const typstRenderer = vi.fn(async () => Buffer.from("%PDF-1.7\n"));
+
+    const result = await runTypstCheck({
+      checkedAt,
+      env: {},
+      typstRenderer,
+    });
+
+    expect(result.status).toBe("pass");
+    expect(result.code).toBe("ok");
+    expect(typstRenderer).toHaveBeenCalledWith(
+      {
+        source: expect.stringContaining("Sheet Happens Typst check"),
+        filename: "system-check",
+      },
+      {
+        typstBin: "typst",
+        timeoutMs: 5_000,
+      },
+    );
+  });
+
+  it("fails Typst checks when the probe cannot render a PDF", async () => {
+    const typstRenderer = vi.fn(async () => Buffer.from("not a pdf"));
+
+    const result = await runTypstCheck({
+      checkedAt,
+      env: {
+        TYPST_BIN: "/opt/bin/typst",
+      },
+      typstRenderer,
+    });
+
+    expect(result.status).toBe("fail");
+    expect(result.code).toBe("typstProbeFailed");
+    expect(result.error).toContain("Typst probe did not return a PDF file.");
+  });
+
   it("summarizes warnings without failing the whole system check", async () => {
     const storage = createMemoryStorage();
     const db = {
@@ -118,6 +158,7 @@ describe("system checks", () => {
       now,
       db,
       storage,
+      typstRenderer: vi.fn(async () => Buffer.from("%PDF-1.7\n")),
       env: {
         DATABASE_URL: "postgresql://user:password@example.test/db",
         BETTER_AUTH_SECRET: "auth-secret",
@@ -135,7 +176,7 @@ describe("system checks", () => {
     });
 
     expect(summary.status).toBe("warning");
-    expect(summary.checks).toHaveLength(5);
+    expect(summary.checks).toHaveLength(6);
   });
 });
 

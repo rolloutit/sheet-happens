@@ -1,12 +1,12 @@
 {
   "$schema": "https://railway.com/railway.schema.json",
   "build": {
-    "builder": "RAILPACK",
-    "buildCommand": "pnpm build"
+    "builder": "DOCKERFILE",
+    "dockerfilePath": "Dockerfile"
   },
   "deploy": {
     "preDeployCommand": "pnpm db:migrate:deploy && pnpm railway:bootstrap-admin",
-    "startCommand": "HOSTNAME=0.0.0.0 pnpm start",
+    "startCommand": "pnpm start",
     "healthcheckPath": "/api/health",
     "healthcheckTimeout": 100,
     "restartPolicyType": "ON_FAILURE",

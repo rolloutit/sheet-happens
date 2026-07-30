@@ -1360,7 +1360,7 @@
     },
     "checks": {
       "title": "Környezet állapota",
-      "description": "Utolsó ellenőrzés: {checkedAt}. Az objektumtároló ideiglenes írás, olvasás és törlés próbával van ellenőrizve.",
+      "description": "Utolsó ellenőrzés: {checkedAt}. Az objektumtároló és a PDF renderelés ideiglenes próbákkal van ellenőrizve.",
       "items": {
         "application": {
           "title": "Alkalmazás konfiguráció"
@@ -1376,6 +1376,9 @@
         },
         "googleOAuth": {
           "title": "Google OAuth"
+        },
+        "typst": {
+          "title": "Typst PDF renderelő"
         }
       }
     },
@@ -1390,7 +1393,8 @@
       "emailSmtpMissingHost": "Az SMTP mód be van kapcsolva, de az SMTP_HOST hiányzik.",
       "emailSmtpDefaultFrom": "Az SMTP be van állítva, de az AUTH_EMAIL_FROM még a lokális alapértelmezett feladót használja.",
       "googleDisabled": "A Google OAuth nincs beállítva. Ez csak akkor elfogadható, ha ebben a környezetben szándékosan ki van kapcsolva a Google belépés.",
-      "googlePartialConfig": "A Google OAuth csak részben van beállítva. Client id, client secret és engedélyezett domainek mind szükségesek."
+      "googlePartialConfig": "A Google OAuth csak részben van beállítva. Client id, client secret és engedélyezett domainek mind szükségesek.",
+      "typstProbeFailed": "A Typst nem tudta lefordítani a PDF próbadokumentumot. A riport PDF export nem fog működni, amíg a renderelő nem elérhető."
     },
     "details": {
       "checkedAt": "Ellenőrizve",
@@ -1398,7 +1402,8 @@
       "from": "Feladó",
       "provider": "Provider",
       "allowedDomains": "Engedélyezett domainek",
-      "probeObject": "Próba objektum"
+      "probeObject": "Próba objektum",
+      "probePdf": "PDF próba"
     },
     "duration": "{durationMs} ms",
     "missingEnv": "Hiányzik: {names}"
@@ -1783,6 +1788,78 @@
       "copyFailed": "Nem sikerült másolni: {label}.",
       "currentPasswordRequired": "Add meg a jelenlegi jelszavad az authenticator alkalmazásos ellenőrzés kezeléséhez.",
       "invalidPassword": "A jelenlegi jelszó kötelező vagy hibás."
+    }
+  },
+  "AdminReports": {
+    "eyebrow": "Admin",
+    "title": "Riportok és export",
+    "subtitle": "Szűrd a rögzített időt, ellenőrizd az összesítőket, és készíts elő megosztható riport exportot.",
+    "export": {
+      "action": "PDF export",
+      "defaultTitle": "Időriport",
+      "titleLabel": "Export címe",
+      "modeLabel": "Tartalom",
+      "modeCostFree": "Költségmentes",
+      "modeInternal": "Belső"
+    },
+    "filters": {
+      "start": "Kezdő",
+      "end": "Záró",
+      "project": "Projekt",
+      "group": "Projektcsoport",
+      "member": "Tag",
+      "view": "Nézet",
+      "all": "Mind",
+      "projectAll": "Minden projekt",
+      "groupAll": "Minden csoport",
+      "memberAll": "Minden tag",
+      "apply": "Szűrés",
+      "clear": "Törlés"
+    },
+    "period": {
+      "month": "Hónap",
+      "week": "Hét",
+      "day": "Nap",
+      "year": "Év",
+      "custom": "Egyéni"
+    },
+    "views": {
+      "user": "Felhasználó nézet",
+      "project": "Projekt nézet"
+    },
+    "warnings": {
+      "timezone": "Tagonkénti helyi dátumhatárok. Időzónák: {timezones}",
+      "noTimezone": "nincs"
+    },
+    "stats": {
+      "totalHours": "Összes óra",
+      "period": "Időszak",
+      "people": "Fő",
+      "projects": "Projekt"
+    },
+    "charts": {
+      "time": "Órák az időszakban",
+      "timeDescription": "Hetek szerint csoportosítva a kiválasztott időszakból.",
+      "users": "Felhasználónkénti megoszlás",
+      "projects": "Projektenkénti megoszlás",
+      "breakdownDescription": "A kiválasztott rögzített idő aránya."
+    },
+    "detail": {
+      "title": "Tételes bontás",
+      "description": "Költségmentes riportadat az időbejegyzésekből. Az óradíjak és költségek a belső export módba kerülnek.",
+      "internalProject": "Belső"
+    },
+    "table": {
+      "date": "Dátum",
+      "project": "Projekt",
+      "member": "Tag",
+      "description": "Leírás",
+      "hours": "Óra",
+      "noDescription": "Nincs leírás"
+    },
+    "empty": {
+      "title": "Nincs rögzített idő ezekkel a szűrőkkel.",
+      "description": "Módosítsd az időszakot vagy törölj egy szűrőt."
     }
   },
   "SettingsActions": {
