@@ -7,6 +7,17 @@ export {
   ReportSnapshotError,
   resolveReportLineRate,
 } from "./reports";
+export {
+  normalizeReportExportTitle,
+  parseReportMode,
+  parseReportSearchParams,
+  reportSearchParamsFromFormData,
+} from "./report-filter-params";
+export {
+  buildReportExportTypstSource,
+  generateReportPdfExport,
+  ReportPdfExportError,
+} from "./report-pdf";
 export type {
   BuildReportSnapshotInput,
   NormalizedReportFilters,
@@ -38,3 +49,13 @@ export type {
   ReportView,
   ReportWarning,
 } from "./reports";
+export type {
+  GenerateReportPdfExportInput,
+  GenerateReportPdfExportResult,
+  ReportPdfExportFilters,
+} from "./report-pdf";
+export type {
+  ParsedReportSearchParams,
+  ReportPeriodMode,
+  ReportSearchParams,
+} from "./report-filter-params";

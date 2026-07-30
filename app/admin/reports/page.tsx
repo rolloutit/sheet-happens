@@ -16,39 +16,23 @@ import {
 import {
   getTimeEntryReportSnapshot,
   listReportFilterOptions,
+  parseReportSearchParams,
   type ReportCostFreeLine,
   type ReportFilterOption,
+  type ReportPeriodMode,
+  type ReportSearchParams,
   type ReportSnapshot,
   type ReportView,
 } from "@/src/server/reports";
-import {
-  addDays,
-  formatDateOnly,
-  getMonthStart,
-  getMonday,
-  getTodayIsoInTimezone,
-  parseDateOnly,
-} from "@/src/server/time-tracking";
+import { formatDateOnly, getMonday, parseDateOnly } from "@/src/server/time-tracking";
 
 export const dynamic = "force-dynamic";
 
 type AdminReportsPageProps = {
-  searchParams?: Promise<AdminReportSearchParams>;
-};
-
-type AdminReportSearchParams = {
-  start?: string | string[];
-  end?: string | string[];
-  period?: string | string[];
-  anchor?: string | string[];
-  project?: string | string[];
-  group?: string | string[];
-  member?: string | string[];
-  view?: string | string[];
+  searchParams?: Promise<ReportSearchParams>;
 };
 
 type AdminReportsTranslator = Awaited<ReturnType<typeof getTranslations>>;
-type ReportPeriodMode = "month" | "week" | "day" | "year" | "custom";
 
 const selectClassName =
   "h-11 min-w-0 rounded-[var(--radius-md)] border border-border bg-background px-4 py-2.5 font-body text-sm font-semibold text-foreground shadow-[0_14px_40px_-30px_rgba(0,0,0,0.45)] transition focus-visible:border-ring focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30";
@@ -82,15 +66,7 @@ export default async function AdminReportsPage({ searchParams }: AdminReportsPag
       <section className="mx-auto grid w-full max-w-[73.75rem] gap-4 px-4 py-8 sm:px-6 lg:px-8">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
           <SectionHead eyebrow={t("eyebrow")} title={t("title")} subtitle={t("subtitle")} />
-          <Button
-            type="button"
-            variant="cta"
-            icon={FileDown}
-            disabled
-            title={t("export.disabledTitle")}
-          >
-            {t("export.action")}
-          </Button>
+          <ReportExportForm snapshot={snapshot} filters={filters} locale={locale} t={t} />
         </div>
 
         <ReportFilters
@@ -167,6 +143,93 @@ export default async function AdminReportsPage({ searchParams }: AdminReportsPag
         )}
       </section>
     </AppShell>
+  );
+}
+
+function ReportExportForm({
+  snapshot,
+  filters,
+  locale,
+  t,
+}: {
+  snapshot: ReportSnapshot;
+  filters: ReturnType<typeof parseReportSearchParams>;
+  locale: string;
+  t: AdminReportsTranslator;
+}) {
+  const defaultTitle = `${t("export.defaultTitle")} - ${formatPeriod(
+    snapshot.period.start,
+    snapshot.period.end,
+    locale,
+  )}`;
+
+  return (
+    <form
+      action="/admin/reports/export"
+      method="post"
+      target="_blank"
+      className="grid gap-2 rounded-[var(--radius-lg)] border border-border bg-card p-3 shadow-soft sm:min-w-[28rem] sm:grid-cols-[minmax(0,1fr)_9rem_auto] sm:items-end"
+    >
+      <HiddenReportFilters snapshot={snapshot} filters={filters} locale={locale} />
+      <label className="grid gap-1">
+        <span className="font-ui text-[10.5px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+          {t("export.titleLabel")}
+        </span>
+        <Input
+          name="title"
+          defaultValue={defaultTitle}
+          maxLength={120}
+          className="h-11 bg-background"
+        />
+      </label>
+      <label className="grid gap-1">
+        <span className="font-ui text-[10.5px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+          {t("export.modeLabel")}
+        </span>
+        <select name="mode" defaultValue="COST_FREE" className={selectClassName}>
+          <option value="COST_FREE">{t("export.modeCostFree")}</option>
+          <option value="INTERNAL">{t("export.modeInternal")}</option>
+        </select>
+      </label>
+      <Button type="submit" variant="cta" icon={FileDown} disabled={snapshot.lines.length === 0}>
+        {t("export.action")}
+      </Button>
+    </form>
+  );
+}
+
+function HiddenReportFilters({
+  snapshot,
+  filters,
+  locale,
+}: {
+  snapshot: ReportSnapshot;
+  filters: ReturnType<typeof parseReportSearchParams>;
+  locale: string;
+}) {
+  return (
+    <>
+      <input type="hidden" name="locale" value={locale} />
+      <input type="hidden" name="period" value={filters.period} />
+      <input type="hidden" name="view" value={snapshot.view} />
+      {filters.period === "custom" ? (
+        <>
+          <input type="hidden" name="start" value={snapshot.period.start} />
+          <input type="hidden" name="end" value={snapshot.period.end} />
+        </>
+      ) : (
+        <input type="hidden" name="anchor" value={filters.anchor} />
+      )}
+      {snapshot.filters.projectId ? (
+        <input type="hidden" name="project" value={snapshot.filters.projectId} />
+      ) : null}
+      {snapshot.filters.projectGroupId ? (
+        <input type="hidden" name="group" value={snapshot.filters.projectGroupId} />
+      ) : null}
+      {snapshot.filters.memberId ? (
+        <input type="hidden" name="member" value={snapshot.filters.memberId} />
+      ) : null}
+    </>
   );
 }
 
@@ -672,133 +735,6 @@ function ReportDetail({
       })}
     </div>
   );
-}
-
-function parseReportSearchParams(searchParams: AdminReportSearchParams, timezone: string) {
-  const today = parseDateOnly(getTodayIsoInTimezone(timezone));
-  const period = parsePeriodMode(getSingleParam(searchParams.period));
-  const rawAnchor = getSingleParam(searchParams.anchor);
-  const fallbackAnchor = parseAnchorDate(rawAnchor, "month", today);
-
-  if (period === "custom") {
-    const fallbackStart = getMonthStart(fallbackAnchor);
-    const fallbackEnd = getMonthEnd(fallbackStart);
-    const rawStart = parseDateParam(getSingleParam(searchParams.start), fallbackStart);
-    const rawEnd = parseDateParam(getSingleParam(searchParams.end), fallbackEnd);
-    const [periodStart, periodEnd] =
-      rawStart.getTime() <= rawEnd.getTime() ? [rawStart, rawEnd] : [rawEnd, rawStart];
-
-    return {
-      period,
-      anchor: formatDateOnly(periodStart),
-      periodStart,
-      periodEnd,
-      view: parseView(getSingleParam(searchParams.view)),
-      projectId: getSingleParam(searchParams.project) || null,
-      projectGroupId: getSingleParam(searchParams.group) || null,
-      memberId: getSingleParam(searchParams.member) || null,
-      timezone,
-    };
-  }
-
-  const anchorDate = parseAnchorDate(rawAnchor, period, today);
-  const range = getPeriodRange(period, anchorDate);
-
-  return {
-    period,
-    anchor: range.anchor,
-    periodStart: range.periodStart,
-    periodEnd: range.periodEnd,
-    view: parseView(getSingleParam(searchParams.view)),
-    projectId: getSingleParam(searchParams.project) || null,
-    projectGroupId: getSingleParam(searchParams.group) || null,
-    memberId: getSingleParam(searchParams.member) || null,
-    timezone,
-  };
-}
-
-function parsePeriodMode(value: string | undefined): ReportPeriodMode {
-  return value === "week" || value === "day" || value === "year" || value === "custom"
-    ? value
-    : "month";
-}
-
-function parseAnchorDate(value: string | undefined, period: ReportPeriodMode, fallback: Date) {
-  try {
-    if (period === "month") {
-      return parseDateOnly(`${value?.slice(0, 7) || formatDateOnly(fallback).slice(0, 7)}-01`);
-    }
-
-    if (period === "year") {
-      const year = value?.slice(0, 4) || String(fallback.getUTCFullYear());
-      return parseDateOnly(`${year}-01-01`);
-    }
-
-    return parseDateParam(value, fallback);
-  } catch {
-    return fallback;
-  }
-}
-
-function getPeriodRange(period: Exclude<ReportPeriodMode, "custom">, anchorDate: Date) {
-  if (period === "week") {
-    const periodStart = getMonday(anchorDate);
-    return {
-      anchor: formatDateOnly(anchorDate),
-      periodStart,
-      periodEnd: addDays(periodStart, 6),
-    };
-  }
-
-  if (period === "day") {
-    const day = parseDateOnly(formatDateOnly(anchorDate));
-    return {
-      anchor: formatDateOnly(day),
-      periodStart: day,
-      periodEnd: day,
-    };
-  }
-
-  if (period === "year") {
-    const periodStart = new Date(Date.UTC(anchorDate.getUTCFullYear(), 0, 1));
-    return {
-      anchor: formatDateOnly(periodStart),
-      periodStart,
-      periodEnd: new Date(Date.UTC(anchorDate.getUTCFullYear(), 11, 31)),
-    };
-  }
-
-  const periodStart = getMonthStart(anchorDate);
-  return {
-    anchor: formatDateOnly(periodStart),
-    periodStart,
-    periodEnd: getMonthEnd(periodStart),
-  };
-}
-
-function getMonthEnd(monthStart: Date) {
-  return addDays(
-    new Date(Date.UTC(monthStart.getUTCFullYear(), monthStart.getUTCMonth() + 1, 1)),
-    -1,
-  );
-}
-
-function parseDateParam(value: string | undefined, fallback: Date) {
-  if (!value) return fallback;
-
-  try {
-    return parseDateOnly(value);
-  } catch {
-    return fallback;
-  }
-}
-
-function parseView(value: string | undefined): ReportView {
-  return value === "PROJECT" ? "PROJECT" : "USER";
-}
-
-function getSingleParam(value: string | string[] | undefined) {
-  return Array.isArray(value) ? value[0] : value;
 }
 
 function buildWeekBuckets(lines: ReportCostFreeLine[]) {
