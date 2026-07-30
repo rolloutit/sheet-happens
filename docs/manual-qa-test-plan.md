@@ -67,6 +67,8 @@ Replace placeholder values before sharing a concrete test run:
 - `{RATE_CURRENCY}`: initial rate currency, for example `HUF`.
 - `{RATE_UPDATED_CURRENCY}`: second rate currency, for example `EUR`.
 - `{RATE_NOTE}`: reason or note text for rate testing.
+- `{REPORT_EXPORT_TITLE}`: title used for a cost-free report PDF export.
+- `{INTERNAL_REPORT_EXPORT_TITLE}`: title used for an internal report PDF export.
 
 ## General Rules
 
@@ -99,13 +101,14 @@ Run this after deployment configuration changes and before invoice testing.
 
 1. Sign in as `{ADMIN_EMAIL}`.
 2. Open `{SYSTEM_CHECK_VIEW}`.
-3. Confirm the page shows application configuration, database, object storage, email delivery, and Google OAuth checks.
+3. Confirm the page shows application configuration, database, object storage, email delivery, Google OAuth, and Typst PDF renderer checks.
 4. Confirm the object storage check completes a temporary write, read, and delete probe.
-5. Open `https://{DOMAIN_NAME}/api/admin/system-check` in a new tab.
+5. Confirm the Typst PDF renderer check completes a temporary PDF render probe.
+6. Open `https://{DOMAIN_NAME}/api/admin/system-check` in a new tab.
 
 ### Expected Result
 
-- Application configuration, database, and object storage are passing before invoice upload tests.
+- Application configuration, database, object storage, and Typst PDF renderer are passing before invoice upload and report PDF export tests.
 - Email delivery is passing when SMTP is expected, or shows a clear warning when console mode is intentionally used.
 - Google OAuth is passing when Google sign-in is expected, or shows a clear warning when it is intentionally disabled.
 - The JSON endpoint returns the same check results without exposing secret values.
@@ -1613,6 +1616,74 @@ Expected result:
 - The archived member sees an account status page.
 - Dashboard content is not visible.
 - Reusing an old invitation link for that member does not reactivate the archived account.
+
+## Reports And PDF Export
+
+### Filter Report Data
+
+1. Sign in as `{ADMIN_EMAIL}` with TOTP enabled and verified.
+2. Open `https://{DOMAIN_NAME}/admin/reports`.
+3. Switch between month, week, day, year, and custom period filters.
+4. Filter by project, project group, and member.
+5. Switch between user view and project view.
+6. Clear filters.
+
+Expected result:
+
+- The report updates for each period mode and filter.
+- User view groups by people.
+- Project view groups by projects.
+- The selected filters are reflected in the URL and survive browser refresh.
+- Clearing filters returns to the default monthly report.
+
+### Export Cost-Free PDF
+
+1. Sign in as `{ADMIN_EMAIL}` with TOTP enabled and verified.
+2. Open `https://{DOMAIN_NAME}/admin/reports`.
+3. Choose filters that include tracked time.
+4. Enter `{REPORT_EXPORT_TITLE}` as the export title.
+5. Select cost-free content.
+6. Click `PDF export`.
+7. Open the downloaded PDF.
+8. Search the PDF for hourly rate, amount, and currency values that should only appear internally.
+
+Expected result:
+
+- A PDF downloads successfully.
+- The export title appears at the top of the PDF.
+- The PDF contains hours, dates, projects or members, and descriptions.
+- The PDF does not contain hourly rates or calculated amounts.
+- An audit row is recorded for `report.exported`.
+
+### Export Internal PDF
+
+1. Sign in as `{ADMIN_EMAIL}` with TOTP enabled and verified.
+2. Open `https://{DOMAIN_NAME}/admin/reports`.
+3. Choose filters that include tracked time with configured rates.
+4. Enter `{INTERNAL_REPORT_EXPORT_TITLE}` as the export title.
+5. Select internal content.
+6. Click `PDF export`.
+7. Open the downloaded PDF.
+
+Expected result:
+
+- A PDF downloads successfully.
+- The PDF contains hours, hourly rates, currencies, and calculated amounts.
+- Missing rates are shown as missing, not silently calculated as zero.
+- An audit row is recorded for `report.exported`.
+
+### Export Runtime Configuration
+
+1. Sign in as `{ADMIN_EMAIL}` with TOTP enabled and verified.
+2. Open `https://{DOMAIN_NAME}/admin/reports`.
+3. Export a PDF from an environment where object storage and Typst are configured.
+4. Repeat in an environment where Typst is intentionally not available, if such an environment exists.
+
+Expected result:
+
+- With object storage and Typst configured, the export succeeds.
+- Without Typst, the export fails with a clear server error instead of a broken or empty PDF.
+- Without object storage, the export fails and no report export metadata is left behind.
 
 ## Audit Log
 
