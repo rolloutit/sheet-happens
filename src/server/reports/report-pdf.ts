@@ -224,7 +224,7 @@ function buildTypstPreamble(labels: ReportPdfLabels) {
       labels.page,
     )} #context counter(page).display("1")])`,
     "])",
-    '#set text(font: ("Inter", "Arial", "Helvetica", "Libertinus Serif"), size: 8.7pt, fill: ink)',
+    '#set text(font: ("Inter", "Arial", "Helvetica", "DejaVu Sans", "Libertinus Serif"), size: 8.7pt, fill: ink)',
     "#set par(leading: 0.58em)",
     "#set heading(numbering: none)",
     "",
