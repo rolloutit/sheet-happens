@@ -6,7 +6,7 @@
   },
   "deploy": {
     "preDeployCommand": "pnpm db:migrate:deploy && pnpm railway:bootstrap-admin",
-    "startCommand": "HOSTNAME=0.0.0.0 pnpm start",
+    "startCommand": "pnpm start",
     "healthcheckPath": "/api/health",
     "healthcheckTimeout": 100,
     "restartPolicyType": "ON_FAILURE",
