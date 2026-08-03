@@ -12,6 +12,7 @@ import {
   LogOut,
   Menu,
   PanelLeftClose,
+  PanelLeftOpen,
   ScrollText,
   Settings,
   Square,
@@ -21,7 +22,7 @@ import {
 } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
-import { useState, useSyncExternalStore, useTransition } from "react";
+import { useEffect, useState, useSyncExternalStore, useTransition } from "react";
 
 import {
   Drawer,
@@ -32,6 +33,7 @@ import {
   DrawerTrigger,
 } from "@/src/components/ui/Drawer";
 import { authClient } from "@/src/lib/auth-client";
+import { cn } from "@/src/lib/utils";
 import { setLocaleAction } from "@/src/i18n/actions";
 import { CommandPill } from "../CommandPill";
 import { LanguageToggle } from "../LanguageToggle";
@@ -101,7 +103,7 @@ export function AppShell({
   current = "dashboard",
   role = "admin",
   profile,
-  collapsed = false,
+  collapsed: initiallyCollapsed = false,
   mobileNavigationMode = "auto",
   language,
   user = defaultUser,
@@ -121,12 +123,17 @@ export function AppShell({
   const locale = useLocale();
   const t = useTranslations("AppShell");
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [isCollapsed, setIsCollapsed] = useState(initiallyCollapsed);
   const [localLanguage, setLocalLanguage] = useState(language ?? locale);
   const [timerNotice, setTimerNotice] = useState<string | null>(null);
   const resolvedProfile = profile ?? inferProfileFromLegacyRole(role);
   const selectedLanguage = language ?? localLanguage;
   const [isStoppingTimer, startStoppingTimerTransition] = useTransition();
   const [, startLanguageTransition] = useTransition();
+
+  useEffect(() => {
+    setIsCollapsed(initiallyCollapsed);
+  }, [initiallyCollapsed]);
   const resolvedNotifications = notifications ?? [
     {
       id: "missing-hours",
@@ -215,13 +222,20 @@ export function AppShell({
   }
 
   return (
-    <div className="min-h-screen bg-background text-foreground lg:grid lg:grid-cols-[256px_1fr]">
-      <aside className="hidden min-h-screen border-r border-border bg-[#0a1917] lg:flex lg:flex-col">
-        <div className="flex h-16 items-center gap-3 px-4">
+    <div
+      className={cn(
+        "min-h-screen bg-background text-foreground lg:grid lg:h-screen lg:overflow-hidden",
+        isCollapsed ? "lg:grid-cols-[80px_1fr]" : "lg:grid-cols-[256px_1fr]",
+      )}
+    >
+      <aside className="hidden min-h-screen border-r border-border bg-[#0a1917] lg:flex lg:h-screen lg:flex-col lg:overflow-hidden">
+        <div
+          className={cn("flex h-16 items-center gap-3 px-4", isCollapsed && "justify-center px-3")}
+        >
           <div className="grid size-10 place-items-center rounded-[var(--radius-md)] bg-accent text-sm font-bold text-accent-foreground shadow-soft">
             SH
           </div>
-          {!collapsed ? (
+          {!isCollapsed ? (
             <div className="min-w-0">
               <p className="truncate text-base font-semibold leading-tight">Sheet Happens</p>
               <p className="font-ui text-[10px] font-medium uppercase tracking-[0.08em] text-muted-foreground">
@@ -230,49 +244,76 @@ export function AppShell({
             </div>
           ) : null}
         </div>
-        <nav className="flex-1 overflow-y-auto px-[18px] py-2" aria-label={t("primaryNavigation")}>
+        <nav
+          className={cn("flex-1 overflow-y-auto py-2", isCollapsed ? "px-3" : "px-[18px]")}
+          aria-label={t("primaryNavigation")}
+        >
           <NavGroup
             group="main"
             role={role}
             profile={resolvedProfile}
             current={current}
+            collapsed={isCollapsed}
             onNavigate={handleNavigate}
             t={t}
           />
           {role === "admin" ? (
             <>
-              <p className="mx-3 mb-2 mt-5 font-ui text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
-                Admin
-              </p>
+              {!isCollapsed ? (
+                <p className="mx-3 mb-2 mt-5 font-ui text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+                  Admin
+                </p>
+              ) : null}
               <NavGroup
                 group="admin"
                 role={role}
                 profile={resolvedProfile}
                 current={current}
+                collapsed={isCollapsed}
                 onNavigate={handleNavigate}
                 t={t}
               />
             </>
           ) : null}
         </nav>
-        <div className="grid gap-1 border-t border-border px-[18px] py-3">
+        <div
+          className={cn(
+            "grid gap-1 border-t border-border py-3",
+            isCollapsed ? "px-3" : "px-[18px]",
+          )}
+        >
           <a
             href="#"
-            className="flex items-center gap-3 rounded-[var(--radius-md)] px-3 py-2 text-sm font-medium text-muted-foreground transition hover:bg-secondary hover:text-foreground"
+            className={cn(
+              "flex items-center gap-3 rounded-[var(--radius-md)] px-3 py-2 text-sm font-medium text-muted-foreground transition hover:bg-secondary hover:text-foreground",
+              isCollapsed && "justify-center px-0",
+            )}
+            aria-label={isCollapsed ? t("help") : undefined}
+            title={isCollapsed ? t("help") : undefined}
           >
             <HelpCircle className="size-[18px]" aria-hidden="true" />
-            {t("help")}
+            {!isCollapsed ? t("help") : null}
           </a>
           <button
             type="button"
-            className="flex items-center gap-3 rounded-[var(--radius-md)] px-3 py-2 text-left text-sm font-medium text-muted-foreground transition hover:bg-secondary hover:text-foreground"
+            className={cn(
+              "flex items-center gap-3 rounded-[var(--radius-md)] px-3 py-2 text-left text-sm font-medium text-muted-foreground transition hover:bg-secondary hover:text-foreground",
+              isCollapsed && "justify-center px-0",
+            )}
+            aria-label={isCollapsed ? t("expandSidebar") : t("collapseSidebar")}
+            title={isCollapsed ? t("expandSidebar") : undefined}
+            onClick={() => setIsCollapsed((currentCollapsed) => !currentCollapsed)}
           >
-            <PanelLeftClose className="size-[18px]" aria-hidden="true" />
-            {t("collapseSidebar")}
+            {isCollapsed ? (
+              <PanelLeftOpen className="size-[18px]" aria-hidden="true" />
+            ) : (
+              <PanelLeftClose className="size-[18px]" aria-hidden="true" />
+            )}
+            {!isCollapsed ? t("collapseSidebar") : null}
           </button>
         </div>
       </aside>
-      <div className="min-w-0">
+      <div className="min-w-0 lg:h-screen lg:overflow-y-auto">
         <header className="sticky top-0 z-20 border-b border-border bg-background/80 backdrop-blur-xl">
           <div className="flex h-16 items-center justify-between px-4 sm:px-6 lg:px-8">
             <div className="flex items-center gap-3">
@@ -514,6 +555,7 @@ function NavGroup({
   role,
   profile,
   current,
+  collapsed,
   onNavigate,
   t,
 }: {
@@ -521,6 +563,7 @@ function NavGroup({
   role: AppShellProps["role"];
   profile: AppShellProfile;
   current: string;
+  collapsed?: boolean;
   onNavigate?: (itemId: string) => void;
   t: AppShellTranslator;
 }) {
@@ -545,13 +588,18 @@ function NavGroup({
                 event.preventDefault();
                 onNavigate?.(item.id);
               }}
-              className="relative flex items-center gap-3 rounded-[var(--radius-md)] px-3 py-2.5 text-sm font-medium text-muted-foreground transition hover:bg-secondary hover:text-foreground aria-[current=page]:bg-accent/15 aria-[current=page]:font-semibold aria-[current=page]:text-accent"
+              className={cn(
+                "relative flex items-center gap-3 rounded-[var(--radius-md)] px-3 py-2.5 text-sm font-medium text-muted-foreground transition hover:bg-secondary hover:text-foreground aria-[current=page]:bg-accent/15 aria-[current=page]:font-semibold aria-[current=page]:text-accent",
+                collapsed && "justify-center px-0",
+              )}
+              aria-label={collapsed ? t(item.labelKey) : undefined}
+              title={collapsed ? t(item.labelKey) : undefined}
             >
               {active ? (
                 <span className="absolute -left-2 top-1/2 h-5 w-1 -translate-y-1/2 rounded bg-accent" />
               ) : null}
               <item.icon className="size-[19px]" aria-hidden="true" />
-              {t(item.labelKey)}
+              {!collapsed ? t(item.labelKey) : null}
             </a>
           );
         })}
