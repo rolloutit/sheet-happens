@@ -10,6 +10,7 @@ import { Field } from "@/src/components/ui/Field";
 import { Input } from "@/src/components/ui/Input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/src/components/ui/Tabs";
 import { Textarea } from "@/src/components/ui/Textarea";
+import { MarkdownArticle } from "../MarkdownArticle";
 import type { InfoPageEditorProps, InfoPageEditorValue } from "./InfoPageEditor.types";
 
 export function InfoPageEditor({
@@ -109,39 +110,10 @@ export function InfoPageEditor({
 }
 
 function MarkdownPreview({ title, body }: { title: string; body: string }) {
-  const lines = body.split("\n").filter((line) => line.trim().length > 0);
-
   return (
-    <article className="grid gap-3 rounded-[var(--radius-lg)] border border-border bg-card p-5">
+    <div className="grid gap-3 rounded-[var(--radius-lg)] border border-border bg-card p-5">
       <h2 className="text-2xl font-semibold">{title}</h2>
-      {lines.map((line, index) => {
-        if (line.startsWith("## ")) {
-          return (
-            <h3 key={`${line}-${index}`} className="pt-2 text-lg font-semibold">
-              {line.replace(/^## /, "")}
-            </h3>
-          );
-        }
-        if (line.startsWith("# ")) {
-          return (
-            <h3 key={`${line}-${index}`} className="pt-2 text-xl font-semibold">
-              {line.replace(/^# /, "")}
-            </h3>
-          );
-        }
-        if (line.startsWith("- ")) {
-          return (
-            <p key={`${line}-${index}`} className="pl-3 text-sm text-muted-foreground">
-              • {line.replace(/^- /, "")}
-            </p>
-          );
-        }
-        return (
-          <p key={`${line}-${index}`} className="text-sm leading-6 text-muted-foreground">
-            {line}
-          </p>
-        );
-      })}
-    </article>
+      <MarkdownArticle markdown={body} />
+    </div>
   );
 }
