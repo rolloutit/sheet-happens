@@ -286,6 +286,76 @@
       "signOut": "Sign out"
     }
   },
+  "Help": {
+    "eyebrow": "Help",
+    "title": "Help and manual",
+    "subtitle": "Read admin-maintained welcome notes and the source-of-truth product manual.",
+    "tabs": {
+      "label": "Help content",
+      "welcome": "Welcome",
+      "manual": "Manual"
+    },
+    "actions": {
+      "editWelcome": "Edit welcome content"
+    },
+    "welcome": {
+      "fallbackBadge": "Source default",
+      "publishedBadge": "Published",
+      "version": "Version {version}",
+      "description": "Admin-maintained content shown to everyone."
+    },
+    "manual": {
+      "title": "Product manual",
+      "subtitle": "Source-controlled documentation for the current product behavior.",
+      "available": "Available",
+      "restricted": "Restricted",
+      "restrictedMessage": "This function exists, but the detailed manual is visible only to users who can use it. This avoids exposing internal operational details."
+    },
+    "audience": {
+      "all": "Everyone",
+      "contractor": "Contractors",
+      "admin": "Admins"
+    }
+  },
+  "AdminInfo": {
+    "eyebrow": "Admin",
+    "title": "Information page",
+    "subtitle": "Edit the admin-maintained welcome content shown in Help. The Manual tab is source-controlled.",
+    "actions": {
+      "openHelp": "Open Help"
+    },
+    "editor": {
+      "title": "Welcome content",
+      "description": "Use this for lightweight onboarding notes. Keep exact product behavior in the Manual tab.",
+      "titleLabel": "Title",
+      "bodyLabel": "Markdown",
+      "previewTitle": "Live preview",
+      "previewDescription": "This is how the Welcome tab renders.",
+      "publish": "Publish",
+      "reset": "Reset to source default",
+      "markdownHint": "Supported Markdown: headings, bold, italic, lists, quotes, links, and inline code.",
+      "fallbackNotice": "Using source default until first publish.",
+      "statusDraft": "Draft",
+      "statusPublished": "Published",
+      "versionLabel": "Version {version}",
+      "updatedAtLabel": "Updated {date}"
+    }
+  },
+  "AdminInfoActions": {
+    "validation": {
+      "titleRequired": "Title is required.",
+      "titleMax": "Title must be at most 120 characters.",
+      "bodyRequired": "Markdown content is required.",
+      "bodyMax": "Markdown content must be at most 20,000 characters."
+    },
+    "errors": {
+      "fixFields": "Fix the highlighted fields.",
+      "publishFailed": "The information page could not be published."
+    },
+    "success": {
+      "published": "Information page published."
+    }
+  },
   "Dashboard": {
     "eyebrow": "Home",
     "title": "Dashboard",
