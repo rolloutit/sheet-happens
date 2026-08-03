@@ -286,6 +286,76 @@
       "signOut": "Kijelentkezés"
     }
   },
+  "Help": {
+    "eyebrow": "Súgó",
+    "title": "Súgó és kézikönyv",
+    "subtitle": "Admin által karbantartott üdvözlő szöveg és forráskódban karbantartott termékkézikönyv.",
+    "tabs": {
+      "label": "Súgó tartalom",
+      "welcome": "Üdvözlő",
+      "manual": "Kézikönyv"
+    },
+    "actions": {
+      "editWelcome": "Üdvözlő tartalom szerkesztése"
+    },
+    "welcome": {
+      "fallbackBadge": "Forrás alapértelmezett",
+      "publishedBadge": "Közzétéve",
+      "version": "{version}. verzió",
+      "description": "Admin által karbantartott tartalom, amit mindenki lát."
+    },
+    "manual": {
+      "title": "Termékkézikönyv",
+      "subtitle": "Forráskódban karbantartott dokumentáció az aktuális termékviselkedésről.",
+      "available": "Elérhető",
+      "restricted": "Korlátozott",
+      "restrictedMessage": "Ez a funkció létezik, de a részletes kézikönyv csak azoknak látható, akik használhatják. Így nem jelennek meg belső működési részletek."
+    },
+    "audience": {
+      "all": "Mindenki",
+      "contractor": "Kontraktorok",
+      "admin": "Adminok"
+    }
+  },
+  "AdminInfo": {
+    "eyebrow": "Admin",
+    "title": "Információs oldal",
+    "subtitle": "A Súgóban megjelenő admin által karbantartott üdvözlő tartalom szerkesztése. A Kézikönyv fül forráskódban karbantartott.",
+    "actions": {
+      "openHelp": "Súgó megnyitása"
+    },
+    "editor": {
+      "title": "Üdvözlő tartalom",
+      "description": "Könnyű onboarding megjegyzésekhez használd. A pontos termékviselkedés maradjon a Kézikönyv fülön.",
+      "titleLabel": "Cím",
+      "bodyLabel": "Markdown",
+      "previewTitle": "Élő előnézet",
+      "previewDescription": "Így jelenik meg az Üdvözlő fülön.",
+      "publish": "Közzététel",
+      "reset": "Visszaállítás a forrás alapra",
+      "markdownHint": "Támogatott Markdown: címsorok, félkövér, dőlt, listák, idézetek, linkek és inline kód.",
+      "fallbackNotice": "Forrás alapértelmezett tartalom az első közzétételig.",
+      "statusDraft": "Vázlat",
+      "statusPublished": "Közzétéve",
+      "versionLabel": "{version}. verzió",
+      "updatedAtLabel": "Frissítve: {date}"
+    }
+  },
+  "AdminInfoActions": {
+    "validation": {
+      "titleRequired": "A cím kötelező.",
+      "titleMax": "A cím legfeljebb 120 karakter lehet.",
+      "bodyRequired": "A markdown tartalom kötelező.",
+      "bodyMax": "A markdown tartalom legfeljebb 20 000 karakter lehet."
+    },
+    "errors": {
+      "fixFields": "Javítsd a jelölt mezőket.",
+      "publishFailed": "Az információs oldal közzététele nem sikerült."
+    },
+    "success": {
+      "published": "Az információs oldal közzétéve."
+    }
+  },
   "Dashboard": {
     "eyebrow": "Kezdőlap",
     "title": "Irányítópult",

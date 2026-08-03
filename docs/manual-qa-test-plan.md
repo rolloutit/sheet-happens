@@ -14,6 +14,8 @@ Replace placeholder values before sharing a concrete test run:
 - `{INVALID_INVITE_TOKEN}`: deliberately invalid invitation token for negative testing.
 - `{SYSTEM_CHECK_VIEW}`: admin system-check path, default `https://{DOMAIN_NAME}/admin/system`.
 - `{AUDIT_LOG_VIEW}`: audit-log viewer path, default `https://{DOMAIN_NAME}/admin/audit`.
+- `{HELP_VIEW}`: Help page path, default `https://{DOMAIN_NAME}/help`.
+- `{ADMIN_INFO_VIEW}`: admin information-page editor path, default `https://{DOMAIN_NAME}/admin/info`.
 - `{INVITED_EMAIL}`: email address that owns the tested invitation.
 - `{INVITED_FIRST_NAME}`: first name used when creating a new invited member.
 - `{INVITED_LAST_NAME}`: last name used when creating a new invited member.
@@ -69,6 +71,8 @@ Replace placeholder values before sharing a concrete test run:
 - `{RATE_NOTE}`: reason or note text for rate testing.
 - `{REPORT_EXPORT_TITLE}`: title used for a cost-free report PDF export.
 - `{INTERNAL_REPORT_EXPORT_TITLE}`: title used for an internal report PDF export.
+- `{HELP_WELCOME_TITLE}`: title used when testing admin-edited Help welcome content.
+- `{HELP_WELCOME_MARKDOWN}`: markdown body used when testing admin-edited Help welcome content.
 
 ## General Rules
 
@@ -1728,6 +1732,68 @@ Expected result:
 - Sensitive-looking keys such as password, token, secret, backup code, and credential values are
   displayed as `[redacted]`.
 - Closing the dialog returns to the same filtered audit list.
+
+## Help And Manual
+
+### Read Help Welcome Content
+
+1. Sign in as `{EMPLOYEE_EMAIL}`, `{CONTRACTOR_EMAIL}`, or `{ADMIN_EMAIL}`.
+2. Open `{HELP_VIEW}`.
+3. Select the `Welcome` tab.
+
+Expected result:
+
+- The Help page opens for active users.
+- The Welcome tab shows the published admin-maintained markdown content.
+- If no admin content has been published yet, the page shows the source default welcome content.
+- Signed-out users cannot open `{HELP_VIEW}`.
+
+### Read Manual With Role-Based Visibility
+
+1. Sign in as `{EMPLOYEE_EMAIL}`.
+2. Open `{HELP_VIEW}` and select the `Manual` tab.
+3. Confirm general topics, such as dashboard, time tracking, and security settings, show full text.
+4. Confirm contractor-only and admin-only topics are visible as topic names but show only a generic restricted message.
+5. Sign out and repeat as `{CONTRACTOR_EMAIL}`.
+6. Sign out and repeat as `{ADMIN_EMAIL}`.
+
+Expected result:
+
+- Employees can read only topics for functions they can use.
+- Contractors can read contractor timesheet/invoice topics in addition to general topics.
+- Admins can read every manual topic.
+- Restricted topics do not expose detailed operational instructions.
+
+### Admin Publishes Welcome Content
+
+1. Sign in as `{ADMIN_EMAIL}` with TOTP enabled and verified.
+2. Open `{ADMIN_INFO_VIEW}`.
+3. Enter `{HELP_WELCOME_TITLE}` as the title.
+4. Enter `{HELP_WELCOME_MARKDOWN}` as the markdown body.
+5. Confirm the live preview updates.
+6. Click `Publish`.
+7. Open `{HELP_VIEW}` and select the `Welcome` tab.
+
+Expected result:
+
+- The admin editor is available only to admins.
+- The live preview renders the controlled Markdown subset.
+- Publishing stores a new immutable version and shows a success message.
+- The Help Welcome tab shows the newly published content.
+- An audit row is recorded for `info_pages.publish`.
+
+### Help Navigation
+
+1. Sign in as `{ADMIN_EMAIL}`.
+2. Open `https://{DOMAIN_NAME}/dashboard`.
+3. Click the sidebar Help link.
+4. Click the admin `Information page` navigation item.
+
+Expected result:
+
+- The sidebar Help link opens `{HELP_VIEW}` and highlights Help.
+- The admin Information page navigation item opens `{ADMIN_INFO_VIEW}`.
+- Non-admin users do not see or access `{ADMIN_INFO_VIEW}`.
 
 ## Navigation
 
