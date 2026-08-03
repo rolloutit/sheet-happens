@@ -88,7 +88,7 @@ const navItems = [
   { id: "rates", labelKey: "nav.rates", icon: WalletCards, group: "admin", href: "/admin/rates" },
   { id: "audit", labelKey: "nav.audit", icon: ScrollText, group: "admin", href: "/admin/audit" },
   { id: "system", labelKey: "nav.system", icon: Activity, group: "admin", href: "/admin/system" },
-  { id: "info", labelKey: "nav.info", icon: BookOpen, group: "admin", href: "#" },
+  { id: "info", labelKey: "nav.info", icon: BookOpen, group: "admin", href: "/admin/info" },
 ] as const;
 
 const defaultUser = {
@@ -183,7 +183,7 @@ export function AppShell({
 
     const item = navItems.find((navItem) => navItem.id === itemId);
 
-    if (item && item.href !== "#") {
+    if (item) {
       window.location.href = item.href;
     }
   }
@@ -283,11 +283,12 @@ export function AppShell({
           )}
         >
           <a
-            href="#"
+            href="/help"
             className={cn(
-              "flex items-center gap-3 rounded-[var(--radius-md)] px-3 py-2 text-sm font-medium text-muted-foreground transition hover:bg-secondary hover:text-foreground",
+              "flex items-center gap-3 rounded-[var(--radius-md)] px-3 py-2 text-sm font-medium text-muted-foreground transition hover:bg-secondary hover:text-foreground aria-[current=page]:bg-accent/15 aria-[current=page]:font-semibold aria-[current=page]:text-accent",
               isCollapsed && "justify-center px-0",
             )}
+            aria-current={current === "help" ? "page" : undefined}
             aria-label={isCollapsed ? t("help") : undefined}
             title={isCollapsed ? t("help") : undefined}
           >
@@ -608,6 +609,7 @@ function NavGroup({
 }
 
 function pageTitle(current: string, t: AppShellTranslator) {
+  if (current === "help") return t("help");
   if (current === "settings") return t("nav.settings");
 
   const item = navItems.find((navItem) => navItem.id === current);
