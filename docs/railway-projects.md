@@ -18,8 +18,30 @@ removed, so it no longer tracks `develop`, and its generated domain was renamed 
 as a rollback target. Production is expected to move out of `SheetHappens` into its own project next;
 when that happens the old project — and its dormant dev environment — can be deleted.
 
-Each project keeps one environment. Stage differences live in project-scoped variables and the
-branch its service tracks, not in per-environment overrides.
+Each project keeps one persistent environment. Stage differences live in project-scoped variables and
+the branch its service tracks, not in per-environment overrides.
+
+## PR environments
+
+Opening a pull request against the branch a project's service tracks creates an ephemeral
+environment, forked from that project's base environment. Both projects have it on:
+`prDeploys: true`, `focusedPrEnvironments: true`, `botPrEnvironments: false` (no previews for bot
+PRs), with `baseEnvironmentId` pointing at the persistent environment. So PRs into `develop` get a
+preview in `sheet-happens-dev`, forked from `development`.
+
+This is a **project-level setting that connecting the repo does not imply** — a fresh project has
+`prDeploys: false` and silently creates no previews. It is not visible in `railway status`; check it
+explicitly:
+
+```bash
+railway api 'query($id: String!) { project(id: $id) {
+  prDeploys botPrEnvironments focusedPrEnvironments baseEnvironmentId } }' --raw-var id=<project-id>
+```
+
+A PR environment forks the base environment's services and volumes, so each open PR carries its own
+copy of the dev database. Google sign-in and passkeys do **not** work in a PR environment — its
+hostname is per-PR, so it matches neither the registered Google redirect URI nor a passkey's RP ID.
+Use email/password or magic-link sign-in there.
 
 ## Reprovisioning
 
