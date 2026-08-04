@@ -25,5 +25,8 @@ src/server/db/generated
 # logs
 *.log
 
+# claude code (per-developer)
+.claude/settings.local.json
+
 # macOS
 .DS_Store
