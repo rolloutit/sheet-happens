@@ -92,6 +92,9 @@ Detailed workflow lives in the `/git-workflow` skill (`.claude/skills/git-workfl
 - `docs/database-schema.md` · `docs/auth-user-management.md` · `docs/frontend-stack.md`
 - `docs/tokens.md` — design tokens · `docs/component-library-audit.md` — component inventory
 - `docs/local-dev-db.md` · `docs/manual-qa-test-plan.md`
+- `docs/railway-projects.md` — deployed project/environment topology, domain moves, deployed-DB
+  access, and why config lives in `railway.json` rather than Railway IaC. Read before changing
+  anything on Railway.
 
 ## Working agreements
 
