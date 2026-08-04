@@ -41,6 +41,8 @@
     "ci": "pnpm typecheck && pnpm lint && pnpm format && pnpm test && pnpm build-storybook && pnpm test-storybook && pnpm test:visual:static && pnpm e2e"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.1096.0",
+    "@aws-sdk/s3-request-presigner": "^3.1096.0",
     "@better-auth/passkey": "^1.6.23",
     "@better-auth/prisma-adapter": "^1.6.23",
     "@hookform/resolvers": "latest",
@@ -98,7 +100,7 @@
     "prisma": "^7.8.0",
     "storybook": "latest",
     "tailwindcss": "latest",
-    "typescript": "latest",
+    "typescript": "^6.0.3",
     "vitest": "latest"
   }
 }

@@ -33,6 +33,7 @@ describe("timesheet monthly preview", () => {
       hourlyRate: "120.00",
       currencyCode: "EUR",
       source: "PROJECT_OVERRIDE",
+      sourceRatePeriodId: "override-rate",
     });
   });
 
@@ -59,6 +60,7 @@ describe("timesheet monthly preview", () => {
       hourlyRate: "90.00",
       currencyCode: "EUR",
       source: "MEMBER_DEFAULT",
+      sourceRatePeriodId: "new-rate",
     });
   });
 
@@ -75,6 +77,7 @@ describe("timesheet monthly preview", () => {
           hourlyRate: "100.00",
           currencyCode: "EUR",
           source: "MEMBER_DEFAULT",
+          sourceRatePeriodId: "member-rate",
         },
         amountCents: 20_000,
       },
@@ -99,6 +102,7 @@ describe("timesheet monthly preview", () => {
           hourlyRate: "25000.00",
           currencyCode: "HUF",
           source: "PROJECT_OVERRIDE",
+          sourceRatePeriodId: "override-rate",
         },
         amountCents: 1_250_000,
       },
@@ -122,6 +126,7 @@ describe("timesheet monthly preview", () => {
             hourlyRate: "100.00",
             currencyCode: "EUR",
             source: "MEMBER_DEFAULT",
+            sourceRatePeriodId: "member-rate",
           },
           mixedRates: false,
           missingRateLineCount: 1,
@@ -139,6 +144,7 @@ describe("timesheet monthly preview", () => {
             hourlyRate: "25000.00",
             currencyCode: "HUF",
             source: "PROJECT_OVERRIDE",
+            sourceRatePeriodId: "override-rate",
           },
           mixedRates: false,
           missingRateLineCount: 0,

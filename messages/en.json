@@ -12,6 +12,7 @@
     "openNavigation": "Open navigation",
     "help": "Help",
     "collapseSidebar": "Collapse sidebar",
+    "expandSidebar": "Expand sidebar",
     "language": "Language",
     "soon": "Soon",
     "command": {
@@ -39,6 +40,7 @@
       "people": "People",
       "rates": "Rates",
       "audit": "Audit log",
+      "system": "System",
       "info": "Information page",
       "settings": "Settings"
     },
@@ -284,6 +286,76 @@
       "signOut": "Sign out"
     }
   },
+  "Help": {
+    "eyebrow": "Help",
+    "title": "Help and manual",
+    "subtitle": "Read admin-maintained welcome notes and the source-of-truth product manual.",
+    "tabs": {
+      "label": "Help content",
+      "welcome": "Welcome",
+      "manual": "Manual"
+    },
+    "actions": {
+      "editWelcome": "Edit welcome content"
+    },
+    "welcome": {
+      "fallbackBadge": "Source default",
+      "publishedBadge": "Published",
+      "version": "Version {version}",
+      "description": "Admin-maintained content shown to everyone."
+    },
+    "manual": {
+      "title": "Product manual",
+      "subtitle": "Source-controlled documentation for the current product behavior.",
+      "available": "Available",
+      "restricted": "Restricted",
+      "restrictedMessage": "This function exists, but the detailed manual is visible only to users who can use it. This avoids exposing internal operational details."
+    },
+    "audience": {
+      "all": "Everyone",
+      "contractor": "Contractors",
+      "admin": "Admins"
+    }
+  },
+  "AdminInfo": {
+    "eyebrow": "Admin",
+    "title": "Information page",
+    "subtitle": "Edit the admin-maintained welcome content shown in Help. The Manual tab is source-controlled.",
+    "actions": {
+      "openHelp": "Open Help"
+    },
+    "editor": {
+      "title": "Welcome content",
+      "description": "Use this for lightweight onboarding notes. Keep exact product behavior in the Manual tab.",
+      "titleLabel": "Title",
+      "bodyLabel": "Markdown",
+      "previewTitle": "Live preview",
+      "previewDescription": "This is how the Welcome tab renders.",
+      "publish": "Publish",
+      "reset": "Reset to source default",
+      "markdownHint": "Supported Markdown: headings, bold, italic, lists, quotes, links, and inline code.",
+      "fallbackNotice": "Using source default until first publish.",
+      "statusDraft": "Draft",
+      "statusPublished": "Published",
+      "versionLabel": "Version {version}",
+      "updatedAtLabel": "Updated {date}"
+    }
+  },
+  "AdminInfoActions": {
+    "validation": {
+      "titleRequired": "Title is required.",
+      "titleMax": "Title must be at most 120 characters.",
+      "bodyRequired": "Markdown content is required.",
+      "bodyMax": "Markdown content must be at most 20,000 characters."
+    },
+    "errors": {
+      "fixFields": "Fix the highlighted fields.",
+      "publishFailed": "The information page could not be published."
+    },
+    "success": {
+      "published": "Information page published."
+    }
+  },
   "Dashboard": {
     "eyebrow": "Home",
     "title": "Dashboard",
@@ -322,8 +394,37 @@
     },
     "warnings": {
       "mixedCurrency": "The selected month contains multiple currencies.",
-      "missingRates": "Missing rates for {count} entries.",
+      "missingRates": "Ask your admin to add rates for {count} entries before submitting.",
       "rejected": "Rejected: {reason}"
+    },
+    "actionResults": {
+      "invoiceUploaded": "Invoice uploaded. The timesheet is now marked as invoiced.",
+      "invoiceCancellationUploaded": "Cancellation invoice uploaded. Upload the corrected invoice next.",
+      "invoiceReplacementUploaded": "Replacement invoice uploaded. The timesheet is now marked as invoiced.",
+      "invoiceInvalidInput": "Check the invoice details and upload again.",
+      "invoiceInvalidMonth": "Choose a valid timesheet month.",
+      "invoiceCurrencyInvalid": "The invoice currency is not supported.",
+      "invoiceCurrencyMismatch": "The invoice currency must match the approved timesheet currency.",
+      "invoiceApprovedRequired": "The timesheet must be approved before an invoice can be uploaded.",
+      "invoiceRevisionChanged": "The timesheet changed during upload. Refresh and try again.",
+      "invoiceAlreadyUploaded": "An invoice has already been uploaded for this timesheet.",
+      "invoiceRejectedNotFound": "The rejected invoice could not be found.",
+      "invoiceCancellationRequired": "Upload a cancellation invoice for the rejected invoice before uploading the corrected invoice.",
+      "invoiceReplacementRequired": "Upload the corrected invoice after the cancellation invoice.",
+      "invoiceInvalidStep": "This invoice upload step is no longer valid. Refresh and try again.",
+      "invoiceFileRequired": "Choose a PDF invoice file.",
+      "invoiceFileTooLarge": "The invoice PDF is too large.",
+      "invoicePdfRequired": "Only PDF invoices can be uploaded.",
+      "invoiceNumberRequired": "Enter the invoice number.",
+      "invoiceAmountInvalid": "Enter a valid positive invoice amount.",
+      "invoiceCancellationAmountInvalid": "The cancellation invoice amount must be the negative amount of the rejected invoice.",
+      "invoiceCancellationCurrencyInvalid": "The cancellation invoice currency must match the rejected invoice currency.",
+      "invoiceStorageMissing": "Invoice storage is not configured for this environment.",
+      "memberNotFound": "Member profile not found.",
+      "contractorRequired": "Only contractors can upload invoices.",
+      "notAllowed": "You are not allowed to upload this invoice.",
+      "databaseUnavailable": "Database unavailable. Try again later.",
+      "invoiceFailed": "The invoice could not be uploaded."
     },
     "breakdown": {
       "title": "Project breakdown",
@@ -352,6 +453,284 @@
       "mixedCurrency": "Mixed currency",
       "missingRate": "Missing rate",
       "none": "-"
+    },
+    "submit": {
+      "trigger": "Submit timesheet",
+      "title": "Submit timesheet?",
+      "description": "Submitting locks the source time entries for this month. Edits require an admin rejection and unlock.",
+      "details": "{month} will be submitted for approval from the current time entries.",
+      "confirm": "Submit timesheet",
+      "cancel": "Cancel",
+      "submitting": "Submitting",
+      "disabled": {
+        "notOpen": "This month is already in a submitted workflow state.",
+        "noEntries": "Add at least one time entry before submitting.",
+        "missingRates": "Ask your admin to add the missing rates before submitting.",
+        "mixedCurrency": "A submitted month must use a single currency.",
+        "notReady": "The timesheet amount is not ready for submission."
+      }
+    },
+    "invoice": {
+      "title": "Contractor invoice",
+      "description": "Upload the invoice PDF after admin approval.",
+      "uploadedDescription": "Uploaded invoice for the approved timesheet revision.",
+      "cancellationDescription": "Upload the cancellation invoice for the rejected invoice first.",
+      "replacementDescription": "The cancellation invoice is uploaded. Upload the corrected invoice.",
+      "invoiceNumber": "Invoice number",
+      "invoiceNumberPlaceholder": "Invoice number",
+      "declaredAmount": "Invoice amount",
+      "currency": "Currency",
+      "file": "PDF invoice",
+      "fileHint": "PDF only, max {sizeMb} MB.",
+      "upload": "Upload invoice",
+      "uploadCancellation": "Upload cancellation invoice",
+      "uploadReplacement": "Upload replacement invoice",
+      "cancellationUploaded": "Cancellation invoice uploaded",
+      "uploadedAt": "Uploaded",
+      "rejectedReason": "Invoice rejected: {reason}",
+      "role": {
+        "label": "Type",
+        "original": "Original",
+        "replacement": "Replacement",
+        "cancellation": "Cancellation",
+        "corrected": "Corrected"
+      },
+      "status": {
+        "uploaded": "Uploaded",
+        "accepted": "Accepted",
+        "rejected": "Rejected",
+        "replaced": "Replaced",
+        "cancelled": "Cancelled",
+        "deleted": "Deleted"
+      }
+    }
+  },
+  "TimesheetActions": {
+    "success": {
+      "submitted": "Timesheet submitted."
+    },
+    "errors": {
+      "invalidMonth": "Choose a valid month.",
+      "memberNotFound": "Member profile not found.",
+      "contractorRequired": "Only contractors can submit timesheets.",
+      "monthLocked": "This month is already locked by a submitted timesheet.",
+      "monthNotOpen": "This month is not open for submission.",
+      "noEntries": "Add at least one time entry before submitting.",
+      "entriesAlreadyLocked": "Some entries are already locked by another timesheet.",
+      "missingProjectAssignment": "Every entry must have a project assignment.",
+      "invalidDurations": "Every entry must have a positive duration.",
+      "missingDescriptions": "Every entry must have a description before submission.",
+      "missingRates": "Ask your admin to add the missing rates before submitting.",
+      "mixedCurrency": "A submitted month must use a single currency.",
+      "entriesChanged": "Time entries changed during submission. Try again.",
+      "notAllowed": "You are not allowed to submit this timesheet.",
+      "databaseUnavailable": "Database unavailable. Try again later.",
+      "submitFailed": "The timesheet could not be submitted.",
+      "invoiceApprovedRequired": "The timesheet must be approved before an invoice can be uploaded.",
+      "invoiceRevisionChanged": "The timesheet changed during upload. Refresh and try again.",
+      "invoiceAlreadyUploaded": "An invoice has already been uploaded for this timesheet.",
+      "invoiceFileRequired": "Choose a PDF invoice file.",
+      "invoiceFileTooLarge": "The invoice PDF is too large.",
+      "invoicePdfRequired": "Only PDF invoices can be uploaded.",
+      "invoiceNumberRequired": "Enter the invoice number.",
+      "invoiceAmountInvalid": "Enter a positive invoice amount.",
+      "invoiceCurrencyInvalid": "The invoice currency is not supported.",
+      "invoiceStorageMissing": "Invoice storage is not configured for this environment.",
+      "invoiceFailed": "The invoice could not be uploaded."
+    }
+  },
+  "AdminTimesheets": {
+    "eyebrow": "Admin",
+    "title": "Timesheet approvals",
+    "subtitle": "Review submitted contractor timesheets from immutable monthly snapshots.",
+    "revision": "Revision {number}",
+    "summary": {
+      "hours": "Hours",
+      "amount": "Amount",
+      "entries": "Entries",
+      "revision": "Revision"
+    },
+    "status": {
+      "submitted": "Submitted",
+      "rejected": "Rejected",
+      "approved": "Approved",
+      "invoiced": "Invoiced",
+      "invoice_rejected": "Invoice rejected",
+      "accepted": "Accepted",
+      "paid": "Paid"
+    },
+    "stats": {
+      "matching": "Matching",
+      "matchingCaption": "Timesheets matching the current filters.",
+      "page": "Current page",
+      "pageCaption": "Visible range on this page.",
+      "pageSize": "Page size",
+      "pageSizeCaption": "Rows loaded per page."
+    },
+    "filters": {
+      "title": "Filters",
+      "description": "Search by contractor name or email, then narrow by status, contractor, project, or month.",
+      "search": "Search",
+      "searchPlaceholder": "Name or email...",
+      "status": "Status",
+      "allStatuses": "All statuses",
+      "contractor": "Contractor",
+      "allContractors": "All contractors",
+      "project": "Project",
+      "allProjects": "All projects",
+      "month": "Month",
+      "apply": "Apply filters",
+      "clear": "Clear"
+    },
+    "list": {
+      "title": "Submitted timesheets",
+      "showing": "Showing {start}-{end} of {total}.",
+      "caption": "Admin timesheet review list",
+      "empty": "No timesheets match these filters.",
+      "review": "Review",
+      "entries": "{count} entries",
+      "projects": "{count} projects"
+    },
+    "table": {
+      "contractor": "Contractor",
+      "month": "Month",
+      "status": "Status",
+      "hours": "Hours",
+      "amount": "Amount",
+      "submitted": "Submitted",
+      "snapshot": "Snapshot",
+      "action": "Action"
+    },
+    "pagination": {
+      "summary": "Page {page} of {totalPages}, {totalItems} total.",
+      "previous": "Previous",
+      "next": "Next"
+    },
+    "detail": {
+      "back": "Back to approvals",
+      "title": "{name} timesheet",
+      "subtitle": "{month} submitted snapshot.",
+      "rejectionReason": "Rejection reason: {reason}"
+    },
+    "snapshot": {
+      "title": "Submitted snapshot",
+      "description": "These lines are copied from the source time entries at submission time.",
+      "locked": "Locked",
+      "unlocked": "Unlocked",
+      "empty": "This revision has no snapshot lines.",
+      "projectSummary": "{hours} h, {entries} entries",
+      "lineCaption": "Timesheet snapshot source lines"
+    },
+    "lineTable": {
+      "date": "Date",
+      "description": "Description",
+      "hours": "Hours",
+      "rate": "Rate",
+      "amount": "Amount"
+    },
+    "rateSource": {
+      "MEMBER_DEFAULT": "central",
+      "PROJECT_OVERRIDE": "project override"
+    },
+    "events": {
+      "title": "Event history",
+      "description": "Submitted, review, rejection, and unlock events for this timesheet.",
+      "empty": "No events recorded for this timesheet.",
+      "types": {
+        "submitted": "Submitted",
+        "approved": "Approved",
+        "rejected": "Rejected",
+        "unlocked": "Unlocked",
+        "resubmitted": "Resubmitted",
+        "correction_opened": "Correction opened",
+        "cancellation_invoice_uploaded": "Cancellation invoice uploaded",
+        "corrected_revision_submitted": "Corrected revision submitted",
+        "invoice_uploaded": "Invoice uploaded",
+        "invoice_accepted": "Invoice accepted",
+        "invoice_rejected": "Invoice rejected",
+        "correction_closed": "Correction closed",
+        "paid": "Paid"
+      }
+    },
+    "actions": {
+      "title": "Review actions",
+      "description": "Approve a correct snapshot, or reject it to unlock the month for contractor edits.",
+      "approve": "Approve timesheet",
+      "rejectReason": "Rejection reason",
+      "rejectPlaceholder": "Explain what must be corrected before resubmission.",
+      "rejectAndUnlock": "Reject and unlock month",
+      "closed": "This timesheet is currently {status}.",
+      "locked": "The source month remains locked.",
+      "unlocked": "The source month is unlocked for contractor edits."
+    },
+    "invoice": {
+      "title": "Invoice reconciliation",
+      "description": "Compare the uploaded PDF against the approved timesheet total. There is no automatic matching.",
+      "awaitingDescription": "The contractor can upload the invoice after approval.",
+      "empty": "No invoice has been uploaded yet.",
+      "systemTotal": "System total",
+      "invoiceTotal": "Invoice total",
+      "matchState": "Match",
+      "match": "Matches",
+      "mismatch": "Mismatch",
+      "difference": "Difference: {amount}",
+      "currencyDifference": "System: {system}, invoice: {invoice}",
+      "metadata": "Invoice metadata",
+      "relatedDocuments": "Related invoice documents",
+      "file": "File",
+      "uploadedAt": "Uploaded",
+      "fileSize": "File size",
+      "rejectionReason": "Rejection reason",
+      "compareHint": "Review the PDF manually before accepting. Acceptance only confirms the uploaded invoice was checked.",
+      "openPdf": "Open PDF",
+      "pdfTitle": "Uploaded invoice PDF: {filename}",
+      "accept": "Accept invoice",
+      "rejectReason": "Invoice rejection reason",
+      "rejectPlaceholder": "Explain what must be corrected on the invoice.",
+      "reject": "Reject invoice",
+      "acceptedMessage": "The invoice has been accepted and is awaiting payment.",
+      "rejectedMessage": "The invoice was rejected. The contractor must upload a cancellation invoice before the corrected invoice.",
+      "readyForPayment": "Invoice accepted",
+      "markPaidDescription": "Mark this accepted timesheet as paid after the payment has been completed.",
+      "markPaid": "Mark as paid",
+      "paidMessage": "This timesheet has been marked as paid.",
+      "notReviewable": "This invoice cannot be reviewed in its current state.",
+      "role": {
+        "label": "Type",
+        "original": "Original",
+        "replacement": "Replacement",
+        "cancellation": "Cancellation",
+        "corrected": "Corrected"
+      },
+      "status": {
+        "uploaded": "Uploaded",
+        "accepted": "Accepted",
+        "rejected": "Rejected",
+        "replaced": "Replaced",
+        "cancelled": "Cancelled",
+        "deleted": "Deleted"
+      }
+    },
+    "actionResults": {
+      "approved": "Timesheet approved.",
+      "rejected": "Timesheet rejected and unlocked.",
+      "invoiceAccepted": "Invoice accepted.",
+      "invoiceRejected": "Invoice rejected.",
+      "paid": "Timesheet marked as paid.",
+      "invalid": "The selected timesheet is invalid.",
+      "notFound": "Timesheet not found.",
+      "invoiceNotFound": "Invoice not found.",
+      "acceptedInvoiceNotFound": "Accepted invoice not found.",
+      "reasonRequired": "Add a rejection reason before rejecting.",
+      "invoiceReasonRequired": "Add a rejection reason before rejecting the invoice.",
+      "invoicePackageIncomplete": "The replacement invoice cannot be accepted until the cancellation invoice is uploaded.",
+      "notSubmitted": "Only submitted timesheets can be reviewed.",
+      "notAccepted": "Only accepted timesheets can be marked as paid.",
+      "notInvoiced": "Only uploaded invoices can be reviewed.",
+      "invoiceRevisionChanged": "The invoice does not belong to the current timesheet revision.",
+      "notAllowed": "You are not allowed to review this timesheet.",
+      "databaseUnavailable": "Database unavailable. Try again later.",
+      "failed": "The timesheet review action failed."
     }
   },
   "DashboardCards": {
@@ -929,16 +1308,24 @@
       "addPeriod": "Add period",
       "addOverride": "Add override",
       "addOverridePeriod": "Add override period",
+      "replace": "Replace",
+      "replaceFromDate": "Replace from date",
+      "replaceOverrideFromDate": "Replace override from date",
       "cancel": "Cancel"
     },
     "fields": {
       "project": "Project",
       "validFrom": "Valid from",
+      "replaceFrom": "Replace from",
       "validTo": "Valid to",
       "hourlyRate": "Hourly rate",
       "currency": "Currency",
       "reason": "Reason / note",
       "reasonPlaceholder": "Why is this rate changing?"
+    },
+    "replaceForm": {
+      "title": "Replace this period from a date",
+      "description": "If the date is the period start, this period is replaced in place. Later dates split the period and start a replacement from that date."
     },
     "timeline": {
       "range": "{from} to {to}",
@@ -951,12 +1338,16 @@
   "AdminRatesActions": {
     "success": {
       "memberRateCreated": "Member rate period created.",
-      "assignmentOverrideCreated": "Assignment override rate period created."
+      "assignmentOverrideCreated": "Assignment override rate period created.",
+      "memberRateReplaced": "Member rate period replaced.",
+      "assignmentOverrideReplaced": "Assignment override rate period replaced."
     },
     "errors": {
       "fixFields": "Fix the highlighted rate fields and try again.",
       "memberRateFailed": "The member rate could not be created.",
       "assignmentOverrideFailed": "The assignment override rate could not be created.",
+      "memberRateReplaceFailed": "The member rate could not be replaced.",
+      "assignmentOverrideReplaceFailed": "The assignment override rate could not be replaced.",
       "databaseUnavailable": "The database is not reachable. Try again later or contact support.",
       "rateLinkFailed": "The rate could not be linked to the selected member or assignment. Refresh and try again.",
       "ratesUnavailable": "Rates are temporarily unavailable. Try again later or contact support."
@@ -964,6 +1355,7 @@
     "validation": {
       "validDate": "Choose a valid date.",
       "rateStartRequired": "Rate start date is required.",
+      "replacementStartRequired": "Replacement start date is required.",
       "validStartDate": "Choose a valid start date.",
       "hourlyRateRequired": "Hourly rate is required.",
       "hourlyRateFormat": "Enter a non-negative amount with up to 2 decimals.",
@@ -1017,6 +1409,75 @@
       "after": "After",
       "noData": "No data"
     }
+  },
+  "AdminSystem": {
+    "eyebrow": "Admin",
+    "title": "System check",
+    "subtitle": "Verify deployment configuration and external services before manual testing.",
+    "actions": {
+      "refresh": "Refresh",
+      "openJson": "Open JSON"
+    },
+    "stats": {
+      "overall": "Overall",
+      "passing": "Passing",
+      "warnings": "Warnings",
+      "failing": "Failing"
+    },
+    "statuses": {
+      "pass": "Pass",
+      "warning": "Warning",
+      "fail": "Fail"
+    },
+    "checks": {
+      "title": "Environment readiness",
+      "description": "Last checked at {checkedAt}. Object storage and PDF rendering are tested with temporary probes.",
+      "items": {
+        "application": {
+          "title": "Application configuration"
+        },
+        "database": {
+          "title": "Database"
+        },
+        "objectStorage": {
+          "title": "Object storage"
+        },
+        "email": {
+          "title": "Email delivery"
+        },
+        "googleOAuth": {
+          "title": "Google OAuth"
+        },
+        "typst": {
+          "title": "Typst PDF renderer"
+        }
+      }
+    },
+    "messages": {
+      "ok": "The check completed successfully.",
+      "missingEnv": "One or more required environment variables are missing.",
+      "databaseUnavailable": "The database query failed.",
+      "storageUnsupportedProvider": "The configured object storage provider is not supported.",
+      "storageProbeFailed": "The object storage write, read, or delete probe failed.",
+      "emailConsole": "Email delivery is in console mode. This is useful locally, but deployed QA normally needs SMTP.",
+      "emailInvalidMode": "The email delivery mode is not recognized, so the app will fall back to console mode.",
+      "emailSmtpMissingHost": "SMTP mode is enabled, but SMTP_HOST is missing.",
+      "emailSmtpDefaultFrom": "SMTP is configured, but AUTH_EMAIL_FROM still uses the local default sender.",
+      "googleDisabled": "Google OAuth is not configured. This is acceptable only if Google sign-in is intentionally disabled for this environment.",
+      "googlePartialConfig": "Google OAuth is partially configured. Client id, client secret, and allowed domains must all be present.",
+      "typstProbeFailed": "Typst could not compile the PDF probe. Report PDF exports will fail until the renderer is available."
+    },
+    "details": {
+      "checkedAt": "Checked at",
+      "mode": "Mode",
+      "from": "From",
+      "provider": "Provider",
+      "allowedDomains": "Allowed domains",
+      "probeObject": "Probe object",
+      "probePdf": "PDF probe"
+    },
+    "duration": "{durationMs} ms",
+    "missingEnv": "Missing: {names}"
   },
   "TimeTracking": {
     "view": {
@@ -1398,6 +1859,78 @@
       "copyFailed": "Could not copy {label}.",
       "currentPasswordRequired": "Enter your current password to manage authenticator-app verification.",
       "invalidPassword": "Current password is required or incorrect."
+    }
+  },
+  "AdminReports": {
+    "eyebrow": "Admin",
+    "title": "Reports & export",
+    "subtitle": "Filter tracked time, inspect totals, and prepare shareable report exports.",
+    "export": {
+      "action": "Export PDF",
+      "defaultTitle": "Time report",
+      "titleLabel": "Export title",
+      "modeLabel": "Content",
+      "modeCostFree": "Cost-free",
+      "modeInternal": "Internal"
+    },
+    "filters": {
+      "start": "From",
+      "end": "To",
+      "project": "Project",
+      "group": "Project group",
+      "member": "Member",
+      "view": "View",
+      "all": "All",
+      "projectAll": "All projects",
+      "groupAll": "All groups",
+      "memberAll": "All members",
+      "apply": "Apply filters",
+      "clear": "Clear"
+    },
+    "period": {
+      "month": "Month",
+      "week": "Week",
+      "day": "Day",
+      "year": "Year",
+      "custom": "Custom"
+    },
+    "views": {
+      "user": "User view",
+      "project": "Project view"
+    },
+    "warnings": {
+      "timezone": "Member-local date boundaries. Time zones: {timezones}",
+      "noTimezone": "none"
+    },
+    "stats": {
+      "totalHours": "Total hours",
+      "period": "Period",
+      "people": "People",
+      "projects": "Projects"
+    },
+    "charts": {
+      "time": "Hours over the period",
+      "timeDescription": "Grouped by week from the selected date range.",
+      "users": "User breakdown",
+      "projects": "Project breakdown",
+      "breakdownDescription": "Share of the selected tracked time."
+    },
+    "detail": {
+      "title": "Itemized breakdown",
+      "description": "Cost-free report data from time entries. Rates and costs are reserved for internal export mode.",
+      "internalProject": "Internal"
+    },
+    "table": {
+      "date": "Date",
+      "project": "Project",
+      "member": "Member",
+      "description": "Description",
+      "hours": "Hours",
+      "noDescription": "No description"
+    },
+    "empty": {
+      "title": "No tracked time matches these filters.",
+      "description": "Adjust the period or remove a filter."
     }
   },
   "SettingsActions": {

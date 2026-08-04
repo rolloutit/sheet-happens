@@ -23,3 +23,21 @@ export type CreateAssignmentOverrideRateActionInput = {
   currencyCode: string;
   note: string;
 };
+
+export type ReplaceMemberDefaultRateActionInput = {
+  memberId: string;
+  ratePeriodId: string;
+  validFrom: string;
+  hourlyRate: string;
+  currencyCode: string;
+  note: string;
+};
+
+export type ReplaceAssignmentOverrideRateActionInput = {
+  projectAssignmentId: string;
+  ratePeriodId: string;
+  validFrom: string;
+  hourlyRate: string;
+  currencyCode: string;
+  note: string;
+};

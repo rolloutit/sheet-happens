@@ -29,6 +29,20 @@ export type CreateAssignmentOverrideRateInput = RatePeriodInput & {
   requestMetadata?: RateRequestMetadata;
 };
 
+export type ReplaceMemberDefaultRateFromDateInput = Omit<RatePeriodInput, "validTo"> & {
+  memberId: string;
+  ratePeriodId: string;
+  actorMemberId: string;
+  requestMetadata?: RateRequestMetadata;
+};
+
+export type ReplaceAssignmentOverrideRateFromDateInput = Omit<RatePeriodInput, "validTo"> & {
+  projectAssignmentId: string;
+  ratePeriodId: string;
+  actorMemberId: string;
+  requestMetadata?: RateRequestMetadata;
+};
+
 export type AdminRatePeriodRow = {
   id: string;
   validFrom: string;
@@ -131,9 +145,7 @@ type RateManagementTransaction = {
       where: {
         id: string;
       };
-      data: {
-        validTo: Date;
-      };
+      data: RatePeriodUpdateData;
       select: RatePeriodSelect;
     }): Promise<RatePeriodRecord>;
   };
@@ -163,11 +175,19 @@ type RateManagementTransaction = {
       where: {
         id: string;
       };
-      data: {
-        validTo: Date;
-      };
+      data: RatePeriodUpdateData;
       select: RatePeriodSelect;
     }): Promise<RatePeriodRecord>;
+  };
+  timesheetSnapshotLine: {
+    count(args: {
+      where: {
+        sourceRatePeriodId: string;
+        localDate: {
+          gte: Date;
+        };
+      };
+    }): Promise<number>;
   };
   auditLog: {
     create(args: {
@@ -303,6 +323,13 @@ type NormalizedRateInput = {
   hourlyRate: string;
   currencyCode: string;
   note: string | null;
+};
+
+type RatePeriodUpdateData = {
+  validTo?: Date | null;
+  hourlyRate?: string;
+  currencyCode?: string;
+  note?: string | null;
 };
 
 const memberSelect = {
@@ -581,6 +608,250 @@ export async function createAssignmentOverrideRate(
   });
 }
 
+export async function replaceMemberDefaultRateFromDate(
+  input: ReplaceMemberDefaultRateFromDateInput,
+  deps: { db?: RateManagementDb } = {},
+) {
+  const db = deps.db ?? (prisma as unknown as RateManagementDb);
+  const replacementInput = normalizeRateInput({
+    validFrom: input.validFrom,
+    hourlyRate: input.hourlyRate,
+    currencyCode: input.currencyCode,
+    note: input.note,
+  });
+
+  return db.$transaction(async (tx) => {
+    await findRateMember(tx, input.memberId);
+    const existingRates = await tx.memberDefaultRatePeriod.findMany({
+      where: {
+        memberId: input.memberId,
+      },
+      orderBy: [{ validFrom: "asc" }],
+      select: ratePeriodSelect,
+    });
+    const targetRate = findRatePeriodForReplacement(existingRates, input.ratePeriodId);
+    const replacementRate = buildReplacementRate(targetRate, replacementInput);
+
+    await assertRatePeriodCanBeReplaced(tx, targetRate, replacementRate.validFrom);
+    assertNoRateOverlap(
+      existingRates.filter((rate) => rate.id !== targetRate.id),
+      replacementRate,
+    );
+
+    if (startsAtSameDate(targetRate, replacementRate)) {
+      const updatedRate = await tx.memberDefaultRatePeriod.update({
+        where: {
+          id: targetRate.id,
+        },
+        data: getInPlaceReplacementUpdateData(replacementRate),
+        select: ratePeriodSelect,
+      });
+
+      await tx.auditLog.create({
+        data: {
+          actorMemberId: input.actorMemberId,
+          action: "rate.member_default.replaced_in_place",
+          targetType: "member_default_rate_period",
+          targetId: targetRate.id,
+          before: serializeRatePeriodRecord(targetRate),
+          after: serializeRatePeriodRecord(updatedRate),
+          ...input.requestMetadata,
+        },
+      });
+
+      return {
+        ratePeriodId: updatedRate.id,
+        replacedRatePeriodId: targetRate.id,
+      };
+    }
+
+    const created = await tx.memberDefaultRatePeriod.create({
+      data: {
+        memberId: input.memberId,
+        ...replacementRate,
+        createdByMemberId: input.actorMemberId,
+      },
+      select: {
+        id: true,
+      },
+    });
+
+    const closedRate = await tx.memberDefaultRatePeriod.update({
+      where: {
+        id: targetRate.id,
+      },
+      data: {
+        validTo: replacementRate.validFrom,
+      },
+      select: ratePeriodSelect,
+    });
+
+    await tx.auditLog.create({
+      data: {
+        actorMemberId: input.actorMemberId,
+        action: "rate.member_default.closed_for_replacement",
+        targetType: "member_default_rate_period",
+        targetId: targetRate.id,
+        before: serializeRatePeriodRecord(targetRate),
+        after: {
+          ...serializeRatePeriodRecord(closedRate),
+          replacementRatePeriodId: created.id,
+        },
+        ...input.requestMetadata,
+      },
+    });
+
+    await tx.auditLog.create({
+      data: {
+        actorMemberId: input.actorMemberId,
+        action: "rate.member_default.replacement_created",
+        targetType: "member_default_rate_period",
+        targetId: created.id,
+        after: {
+          memberId: input.memberId,
+          replacedRatePeriodId: targetRate.id,
+          ...serializeRateInput(replacementRate),
+        },
+        ...input.requestMetadata,
+      },
+    });
+
+    return {
+      ratePeriodId: created.id,
+      replacedRatePeriodId: targetRate.id,
+    };
+  });
+}
+
+export async function replaceAssignmentOverrideRateFromDate(
+  input: ReplaceAssignmentOverrideRateFromDateInput,
+  deps: { db?: RateManagementDb } = {},
+) {
+  const db = deps.db ?? (prisma as unknown as RateManagementDb);
+  const replacementInput = normalizeRateInput({
+    validFrom: input.validFrom,
+    hourlyRate: input.hourlyRate,
+    currencyCode: input.currencyCode,
+    note: input.note,
+  });
+
+  return db.$transaction(async (tx) => {
+    const assignment = await findRateAssignment(tx, input.projectAssignmentId);
+
+    if (assignment.member.currentProfile !== "CONTRACTOR") {
+      throw new RateManagementError(
+        "Only contractor assignments can have project-specific override rates.",
+      );
+    }
+
+    const existingRates = await tx.assignmentRatePeriod.findMany({
+      where: {
+        projectAssignmentId: input.projectAssignmentId,
+      },
+      orderBy: [{ validFrom: "asc" }],
+      select: ratePeriodSelect,
+    });
+    const targetRate = findRatePeriodForReplacement(existingRates, input.ratePeriodId);
+    const replacementRate = buildReplacementRate(targetRate, replacementInput);
+
+    await assertRatePeriodCanBeReplaced(tx, targetRate, replacementRate.validFrom);
+    assertNoRateOverlap(
+      existingRates.filter((rate) => rate.id !== targetRate.id),
+      replacementRate,
+    );
+
+    if (startsAtSameDate(targetRate, replacementRate)) {
+      const updatedRate = await tx.assignmentRatePeriod.update({
+        where: {
+          id: targetRate.id,
+        },
+        data: getInPlaceReplacementUpdateData(replacementRate),
+        select: ratePeriodSelect,
+      });
+
+      await tx.auditLog.create({
+        data: {
+          actorMemberId: input.actorMemberId,
+          action: "rate.assignment_override.replaced_in_place",
+          targetType: "assignment_rate_period",
+          targetId: targetRate.id,
+          before: serializeRatePeriodRecord(targetRate),
+          after: {
+            projectAssignmentId: input.projectAssignmentId,
+            memberId: assignment.memberId,
+            projectId: assignment.projectId,
+            ...serializeRatePeriodRecord(updatedRate),
+          },
+          ...input.requestMetadata,
+        },
+      });
+
+      return {
+        ratePeriodId: updatedRate.id,
+        replacedRatePeriodId: targetRate.id,
+      };
+    }
+
+    const created = await tx.assignmentRatePeriod.create({
+      data: {
+        projectAssignmentId: input.projectAssignmentId,
+        ...replacementRate,
+        createdByMemberId: input.actorMemberId,
+      },
+      select: {
+        id: true,
+      },
+    });
+
+    const closedRate = await tx.assignmentRatePeriod.update({
+      where: {
+        id: targetRate.id,
+      },
+      data: {
+        validTo: replacementRate.validFrom,
+      },
+      select: ratePeriodSelect,
+    });
+
+    await tx.auditLog.create({
+      data: {
+        actorMemberId: input.actorMemberId,
+        action: "rate.assignment_override.closed_for_replacement",
+        targetType: "assignment_rate_period",
+        targetId: targetRate.id,
+        before: serializeRatePeriodRecord(targetRate),
+        after: {
+          ...serializeRatePeriodRecord(closedRate),
+          replacementRatePeriodId: created.id,
+        },
+        ...input.requestMetadata,
+      },
+    });
+
+    await tx.auditLog.create({
+      data: {
+        actorMemberId: input.actorMemberId,
+        action: "rate.assignment_override.replacement_created",
+        targetType: "assignment_rate_period",
+        targetId: created.id,
+        after: {
+          projectAssignmentId: input.projectAssignmentId,
+          memberId: assignment.memberId,
+          projectId: assignment.projectId,
+          replacedRatePeriodId: targetRate.id,
+          ...serializeRateInput(replacementRate),
+        },
+        ...input.requestMetadata,
+      },
+    });
+
+    return {
+      ratePeriodId: created.id,
+      replacedRatePeriodId: targetRate.id,
+    };
+  });
+}
+
 function normalizeRateInput(input: RatePeriodInput): NormalizedRateInput {
   const validFrom = normalizeDateOnly(input.validFrom, "Rate start date is required.");
   const validTo = input.validTo
@@ -653,6 +924,89 @@ async function findRateAssignment(tx: RateManagementTransaction, assignmentId: s
   }
 
   return assignment;
+}
+
+function findRatePeriodForReplacement(existingRates: RatePeriodRecord[], ratePeriodId: string) {
+  const rate = existingRates.find((existingRate) => existingRate.id === ratePeriodId);
+
+  if (!rate) {
+    throw new RateManagementError("Rate period does not exist.");
+  }
+
+  return rate;
+}
+
+function buildReplacementRate(
+  targetRate: RatePeriodRecord,
+  replacementInput: NormalizedRateInput,
+): NormalizedRateInput {
+  assertReplacementStartInsideTarget(targetRate, replacementInput.validFrom);
+  assertReplacementCurrencyBoundary(targetRate, replacementInput);
+
+  return {
+    ...replacementInput,
+    validTo: targetRate.validTo,
+  };
+}
+
+function assertReplacementStartInsideTarget(targetRate: RatePeriodRecord, replacementStart: Date) {
+  if (replacementStart < targetRate.validFrom) {
+    throw new RateManagementError(
+      "Replacement start date must be on or after the rate period start.",
+    );
+  }
+
+  if (targetRate.validTo && replacementStart >= targetRate.validTo) {
+    throw new RateManagementError(
+      "Replacement start date must be inside the selected rate period.",
+    );
+  }
+}
+
+function startsAtSameDate(targetRate: RatePeriodRecord, replacementRate: NormalizedRateInput) {
+  return targetRate.validFrom.getTime() === replacementRate.validFrom.getTime();
+}
+
+function getInPlaceReplacementUpdateData(replacementRate: NormalizedRateInput) {
+  return {
+    hourlyRate: replacementRate.hourlyRate,
+    currencyCode: replacementRate.currencyCode,
+    note: replacementRate.note,
+  } satisfies RatePeriodUpdateData;
+}
+
+function assertReplacementCurrencyBoundary(
+  targetRate: RatePeriodRecord,
+  replacementRate: NormalizedRateInput,
+) {
+  if (targetRate.currencyCode === replacementRate.currencyCode) return;
+
+  if (replacementRate.validFrom.getUTCDate() !== 1) {
+    throw new RateManagementError(
+      "Currency-changing replacements must start on the first day of a month.",
+    );
+  }
+}
+
+async function assertRatePeriodCanBeReplaced(
+  tx: RateManagementTransaction,
+  targetRate: RatePeriodRecord,
+  replacementStart: Date,
+) {
+  const usedSnapshotLineCount = await tx.timesheetSnapshotLine.count({
+    where: {
+      sourceRatePeriodId: targetRate.id,
+      localDate: {
+        gte: replacementStart,
+      },
+    },
+  });
+
+  if (usedSnapshotLineCount > 0) {
+    throw new RateManagementError(
+      "This rate period is already used by submitted timesheets from the replacement date.",
+    );
+  }
 }
 
 function assertNoRateOverlap(existingRates: RatePeriodRecord[], nextRate: NormalizedRateInput) {

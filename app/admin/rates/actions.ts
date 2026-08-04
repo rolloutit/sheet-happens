@@ -13,6 +13,8 @@ import {
   createAssignmentOverrideRate,
   createMemberDefaultRate,
   RateManagementError,
+  replaceAssignmentOverrideRateFromDate,
+  replaceMemberDefaultRateFromDate,
   type RateRequestMetadata,
 } from "@/src/server/rates";
 import type {
@@ -20,6 +22,8 @@ import type {
   CreateMemberDefaultRateActionInput,
   RateActionState,
   RateFormField,
+  ReplaceAssignmentOverrideRateActionInput,
+  ReplaceMemberDefaultRateActionInput,
 } from "./actions.types";
 
 type AdminRatesActionsTranslator = Awaited<ReturnType<typeof getTranslations>>;
@@ -59,6 +63,26 @@ function createRateFormSchema(t: AdminRatesActionsTranslator) {
         });
       }
     });
+}
+
+function createRateReplacementFormSchema(t: AdminRatesActionsTranslator) {
+  return z.object({
+    validFrom: z
+      .string()
+      .trim()
+      .min(1, t("validation.replacementStartRequired"))
+      .refine(isDateInputValue, t("validation.validStartDate")),
+    hourlyRate: z
+      .string()
+      .trim()
+      .min(1, t("validation.hourlyRateRequired"))
+      .regex(/^\d+(\.\d{1,2})?$/, t("validation.hourlyRateFormat")),
+    currencyCode: z
+      .string()
+      .transform(normalizeCurrencyCode)
+      .refine(isSupportedCurrencyCode, t("validation.supportedCurrency")),
+    note: z.string().trim().max(1000, t("validation.noteMax")),
+  });
 }
 
 export async function createMemberDefaultRateAction(
@@ -131,6 +155,79 @@ export async function createAssignmentOverrideRateAction(
     };
   } catch (error) {
     return mapRateActionError(error, t("errors.assignmentOverrideFailed"), t);
+  }
+}
+
+export async function replaceMemberDefaultRateAction(
+  input: ReplaceMemberDefaultRateActionInput,
+): Promise<RateActionState> {
+  const t = await getTranslations("AdminRatesActions");
+  const parsed = createRateReplacementFormSchema(t).safeParse(input);
+
+  if (!parsed.success) {
+    return {
+      status: "error",
+      message: t("errors.fixFields"),
+      fieldErrors: getRateFieldErrors(parsed.error),
+    };
+  }
+
+  try {
+    const { member: admin } = await requireAdminAppMemberForAction();
+    await replaceMemberDefaultRateFromDate({
+      ...parsed.data,
+      memberId: input.memberId,
+      ratePeriodId: input.ratePeriodId,
+      validFrom: parseRequiredDate(parsed.data.validFrom),
+      actorMemberId: admin.id,
+      requestMetadata: await getRateRequestMetadata(),
+    });
+
+    revalidatePath("/admin/rates");
+
+    return {
+      status: "success",
+      message: t("success.memberRateReplaced"),
+    };
+  } catch (error) {
+    return mapRateActionError(error, t("errors.memberRateReplaceFailed"), t);
+  }
+}
+
+export async function replaceAssignmentOverrideRateAction(
+  input: ReplaceAssignmentOverrideRateActionInput,
+): Promise<RateActionState> {
+  const t = await getTranslations("AdminRatesActions");
+  const parsed = createRateReplacementFormSchema(t).safeParse(input);
+
+  if (!parsed.success) {
+    return {
+      status: "error",
+      message: t("errors.fixFields"),
+      fieldErrors: getRateFieldErrors(parsed.error),
+    };
+  }
+
+  try {
+    const { member: admin } = await requireAdminAppMemberForAction();
+    await replaceAssignmentOverrideRateFromDate({
+      ...parsed.data,
+      projectAssignmentId: input.projectAssignmentId,
+      ratePeriodId: input.ratePeriodId,
+      validFrom: parseRequiredDate(parsed.data.validFrom),
+      actorMemberId: admin.id,
+      requestMetadata: await getRateRequestMetadata(),
+    });
+
+    revalidatePath("/admin/projects");
+    revalidatePath("/admin/rates");
+
+    return {
+      status: "success",
+      message: t("success.assignmentOverrideReplaced"),
+    };
+  } catch (error) {
+    return mapRateActionError(error, t("errors.assignmentOverrideReplaceFailed"), t);
   }
 }
 

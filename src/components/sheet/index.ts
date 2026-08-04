@@ -52,6 +52,8 @@ export type {
 } from "./InfoPageEditor";
 export { ManagementViews } from "./ManagementViews";
 export type { ManagementView, ManagementViewsProps } from "./ManagementViews";
+export { MarkdownArticle } from "./MarkdownArticle";
+export type { MarkdownArticleProps } from "./MarkdownArticle";
 export { MonthRow } from "./MonthRow";
 export type { MonthRowProps } from "./MonthRow";
 export { NotificationPreferences } from "./NotificationPreferences";

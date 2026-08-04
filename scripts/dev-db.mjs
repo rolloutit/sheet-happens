@@ -17,6 +17,14 @@ const defaultDatabaseUrl =
   "postgresql://sheet_happens:sheet_happens@localhost:5432/sheet_happens?schema=public";
 const databaseUrl = process.env.DATABASE_URL || defaultDatabaseUrl;
 const appUrl = (process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000").replace(/\/$/, "");
+const objectStorage = {
+  endpoint: process.env.S3_ENDPOINT || "http://localhost:9000",
+  bucket: process.env.S3_BUCKET || "sheet-happens-dev",
+  accessKeyId: process.env.S3_ACCESS_KEY_ID || "sheet_happens",
+  secretAccessKey: process.env.S3_SECRET_ACCESS_KEY || "sheet_happens",
+  region: process.env.S3_REGION || "us-east-1",
+  forcePathStyle: process.env.S3_FORCE_PATH_STYLE || "true",
+};
 
 const seedInvitations = [
   {
@@ -96,7 +104,8 @@ try {
   }
 
   if (command !== "seed") {
-    await dockerCompose(["up", "-d", "db"]);
+    await dockerCompose(["up", "-d", "db", "minio"]);
+    await dockerCompose(["run", "--rm", "minio-init"]);
     await waitForDatabase();
     await ensureExtensions();
     await prismaDbPush();
@@ -315,6 +324,14 @@ function printSummary() {
   console.log("");
   console.log("Dev database is ready.");
   console.log(`DATABASE_URL=${databaseUrl}`);
+  console.log("");
+  console.log("Dev object storage is ready.");
+  console.log(`S3_ENDPOINT=${objectStorage.endpoint}`);
+  console.log(`S3_REGION=${objectStorage.region}`);
+  console.log(`S3_BUCKET=${objectStorage.bucket}`);
+  console.log(`S3_ACCESS_KEY_ID=${objectStorage.accessKeyId}`);
+  console.log(`S3_SECRET_ACCESS_KEY=${objectStorage.secretAccessKey}`);
+  console.log(`S3_FORCE_PATH_STYLE=${objectStorage.forcePathStyle}`);
   console.log("");
   console.log("Seeded invite links:");
 

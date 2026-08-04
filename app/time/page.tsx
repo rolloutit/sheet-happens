@@ -1,5 +1,6 @@
 import { AppShell } from "@/src/components/layout/AppShell";
 import {
+  mapMemberToShellProfile,
   mapMemberToShellRole,
   mapMemberToShellUser,
   requireActiveAppMember,
@@ -35,6 +36,7 @@ export default async function TimePage({ searchParams }: TimePageProps) {
     <AppShell
       current="time"
       role={mapMemberToShellRole(member)}
+      profile={mapMemberToShellProfile(member)}
       user={mapMemberToShellUser(member)}
       timer={
         week.runningTimer

@@ -9,7 +9,11 @@ import {
   CardTitle,
 } from "@/src/components/ui/Card";
 import { listAuditLogsForAdmin, type AuditLogSearchParams } from "@/src/server/audit";
-import { mapMemberToShellUser, requireAdminAppMember } from "@/src/server/auth/app-access";
+import {
+  mapMemberToShellProfile,
+  mapMemberToShellUser,
+  requireAdminAppMember,
+} from "@/src/server/auth/app-access";
 import { AdminAuditLogClient } from "./AdminAuditLogClient";
 
 export const dynamic = "force-dynamic";
@@ -27,7 +31,12 @@ export default async function AdminAuditPage({ searchParams }: AdminAuditPagePro
   });
 
   return (
-    <AppShell current="audit" role="admin" user={mapMemberToShellUser(admin)}>
+    <AppShell
+      current="audit"
+      role="admin"
+      profile={mapMemberToShellProfile(admin)}
+      user={mapMemberToShellUser(admin)}
+    >
       <section className="mx-auto grid w-full max-w-[92rem] gap-6 px-4 py-8 sm:px-6 lg:px-8">
         <div className="flex flex-col gap-2">
           <p className="font-ui text-sm font-medium uppercase tracking-[0.18em] text-accent">

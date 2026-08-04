@@ -6,6 +6,8 @@ import {
   listAssignmentRatesForAdmin,
   listMemberRatesForAdmin,
   RateManagementError,
+  replaceAssignmentOverrideRateFromDate,
+  replaceMemberDefaultRateFromDate,
 } from "./rates";
 
 type TestMember = {
@@ -101,6 +103,7 @@ function createRateDb(
     assignmentRates?: TestRatePeriod[];
     members?: Array<TestMember & { defaultRatePeriods: TestRatePeriod[] }>;
     assignments?: Array<TestAssignment & { overrideRates: TestRatePeriod[] }>;
+    usedSnapshotLineCount?: number;
   } = {},
 ) {
   const tx = {
@@ -119,7 +122,10 @@ function createRateDb(
 
         return Promise.resolve({
           ...existingRate,
-          validTo: data.validTo,
+          validTo: "validTo" in data ? data.validTo : existingRate.validTo,
+          hourlyRate: "hourlyRate" in data ? data.hourlyRate : existingRate.hourlyRate,
+          currencyCode: "currencyCode" in data ? data.currencyCode : existingRate.currencyCode,
+          note: "note" in data ? data.note : existingRate.note,
         });
       }),
     },
@@ -132,9 +138,15 @@ function createRateDb(
 
         return Promise.resolve({
           ...existingRate,
-          validTo: data.validTo,
+          validTo: "validTo" in data ? data.validTo : existingRate.validTo,
+          hourlyRate: "hourlyRate" in data ? data.hourlyRate : existingRate.hourlyRate,
+          currencyCode: "currencyCode" in data ? data.currencyCode : existingRate.currencyCode,
+          note: "note" in data ? data.note : existingRate.note,
         });
       }),
+    },
+    timesheetSnapshotLine: {
+      count: vi.fn().mockResolvedValue(overrides.usedSnapshotLineCount ?? 0),
     },
     auditLog: {
       create: vi.fn().mockResolvedValue({ id: "audit-1" }),
@@ -449,6 +461,187 @@ describe("rate management services", () => {
     );
   });
 
+  it("replaces a central member rate from an in-period date", async () => {
+    const { db, tx } = createRateDb({
+      memberRates: [
+        {
+          ...baseRate,
+          validFrom: new Date("2026-06-01T00:00:00.000Z"),
+          validTo: null,
+          currencyCode: "HUF",
+        },
+      ],
+    });
+
+    const result = await replaceMemberDefaultRateFromDate(
+      {
+        memberId: "member-1",
+        ratePeriodId: "rate-1",
+        validFrom: new Date("2026-07-01T00:00:00.000Z"),
+        hourlyRate: "100",
+        currencyCode: "EUR",
+        note: "Correct July currency",
+        actorMemberId: "admin-1",
+      },
+      { db },
+    );
+
+    expect(result).toEqual({
+      ratePeriodId: "member-rate-created",
+      replacedRatePeriodId: "rate-1",
+    });
+    expect(tx.timesheetSnapshotLine.count).toHaveBeenCalledWith({
+      where: {
+        sourceRatePeriodId: "rate-1",
+        localDate: {
+          gte: new Date("2026-07-01T00:00:00.000Z"),
+        },
+      },
+    });
+    expect(tx.memberDefaultRatePeriod.update).toHaveBeenCalledWith({
+      where: {
+        id: "rate-1",
+      },
+      data: {
+        validTo: new Date("2026-07-01T00:00:00.000Z"),
+      },
+      select: expect.any(Object),
+    });
+    expect(tx.memberDefaultRatePeriod.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          memberId: "member-1",
+          validFrom: new Date("2026-07-01T00:00:00.000Z"),
+          validTo: null,
+          hourlyRate: "100.00",
+          currencyCode: "EUR",
+          note: "Correct July currency",
+          createdByMemberId: "admin-1",
+        }),
+      }),
+    );
+    expect(tx.auditLog.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          action: "rate.member_default.closed_for_replacement",
+          targetType: "member_default_rate_period",
+          targetId: "rate-1",
+          after: expect.objectContaining({
+            validTo: "2026-07-01",
+            replacementRatePeriodId: "member-rate-created",
+          }),
+        }),
+      }),
+    );
+    expect(tx.auditLog.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          action: "rate.member_default.replacement_created",
+          targetType: "member_default_rate_period",
+          targetId: "member-rate-created",
+          after: expect.objectContaining({
+            memberId: "member-1",
+            replacedRatePeriodId: "rate-1",
+            validFrom: "2026-07-01",
+            currencyCode: "EUR",
+          }),
+        }),
+      }),
+    );
+  });
+
+  it("replaces a central member rate in place from the same start date", async () => {
+    const { db, tx } = createRateDb({
+      memberRates: [
+        {
+          ...baseRate,
+          currencyCode: "HUF",
+        },
+      ],
+    });
+
+    const result = await replaceMemberDefaultRateFromDate(
+      {
+        memberId: "member-1",
+        ratePeriodId: "rate-1",
+        validFrom: new Date("2026-07-01T00:00:00.000Z"),
+        hourlyRate: "100",
+        currencyCode: "EUR",
+        note: "Correct July currency",
+        actorMemberId: "admin-1",
+      },
+      { db },
+    );
+
+    expect(result).toEqual({
+      ratePeriodId: "rate-1",
+      replacedRatePeriodId: "rate-1",
+    });
+    expect(tx.memberDefaultRatePeriod.create).not.toHaveBeenCalled();
+    expect(tx.memberDefaultRatePeriod.update).toHaveBeenCalledWith({
+      where: {
+        id: "rate-1",
+      },
+      data: {
+        hourlyRate: "100.00",
+        currencyCode: "EUR",
+        note: "Correct July currency",
+      },
+      select: expect.any(Object),
+    });
+    expect(tx.auditLog.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          action: "rate.member_default.replaced_in_place",
+          targetType: "member_default_rate_period",
+          targetId: "rate-1",
+          before: expect.objectContaining({
+            currencyCode: "HUF",
+            validFrom: "2026-07-01",
+          }),
+          after: expect.objectContaining({
+            currencyCode: "EUR",
+            hourlyRate: "100.00",
+            validFrom: "2026-07-01",
+            validTo: null,
+          }),
+        }),
+      }),
+    );
+  });
+
+  it("rejects central rate replacement when submitted snapshots use the affected dates", async () => {
+    const { db, tx } = createRateDb({
+      memberRates: [
+        {
+          ...baseRate,
+          validFrom: new Date("2026-06-01T00:00:00.000Z"),
+          validTo: null,
+        },
+      ],
+      usedSnapshotLineCount: 2,
+    });
+
+    await expect(
+      replaceMemberDefaultRateFromDate(
+        {
+          memberId: "member-1",
+          ratePeriodId: "rate-1",
+          validFrom: new Date("2026-07-01T00:00:00.000Z"),
+          hourlyRate: "100",
+          currencyCode: "EUR",
+          actorMemberId: "admin-1",
+        },
+        { db },
+      ),
+    ).rejects.toThrow(
+      "This rate period is already used by submitted timesheets from the replacement date.",
+    );
+
+    expect(tx.memberDefaultRatePeriod.update).not.toHaveBeenCalled();
+    expect(tx.memberDefaultRatePeriod.create).not.toHaveBeenCalled();
+  });
+
   it("lists assignment override rates", async () => {
     const { db } = createRateDb({
       assignments: [
@@ -579,6 +772,181 @@ describe("rate management services", () => {
         }),
       }),
     );
+  });
+
+  it("replaces an assignment override from a month boundary", async () => {
+    const { db, tx } = createRateDb({
+      assignmentRates: [
+        {
+          ...baseRate,
+          validFrom: new Date("2026-06-01T00:00:00.000Z"),
+          validTo: null,
+          currencyCode: "HUF",
+        },
+      ],
+    });
+
+    const result = await replaceAssignmentOverrideRateFromDate(
+      {
+        projectAssignmentId: "assignment-1",
+        ratePeriodId: "rate-1",
+        validFrom: new Date("2026-07-01T00:00:00.000Z"),
+        hourlyRate: 107,
+        currencyCode: "EUR",
+        note: "Correct July override",
+        actorMemberId: "admin-1",
+      },
+      { db },
+    );
+
+    expect(result).toEqual({
+      ratePeriodId: "assignment-rate-created",
+      replacedRatePeriodId: "rate-1",
+    });
+    expect(tx.assignmentRatePeriod.update).toHaveBeenCalledWith({
+      where: {
+        id: "rate-1",
+      },
+      data: {
+        validTo: new Date("2026-07-01T00:00:00.000Z"),
+      },
+      select: expect.any(Object),
+    });
+    expect(tx.assignmentRatePeriod.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          projectAssignmentId: "assignment-1",
+          validFrom: new Date("2026-07-01T00:00:00.000Z"),
+          validTo: null,
+          hourlyRate: "107.00",
+          currencyCode: "EUR",
+          note: "Correct July override",
+        }),
+      }),
+    );
+    expect(tx.auditLog.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          action: "rate.assignment_override.closed_for_replacement",
+          targetType: "assignment_rate_period",
+          targetId: "rate-1",
+          after: expect.objectContaining({
+            validTo: "2026-07-01",
+            replacementRatePeriodId: "assignment-rate-created",
+          }),
+        }),
+      }),
+    );
+    expect(tx.auditLog.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          action: "rate.assignment_override.replacement_created",
+          targetType: "assignment_rate_period",
+          targetId: "assignment-rate-created",
+          after: expect.objectContaining({
+            projectAssignmentId: "assignment-1",
+            memberId: "member-1",
+            projectId: "project-1",
+            replacedRatePeriodId: "rate-1",
+            validFrom: "2026-07-01",
+            currencyCode: "EUR",
+          }),
+        }),
+      }),
+    );
+  });
+
+  it("replaces an assignment override in place from the same start date", async () => {
+    const { db, tx } = createRateDb({
+      assignmentRates: [
+        {
+          ...baseRate,
+          currencyCode: "HUF",
+        },
+      ],
+    });
+
+    const result = await replaceAssignmentOverrideRateFromDate(
+      {
+        projectAssignmentId: "assignment-1",
+        ratePeriodId: "rate-1",
+        validFrom: new Date("2026-07-01T00:00:00.000Z"),
+        hourlyRate: 107,
+        currencyCode: "EUR",
+        note: "Correct July override",
+        actorMemberId: "admin-1",
+      },
+      { db },
+    );
+
+    expect(result).toEqual({
+      ratePeriodId: "rate-1",
+      replacedRatePeriodId: "rate-1",
+    });
+    expect(tx.assignmentRatePeriod.create).not.toHaveBeenCalled();
+    expect(tx.assignmentRatePeriod.update).toHaveBeenCalledWith({
+      where: {
+        id: "rate-1",
+      },
+      data: {
+        hourlyRate: "107.00",
+        currencyCode: "EUR",
+        note: "Correct July override",
+      },
+      select: expect.any(Object),
+    });
+    expect(tx.auditLog.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          action: "rate.assignment_override.replaced_in_place",
+          targetType: "assignment_rate_period",
+          targetId: "rate-1",
+          before: expect.objectContaining({
+            currencyCode: "HUF",
+            validFrom: "2026-07-01",
+          }),
+          after: expect.objectContaining({
+            projectAssignmentId: "assignment-1",
+            memberId: "member-1",
+            projectId: "project-1",
+            currencyCode: "EUR",
+            hourlyRate: "107.00",
+            validFrom: "2026-07-01",
+            validTo: null,
+          }),
+        }),
+      }),
+    );
+  });
+
+  it("rejects currency-changing assignment replacements outside month boundaries", async () => {
+    const { db, tx } = createRateDb({
+      assignmentRates: [
+        {
+          ...baseRate,
+          validFrom: new Date("2026-06-01T00:00:00.000Z"),
+          validTo: null,
+          currencyCode: "HUF",
+        },
+      ],
+    });
+
+    await expect(
+      replaceAssignmentOverrideRateFromDate(
+        {
+          projectAssignmentId: "assignment-1",
+          ratePeriodId: "rate-1",
+          validFrom: new Date("2026-07-15T00:00:00.000Z"),
+          hourlyRate: 107,
+          currencyCode: "EUR",
+          actorMemberId: "admin-1",
+        },
+        { db },
+      ),
+    ).rejects.toThrow("Currency-changing replacements must start on the first day of a month.");
+
+    expect(tx.assignmentRatePeriod.update).not.toHaveBeenCalled();
+    expect(tx.assignmentRatePeriod.create).not.toHaveBeenCalled();
   });
 
   it("rejects employee assignment override rates", async () => {
