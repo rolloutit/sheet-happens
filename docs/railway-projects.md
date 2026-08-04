@@ -23,11 +23,20 @@ the branch its service tracks, not in per-environment overrides.
 
 ## PR environments
 
-Opening a pull request against the branch a project's service tracks creates an ephemeral
-environment, forked from that project's base environment. Both projects have it on:
-`prDeploys: true`, `focusedPrEnvironments: true`, `botPrEnvironments: false` (no previews for bot
-PRs), with `baseEnvironmentId` pointing at the persistent environment. So PRs into `develop` get a
-preview in `sheet-happens-dev`, forked from `development`.
+Opening a pull request creates an ephemeral environment, forked from the project's base environment
+and deleted when the PR merges or closes.
+
+**Previews come from `sheet-happens-dev` only.** It has `prDeploys: true`,
+`focusedPrEnvironments: true`, `botPrEnvironments: false` (no previews for bot PRs), and
+`baseEnvironmentId` pointing at its `development` environment — so a PR into `develop` gets a preview
+forked from live dev. `SheetHappens` has `prDeploys: false` deliberately: its only deploy trigger is
+`main`, and its base environment is the dormant `development` one whose `BETTER_AUTH_URL` and
+`NEXT_PUBLIC_APP_URL` still name the hostname the new project now serves, so anything forked from it
+would come up with the wrong auth URLs. Disabling it also rules out a duplicate preview per PR.
+
+That last point matters because Railway's docs do not say whether previews are scoped by the PR's
+base branch or by "a service in this project is connected to the PR's repo" — and both projects'
+services are connected to the same repo. Keep previews enabled in exactly one project.
 
 This is a **project-level setting that connecting the repo does not imply** — a fresh project has
 `prDeploys: false` and silently creates no previews. It is not visible in `railway status`; check it
