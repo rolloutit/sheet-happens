@@ -2029,21 +2029,23 @@ Expected result:
 
 ### Design Token Fidelity Against The Prototype
 
-Reference screens live in `claude_design_proto/screenshots` (gitignored); `claude_design_proto/shell/theme.css`
-is the token source of truth.
+Reference screens live in `claude_design_proto/screenshots` (gitignored). The prototype remains
+the reference for the **light** theme; the dark theme follows `docs/dark-mode-redesign.md`
+("Graphite Aurora") instead, so dark prototype screenshots are historical — compare dark against
+the checked-in visual baselines and the scenario below.
 
 1. Open `/dashboard` in dark theme and compare against `shell-dark-admin.png` and `dash-admin-dark.png`.
-2. Confirm the page canvas shows a teal glow off the **top-right** corner and a warm amber glow off the
-   **bottom-left**, over a near-black base — not a flat fill.
+2. Confirm the page canvas shows a faint mint glow off the **top-right** corner and a faint peach
+   glow off the **bottom-left**, over a near-black graphite base — not a flat fill.
 3. Switch to light theme. The canvas base is a warm beige that lightens toward white at the top-right.
 4. On both themes check a card: it is fully opaque, with no gradient showing through it.
 5. Hover a clickable card. It rises slightly, its border strengthens, and it gains one soft shadow.
 6. In light theme confirm shadows read teal-grey, not black.
-7. Compare status pills against `ts-list.png` and `rv-queue.png`: a soft tint fill with tone-coloured
-   text and **no** outline ring. Only the neutral pill keeps a border.
-8. Check a primary button: a teal→mint gradient with a soft accent glow beneath it, not a flat fill.
+7. Check status pills on `/timesheets` or the review queue: a soft tint fill, tone-coloured text,
+   and a faint border of the same hue. The neutral pill keeps the standard border.
+8. Check a primary button: a mint gradient with a soft glow beneath it, not a flat fill.
    Check the amber CTA button hovers to a deeper amber.
-9. Open a dialog and a drawer. The backdrop is a dark teal scrim with a slight blur.
+9. Open a dialog and a drawer. The backdrop is a near-black scrim with a slight blur.
 10. Open a dropdown, a select and a tooltip. Each has a visible stronger border; the tooltip sits on
     the tertiary surface, not the card colour.
 11. Trigger a loading state and confirm skeletons sweep a sheen across themselves rather than pulsing.
@@ -2059,6 +2061,46 @@ Expected result:
 - Table headers have no fill of their own, just a hairline rule, in the subtle text tier.
 - Placeholders sit one step lighter than body copy.
 - Nothing regresses at mobile widths, and the collapsed sidebar rail is 76px.
+
+### Graphite Aurora Dark Theme
+
+1. Open `/dashboard` in the dark theme and look at the overall colour of the chassis: page,
+   sidebar, cards, dividers.
+2. Compare the sidebar against the page canvas, then hover an inactive navigation item and look at
+   the active one.
+3. Find a screen showing several status pills together (`/timesheets`, the review queue) and a
+   dashboard distribution bar with success, warning, and danger segments side by side.
+4. Look at the page gutters on `/dashboard` — the margins around and below the cards — then at a
+   dense table screen, then at `/login`.
+5. Enable "reduce motion" in the operating system and reload `/dashboard` and `/login`.
+6. Open `/time` and any form: click into an input.
+7. Open `/admin/reports` and check the donut, the horizontal bars, and the utilization trend in
+   both themes.
+8. Switch to the light theme and check an "Approved" pill and a rejected/danger state, then switch
+   back to dark and check the same rows.
+
+Expected result:
+
+- The chassis is neutral graphite — no green or teal cast on the page, cards, hovers, or borders.
+  Body text reads warm off-white, not mint-tinted. Mint appears only as a signal: the active nav
+  item, focus rings, links, the primary button, the running timer.
+- The sidebar is darker than the canvas and recedes; the active item carries a soft mint tint, a
+  bright label, and a thin gradient rail on its left edge; inactive items sit in the quiet third
+  text tier until hovered.
+- Every pill tone is distinguishable at a glance — danger is unmistakably rose, warning amber,
+  success green, info mint — each with a faint border of its own hue. The distribution bar's three
+  segments never read as two warm blushes.
+- The gutters show a faint dot lattice, soft corner glows, and a barely-there grain; none of it
+  shows through cards, tables, or dialogs, and a dense financial table stays calm. The auth screen
+  shows the same atmosphere behind the form panel only, never over the teal brand panel.
+- With reduce motion on, the corner glows sit still, centred and unscaled, and the page looks
+  composed — nothing is caught mid-drift.
+- Inputs sit slightly below the surface (a darker inset fill in dark, a warm cream fill in light)
+  with a visible border and a bright mint focus ring.
+- Report series follow one fixed colour order — mint, amber, violet, green, rose, blue — in both
+  themes; a series keeps its colour when filters change, and every mark is readable on its card.
+- "Approved" is the same green and "rejected" the same rose in both themes — the hue does not
+  drift between light and dark, and the pill text stays readable on its tint in both.
 
 ### Rollout IT Brand Mark
 
