@@ -264,6 +264,148 @@ body,
   background: var(--canvas-aurora), var(--canvas-base);
 }
 
+/* Atmosphere — the brand layer behind the app (docs/dark-mode-redesign.md §5). Dark-only in this
+   pass: light mode is the brand kit's native habitat and gets its own treatment later. Mounted by
+   `AppShell` and `AuthShell` inside their own positioned roots, so `absolute` rather than the
+   usual `fixed` — the auth screen must keep it off the brand panel. Content sits at z-index 2,
+   above both layers; surfaces stay opaque, so on dense screens the atmosphere lives only in the
+   gutters. */
+.sheet-atmosphere {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  pointer-events: none;
+  contain: strict; /* isolates paint; the layer never reflows with content */
+}
+
+/* The dot lattice appears only toward the edges: transparent at the centre-top where content
+   lives, opaque toward the gutters. */
+.sheet-atmosphere::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image: radial-gradient(circle at 1px 1px, var(--atmo-dot) 1px, transparent 0);
+  background-size: 24px 24px;
+  mask-image: radial-gradient(120% 90% at 50% 0%, transparent 34%, #000 100%);
+}
+
+/* Brand blobs as light, not ink: a colour→transparent gradient fill at ~5%, blurred until only a
+   glow in the blob's shape remains. Anchored to opposite corners and bleeding off-canvas — a
+   glimpsed shape reads as depth, a complete one reads as clip art.
+
+   Drift follows the AuthGyroscope rules established above: one translate axis per element, the
+   swell on the independent `scale` property, and frame 0 of every loop is the resting state —
+   centred and unscaled — because `prefers-reduced-motion` collapses each loop to one iteration
+   and the visual baselines freeze infinite animations at frame 0. */
+.sheet-blob {
+  position: absolute;
+  filter: blur(72px);
+}
+
+.sheet-blob--mint {
+  top: -22%;
+  left: -14%;
+  width: 58vmax;
+  height: 58vmax;
+  animation:
+    sheet-blob-drift-x 120s linear infinite,
+    sheet-blob-swell 90s var(--ease-standard) infinite;
+}
+
+.sheet-blob--peach {
+  right: -18%;
+  bottom: -26%;
+  width: 52vmax;
+  height: 52vmax;
+  animation:
+    sheet-blob-drift-y 170s linear infinite,
+    sheet-blob-swell 90s var(--ease-standard) infinite;
+}
+
+/* The same four-stop sine as the gyroscope drift: ease-out to one extreme, ease-in-out across to
+   the other, ease-in home — zero velocity meets zero velocity at the extremes, and 0% is the
+   centre rather than an endpoint. */
+@keyframes sheet-blob-drift-x {
+  0% {
+    translate: 0 0;
+    animation-timing-function: ease-out;
+  }
+
+  25% {
+    translate: 3rem 0;
+    animation-timing-function: ease-in-out;
+  }
+
+  75% {
+    translate: -3rem 0;
+    animation-timing-function: ease-in;
+  }
+
+  100% {
+    translate: 0 0;
+  }
+}
+
+@keyframes sheet-blob-drift-y {
+  0% {
+    translate: 0 0;
+    animation-timing-function: ease-out;
+  }
+
+  25% {
+    translate: 0 2.5rem;
+    animation-timing-function: ease-in-out;
+  }
+
+  75% {
+    translate: 0 -2.5rem;
+    animation-timing-function: ease-in;
+  }
+
+  100% {
+    translate: 0 0;
+  }
+}
+
+@keyframes sheet-blob-swell {
+  0%,
+  100% {
+    scale: 1;
+  }
+
+  50% {
+    scale: 1.03;
+  }
+}
+
+/* Grain, so the faint aurora gradients don't band on 8-bit panels. The turbulence noise is moved
+   into *alpha* by the feColorMatrix (white with varying opacity), because `mix-blend-mode:
+   overlay` preserves blacks and would do almost nothing at this lightness. `stitchTiles` makes
+   the 160px tile seamless. `baseFrequency` and `--atmo-grain` are the two numbers to tune on real
+   hardware; if paint cost shows up, rasterise the tile to a WebP in `public/`. */
+.sheet-grain {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  opacity: var(--atmo-grain);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix type='matrix' values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0.28 0.28 0.28 0 0'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23g)'/%3E%3C/svg%3E");
+}
+
+.light .sheet-atmosphere,
+.light .sheet-grain {
+  display: none;
+}
+
+/* Reduced motion is handled by the global block at the end of this file (every loop collapses to
+   its frame-0 resting state). Reduced transparency switches the drift off as well. */
+@media (prefers-reduced-transparency: reduce) {
+  .sheet-blob {
+    animation: none;
+  }
+}
+
 button,
 input,
 select,

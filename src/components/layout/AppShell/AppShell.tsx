@@ -36,6 +36,7 @@ import {
 import { authClient } from "@/src/lib/auth-client";
 import { cn } from "@/src/lib/utils";
 import { setLocaleAction } from "@/src/i18n/actions";
+import { Atmosphere } from "../Atmosphere";
 import { BrandMark } from "../BrandMark";
 import { CommandPill } from "../CommandPill";
 import { LanguageToggle } from "../LanguageToggle";
@@ -224,13 +225,14 @@ export function AppShell({
   return (
     <div
       className={cn(
-        "sheet-canvas min-h-screen text-foreground lg:grid lg:h-screen lg:overflow-hidden",
+        "sheet-canvas relative min-h-screen text-foreground lg:grid lg:h-screen lg:overflow-hidden",
         isCollapsed
           ? "lg:grid-cols-[var(--sidebar-w-collapsed)_1fr]"
           : "lg:grid-cols-[var(--sidebar-w)_1fr]",
       )}
     >
-      <aside className="hidden min-h-screen border-r border-sidebar-border bg-sidebar lg:flex lg:h-screen lg:flex-col lg:overflow-hidden">
+      <Atmosphere />
+      <aside className="relative z-[2] hidden min-h-screen border-r border-sidebar-border bg-sidebar lg:flex lg:h-screen lg:flex-col lg:overflow-hidden">
         <div
           className={cn("flex h-16 items-center gap-3 px-4", isCollapsed && "justify-center px-3")}
         >
@@ -314,7 +316,7 @@ export function AppShell({
           </button>
         </div>
       </aside>
-      <div className="min-w-0 lg:h-screen lg:overflow-y-auto">
+      <div className="relative z-[2] min-w-0 lg:h-screen lg:overflow-y-auto">
         <header className="sticky top-0 z-20 border-b border-border bg-header backdrop-blur-[14px]">
           <div className="flex h-16 items-center justify-between px-4 sm:px-6 lg:px-8">
             <div className="flex items-center gap-3">

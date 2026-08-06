@@ -1,5 +1,6 @@
 export { AppShell } from "./AppShell";
 export type { AppShellProps } from "./AppShell";
+export { Atmosphere } from "./Atmosphere";
 export {
   AuthButton,
   AuthField,
