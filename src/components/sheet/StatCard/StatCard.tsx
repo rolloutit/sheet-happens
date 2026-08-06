@@ -115,7 +115,7 @@ export function StatCard({
           language reaches inside an opaque surface (docs/dark-mode-redesign.md §5, Layer 5). */}
       <span
         aria-hidden="true"
-        className="pointer-events-none absolute -right-9 -top-9 size-24 rounded-full border border-accent/20 bg-[radial-gradient(circle_at_center,var(--accent-soft),transparent_72%)]"
+        className="pointer-events-none absolute -right-9 -top-9 size-24 rounded-full border border-accent-line bg-[radial-gradient(circle_at_center,var(--accent-soft),transparent_72%)]"
       />
       <CardHeader>
         <CardTitle>{label}</CardTitle>

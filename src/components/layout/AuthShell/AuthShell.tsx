@@ -128,10 +128,10 @@ export function AuthShell({
             value={locale}
             label={t("language")}
             size="sm"
-            className="border-border/70 bg-secondary/75 shadow-[0_18px_44px_-28px_rgb(55_227_222_/_0.8)]"
+            className="border-border/70 bg-secondary/75 shadow-[0_18px_44px_-28px_var(--accent-line)]"
             onValueChange={handleLanguageChange}
           />
-          <ThemeToggle className="size-9 rounded-[var(--radius-md)] border-border/70 bg-secondary/75 text-muted-foreground shadow-[0_18px_44px_-28px_rgb(55_227_222_/_0.8)] hover:text-foreground" />
+          <ThemeToggle className="size-9 rounded-[var(--radius-md)] border-border/70 bg-secondary/75 text-muted-foreground shadow-[0_18px_44px_-28px_var(--accent-line)] hover:text-foreground" />
         </div>
         <div className={cn("relative z-[2] w-full max-w-[408px]", contentClassName)}>
           {children}

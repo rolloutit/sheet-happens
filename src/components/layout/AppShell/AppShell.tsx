@@ -287,7 +287,7 @@ export function AppShell({
           <a
             href="/help"
             className={cn(
-              "flex items-center gap-3 rounded-[var(--radius-md)] px-3 py-2 text-sm font-medium text-subtle-foreground transition hover:bg-secondary hover:text-foreground aria-[current=page]:bg-primary/12 aria-[current=page]:font-semibold aria-[current=page]:text-accent",
+              "flex items-center gap-3 rounded-[var(--radius-md)] px-3 py-2 text-sm font-medium text-subtle-foreground transition hover:bg-secondary hover:text-foreground aria-[current=page]:bg-accent-soft aria-[current=page]:font-semibold aria-[current=page]:text-accent",
               isCollapsed && "justify-center px-0",
             )}
             aria-current={current === "help" ? "page" : undefined}
@@ -601,7 +601,7 @@ function NavGroup({
                 onNavigate?.(item.id);
               }}
               className={cn(
-                "relative flex items-center gap-3 rounded-[var(--radius-md)] px-3 py-2.5 text-sm font-medium text-subtle-foreground transition hover:bg-secondary hover:text-foreground aria-[current=page]:bg-primary/12 aria-[current=page]:font-semibold aria-[current=page]:text-accent",
+                "relative flex items-center gap-3 rounded-[var(--radius-md)] px-3 py-2.5 text-sm font-medium text-subtle-foreground transition hover:bg-secondary hover:text-foreground aria-[current=page]:bg-accent-soft aria-[current=page]:font-semibold aria-[current=page]:text-accent",
                 collapsed && "justify-center px-0",
               )}
               aria-label={collapsed ? t(item.labelKey) : undefined}
