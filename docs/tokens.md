@@ -1,9 +1,16 @@
 # Design Tokens
 
-The token source is `app/globals.css`. It is a transcription of the design prototype's
-`claude_design_proto/shell/theme.css` (gitignored). Where the prototype's Figma export
-(`claude_design_proto/_ds/**/colors_and_type.css`) disagrees — it carries a different radius scale —
-**`shell/theme.css` wins**, because that is what the prototype screens actually render with.
+The token source is `app/globals.css`. The **dark palette is "Graphite Aurora"** — a neutral
+cool-graphite chassis (H ≈ 264°, C ≤ 0.017), warm ivory type from the brand Beige ramp (H ≈ 79°),
+and four widely-separated signal hues — adopted from `docs/dark-mode-redesign.md`, which holds the
+full rationale, the computed contrast tables, and the open brand questions. The light palette
+remains the prototype transcription (`claude_design_proto/shell/theme.css`, gitignored), except
+that its success and danger hues are aligned to the dark palette's (see below).
+
+The one discipline rule that keeps the theme working: **mint is a signal, never a surface.** It
+appears only where it carries meaning — active navigation, focus, links, the running timer, the
+primary action — and structure is always neutral. As a budget, mint should cover under ~5% of the
+pixels on any screen.
 
 ## Theme modes
 
@@ -31,7 +38,21 @@ The trade-off is that such an entry is **not** emitted as a custom property. Two
 ## Token families
 
 - **Color, base:** `background`, `foreground`, `card`, `popover`, `primary`, `secondary`, `muted`,
-  `accent`, `cta`, `success`, `warning`, `destructive`, `border`, `input`, `ring`, `sidebar`.
+  `accent`, `cta`, `success`, `warning`, `destructive`, `border`, `input`, `ring`, `sidebar`,
+  `surface-inset`. In dark these form a six-step surface ramp — monotonic in lightness _and_
+  chroma (C 0.005 → 0.016, the way a surface picks up ambient colour as it lifts):
+  `--canvas-base` (void) < `surface-inset` < `background` < `card` < `secondary` (hover) <
+  `popover`/`muted` (overlays). The sidebar sits **below** the canvas (`surface-inset`) —
+  navigation recedes, content comes forward. `surface-inset` is also the fill for inputs, wells,
+  and table stripes.
+- **Signals:** the four families sit ≥ 42° apart in OKLCH hue (mint 195°, green 153°, amber 65°,
+  rose 15°), so the 16% `*-soft` tints stay distinguishable when composited over the neutral card.
+  Success and danger use the **same hues in both themes**, so a status reads as one colour
+  everywhere; the light values are tuned so every text pairing (on white, `--background`,
+  `--secondary`, and their own soft) clears 4.5:1.
+- **Inks:** `--ink-mint`, `--ink-amber`, `--ink-rose` — the three dark text colours for
+  full-strength signal fills. The `*-foreground` tokens reference them in dark; every pairing
+  clears 6:1. Components should keep using the semantic `*-foreground` names.
 - **Color, second tier** — the prototype's derived set, preferred over ad-hoc opacity modifiers:
   - `accent-soft` / `success-soft` / `warning-soft` / `destructive-soft` — the one canonical tint per
     tone. Use `bg-success-soft`, not `bg-success/12`. In light theme these are solid pastels, which a
@@ -43,9 +64,24 @@ The trade-off is that such an entry is **not** emitted as a custom property. Two
     de-emphasised numbers.
   - `cta-hover`, `header` (the translucent sticky-header fill), `scrim` (overlay backdrops),
     `sidebar-border`.
-- **Backdrop:** `--canvas-base`, `--canvas-glow-teal`, `--canvas-glow-warm` feed the three-layer
-  `.sheet-canvas` gradient — a teal glow off the top-right, a warm one off the bottom-left, over the
-  base. Raw CSS variables, not Tailwind color tokens.
+- **Backdrop:** `--canvas-base` (the void) plus the per-theme `--canvas-aurora` gradient pair feed
+  the `body`/`.sheet-canvas` background — a cool glow off the top-right, a warm one off the
+  bottom-left, over the base. In dark the glows are huge and faint (`--atmo-mint` at 10% lifts the
+  void from L 0.145 to L 0.217); light keeps its original composition. Raw CSS variables, not
+  Tailwind color tokens.
+- **Atmosphere:** `--atmo-mint`, `--atmo-peach`, `--atmo-dot`, `--atmo-blob-mint`,
+  `--atmo-blob-peach`, `--atmo-grain` drive the decorative layer (`.sheet-atmosphere` +
+  `.sheet-grain`) that `AppShell` and `AuthShell` mount via the `Atmosphere` component: corner
+  blob glows, a gutter-masked dot lattice, and feTurbulence grain that keeps the aurora from
+  banding. **Dark-only** — `.light` hides both layers. Content sits above at `z-index: 2`;
+  surfaces stay opaque, so on dense screens the atmosphere lives only in the gutters. The blob
+  silhouettes are provisional superellipse stubs until the brand shapes are exported from the
+  styleguide's _Graphical elements_ frame.
+- **Charts:** `--chart-1` … `--chart-6` — the categorical ramp (mint, amber, violet, green, rose,
+  blue), assigned in fixed order and never cycled or re-ranked. Each step passes the `dataviz`
+  skill validator against both the dark card and white, so the ramp is deliberately
+  **theme-stable** (`.light` does not override it). Violet and blue are **chart-only** and must
+  never appear in UI chrome. Single-series charts use `var(--chart-1)`, not `var(--primary)`.
 - **Radius:** `xs` 6 · `sm` 9 · `md` 12 · `lg` 16 · `xl` 22 · `pill` 999.
 - **Font:** Lexend sans token and Poppins UI token (`font-ui`).
 - **Shadow:** the prototype has exactly **one** elevation. `--elevation-pop` holds it per theme —
