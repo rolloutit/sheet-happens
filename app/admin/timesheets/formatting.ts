@@ -1,63 +1,27 @@
 import type { getTranslations } from "next-intl/server";
 
+import {
+  formatMoney as formatMoneyBase,
+  formatPeriodRange as formatPeriodRangeBase,
+  formatTimestamp as formatTimestampBase,
+} from "@/src/lib/formatting";
 import type { TimesheetPreviewStatus } from "@/src/server/timesheets";
 
 type AdminTimesheetsTranslator = Awaited<ReturnType<typeof getTranslations>>;
 
-export function formatHours(minutes: number, locale: string) {
-  return new Intl.NumberFormat(locale, {
-    maximumFractionDigits: 2,
-  }).format(minutes / 60);
-}
+export { formatCount, formatHours, formatMonthLabel, formatRate } from "@/src/lib/formatting";
 
-export function formatCount(value: number, locale: string) {
-  return new Intl.NumberFormat(locale).format(value);
-}
-
+/** Timesheet screens spell the currency out, because contractors reconcile these against invoices. */
 export function formatMoney(amount: string, currencyCode: string, locale: string) {
-  return new Intl.NumberFormat(locale, {
-    style: "currency",
-    currency: currencyCode,
-    currencyDisplay: "code",
-    maximumFractionDigits: 2,
-  }).format(Number(amount));
-}
-
-export function formatRate(hourlyRate: string, currencyCode: string, locale: string) {
-  const formattedRate = new Intl.NumberFormat(locale, {
-    maximumFractionDigits: 2,
-  }).format(Number(hourlyRate));
-
-  return `${formattedRate} ${currencyCode}/h`;
-}
-
-export function formatMonthLabel(value: string, locale: string) {
-  return new Intl.DateTimeFormat(locale, {
-    month: "long",
-    year: "numeric",
-    timeZone: "UTC",
-  }).format(new Date(`${value}T00:00:00.000Z`));
+  return formatMoneyBase(amount, currencyCode, locale, { display: "code" });
 }
 
 export function formatPeriodRange(start: string, end: string, locale: string) {
-  const formatter = new Intl.DateTimeFormat(locale, {
-    month: "short",
-    day: "numeric",
-    timeZone: "UTC",
-  });
-
-  return `${formatter.format(new Date(`${start}T00:00:00.000Z`))} - ${formatter.format(
-    new Date(`${end}T00:00:00.000Z`),
-  )}`;
+  return formatPeriodRangeBase(start, end, locale, { style: "short" });
 }
 
 export function formatTimestamp(value: string | null, locale: string) {
-  if (!value) return "-";
-
-  return new Intl.DateTimeFormat(locale, {
-    dateStyle: "medium",
-    timeStyle: "short",
-  }).format(new Date(value));
+  return formatTimestampBase(value, locale);
 }
 
 export function getStatusLabel(status: string, t: AdminTimesheetsTranslator) {

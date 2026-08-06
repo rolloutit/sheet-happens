@@ -3,7 +3,7 @@ import { randomUUID } from "node:crypto";
 import { getGoogleAuthSettings } from "@/src/server/auth/sign-in-methods";
 import { prisma } from "@/src/server/db/client";
 import { getEmailDeliveryMode } from "@/src/server/email/mailer";
-import { renderTypstPdf } from "@/src/server/pdf/typst";
+import { renderTypstDocument } from "@/src/server/pdf";
 import { getObjectStorage, type ObjectStorage } from "@/src/server/storage";
 
 export type SystemCheckStatus = "pass" | "warning" | "fail";
@@ -51,7 +51,7 @@ export type RunSystemChecksDeps = {
   env?: SystemCheckEnv;
   db?: Pick<typeof prisma, "$queryRawUnsafe">;
   storage?: ObjectStorage;
-  typstRenderer?: typeof renderTypstPdf;
+  typstRenderer?: typeof renderTypstDocument;
   now?: Date;
 };
 
@@ -79,12 +79,6 @@ const SECRET_ENV_NAMES = [
   "SMTP_PASSWORD",
   "S3_SECRET_ACCESS_KEY",
 ] as const;
-
-const TYPST_SYSTEM_CHECK_SOURCE = [
-  "#set page(width: 90mm, height: 40mm, margin: 8mm)",
-  "#set text(size: 10pt)",
-  "Sheet Happens Typst check",
-].join("\n");
 
 export async function runSystemChecks(deps: RunSystemChecksDeps = {}): Promise<SystemCheckSummary> {
   const env = deps.env ?? process.env;
@@ -357,17 +351,19 @@ export async function runGoogleOAuthCheck(input: {
 export async function runTypstCheck(input: {
   env: SystemCheckEnv;
   checkedAt: string;
-  typstRenderer?: typeof renderTypstPdf;
+  typstRenderer?: typeof renderTypstDocument;
 }): Promise<SystemCheckResult> {
   return timeCheck("typst", input.checkedAt, async () => {
     const binary = input.env.TYPST_BIN?.trim() || "typst";
     const details = [envValueDetail("TYPST_BIN", binary)];
 
     try {
-      const renderer = input.typstRenderer ?? renderTypstPdf;
+      const renderer = input.typstRenderer ?? renderTypstDocument;
+      // Compiling from the template directory also proves the templates and bundled fonts
+      // reached the deployed image, not just that the binary runs.
       const pdf = await renderer(
         {
-          source: TYPST_SYSTEM_CHECK_SOURCE,
+          template: "system-check",
           filename: "system-check",
         },
         {

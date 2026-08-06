@@ -1,13 +1,15 @@
 import { NextResponse } from "next/server";
+import { getTranslations } from "next-intl/server";
 
 import { requireAdminAppMember } from "@/src/server/auth/app-access";
 import {
   generateReportPdfExport,
   getTimeEntryReportSnapshot,
-  normalizeReportExportTitle,
+  parseReportExportLocale,
   parseReportMode,
   parseReportSearchParams,
   reportSearchParamsFromFormData,
+  resolveReportExportTitle,
   type ReportPdfExportFilters,
 } from "@/src/server/reports";
 import { formatDateOnly } from "@/src/server/time-tracking";
@@ -18,9 +20,12 @@ export const runtime = "nodejs";
 export async function POST(request: Request) {
   const { member: admin } = await requireAdminAppMember("/admin/reports");
   const formData = await request.formData();
-  const locale = parseLocale(formString(formData, "locale"));
+  const locale = parseReportExportLocale(formData.get("locale"));
   const mode = parseReportMode(formData.get("mode"));
   const filters = parseReportSearchParams(reportSearchParamsFromFormData(formData), admin.timezone);
+  // The export locale is chosen in the dialog, not taken from the request cookie, so it is passed
+  // explicitly and the interface language never decides what the document says.
+  const t = await getTranslations({ locale, namespace: "AdminReports" });
   const snapshot = await getTimeEntryReportSnapshot({
     periodStart: filters.periodStart,
     periodEnd: filters.periodEnd,
@@ -30,9 +35,7 @@ export async function POST(request: Request) {
     projectGroupId: filters.projectGroupId,
     memberId: filters.memberId,
   });
-  const title =
-    normalizeReportExportTitle(formData.get("title")) ||
-    `Time report ${snapshot.period.start} ${snapshot.period.end}`;
+  const title = resolveReportExportTitle(formData.get("title"), snapshot.period);
 
   if (snapshot.lines.length === 0) {
     return new Response("No tracked time matches these export filters.", {
@@ -51,6 +54,7 @@ export async function POST(request: Request) {
       timezone: admin.timezone,
       generatedByMemberId: admin.id,
       filters: buildExportFilters(filters),
+      t,
       requestMetadata: {
         ipAddress: request.headers.get("x-forwarded-for"),
         userAgent: request.headers.get("user-agent"),
@@ -90,16 +94,6 @@ function buildExportFilters(
     projectGroupId: filters.projectGroupId,
     memberId: filters.memberId,
   };
-}
-
-function parseLocale(value: string | undefined) {
-  return value === "en" ? "en" : "hu";
-}
-
-function formString(formData: FormData, key: string) {
-  const value = formData.get(key);
-
-  return typeof value === "string" ? value : undefined;
 }
 
 function sanitizeHeaderFilename(filename: string) {

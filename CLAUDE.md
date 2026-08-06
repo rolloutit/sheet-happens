@@ -24,8 +24,9 @@ pnpm only — `packageManager: pnpm@11.5.3`, Node `24.14.0` (`.nvmrc`). Never np
 ## Environment
 
 - Copy `.env.example` → `.env.local`. Never edit or commit `.env`/`.env*.local`.
-- PDF export (`src/server/pdf`) shells out to Typst: needs `typst` on PATH or `TYPST_BIN` set.
-  Production runs it from the Dockerfile image.
+- PDF export (`src/server/pdf`) shells out to Typst: needs `typst` on PATH or `TYPST_BIN` set
+  (pin 0.15.1 to match the Dockerfile). Production runs it from the Dockerfile image.
+  `pnpm test:pdf` renders the templates for real; plain `pnpm test` never invokes Typst.
 - Object storage is S3-compatible; local dev uses MinIO on `:9000` (console `:9001`).
 
 ## Architecture rules
@@ -39,6 +40,12 @@ pnpm only — `packageManager: pnpm@11.5.3`, Node `24.14.0` (`.nvmrc`). Never np
 - **Server Actions stay thin**: authenticate → authorize → validate with Zod → call
   `src/server/<domain>` → return a typed result. Domain and DB logic lives in `src/server/*`,
   never in components or route files.
+- **PDF documents are Typst templates, never generated markup.** Layout lives in
+  `src/server/pdf/templates/*.typ` (`lib/theme.typ` for tokens, `lib/components.typ` for blocks);
+  TypeScript only builds a display-ready JSON payload (`report-pdf-payload.ts`) that the template
+  reads via `json("/data.json")`. Never concatenate values into Typst markup — that is what the old
+  hand-rolled escaping existed for. Do all number/money/date formatting in TS via
+  `src/lib/formatting` so `Intl` stays the single authority; templates contain no locale logic.
 - No Redux, Zustand, or TanStack Query in v1. Local React state for component UI state; URL search
   params for shareable table/filter state.
 - Import alias `@/*` resolves to the repo root.

@@ -8,6 +8,7 @@ export type AppShellProps = {
   current?: string;
   role?: "employee" | "contractor" | "admin";
   profile?: "employee" | "contractor";
+  /** Initial collapsed state of the desktop sidebar; the toggle button owns it after mount. */
   collapsed?: boolean;
   mobileNavigationMode?: "auto" | "always";
   language?: string;

@@ -189,7 +189,7 @@ export async function getAppAccessState(): Promise<AppAccessState> {
     };
   }
 
-  if (!hasCompletedSecuritySetup(resolvedAuthUser)) {
+  if (!isSecuritySetupOptionalInDev() && !hasCompletedSecuritySetup(resolvedAuthUser)) {
     return {
       status: "security_setup_required",
       session,
@@ -235,7 +235,7 @@ export async function requireAdminAppMember(callbackURL: string): Promise<Active
     redirect(accountStatusRoute(callbackURL, "admin-required"));
   }
 
-  if (!state.authUser.twoFactorEnabled) {
+  if (!isSecuritySetupOptionalInDev() && !state.authUser.twoFactorEnabled) {
     redirect(securitySetupRoute(callbackURL, "admin-totp-required"));
   }
 
@@ -291,7 +291,7 @@ export async function requireAdminAppMemberForAction(): Promise<ActiveAppAccess>
     throw new AuthorizationError("Admin access required.");
   }
 
-  if (!state.authUser.twoFactorEnabled) {
+  if (!isSecuritySetupOptionalInDev() && !state.authUser.twoFactorEnabled) {
     throw new AuthorizationError("Authenticator app setup is required for admin actions.");
   }
 
@@ -375,4 +375,12 @@ function getInitials(name: string) {
 
 function hasCompletedSecuritySetup(authUser: AppAuthUser) {
   return authUser.twoFactorEnabled || authUser.passkeyCount > 0;
+}
+
+// Dockerfile hardcodes NODE_ENV=production for every deploy (prod and PR previews), so this can
+// only ever be true for a local `pnpm dev`/`next start` run, never a deployed environment.
+function isSecuritySetupOptionalInDev() {
+  return (
+    process.env.NODE_ENV !== "production" && process.env.AUTH_SECURITY_SETUP_MODE === "optional"
+  );
 }

@@ -1868,10 +1868,29 @@
     "export": {
       "action": "Export PDF",
       "defaultTitle": "Time report",
+      "dialogTitle": "Configure export",
+      "dialogDescription": "Name the export, choose what it contains, and check the preview before downloading the PDF.",
       "titleLabel": "Export title",
+      "titlePlaceholder": "e.g. Diapro — June hours summary",
+      "languageLabel": "PDF language",
       "modeLabel": "Content",
       "modeCostFree": "Cost-free",
-      "modeInternal": "Internal"
+      "modeCostFreeHint": "Hours and descriptions only — safe to share externally.",
+      "modeInternal": "Internal",
+      "modeInternalHint": "With rates and project cost — internal use only.",
+      "internalWarningTitle": "Cost data is visible",
+      "internalWarningBody": "This export includes internal rates and cost. Never send it to a client or outside party.",
+      "formatLabel": "Format",
+      "formatPdf": "PDF document",
+      "previewLabel": "Preview",
+      "previewLoading": "Rendering the preview…",
+      "previewError": "The preview could not be rendered. The export itself may still work.",
+      "previewRetry": "Try again",
+      "previewTruncated": "Preview shows the first {count} pages. The download contains every page.",
+      "timezoneLabel": "Time zone",
+      "cancel": "Cancel",
+      "close": "Close",
+      "download": "Download PDF"
     },
     "filters": {
       "start": "From",
@@ -1931,6 +1950,29 @@
     "empty": {
       "title": "No tracked time matches these filters.",
       "description": "Adjust the period or remove a filter."
+    },
+    "pdf": {
+      "brand": "Sheet Happens",
+      "confidential": "Confidential",
+      "page": "Page",
+      "generatedAt": "Generated",
+      "breakdown": "Breakdown",
+      "breakdownDescription": "Grouped hours and entry counts for the selected report view.",
+      "details": "Details",
+      "detailsDescription": "Time entries included in this report export.",
+      "attention": "Attention",
+      "name": "Name",
+      "share": "Share",
+      "entries": "Entries",
+      "rate": "Rate",
+      "amount": "Amount",
+      "total": "Total",
+      "missingRate": "Missing rate",
+      "missingRateNote": "{marker} marks a time entry with no hourly rate for its period.",
+      "warnings": {
+        "missingRates": "{count, plural, one {# entry is missing a rate.} other {# entries are missing rates.}}",
+        "mixedCurrency": "The report contains multiple currencies: {currencies}."
+      }
     }
   },
   "SettingsActions": {
