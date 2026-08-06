@@ -2087,13 +2087,15 @@ Expected result:
 
 1. Sign out, then open `https://{DOMAIN_NAME}/login` on a desktop width and watch the teal panel for
    the first two seconds without touching anything.
-2. Keep watching for about a minute.
-3. Narrow the window from full width down to roughly 1024px, watching the Rollout IT mark at the
-   centre of the rings and the copy block on its left.
-4. Narrow past the `lg` breakpoint so the panel becomes a banner.
-5. Repeat step 1 on `/set-password`, `/reset-password`, and the two-factor challenge screen.
-6. Switch the theme between light, dark, and system while the panel is on screen.
-7. In the operating system accessibility settings turn on reduce motion, then hard-reload `/login`.
+2. Keep watching for a full minute without scrolling or moving the pointer.
+3. Note where the Rollout IT mark sits, wait about twenty seconds, and look again.
+4. Narrow the window from full width down to roughly 1024px, then shorten it to roughly 700px tall,
+   watching the mark against the headline, the tip pill, and the footer line the whole way.
+5. Leave the window at 1024×768 and watch a full minute there.
+6. Narrow past the `lg` breakpoint so the panel becomes a banner.
+7. Repeat step 1 on `/set-password`, `/reset-password`, and the two-factor challenge screen.
+8. Switch the theme between light, dark, and system while the panel is on screen.
+9. In the operating system accessibility settings turn on reduce motion, then hard-reload `/login`.
 
 Expected result:
 
@@ -2103,16 +2105,23 @@ Expected result:
   the cage reads as a gyroscope, not as stacked ellipses. Two bright arcs sweep round much faster than
   the rings they ride. Glowing beads travel the rings with short tails behind them, and pass in front
   of and behind the centre. Two faint rings ping outward from the mark every few seconds.
+- The whole cage glides slowly and continuously across the panel, carrying the mark with it, and the
+  rings swell and shrink as it travels. It is never parked in one spot, and it takes about a minute to
+  come back to where it started — so two glances twenty seconds apart find the mark in different
+  places. The glide is even, with no jerk, stall, or snap as it loops.
 - The Rollout IT mark stays upright and perfectly still on its frosted tile throughout — it never
-  rotates with the rings. It breathes very slightly, out of step with the glow behind it.
+  rotates with the rings, and it does not tilt or spin as the cage travels. It breathes very slightly,
+  out of step with the glow behind it.
 - The mark is the cream version at every width and in every theme, since the panel is teal in both.
-- The mark's tile never touches or overlaps the headline, the tip pill, or the footer line at any
-  width, including at 1024px where the panel is narrowest.
+- Across the whole glide, at every window size, the mark's tile never touches or overlaps the headline,
+  the tip pill, or the footer line, and never gets clipped by the edge of the teal panel. The tightest
+  cases are a narrow window (1024px wide) and a short one (about 700px tall) — watch a full cycle at
+  each. Ring arcs crossing behind the text are expected; the frosted tile landing on text is not.
 - On the mobile banner the mark, the two fast arcs, and the innermost ring are gone; the two remaining
   rings are cropped to arcs and still turn.
 - Under reduce motion everything is still and the panel still looks composed and deliberate — rings
-  crossing on three axes with the mark centred. No ring is stranded mid-expansion and nothing is
-  missing except the pings.
+  crossing on three axes, with the cage at rest horizontally centred on the panel and the mark centred
+  in it. No ring is stranded mid-expansion and nothing is missing except the pings.
 - Scrolling and typing in the form on the right stay smooth with the animation running.
 
 ## Regression Checklist For Every Release
