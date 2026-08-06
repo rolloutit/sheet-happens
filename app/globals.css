@@ -277,19 +277,8 @@ textarea {
   }
 }
 
-.auth-shell-orbit-ring {
-  transform-origin: 280px 280px;
-  animation: auth-shell-orbit-spin 60s linear infinite;
-}
-
 .auth-shell-float {
   animation: auth-shell-float 7s var(--ease-standard) infinite;
-}
-
-@keyframes auth-shell-orbit-spin {
-  to {
-    transform: rotate(360deg);
-  }
 }
 
 @keyframes auth-shell-float {
@@ -303,6 +292,275 @@ textarea {
   }
 }
 
+/* AuthGyroscope — the auth panel's ring cage. Two constraints shape every keyframe below.
+   1. The `prefers-reduced-motion` block at the end of this file drops every animation to one
+      iteration, so each loop lands on its own 100% frame. Every looping keyframe here therefore ends
+      where it began, and the two that cannot (the pings) are switched off there instead.
+   2. `playwright.visual.config.ts` screenshots with `animations: "disabled"`, which cancels infinite
+      animations to frame 0 and fast-forwards finite ones to their end. Frame 0 of each loop is
+      therefore the frame any visual baseline would capture, so the ring phases that make up frame 0
+      are chosen as a composition rather than left at zero. */
+.auth-gyro {
+  pointer-events: none;
+  perspective: 1100px;
+  transform-style: preserve-3d;
+}
+
+/* `display` deliberately stays out of this rule and is a `grid` utility on the element instead.
+   Everything in this file is unlayered, and unlayered declarations outrank Tailwind's `@layer
+   utilities` — a `display: grid` here would quietly beat the `hidden` that hides three of these
+   layers below `lg`. */
+.auth-gyro-layer {
+  position: absolute;
+  inset: 0;
+  transform-style: preserve-3d;
+  animation: auth-gyro-in 900ms var(--ease-standard) both;
+  animation-delay: var(--gyro-in-delay, 0ms);
+}
+
+/* Centred by the layer's grid rather than by a translate, so `transform` is free to carry nothing but
+   the tilt and `transform-origin` stays the plane's own centre. */
+.auth-gyro-plane {
+  position: relative;
+  width: var(--gyro-diameter);
+  aspect-ratio: 1;
+  transform: rotateZ(var(--gyro-tilt-z)) rotateX(var(--gyro-tilt-x));
+  transform-style: preserve-3d;
+}
+
+.auth-gyro-spin {
+  position: absolute;
+  inset: 0;
+  transform: rotateZ(var(--gyro-phase, 0deg));
+  transform-style: preserve-3d;
+  animation: auth-gyro-turn var(--gyro-duration, 30s) linear infinite;
+  animation-direction: var(--gyro-direction, normal);
+}
+
+.auth-gyro-arm {
+  position: absolute;
+  inset: 0;
+  transform: rotateZ(var(--gyro-arm, 0deg));
+  transform-style: preserve-3d;
+}
+
+.auth-gyro-dot {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  width: var(--gyro-dot, 8px);
+  height: var(--gyro-dot, 8px);
+  border-radius: 50%;
+  background: radial-gradient(
+    circle,
+    #f4ffff 0%,
+    #3affff 42%,
+    rgb(41 198 198 / 0.5) 66%,
+    rgb(41 198 198 / 0) 78%
+  );
+  box-shadow: 0 0 18px 6px rgb(58 255 255 / 0.5);
+  transform: translate(-50%, -50%) rotateX(var(--gyro-face, 0deg));
+}
+
+.auth-gyro-dot--amber {
+  background: radial-gradient(
+    circle,
+    #fff6ec 0%,
+    #fdcfae 45%,
+    rgb(253 207 174 / 0.4) 68%,
+    rgb(253 207 174 / 0) 80%
+  );
+  box-shadow: 0 0 18px 6px rgb(253 207 174 / 0.4);
+}
+
+/* The gradient runs clockwise from the dot's own position, and `--gyro-trail-flip` mirrors it so the
+   arc falls behind the dot on rings that turn the other way. */
+.auth-gyro-trail {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: conic-gradient(
+    from 0deg,
+    rgb(58 255 255 / 0.75) 0deg,
+    rgb(58 255 255 / 0.28) 15deg,
+    rgb(58 255 255 / 0) 34deg,
+    rgb(58 255 255 / 0) 360deg
+  );
+  mask-image: radial-gradient(farthest-side, transparent calc(100% - 6px), #000 calc(100% - 2px));
+  transform: scaleX(var(--gyro-trail-flip, 1));
+}
+
+/* Filters are applied before masks, so the glow lives on the wrapper: on the arc itself it would
+   bloom around the whole disc instead of around the visible arc. */
+.auth-gyro-comet {
+  position: absolute;
+  inset: 0;
+  filter: drop-shadow(0 0 16px rgb(58 255 255 / 0.7));
+}
+
+/* The second sweep runs on a ring that is already the brightest thing in the cage, so it carries less
+   glow — two full-strength sweeps crossing turn the centre into a smear. */
+.auth-gyro-comet--soft {
+  opacity: 0.6;
+  filter: drop-shadow(0 0 12px rgb(132 244 244 / 0.45));
+}
+
+.auth-gyro-comet-arc {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: conic-gradient(
+    from 0deg,
+    rgb(240 255 255 / 0.98) 0deg,
+    rgb(58 255 255 / 0.62) 12deg,
+    rgb(58 255 255 / 0.2) 38deg,
+    rgb(58 255 255 / 0) 68deg,
+    rgb(58 255 255 / 0) 360deg
+  );
+  mask-image: radial-gradient(farthest-side, transparent calc(100% - 7px), #000 calc(100% - 2px));
+}
+
+.auth-gyro-aura {
+  position: absolute;
+  inset: 8%;
+  border-radius: 50%;
+  background: radial-gradient(
+    circle,
+    rgb(58 255 255 / 0.22) 0%,
+    rgb(41 198 198 / 0.13) 42%,
+    rgb(41 198 198 / 0) 70%
+  );
+  filter: blur(18px);
+  animation: auth-gyro-aura 11s var(--ease-standard) infinite;
+}
+
+.auth-gyro-pulse {
+  position: absolute;
+  inset: 0;
+  border: 1px solid rgb(132 244 244 / 0.5);
+  border-radius: 50%;
+  opacity: 0;
+  animation: auth-gyro-pulse 6s var(--ease-standard) infinite;
+  animation-delay: var(--gyro-delay, 0s);
+}
+
+.auth-gyro-hub {
+  position: absolute;
+  inset: 0;
+  place-items: center;
+  animation: auth-gyro-in 900ms var(--ease-standard) both;
+  animation-delay: 340ms;
+}
+
+.auth-gyro-hub-core {
+  position: relative;
+  display: grid;
+  place-items: center;
+}
+
+.auth-gyro-hub-halo {
+  position: absolute;
+  inset: -70%;
+  border-radius: 50%;
+  background: radial-gradient(
+    circle,
+    rgb(58 255 255 / 0.3) 0%,
+    rgb(41 198 198 / 0.14) 42%,
+    rgb(41 198 198 / 0) 72%
+  );
+  /* 7.4s against the tile's 5s: the two never line up, so the centre never pulses on a beat. */
+  animation: auth-gyro-halo 7.4s var(--ease-standard) infinite;
+}
+
+.auth-gyro-hub-tile {
+  position: relative;
+  display: grid;
+  place-items: center;
+  border: 1px solid rgb(255 255 255 / 0.22);
+  border-radius: 22px;
+  background: linear-gradient(160deg, rgb(255 255 255 / 0.2), rgb(255 255 255 / 0.06));
+  box-shadow:
+    0 24px 60px -22px rgb(0 0 0 / 0.65),
+    0 0 42px -6px rgb(58 255 255 / 0.42);
+  backdrop-filter: blur(10px);
+  animation: auth-gyro-breathe 5s var(--ease-standard) infinite;
+}
+
+@keyframes auth-gyro-turn {
+  from {
+    transform: rotateZ(var(--gyro-phase, 0deg));
+  }
+
+  to {
+    transform: rotateZ(calc(var(--gyro-phase, 0deg) + 360deg));
+  }
+}
+
+@keyframes auth-gyro-in {
+  from {
+    opacity: 0;
+    transform: scale(0.72);
+  }
+
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes auth-gyro-pulse {
+  0% {
+    opacity: 0;
+    transform: scale(0.18);
+  }
+
+  16% {
+    opacity: 0.55;
+  }
+
+  100% {
+    opacity: 0;
+    transform: scale(1.04);
+  }
+}
+
+@keyframes auth-gyro-aura {
+  0%,
+  100% {
+    opacity: 0.75;
+    transform: scale(1);
+  }
+
+  50% {
+    opacity: 1;
+    transform: scale(1.08);
+  }
+}
+
+@keyframes auth-gyro-halo {
+  0%,
+  100% {
+    opacity: 0.7;
+    transform: scale(0.94);
+  }
+
+  50% {
+    opacity: 1;
+    transform: scale(1.06);
+  }
+}
+
+@keyframes auth-gyro-breathe {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+
+  50% {
+    transform: scale(1.03);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
@@ -311,5 +569,11 @@ textarea {
     animation-iteration-count: 1 !important;
     scroll-behavior: auto !important;
     transition-duration: 0.01ms !important;
+  }
+
+  /* The pings are the one loop whose 100% frame is invisible, and a single fast-forwarded iteration
+     would leave a stray ring mid-expansion. They carry no meaning, so they simply go. */
+  .auth-gyro-pulse {
+    display: none;
   }
 }

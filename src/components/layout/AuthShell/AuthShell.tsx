@@ -7,18 +7,11 @@ import { useTransition } from "react";
 
 import { localeCookieName } from "@/src/i18n/locales";
 import { cn } from "@/src/lib/utils";
+import { AuthGyroscope } from "../AuthGyroscope";
 import { BrandMark } from "../BrandMark";
 import { LanguageToggle } from "../LanguageToggle";
 import { ThemeToggle } from "../ThemeToggle";
 import type { AuthShellMood, AuthShellProps } from "./AuthShell.types";
-
-const orbitDots = Array.from({ length: 46 }, (_, index) => {
-  const angle = (index / 46) * Math.PI * 2;
-  return {
-    x: (280 + 188 * Math.cos(angle)).toFixed(3),
-    y: (280 + 122 * Math.sin(angle)).toFixed(3),
-  };
-});
 
 const moodTranslationKeys: Record<AuthShellMood, { title: string; subtitle: string }> = {
   back: {
@@ -75,36 +68,15 @@ export function AuthShell({
               "radial-gradient(40% 30% at 80% 75%, rgba(41,198,198,0.22), transparent 70%), radial-gradient(30% 24% at 95% 20%, rgba(255,203,151,0.12), transparent 70%)",
           }}
         />
-        <svg
-          className="auth-shell-orbit absolute right-[-5.5rem] top-1/2 size-[20rem] -translate-y-1/2 lg:right-[-7.5rem] lg:size-[35rem]"
-          viewBox="0 0 560 560"
-          fill="none"
-          aria-hidden="true"
-        >
-          <g className="auth-shell-orbit-ring origin-center">
-            {orbitDots.map((dot, index) => (
-              <circle key={index} cx={dot.x} cy={dot.y} r="1.7" fill="rgba(234,251,250,0.35)" />
-            ))}
-            <circle
-              cx="280"
-              cy="280"
-              r="200"
-              stroke="rgba(234,251,250,0.20)"
-              strokeDasharray="2 9"
-              strokeWidth="1.4"
-            />
-            <circle
-              cx="280"
-              cy="280"
-              r="140"
-              stroke="rgba(253,207,174,0.30)"
-              strokeDasharray="5 8"
-              strokeWidth="1.2"
-            />
-            <circle cx="421" cy="139" r="9" fill="#29c6c6" />
-            <circle cx="421" cy="139" r="17" fill="#29c6c6" opacity="0.18" />
-          </g>
-        </svg>
+        {/* Bled off the right edge on purpose: a cage wider than its frame reads as a system that
+            carries on past the panel, and the arcs sweep behind the headline on the way out.
+
+            `7rem - 18rem` is the same -11rem a plain value would give — written as the hub's inset
+            minus half the 36rem cage so that resizing the cage keeps the hub 7rem from the panel's
+            right edge. `70%` is what actually clears the copy: the panel is `46%` capped at `620px`,
+            so at 1024px it is narrow enough that the 22.5rem copy block spans almost all of it, and
+            only dropping the hub below that block keeps the two from meeting. */}
+        <AuthGyroscope className="absolute right-[-4.5rem] top-1/2 size-[17rem] -translate-y-1/2 lg:right-[calc(7rem-18rem)] lg:top-[70%] lg:size-[36rem]" />
 
         <div className="relative z-10 flex w-full flex-col justify-between gap-8">
           <div className="flex items-center gap-3">
