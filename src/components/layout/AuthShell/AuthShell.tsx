@@ -118,9 +118,9 @@ export function AuthShell({
         </div>
       </aside>
 
-      {/* auth.css:56 — the same two canvas stops as the app shell, just a tighter ellipse. Both
-          themes now come from the tokens, so this needs no `dark:` override. */}
-      <section className="relative flex flex-1 items-start justify-center overflow-hidden bg-[radial-gradient(900px_520px_at_80%_-10%,var(--canvas-glow-teal),var(--canvas-base)_60%)] px-5 pb-24 pt-24 sm:px-6 lg:items-center lg:px-6 lg:py-10">
+      {/* auth.css:56 — the same aurora stops as the app canvas, just a tighter ellipse. Both
+          themes come from the tokens, so this needs no `dark:` override. */}
+      <section className="relative flex flex-1 items-start justify-center overflow-hidden bg-[radial-gradient(900px_520px_at_80%_-10%,var(--atmo-mint),var(--canvas-base)_60%)] px-5 pb-24 pt-24 sm:px-6 lg:items-center lg:px-6 lg:py-10">
         <div className="absolute right-5 top-5 z-10 flex items-center gap-2 sm:right-6">
           <LanguageToggle
             value={locale}

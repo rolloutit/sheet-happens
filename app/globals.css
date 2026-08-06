@@ -49,6 +49,16 @@
   --color-sidebar-border: var(--sidebar-border);
   --color-header: var(--header-bg);
   --color-scrim: var(--scrim);
+  --color-surface-inset: var(--surface-inset);
+  --color-ink-mint: var(--ink-mint);
+  --color-ink-amber: var(--ink-amber);
+  --color-ink-rose: var(--ink-rose);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --color-chart-6: var(--chart-6);
 
   --radius-xs: 6px;
   --radius-sm: 9px;
@@ -71,57 +81,92 @@
   --font-poppins:
     "Poppins", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 
-  /* Canvas layers, consumed by `.sheet-canvas`. The teal glow is opaque — the gradient's
-     `transparent` stop is what fades it, so it carries no alpha of its own. */
-  --canvas-base: #060f0e;
-  --canvas-glow-teal: #173f3c;
-  --canvas-glow-warm: rgb(255 171 99 / 0.085);
+  /* Atmosphere — "Graphite Aurora" (docs/dark-mode-redesign.md §5). `--canvas-base` is the void
+     behind everything; `--canvas-aurora` carries the two glow layers so each theme owns its own
+     geometry as well as its colours. The dark aurora is deliberately huge and faint: mint at 10%
+     lifts the void from L 0.145 to L 0.217, a presence rather than a spotlight. */
+  --canvas-base: #090a0c;
+  --atmo-mint: rgb(41 198 198 / 0.1);
+  --atmo-peach: rgb(255 203 151 / 0.06);
+  --atmo-dot: rgb(132 244 244 / 0.055);
+  --atmo-blob-mint: rgb(41 198 198 / 0.055);
+  --atmo-blob-peach: rgb(255 203 151 / 0.045);
+  --atmo-grain: 0.04;
+  --canvas-aurora:
+    radial-gradient(1600px 1000px at 100% -12%, var(--atmo-mint), transparent 62%),
+    radial-gradient(1300px 900px at -10% 115%, var(--atmo-peach), transparent 64%);
 
-  --background: #0a1716;
-  --foreground: #ecf6f3;
-  --card: #11221f;
-  --card-foreground: #ecf6f3;
-  --popover: #11221f;
-  --popover-foreground: #ecf6f3;
-  --primary: #19a8a3;
-  --primary-foreground: #042322;
-  --secondary: #1a302c;
-  --secondary-foreground: #ecf6f3;
-  --muted: #244039;
-  --muted-foreground: #a4bab3;
-  --text-subtle: #71908a;
-  --accent: #37e3de;
-  --accent-foreground: #042322;
-  --accent-soft: rgb(55 227 222 / 0.15);
-  --accent-line: rgb(55 227 222 / 0.52);
-  --cta: #ffc68b;
-  --cta-hover: #ffb76c;
-  --cta-foreground: #2a1608;
-  --destructive: #ff8f86;
-  --destructive-soft: rgb(255 143 134 / 0.16);
-  --destructive-foreground: #240707;
-  --success: #5fdaa8;
-  --success-soft: rgb(95 218 168 / 0.16);
-  --success-foreground: #082313;
-  --warning: #fcba63;
-  --warning-soft: rgb(252 186 99 / 0.16);
-  --warning-foreground: #2e2100;
-  --border: rgb(143 240 228 / 0.1);
-  --border-strong: rgb(153 245 232 / 0.2);
+  /* Chassis — cool graphite (H ≈ 264°), chroma rising with elevation (C 0.005 → 0.016).
+     inset < base < raised (card) < hover (secondary) < over (popover/muted). The sidebar sits
+     *below* the canvas: navigation recedes, content comes forward. */
+  --background: #0e1014;
+  --surface-inset: #0b0c0f;
+  --card: #15181e;
+  --popover: #1e222a;
+  --secondary: #1a1d24;
+  --muted: #1e222a;
+  --sidebar: #0b0c0f;
+
+  /* Type — warm ivory (H ≈ 79°, from the brand Beige ramp) on the cool chassis. All three live
+     tiers clear 4.5:1 on every surface up to `--popover`. */
+  --foreground: #f3efe9;
+  --card-foreground: #f3efe9;
+  --popover-foreground: #f3efe9;
+  --secondary-foreground: #f3efe9;
+  --muted-foreground: #b7b2aa;
+  --text-subtle: #948f87;
+
+  /* Inks — dark text for full-strength signal fills. One per family; every pairing clears 6:1. */
+  --ink-mint: #04211f;
+  --ink-amber: #2a1608;
+  --ink-rose: #2a0a10;
+
+  /* Signals — mint is a signal, never a surface. The four families sit ≥ 42° apart in hue so the
+     16% `*-soft` tints stay distinguishable over the neutral card. */
+  --primary: #29c6c6;
+  --primary-foreground: var(--ink-mint);
+  --accent: #84f4f4;
+  --accent-foreground: var(--ink-mint);
+  --accent-soft: rgb(41 198 198 / 0.16);
+  --accent-line: rgb(132 244 244 / 0.3);
+  --cta: #ffcb97;
+  --cta-hover: #fab976;
+  --cta-foreground: var(--ink-amber);
+  --success: #5ce08c;
+  --success-soft: rgb(92 224 140 / 0.16);
+  --success-foreground: var(--ink-mint);
+  --warning: #faab59;
+  --warning-soft: rgb(250 171 89 / 0.16);
+  --warning-foreground: var(--ink-amber);
+  --destructive: #ff6a7e;
+  --destructive-soft: rgb(255 106 126 / 0.16);
+  --destructive-foreground: var(--ink-rose);
+
+  /* Edges, depth, chrome — neutral hairlines; a mint edge is reserved for elements that carry
+     the accent. */
+  --border: rgb(232 236 242 / 0.08);
+  --border-strong: rgb(232 236 242 / 0.16);
   /* Input borders are the prototype's `--border-strong`. Declared once: `var()` resolves at the
      use site, so re-binding `--border-strong` in `.light` carries `--input` with it. */
   --input: var(--border-strong);
-  --ring: #37e3de;
-  --sidebar: #0a1917;
-  --sidebar-border: rgb(120 232 220 / 0.07);
-  --header-bg: rgb(10 23 22 / 0.7);
-  --scrim: rgb(4 12 11 / 0.62);
+  --ring: #84f4f4;
+  --sidebar-border: rgb(232 236 242 / 0.06);
+  --header-bg: rgb(14 16 20 / 0.72);
+  --scrim: rgb(9 10 12 / 0.66);
 
   /* Skeleton shimmer stops. Raw variables — they feed a gradient, not a colour utility. */
-  --skeleton: rgb(143 240 228 / 0.055);
-  --skeleton-sheen: rgb(163 245 232 / 0.11);
+  --skeleton: rgb(232 236 242 / 0.05);
+  --skeleton-sheen: rgb(232 236 242 / 0.1);
 
-  --elevation-pop: 0 22px 58px -14px rgb(0 0 0 / 0.68), 0 0 0 1px rgb(120 240 228 / 0.06);
+  --elevation-pop: 0 20px 48px -16px rgb(0 0 0 / 0.72), 0 0 0 1px rgb(232 236 242 / 0.06);
+
+  /* Charts — categorical ramp (§7). Violet and blue are chart-only; they never appear in chrome. */
+  --chart-1: #29c6c6;
+  --chart-2: #ffcb97;
+  --chart-3: #9e8cff;
+  --chart-4: #5ce08c;
+  --chart-5: #ff6a7e;
+  --chart-6: #63a6ff;
 
   --sidebar-w: 256px;
   --sidebar-w-collapsed: 76px;
@@ -137,12 +182,18 @@
 .light {
   color-scheme: light;
 
-  /* Warm cream canvas: white glow off the top-right, peach off the bottom-left. */
+  /* Warm cream canvas: white glow off the top-right, peach off the bottom-left. The atmosphere
+     layers (§5) do not ship to light mode in this pass — only the aurora vars carry over, holding
+     the same composition light mode has always had. */
   --canvas-base: #f4ebdd;
-  --canvas-glow-teal: #ffffff;
-  --canvas-glow-warm: rgb(255 183 122 / 0.2);
+  --atmo-mint: #ffffff;
+  --atmo-peach: rgb(255 183 122 / 0.2);
+  --canvas-aurora:
+    radial-gradient(1150px 700px at 100% -8%, var(--atmo-mint), transparent 58%),
+    radial-gradient(880px 600px at -8% 112%, var(--atmo-peach), transparent 60%);
 
   --background: #fdfaf4;
+  --surface-inset: #faf5ee;
   --foreground: #0a2930;
   --card: #ffffff;
   --card-foreground: #0a2930;
@@ -206,10 +257,7 @@ body {
    `h-screen`/`overflow-hidden` scroll container and would otherwise paint over the body. */
 body,
 .sheet-canvas {
-  background:
-    radial-gradient(1150px 700px at 100% -8%, var(--canvas-glow-teal), transparent 58%),
-    radial-gradient(880px 600px at -8% 112%, var(--canvas-glow-warm), transparent 60%),
-    var(--canvas-base);
+  background: var(--canvas-aurora), var(--canvas-base);
 }
 
 button,
@@ -220,7 +268,7 @@ textarea {
 }
 
 ::selection {
-  background: rgb(55 227 222 / 0.28);
+  background: rgb(41 198 198 / 0.26);
 }
 
 :focus-visible {
