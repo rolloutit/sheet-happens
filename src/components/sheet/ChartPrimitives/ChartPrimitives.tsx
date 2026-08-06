@@ -82,8 +82,8 @@ export function TrendChart({
         <AreaChart data={data} margin={{ top: 8, right: 8, bottom: 0, left: -24 }}>
           <defs>
             <linearGradient id="trend-fill" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="5%" stopColor="var(--primary)" stopOpacity={0.35} />
-              <stop offset="95%" stopColor="var(--primary)" stopOpacity={0.02} />
+              <stop offset="5%" stopColor="var(--chart-1)" stopOpacity={0.35} />
+              <stop offset="95%" stopColor="var(--chart-1)" stopOpacity={0.02} />
             </linearGradient>
           </defs>
           <CartesianGrid strokeDasharray="3 3" vertical={false} />
@@ -96,7 +96,7 @@ export function TrendChart({
           <Area
             type="monotone"
             dataKey="value"
-            stroke="var(--primary)"
+            stroke="var(--chart-1)"
             fill="url(#trend-fill)"
             strokeWidth={2}
           />

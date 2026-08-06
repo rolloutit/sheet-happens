@@ -160,13 +160,18 @@
 
   --elevation-pop: 0 20px 48px -16px rgb(0 0 0 / 0.72), 0 0 0 1px rgb(232 236 242 / 0.06);
 
-  /* Charts — categorical ramp (§7). Violet and blue are chart-only; they never appear in chrome. */
-  --chart-1: #29c6c6;
-  --chart-2: #ffcb97;
-  --chart-3: #9e8cff;
-  --chart-4: #5ce08c;
-  --chart-5: #ff6a7e;
-  --chart-6: #63a6ff;
+  /* Charts — categorical ramp in the redesign's hue order (mint, amber, violet, green, rose,
+     blue; §7), with each step snapped into the dataviz validator's mark-lightness band. The
+     proposal's literal values failed that gate (too bright for marks, peach under the chroma
+     floor); these pass all six checks against both the dark card and white, so the ramp is
+     deliberately theme-stable — `.light` does not override it. Violet and blue are chart-only;
+     they never appear in chrome. */
+  --chart-1: #2ca2a2;
+  --chart-2: #c08442;
+  --chart-3: #715cc7;
+  --chart-4: #3fa164;
+  --chart-5: #b23a4e;
+  --chart-6: #427bc6;
 
   --sidebar-w: 256px;
   --sidebar-w-collapsed: 76px;
