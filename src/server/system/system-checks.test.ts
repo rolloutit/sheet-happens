@@ -122,7 +122,7 @@ describe("system checks", () => {
     expect(result.code).toBe("ok");
     expect(typstRenderer).toHaveBeenCalledWith(
       {
-        source: expect.stringContaining("Sheet Happens Typst check"),
+        template: "system-check",
         filename: "system-check",
       },
       {

@@ -22,7 +22,7 @@ import {
 } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
-import { useEffect, useState, useSyncExternalStore, useTransition } from "react";
+import { useState, useSyncExternalStore, useTransition } from "react";
 
 import {
   Drawer,
@@ -131,9 +131,6 @@ export function AppShell({
   const [isStoppingTimer, startStoppingTimerTransition] = useTransition();
   const [, startLanguageTransition] = useTransition();
 
-  useEffect(() => {
-    setIsCollapsed(initiallyCollapsed);
-  }, [initiallyCollapsed]);
   const resolvedNotifications = notifications ?? [
     {
       id: "missing-hours",

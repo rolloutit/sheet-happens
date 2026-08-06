@@ -1868,10 +1868,29 @@
     "export": {
       "action": "PDF export",
       "defaultTitle": "Időriport",
+      "dialogTitle": "Export beállítása",
+      "dialogDescription": "Add meg az export címét, válaszd ki a tartalmát, és ellenőrizd az előnézetet a PDF letöltése előtt.",
       "titleLabel": "Export címe",
+      "titlePlaceholder": "pl. Diapro — júniusi óra-összesítő",
+      "languageLabel": "PDF nyelve",
       "modeLabel": "Tartalom",
       "modeCostFree": "Költségmentes",
-      "modeInternal": "Belső"
+      "modeCostFreeHint": "Csak órák és leírások — kifelé biztonságosan megosztható.",
+      "modeInternal": "Belső",
+      "modeInternalHint": "Óradíjakkal és projektköltséggel — csak belső használatra.",
+      "internalWarningTitle": "Költségadatok láthatók",
+      "internalWarningBody": "Ez az export belső óradíjakat és költséget tartalmaz. Soha ne küldd ügyfélnek vagy külső félnek.",
+      "formatLabel": "Formátum",
+      "formatPdf": "PDF dokumentum",
+      "previewLabel": "Előnézet",
+      "previewLoading": "Előnézet készítése…",
+      "previewError": "Az előnézet nem készült el. Az export ettől függetlenül működhet.",
+      "previewRetry": "Újra",
+      "previewTruncated": "Az előnézet az első {count} oldalt mutatja. A letöltés minden oldalt tartalmaz.",
+      "timezoneLabel": "Időzóna",
+      "cancel": "Mégse",
+      "close": "Bezárás",
+      "download": "PDF letöltése"
     },
     "filters": {
       "start": "Kezdő",
@@ -1931,6 +1950,29 @@
     "empty": {
       "title": "Nincs rögzített idő ezekkel a szűrőkkel.",
       "description": "Módosítsd az időszakot vagy törölj egy szűrőt."
+    },
+    "pdf": {
+      "brand": "Sheet Happens",
+      "confidential": "Bizalmas",
+      "page": "Oldal",
+      "generatedAt": "Generálva",
+      "breakdown": "Bontás",
+      "breakdownDescription": "Összesített idő és bejegyzésszám a kiválasztott nézet szerint.",
+      "details": "Részletek",
+      "detailsDescription": "A riport alapjául szolgáló időbejegyzések.",
+      "attention": "Figyelmeztetés",
+      "name": "Név",
+      "share": "Arány",
+      "entries": "Bejegyzés",
+      "rate": "Óradíj",
+      "amount": "Összeg",
+      "total": "Összesen",
+      "missingRate": "Hiányzó óradíj",
+      "missingRateNote": "{marker} jelöli azokat a bejegyzéseket, amelyekhez nincs érvényes óradíj.",
+      "warnings": {
+        "missingRates": "{count, plural, one {# bejegyzéshez hiányzik az óradíj.} other {# bejegyzéshez hiányzik az óradíj.}}",
+        "mixedCurrency": "A riport több pénznemet tartalmaz: {currencies}."
+      }
     }
   },
   "SettingsActions": {

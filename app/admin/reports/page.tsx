@@ -1,4 +1,4 @@
-import { CalendarDays, FileDown, FolderKanban, Users, X } from "lucide-react";
+import { CalendarDays, FolderKanban, Users, X } from "lucide-react";
 import type { Route } from "next";
 import Link from "next/link";
 import { getLocale, getTranslations } from "next-intl/server";
@@ -8,6 +8,14 @@ import { Badge } from "@/src/components/ui/Badge";
 import { Button } from "@/src/components/ui/Button";
 import { Input } from "@/src/components/ui/Input";
 import { SectionHead } from "@/src/components/ui/SectionHead";
+import { defaultLocale, resolveLocale, supportedLocales, type AppLocale } from "@/src/i18n/locales";
+import {
+  formatCount,
+  formatDateLabel,
+  formatHours,
+  formatHoursWithUnit,
+  formatPeriodRange,
+} from "@/src/lib/formatting";
 import {
   mapMemberToShellProfile,
   mapMemberToShellUser,
@@ -17,6 +25,7 @@ import {
   getTimeEntryReportSnapshot,
   listReportFilterOptions,
   parseReportSearchParams,
+  reportExportFieldsFromFilters,
   type ReportCostFreeLine,
   type ReportFilterOption,
   type ReportPeriodMode,
@@ -25,6 +34,8 @@ import {
   type ReportView,
 } from "@/src/server/reports";
 import { formatDateOnly, getMonday, parseDateOnly } from "@/src/server/time-tracking";
+
+import { ReportExportModal } from "./ReportExportModal";
 
 export const dynamic = "force-dynamic";
 
@@ -55,6 +66,7 @@ export default async function AdminReportsPage({ searchParams }: AdminReportsPag
     projectGroupId: filters.projectGroupId,
     memberId: filters.memberId,
   });
+  const exportTitles = await buildExportTitles(snapshot.period);
 
   return (
     <AppShell
@@ -66,7 +78,13 @@ export default async function AdminReportsPage({ searchParams }: AdminReportsPag
       <section className="mx-auto grid w-full max-w-[73.75rem] gap-4 px-4 py-8 sm:px-6 lg:px-8">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
           <SectionHead eyebrow={t("eyebrow")} title={t("title")} subtitle={t("subtitle")} />
-          <ReportExportForm snapshot={snapshot} filters={filters} locale={locale} t={t} />
+          <ReportExportModal
+            exportFields={reportExportFieldsFromFilters(filters)}
+            defaultTitles={exportTitles}
+            initialLocale={resolveLocale(locale) ?? defaultLocale}
+            timezone={admin.timezone}
+            disabled={snapshot.lines.length === 0}
+          />
         </div>
 
         <ReportFilters
@@ -80,7 +98,7 @@ export default async function AdminReportsPage({ searchParams }: AdminReportsPag
         <div className="grid gap-3 md:grid-cols-4">
           <SummaryCard
             label={t("stats.totalHours")}
-            value={formatHours(snapshot.summary.totalMinutes, locale)}
+            value={formatHoursWithUnit(snapshot.summary.totalMinutes, locale)}
           />
           <SummaryCard
             label={t("stats.period")}
@@ -88,11 +106,11 @@ export default async function AdminReportsPage({ searchParams }: AdminReportsPag
           />
           <SummaryCard
             label={t("stats.people")}
-            value={formatInteger(snapshot.summary.peopleCount, locale)}
+            value={formatCount(snapshot.summary.peopleCount, locale)}
           />
           <SummaryCard
             label={t("stats.projects")}
-            value={formatInteger(snapshot.summary.projectCount, locale)}
+            value={formatCount(snapshot.summary.projectCount, locale)}
           />
         </div>
 
@@ -143,93 +161,6 @@ export default async function AdminReportsPage({ searchParams }: AdminReportsPag
         )}
       </section>
     </AppShell>
-  );
-}
-
-function ReportExportForm({
-  snapshot,
-  filters,
-  locale,
-  t,
-}: {
-  snapshot: ReportSnapshot;
-  filters: ReturnType<typeof parseReportSearchParams>;
-  locale: string;
-  t: AdminReportsTranslator;
-}) {
-  const defaultTitle = `${t("export.defaultTitle")} - ${formatPeriod(
-    snapshot.period.start,
-    snapshot.period.end,
-    locale,
-  )}`;
-
-  return (
-    <form
-      action="/admin/reports/export"
-      method="post"
-      target="_blank"
-      className="grid gap-2 rounded-[var(--radius-lg)] border border-border bg-card p-3 shadow-soft sm:min-w-[28rem] sm:grid-cols-[minmax(0,1fr)_9rem_auto] sm:items-end"
-    >
-      <HiddenReportFilters snapshot={snapshot} filters={filters} locale={locale} />
-      <label className="grid gap-1">
-        <span className="font-ui text-[10.5px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
-          {t("export.titleLabel")}
-        </span>
-        <Input
-          name="title"
-          defaultValue={defaultTitle}
-          maxLength={120}
-          className="h-11 bg-background"
-        />
-      </label>
-      <label className="grid gap-1">
-        <span className="font-ui text-[10.5px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
-          {t("export.modeLabel")}
-        </span>
-        <select name="mode" defaultValue="COST_FREE" className={selectClassName}>
-          <option value="COST_FREE">{t("export.modeCostFree")}</option>
-          <option value="INTERNAL">{t("export.modeInternal")}</option>
-        </select>
-      </label>
-      <Button type="submit" variant="cta" icon={FileDown} disabled={snapshot.lines.length === 0}>
-        {t("export.action")}
-      </Button>
-    </form>
-  );
-}
-
-function HiddenReportFilters({
-  snapshot,
-  filters,
-  locale,
-}: {
-  snapshot: ReportSnapshot;
-  filters: ReturnType<typeof parseReportSearchParams>;
-  locale: string;
-}) {
-  return (
-    <>
-      <input type="hidden" name="locale" value={locale} />
-      <input type="hidden" name="period" value={filters.period} />
-      <input type="hidden" name="view" value={snapshot.view} />
-      {filters.period === "custom" ? (
-        <>
-          <input type="hidden" name="start" value={snapshot.period.start} />
-          <input type="hidden" name="end" value={snapshot.period.end} />
-        </>
-      ) : (
-        <input type="hidden" name="anchor" value={filters.anchor} />
-      )}
-      {snapshot.filters.projectId ? (
-        <input type="hidden" name="project" value={snapshot.filters.projectId} />
-      ) : null}
-      {snapshot.filters.projectGroupId ? (
-        <input type="hidden" name="group" value={snapshot.filters.projectGroupId} />
-      ) : null}
-      {snapshot.filters.memberId ? (
-        <input type="hidden" name="member" value={snapshot.filters.memberId} />
-      ) : null}
-    </>
   );
 }
 
@@ -480,7 +411,7 @@ function WeekBars({ lines, locale }: { lines: ReportCostFreeLine[]; locale: stri
             className="flex min-h-48 min-w-16 flex-1 flex-col items-center justify-end gap-2"
           >
             <span className="text-sm font-semibold text-foreground">
-              {bucket.totalMinutes ? formatHours(bucket.totalMinutes, locale) : ""}
+              {bucket.totalMinutes ? formatHoursWithUnit(bucket.totalMinutes, locale) : ""}
             </span>
             <span
               className="w-12 rounded-t-[var(--radius-md)] bg-accent shadow-[0_12px_28px_rgba(31,128,127,0.18)]"
@@ -515,7 +446,7 @@ function DonutBreakdown({ snapshot, locale }: { snapshot: ReportSnapshot; locale
       >
         <div className="grid size-24 place-items-center rounded-full bg-card text-center shadow-inner">
           <span className="font-display text-2xl font-semibold leading-none text-foreground">
-            {formatHours(snapshot.summary.totalMinutes, locale).replace(" h", "")}
+            {formatHours(snapshot.summary.totalMinutes, locale)}
           </span>
           <span className="font-ui text-[10px] font-semibold uppercase tracking-[0.1em] text-muted-foreground">
             h
@@ -564,7 +495,9 @@ function HorizontalBreakdown({ snapshot, locale }: { snapshot: ReportSnapshot; l
             />
           </span>
           <span className="text-right text-sm text-muted-foreground">
-            <b className="font-display text-foreground">{formatHours(row.totalMinutes, locale)}</b>{" "}
+            <b className="font-display text-foreground">
+              {formatHoursWithUnit(row.totalMinutes, locale)}
+            </b>{" "}
             · {Math.round(row.percentage)}%
           </span>
         </div>
@@ -704,7 +637,7 @@ function ReportDetail({
                 ) : null}
               </div>
               <div className="font-display text-lg font-semibold text-foreground">
-                {formatHours(group.totalMinutes, locale)}
+                {formatHoursWithUnit(group.totalMinutes, locale)}
               </div>
             </div>
             <div className="divide-y divide-border/70">
@@ -725,7 +658,7 @@ function ReportDetail({
                     {snapshot.view === "USER" ? line.project.name : line.member.name}
                   </div>
                   <div className="font-display text-sm font-semibold text-foreground md:text-right">
-                    {formatHours(line.durationMinutes, locale)}
+                    {formatHoursWithUnit(line.durationMinutes, locale)}
                   </div>
                 </div>
               ))}
@@ -758,26 +691,29 @@ function buildWeekBuckets(lines: ReportCostFreeLine[]) {
   return [...buckets.values()].sort((left, right) => left.key.localeCompare(right.key));
 }
 
-function formatHours(minutes: number, locale: string) {
-  const hours = minutes / 60;
-  const formatter = new Intl.NumberFormat(locale, {
-    maximumFractionDigits: hours % 1 === 0 ? 0 : 2,
-  });
-
-  return `${formatter.format(hours)} h`;
-}
-
-function formatInteger(value: number, locale: string) {
-  return new Intl.NumberFormat(locale, { maximumFractionDigits: 0 }).format(value);
-}
-
 function formatDate(value: string, locale: string) {
-  return new Intl.DateTimeFormat(locale, {
-    month: "short",
-    day: "numeric",
-  }).format(parseDateOnly(value));
+  return formatDateLabel(value, locale, { style: "short" });
 }
 
 function formatPeriod(start: string, end: string, locale: string) {
-  return `${formatDate(start, locale)} - ${formatDate(end, locale)}`;
+  return formatPeriodRange(start, end, locale, { style: "short" });
+}
+
+/**
+ * One generated title per supported language, so the dialog can follow its own language selector
+ * without a round trip — the export language is not the interface language.
+ */
+async function buildExportTitles(period: ReportSnapshot["period"]) {
+  const titles = await Promise.all(
+    supportedLocales.map(async (locale) => {
+      const t = await getTranslations({ locale, namespace: "AdminReports" });
+
+      return [
+        locale,
+        `${t("export.defaultTitle")} - ${formatPeriod(period.start, period.end, locale)}`,
+      ] as const;
+    }),
+  );
+
+  return Object.fromEntries(titles) as Record<AppLocale, string>;
 }

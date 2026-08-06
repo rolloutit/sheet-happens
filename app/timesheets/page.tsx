@@ -27,6 +27,15 @@ import { Field } from "@/src/components/ui/Field";
 import { Input } from "@/src/components/ui/Input";
 import { SectionHead } from "@/src/components/ui/SectionHead";
 import {
+  formatCount,
+  formatHours,
+  formatMonthLabel,
+  formatMoney as formatMoneyBase,
+  formatPeriodRange as formatPeriodRangeBase,
+  formatRate as formatRateBase,
+  formatTimestamp as formatTimestampBase,
+} from "@/src/lib/formatting";
+import {
   accountStatusRoute,
   mapMemberToShellProfile,
   mapMemberToShellRole,
@@ -707,60 +716,20 @@ function formatProjectAmount(
 }
 
 function formatRate(rate: TimesheetPreviewRate, locale: string) {
-  const formattedRate = new Intl.NumberFormat(locale, {
-    maximumFractionDigits: 2,
-  }).format(Number(rate.hourlyRate));
-
-  return `${formattedRate} ${rate.currencyCode}/h`;
+  return formatRateBase(rate.hourlyRate, rate.currencyCode, locale);
 }
 
+/** Contractor-facing amounts spell the currency out to match the invoices they reconcile against. */
 function formatMoney(amount: string, currencyCode: string, locale: string) {
-  return new Intl.NumberFormat(locale, {
-    style: "currency",
-    currency: currencyCode,
-    currencyDisplay: "code",
-    maximumFractionDigits: 2,
-  }).format(Number(amount));
+  return formatMoneyBase(amount, currencyCode, locale, { display: "code" });
 }
 
 function formatDateTime(value: string, locale: string) {
-  return new Intl.DateTimeFormat(locale, {
-    dateStyle: "medium",
-    timeStyle: "short",
-    timeZone: "UTC",
-  }).format(new Date(value));
-}
-
-function formatHours(minutes: number, locale: string) {
-  const hours = minutes / 60;
-
-  return new Intl.NumberFormat(locale, {
-    maximumFractionDigits: 2,
-  }).format(hours);
-}
-
-function formatCount(value: number, locale: string) {
-  return new Intl.NumberFormat(locale).format(value);
-}
-
-function formatMonthLabel(value: string, locale: string) {
-  return new Intl.DateTimeFormat(locale, {
-    month: "long",
-    year: "numeric",
-    timeZone: "UTC",
-  }).format(new Date(`${value}T00:00:00.000Z`));
+  return formatTimestampBase(value, locale, { timeZone: "UTC" });
 }
 
 function formatPeriodRange(start: string, end: string, locale: string) {
-  const formatter = new Intl.DateTimeFormat(locale, {
-    month: "short",
-    day: "numeric",
-    timeZone: "UTC",
-  });
-
-  return `${formatter.format(new Date(`${start}T00:00:00.000Z`))} - ${formatter.format(
-    new Date(`${end}T00:00:00.000Z`),
-  )}`;
+  return formatPeriodRangeBase(start, end, locale, { style: "short" });
 }
 
 function getStatusLabel(status: TimesheetPreviewStatus, t: TimesheetsTranslator) {

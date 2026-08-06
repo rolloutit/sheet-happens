@@ -50,3 +50,18 @@ AUTH_GOOGLE_CLIENT_ID="..."
 AUTH_GOOGLE_CLIENT_SECRET="..."
 AUTH_GOOGLE_ALLOWED_DOMAINS="example.com"
 ```
+
+## Reports demo data
+
+To manually test `/admin/reports` with realistic data, run once after `pnpm db:dev`:
+
+```bash
+pnpm db:dev:seed:reports-demo
+```
+
+This adds 6 active members (employees and contractors, mixed EUR/HUF), 6 projects across one
+project group, assignments, internal rates (including one project-override rate), and ~2 months of
+weekday time entries. It only touches new records — the `admin@example.com` / `contractor@example.com`
+/ `employee@example.com` onboarding-flow rows from the base seed are left untouched. Re-running it is
+safe; it skips anything it already created. Requires an activated admin login to view the page (see
+above).

@@ -1640,23 +1640,82 @@ Expected result:
 - The selected filters are reflected in the URL and survive browser refresh.
 - Clearing filters returns to the default monthly report.
 
+### Configure Export Dialog
+
+1. Sign in as `{ADMIN_EMAIL}` with TOTP enabled and verified.
+2. Open `https://{DOMAIN_NAME}/admin/reports` and choose filters that include tracked time.
+3. Confirm the page header carries only the `PDF export` button — no export title field and no
+   content dropdown.
+4. Click `PDF export` and wait for the preview.
+5. Type a new export title one character at a time and watch the preview.
+6. Switch the content selection to internal, then back to cost-free.
+7. Resize the window down to a narrow width.
+8. Close the dialog with the `X`, with `Escape`, with `Cancel`, and by clicking outside it. Reopen it
+   after each.
+
+Expected result:
+
+- The dialog opens with the export title prefilled from the current period, cost-free selected, and
+  `PDF document` shown as the only format.
+- The preview pane renders the real report document as a white page, one image per page of the
+  export, on the tinted panel behind it.
+- Typing does not re-render the preview on every keystroke: the preview refreshes once, roughly half
+  a second after typing stops, and the heading it shows then matches the title field.
+- A refresh never blanks the preview. The pages already on screen stay put and keep their scroll
+  position while the new render runs; a `Rendering the preview…` note appears next to the `PREVIEW`
+  label, stays visible even when the pages are scrolled past, and the new pages replace the old ones
+  in place. Switching content back and forth quickly does not make the pane strobe.
+- Selecting internal reveals the amber `Cost data is visible` warning and the preview gains rate and
+  cost columns plus a cost metric. Selecting cost-free removes all three again.
+- The footer states the time zone the report was cut on, matching the admin's own time zone.
+- Below roughly 48rem the two panes stack instead of scrolling sideways, and the page never scrolls
+  horizontally.
+- Every close route dismisses the dialog and returns focus to the `PDF export` button. Reopening
+  resets the title and the content selection to their defaults.
+- The dialog title, both content labels and hints, the warning, the format row, the preview label,
+  the time zone label, `Cancel` and `Download PDF` are all translated in Hungarian and English.
+- Both themes are legible: the config rail and footer follow the theme, while the preview page stays
+  white in dark and light alike, because it is the printed document.
+
+### Export Preview Fidelity And Limits
+
+1. Sign in as `{ADMIN_EMAIL}` with TOTP enabled and verified.
+2. Open `https://{DOMAIN_NAME}/admin/reports`, pick a period long enough to fill more than one page,
+   and open the export dialog.
+3. Scroll the preview pane to the last page.
+4. Download the PDF and compare it page by page against what the preview showed.
+5. Pick a period with more than 12 pages of tracked time, if the data allows it.
+6. Filter down to a period with no tracked time and look at the `PDF export` button.
+7. Open the audit log and count the `report.exported` rows created while previewing.
+
+Expected result:
+
+- The preview shows every page of the document, not only the first, in order.
+- The downloaded PDF matches the preview: same title, same columns, same totals, same page count.
+- Beyond 12 pages the preview stops and says it is showing the first 12 pages, while the download
+  still contains all of them.
+- With no tracked time in range the `PDF export` button is disabled and the dialog cannot be opened.
+- Previewing records no `report.exported` audit rows, creates no report export or document rows, and
+  writes nothing to object storage. Only the actual download does.
+
 ### Export Cost-Free PDF
 
 1. Sign in as `{ADMIN_EMAIL}` with TOTP enabled and verified.
 2. Open `https://{DOMAIN_NAME}/admin/reports`.
 3. Choose filters that include tracked time.
-4. Enter `{REPORT_EXPORT_TITLE}` as the export title.
-5. Select cost-free content.
-6. Click `PDF export`.
-7. Open the downloaded PDF.
-8. Search the PDF for hourly rate, amount, and currency values that should only appear internally.
+4. Click `PDF export`.
+5. Enter `{REPORT_EXPORT_TITLE}` as the export title.
+6. Keep cost-free content selected.
+7. Click `Download PDF`.
+8. Open the downloaded PDF.
+9. Search the PDF for hourly rate, amount, and currency values that should only appear internally.
 
 Expected result:
 
 - A PDF downloads successfully.
 - The export title appears at the top of the PDF.
 - The PDF contains hours, dates, projects or members, and descriptions.
-- The PDF does not contain hourly rates or calculated amounts.
+- The PDF does not contain hourly rates or calculated amounts, and does not name the export mode.
 - An audit row is recorded for `report.exported`.
 
 ### Export Internal PDF
@@ -1664,16 +1723,18 @@ Expected result:
 1. Sign in as `{ADMIN_EMAIL}` with TOTP enabled and verified.
 2. Open `https://{DOMAIN_NAME}/admin/reports`.
 3. Choose filters that include tracked time with configured rates.
-4. Enter `{INTERNAL_REPORT_EXPORT_TITLE}` as the export title.
-5. Select internal content.
-6. Click `PDF export`.
-7. Open the downloaded PDF.
+4. Click `PDF export`.
+5. Enter `{INTERNAL_REPORT_EXPORT_TITLE}` as the export title.
+6. Select internal content.
+7. Click `Download PDF`.
+8. Open the downloaded PDF.
 
 Expected result:
 
 - A PDF downloads successfully.
 - The PDF contains hours, hourly rates, currencies, and calculated amounts.
-- Missing rates are shown as missing, not silently calculated as zero.
+- Missing rates are marked with an em dash and explained in a footnote, not silently
+  calculated as zero.
 - An audit row is recorded for `report.exported`.
 
 ### Export Runtime Configuration
@@ -1682,12 +1743,136 @@ Expected result:
 2. Open `https://{DOMAIN_NAME}/admin/reports`.
 3. Export a PDF from an environment where object storage and Typst are configured.
 4. Repeat in an environment where Typst is intentionally not available, if such an environment exists.
+5. In that same environment, open the export dialog and read the preview pane.
 
 Expected result:
 
 - With object storage and Typst configured, the export succeeds.
 - Without Typst, the export fails with a clear server error instead of a broken or empty PDF.
 - Without object storage, the export fails and no report export metadata is left behind.
+- Without Typst, the preview pane shows a translated failure message and a retry button rather than
+  an empty white page, and the message does not leak the binary path or the renderer's stderr.
+
+### Export Template Rendering And Localization
+
+1. Sign in as `{ADMIN_EMAIL}` with TOTP enabled and verified.
+2. Set the interface language to Hungarian, open `https://{DOMAIN_NAME}/admin/reports`, and export
+   both a cost-free and an internal PDF with the `PDF language` selector left on `Magyar`.
+3. Switch the interface language to English, keep the `PDF language` selector on `English`, and
+   export both again.
+4. Open all four PDFs.
+
+Expected result:
+
+- Every PDF renders in the language chosen in the dialog: headings, table headers, the
+  confidentiality pill, the scope facet labels, the `Generated` label, the `Total` row, the footer
+  page label, and the footnotes.
+- Hungarian accented characters (`ő`, `ű`, `á`, `é`, `í`) render correctly and are not replaced by
+  boxes or blank glyphs. The body font is Inter in both languages.
+- Dates never wrap onto a second line inside the date column, in either language.
+- Cost-free PDFs contain no rate, amount, or currency values anywhere, including in the summary
+  band and the breakdown table.
+- A report whose lines have missing rates shows a warning banner, an em dash in the affected rate
+  and amount cells, and a footnote explaining the em dash — never a zero amount.
+
+### Export Language Independent Of The Interface
+
+1. Sign in as `{ADMIN_EMAIL}` with TOTP enabled and verified.
+2. Set the interface language to Hungarian and open `https://{DOMAIN_NAME}/admin/reports`.
+3. Click `PDF export` and read the `PDF nyelve` selector.
+4. Select `English` and wait for the preview to re-render.
+5. Type `{REPORT_EXPORT_TITLE}` over the generated title, switch back to `Magyar`, then to `English`
+   again.
+6. Click `Download PDF` and open the PDF.
+7. Switch the interface language to English, reopen the dialog, select `Magyar`, and download again.
+8. Reopen the dialog after both downloads.
+
+Expected result:
+
+- The selector is a two-pill toggle matching the `User view` / `Project view` pills on the reports
+  page, reachable by keyboard with the arrow keys moving the selection, in both dark and light theme.
+- The dialog's own labels and buttons stay in the interface language; only the preview and the PDF
+  follow the selector.
+- Selecting `English` re-renders the preview in English within about a second, and the generated
+  title switches from `Időriport - …` to `Time report - …`.
+- A hand-typed title survives every later language switch; it is never overwritten.
+- Both PDFs render fully in the language the selector showed at download time, with the app chrome
+  in the other language — proving the two directions are independent.
+- Reopening the dialog resets the selector to the interface language, the generated title, and
+  cost-free content.
+
+### Export Document Design
+
+1. Sign in as `{ADMIN_EMAIL}` with TOTP enabled and verified.
+2. Open `https://{DOMAIN_NAME}/admin/reports`, choose a period with enough tracked time to fill
+   more than one page, and export both a cost-free and an internal PDF.
+3. Read the header block, the summary band, and both tables in each PDF.
+4. Search both PDFs for the words `internal`, `cost-free`, `belső`, and `költségmentes`.
+5. Print or preview one PDF on paper.
+
+Expected result:
+
+- Neither PDF names its export mode anywhere. Both carry the same `Confidential` pill, and the
+  header states the scope instead: view, period, and the project, project group and member filters,
+  with an open filter spelled out as `All projects` / `All members`.
+- An internal export is distinguishable from a cost-free one only by its rate and amount columns
+  and its amount metric.
+- The summary band never leaves an orphaned metric on a second row: four metrics for a cost-free
+  export, five for an internal one, on a single row.
+- Numeric columns are right-aligned, decimal points line up down each column, and every table has
+  alternating row tints.
+- Each table ends with one `Total` row. It appears only after the last row of the table, never at
+  the foot of a page the table continues past.
+- The column header row repeats at the top of every page a table spans, and the footer reads
+  `Page 2 / 3` style page numbers.
+- Group rows carry a member initials chip in user view and a project colour dot in project view;
+  the dot colour matches the project colour on screen.
+- The share column shows a bar whose length matches its percentage, and the bar is still visible
+  for a group rounding to `0%`.
+- The printed page is white with tinted panels and table rows, not a full-page cream background.
+
+### Export Scoped To One Project Or One Member
+
+1. Sign in as `{ADMIN_EMAIL}` with TOTP enabled and verified.
+2. Open `https://{DOMAIN_NAME}/admin/reports`, select a single project, keep user view, and export
+   both a cost-free and an internal PDF.
+3. Switch to project view, clear the project filter, select a single member, and export both again.
+4. Select a single project _and_ a single member together, and export once more.
+5. Repeat step 2 with a project group selected instead of a single project.
+
+Expected result:
+
+- With one project selected, no PDF repeats the project name down a column. The project appears
+  once, in the header `Project` facet, next to a dot in its own project colour.
+- The internal details table drops its `Project` column and keeps `Member`; the description column
+  takes over the freed width.
+- The cost-free details table replaces its `Project` column with `Member`, so every row is still
+  attributable to someone. It never ends up with only a date, a description and hours while more
+  than one member contributed.
+- With one member selected in project view, the reverse happens: the `Member` column disappears and
+  the cost-free table shows `Project` instead.
+- With both a single project and a single member selected, both identifying columns are gone, the
+  details table is date, description and hours, and the header names both.
+- The `Projects` metric disappears from the summary band for a single-project export, and `People`
+  disappears for a single-member export. No metric reads `1`.
+- The breakdown section is omitted entirely when the report has only one group row, since its
+  totals would restate the summary band. The details table still ends with its own `Total` row.
+- Selecting a project _group_ changes nothing about the columns: a group spans several projects, so
+  the `Project` column and the `Projects` metric both stay.
+
+### Export Templates Present In The Deployed Image
+
+1. Sign in as `{ADMIN_EMAIL}` with TOTP enabled and verified.
+2. Open `https://{DOMAIN_NAME}/admin/system`.
+3. Read the Typst PDF renderer check.
+4. Export any report PDF.
+
+Expected result:
+
+- The Typst PDF renderer check passes, which also confirms the `.typ` templates and the bundled
+  Inter fonts were included in the deployed image, not only that the Typst binary exists.
+- If the check fails with a message naming a templates directory, the deployment is missing
+  `src/server/pdf/templates`; the export will fail the same way.
 
 ## Audit Log
 
@@ -1779,6 +1964,8 @@ Expected result:
 - The admin editor is available only to admins.
 - The live preview renders the controlled Markdown subset.
 - Publishing stores a new immutable version and shows a success message.
+- After publishing, the editor shows the stored (trimmed) title and body, the new version number,
+  and an updated-at timestamp formatted in the selected interface language.
 - The Help Welcome tab shows the newly published content.
 - An audit row is recorded for `info_pages.publish`.
 
