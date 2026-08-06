@@ -1999,6 +1999,90 @@ Expected result:
 - `Napló` opens `/admin/audit`.
 - The current sidebar item is highlighted.
 
+## Appearance
+
+### Theme Preference
+
+1. In the browser devtools console run `localStorage.removeItem("theme")`, set the operating system
+   to light appearance, and hard-reload `https://{DOMAIN_NAME}/dashboard`.
+2. Open the theme control in the header (next to `HU | EN`) and pick `Sötét` / `Dark`.
+3. Navigate to `/time`, then reload the page.
+4. Pick `Rendszer` / `System`, then flip the operating system appearance while the tab stays open.
+5. Open a second tab on `/dashboard` and change the theme there.
+6. Below the `md` breakpoint, open the navigation drawer and use the theme and language controls in
+   its footer.
+7. Sign out and repeat step 2 on `/login`.
+
+Expected result:
+
+- With no stored preference the app follows the operating system, and the light theme paints with no
+  dark flash at any point during load.
+- The header control shows a sun in light and a moon in dark, and the open menu marks the active
+  preference.
+- The chosen theme survives navigation, reload, and a language change.
+- On `System`, flipping the operating system appearance re-themes the open tab without a reload.
+- Changing the theme in one tab re-themes the other.
+- In light theme the sidebar and mobile drawer are white (not near-black), the page wash is warm, and
+  dialogs, dropdowns, and popovers stay readable.
+- The drawer footer controls work on mobile and match the header behaviour.
+- The auth screens offer the same three options with the same labels in both locales.
+
+### Design Token Fidelity Against The Prototype
+
+Reference screens live in `claude_design_proto/screenshots` (gitignored); `claude_design_proto/shell/theme.css`
+is the token source of truth.
+
+1. Open `/dashboard` in dark theme and compare against `shell-dark-admin.png` and `dash-admin-dark.png`.
+2. Confirm the page canvas shows a teal glow off the **top-right** corner and a warm amber glow off the
+   **bottom-left**, over a near-black base — not a flat fill.
+3. Switch to light theme. The canvas base is a warm beige that lightens toward white at the top-right.
+4. On both themes check a card: it is fully opaque, with no gradient showing through it.
+5. Hover a clickable card. It rises slightly, its border strengthens, and it gains one soft shadow.
+6. In light theme confirm shadows read teal-grey, not black.
+7. Compare status pills against `ts-list.png` and `rv-queue.png`: a soft tint fill with tone-coloured
+   text and **no** outline ring. Only the neutral pill keeps a border.
+8. Check a primary button: a teal→mint gradient with a soft accent glow beneath it, not a flat fill.
+   Check the amber CTA button hovers to a deeper amber.
+9. Open a dialog and a drawer. The backdrop is a dark teal scrim with a slight blur.
+10. Open a dropdown, a select and a tooltip. Each has a visible stronger border; the tooltip sits on
+    the tertiary surface, not the card colour.
+11. Trigger a loading state and confirm skeletons sweep a sheen across themselves rather than pulsing.
+12. Compare `/time` against `timegrid-dark.png` and `/admin/reports` against `rp-main.png`.
+13. Repeat steps 4–12 in the other theme.
+
+Expected result:
+
+- Both glows are visible on every app page in both themes.
+- Card, table, panel and popover surfaces are opaque and match the prototype's surface colour.
+- Every tone tint (success, warning, danger, accent) uses one consistent strength per theme, and in
+  light theme reads as a solid pastel rather than a washed-out dark colour.
+- Table headers have no fill of their own, just a hairline rule, in the subtle text tier.
+- Placeholders sit one step lighter than body copy.
+- Nothing regresses at mobile widths, and the collapsed sidebar rail is 76px.
+
+### Rollout IT Brand Mark
+
+1. Open `https://{DOMAIN_NAME}/dashboard` in the dark theme and look at the top of the sidebar.
+2. Switch to the light theme without reloading.
+3. Collapse the sidebar with `Oldalsáv összecsukása` / `Collapse sidebar`, then reload the page.
+4. Below the `lg` breakpoint, open the navigation drawer and look at its header.
+5. Sign out, then look at the brand tile on the teal panel of `/login` in both themes, and at mobile
+   width where the panel becomes a banner.
+6. With devtools open on the network tab, hard-reload and filter for `rolloutit`.
+
+Expected result:
+
+- The sidebar shows the Rollout IT pictogram instead of the old `SH` tile, with `Sheet Happens` and
+  the subtitle beside it.
+- The mark is cream in the dark theme and deep teal in the light theme, and it swaps the instant the
+  theme changes — no reload, no flash of the wrong colour, and never a light mark on a white surface.
+- The collapsed rail keeps the mark centred at the same size, and a reload paints the correct colour
+  straight away.
+- The mobile drawer header shows the same mark.
+- The auth panel keeps its frosted tile and shows the cream mark in **both** themes — the panel is
+  teal either way, so a deep-teal mark there would be a bug, not a theme.
+- Both files are requested once and the mark stays crisp on a retina display.
+
 ## Regression Checklist For Every Release
 
 - Invitation activation works for a new invited user.
@@ -2020,3 +2104,5 @@ Expected result:
 - TOTP disablement and backup-code regeneration create audit rows without storing secrets.
 - `/dashboard`, `/settings`, `/admin/people`, `/admin/audit`, `/two-factor`, and `/account-status`
   render without layout breakage on desktop and mobile widths.
+- The light, dark, and system theme preferences all apply with no flash, survive a reload, and leave
+  every screen readable in both themes.

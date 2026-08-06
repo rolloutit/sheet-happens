@@ -479,7 +479,7 @@ function HorizontalBreakdown({ snapshot, locale }: { snapshot: ReportSnapshot; l
                 aria-hidden="true"
               />
             ) : (
-              <span className="grid size-7 shrink-0 place-items-center rounded-full bg-accent/20 font-ui text-[11px] font-bold text-accent">
+              <span className="grid size-7 shrink-0 place-items-center rounded-full bg-accent-soft font-ui text-[11px] font-bold text-accent">
                 {row.initials}
               </span>
             )}
@@ -624,7 +624,7 @@ function ReportDetail({
                   aria-hidden="true"
                 />
               ) : (
-                <span className="grid size-9 place-items-center rounded-full bg-accent/20 font-ui text-xs font-bold text-accent">
+                <span className="grid size-9 place-items-center rounded-full bg-accent-soft font-ui text-xs font-bold text-accent">
                   {lines[0]?.member.initials ?? group.label.slice(0, 2).toUpperCase()}
                 </span>
               )}

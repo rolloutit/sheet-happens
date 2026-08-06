@@ -267,8 +267,8 @@ export function AdminProjectsTable({
           className={cn(
             "rounded-[var(--radius-md)] border px-3 py-2 text-sm",
             message.status === "error"
-              ? "border-destructive/40 bg-destructive/10 text-destructive"
-              : "border-success/40 bg-success/10 text-success",
+              ? "border-destructive/40 bg-destructive-soft text-destructive"
+              : "border-success/40 bg-success-soft text-success",
           )}
         >
           {message.message}
@@ -962,8 +962,8 @@ function BulkAssignmentDialog({
               className={cn(
                 "rounded-[var(--radius-md)] border px-3 py-2 text-sm",
                 actionState.status === "error"
-                  ? "border-destructive/40 bg-destructive/10 text-destructive"
-                  : "border-success/40 bg-success/10 text-success",
+                  ? "border-destructive/40 bg-destructive-soft text-destructive"
+                  : "border-success/40 bg-success-soft text-success",
               )}
             >
               {actionState.message}
@@ -1066,7 +1066,7 @@ function BulkAssignmentDialog({
             </div>
             <p className="text-sm leading-6 text-muted-foreground">{t("bulk.rateHint")}</p>
             {summary.totalCount > 0 && summary.newCount === 0 ? (
-              <p className="rounded-[var(--radius-md)] border border-warning/35 bg-warning/12 px-3 py-2 text-sm text-warning">
+              <p className="rounded-[var(--radius-md)] border border-warning/35 bg-warning-soft px-3 py-2 text-sm text-warning">
                 {t("bulk.allDuplicates")}
               </p>
             ) : null}
@@ -1131,7 +1131,7 @@ function BulkSelectionPanel({
             value={searchValue}
             onChange={(event) => onSearchChange(event.target.value)}
             placeholder="Search..."
-            className="min-w-0 flex-1 bg-transparent text-sm text-foreground outline-none placeholder:text-muted-foreground"
+            className="min-w-0 flex-1 bg-transparent text-sm text-foreground outline-none placeholder:text-subtle-foreground"
           />
         </label>
       </div>
@@ -1168,7 +1168,7 @@ function BulkSelectionRow({
       className={cn(
         "grid gap-2 rounded-[var(--radius-md)] border px-3 py-3 text-left transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
         checked
-          ? "border-primary bg-primary/10"
+          ? "border-primary bg-accent-soft"
           : "border-border bg-background hover:bg-secondary/45",
       )}
     >
@@ -1302,7 +1302,7 @@ function ProjectDetailDrawer({
 
           <div className="grid max-h-[calc(100vh-9rem)] gap-6 overflow-y-auto px-5 py-5">
             {project.status !== "ACTIVE" ? (
-              <div className="rounded-[var(--radius-lg)] border border-warning/35 bg-warning/12 px-4 py-3 text-sm leading-6 text-warning">
+              <div className="rounded-[var(--radius-lg)] border border-warning/35 bg-warning-soft px-4 py-3 text-sm leading-6 text-warning">
                 {t("detail.inactiveWarning")}
               </div>
             ) : null}
@@ -1313,8 +1313,8 @@ function ProjectDetailDrawer({
                 className={cn(
                   "rounded-[var(--radius-md)] border px-3 py-2 text-sm",
                   actionState.status === "error"
-                    ? "border-destructive/40 bg-destructive/10 text-destructive"
-                    : "border-success/40 bg-success/10 text-success",
+                    ? "border-destructive/40 bg-destructive-soft text-destructive"
+                    : "border-success/40 bg-success-soft text-success",
                 )}
               >
                 {actionState.message}
@@ -1852,7 +1852,7 @@ function ProjectEditDialog({
             {actionState?.status === "error" && actionState.message ? (
               <p
                 role="alert"
-                className="rounded-[var(--radius-md)] border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive"
+                className="rounded-[var(--radius-md)] border border-destructive/40 bg-destructive-soft px-3 py-2 text-sm text-destructive"
               >
                 {actionState.message}
               </p>
@@ -1899,7 +1899,7 @@ function ArchiveProjectDialog({
           </DialogTitle>
           <DialogDescription>{t("archiveDialog.description")}</DialogDescription>
         </DialogHeader>
-        <div className="rounded-[var(--radius-md)] border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+        <div className="rounded-[var(--radius-md)] border border-destructive/30 bg-destructive-soft px-3 py-2 text-sm text-destructive">
           {t("archiveDialog.warning")}
         </div>
         <DialogFooter>

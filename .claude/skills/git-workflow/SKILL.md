@@ -91,7 +91,8 @@ Copy this checklist and tick items off:
 - [ ] 6. Report branch + commits, hand push/PR to the developer
 ```
 
-Step 3 gates, matched to the change (full chain is `pnpm ci`):
+Step 3 gates, matched to the change (full chain is `pnpm verify` — `pnpm ci` is a pnpm built-in that
+runs a clean install, not the gates):
 
 - any code: `pnpm typecheck` · `pnpm lint` · `pnpm format`
 - logic under `src/`: `pnpm test`

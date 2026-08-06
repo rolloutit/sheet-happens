@@ -19,7 +19,8 @@ pnpm only — `packageManager: pnpm@11.5.3`, Node `24.14.0` (`.nvmrc`). Never np
 - `pnpm storybook` · `pnpm test-storybook`
 - `pnpm test:visual` — rebuilds Storybook, compares checked-in screenshots
 - `pnpm e2e` — Playwright; boots `pnpm dev` itself, no separate server needed
-- `pnpm ci` — the full gate chain. Run it before calling a feature done.
+- `pnpm verify` — the full gate chain. Run it before calling a feature done. (Not `pnpm ci`: pnpm
+  has a built-in `ci` that shadows package scripts and silently runs a clean install instead.)
 
 ## Environment
 
@@ -70,7 +71,8 @@ Follow `src/components/README.md`. In short:
   `status`), not boolean clusters like `primary`/`danger`/`small`.
 - Reusable components need Storybook coverage for variants, disabled/loading/error/empty, dark and
   light theme, and mobile states. Behavior needs a Storybook `play` test or a Vitest test.
-- Dark is the default theme (next-themes); check both.
+- Theme is a light/dark/**system** preference (next-themes, `system` by default). `:root` is the
+  dark palette, `.light` overrides it — check both.
 
 ## Testing conventions
 

@@ -35,9 +35,12 @@ export function PayslipMonthList({
               return (
                 <ListRow
                   key={item.id}
-                  className={cn("p-4", selectedId === item.id && "border-primary/50 bg-primary/10")}
+                  className={cn(
+                    "p-4",
+                    selectedId === item.id && "border-primary/50 bg-accent-soft",
+                  )}
                   leading={
-                    <span className="grid size-12 place-items-center rounded-[var(--radius-md)] bg-primary/16 text-accent">
+                    <span className="grid size-12 place-items-center rounded-[var(--radius-md)] bg-accent-soft text-accent">
                       <FileText className="size-5" aria-hidden="true" />
                     </span>
                   }

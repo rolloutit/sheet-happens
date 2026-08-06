@@ -165,8 +165,8 @@ export function AdminPeopleTable({
           className={cn(
             "rounded-[var(--radius-md)] border px-3 py-2 text-sm",
             message.status === "error"
-              ? "border-destructive/40 bg-destructive/10 text-destructive"
-              : "border-success/40 bg-success/10 text-success",
+              ? "border-destructive/40 bg-destructive-soft text-destructive"
+              : "border-success/40 bg-success-soft text-success",
           )}
         >
           {message.message}
@@ -618,7 +618,7 @@ function ArchiveMemberDialog({
           </DialogTitle>
           <DialogDescription>{t("archiveDialog.description")}</DialogDescription>
         </DialogHeader>
-        <div className="rounded-[var(--radius-md)] border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+        <div className="rounded-[var(--radius-md)] border border-destructive/30 bg-destructive-soft px-3 py-2 text-sm text-destructive">
           {t("archiveDialog.warning")}
         </div>
         <DialogFooter>
@@ -668,7 +668,7 @@ function ResetTotpDialog({
           </DialogTitle>
           <DialogDescription>{t("resetTotpDialog.description")}</DialogDescription>
         </DialogHeader>
-        <div className="rounded-[var(--radius-md)] border border-warning/40 bg-warning/10 px-3 py-2 text-sm text-warning">
+        <div className="rounded-[var(--radius-md)] border border-warning/40 bg-warning-soft px-3 py-2 text-sm text-warning">
           {t("resetTotpDialog.warning")}
         </div>
         <DialogFooter>

@@ -76,8 +76,6 @@
     "panelFooter": "Időkövetés, timesheet és számlaellenőrzés — egy helyen.",
     "panelTip": "Tipp: passkey-vel két másodperc a belépés.",
     "language": "Nyelv",
-    "themeDark": "Sötét téma",
-    "themeLight": "Világos téma",
     "moods": {
       "back": {
         "title": "Üdv újra.",
@@ -96,6 +94,12 @@
         "subtitle": "Csak hogy biztosan te vagy az."
       }
     }
+  },
+  "ThemeToggle": {
+    "label": "Téma",
+    "light": "Világos",
+    "dark": "Sötét",
+    "system": "Rendszer"
   },
   "Login": {
     "brandSubtitle": "Rollout IT · belső",

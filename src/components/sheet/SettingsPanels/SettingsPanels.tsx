@@ -113,7 +113,7 @@ export function SettingsPanels({
               aria-current={item === section ? "page" : undefined}
               className={cn(
                 "rounded-[var(--radius-md)] px-3 py-2 text-left font-ui text-sm font-semibold capitalize text-muted-foreground transition hover:bg-secondary hover:text-foreground",
-                item === section && "bg-primary/14 text-accent",
+                item === section && "bg-accent-soft text-accent",
               )}
               onClick={() => onSectionChange?.(item)}
             >

@@ -173,7 +173,7 @@ export function ReportExportModal({
         className="flex max-h-[92vh] w-[calc(100vw-2rem)] max-w-[85rem] flex-col gap-0 overflow-hidden p-0"
       >
         <div className="flex shrink-0 items-center gap-2.5 border-b border-border px-5 py-4 pr-14">
-          <span className="flex size-8 shrink-0 items-center justify-center rounded-[var(--radius-sm)] bg-accent/15 text-accent">
+          <span className="flex size-8 shrink-0 items-center justify-center rounded-[var(--radius-sm)] bg-accent-soft text-accent">
             <FileDown className="size-[18px]" aria-hidden="true" />
           </span>
           <DialogTitle className="font-display text-lg font-semibold">
@@ -252,7 +252,7 @@ export function ReportExportModal({
                   />
                 </div>
                 {internal ? (
-                  <div className="flex gap-3 rounded-[var(--radius-md)] border border-warning/40 bg-warning/15 p-3.5">
+                  <div className="flex gap-3 rounded-[var(--radius-md)] border border-warning/40 bg-warning-soft p-3.5">
                     <AlertTriangle
                       className="mt-0.5 size-[18px] shrink-0 text-warning"
                       aria-hidden="true"
@@ -271,7 +271,7 @@ export function ReportExportModal({
 
               <div className="grid gap-2">
                 <span className={MICRO_LABEL}>{t("export.formatLabel")}</span>
-                <div className="flex items-center gap-2.5 rounded-[var(--radius-md)] border-[1.5px] border-accent bg-accent/15 px-3.5 py-2.5">
+                <div className="flex items-center gap-2.5 rounded-[var(--radius-md)] border-[1.5px] border-accent bg-accent-soft px-3.5 py-2.5">
                   <FileText className="size-[18px] text-accent" aria-hidden="true" />
                   <span className="font-ui text-sm font-semibold text-foreground">
                     {t("export.formatPdf")}
@@ -364,8 +364,8 @@ function ModeCard({
       onClick={onSelect}
       className={cn(
         "grid gap-1.5 rounded-[var(--radius-md)] border-[1.5px] border-border bg-card p-3.5 text-left transition duration-200 ease-[var(--ease-standard)] hover:border-border/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-        selected && tone === "accent" && "border-accent bg-accent/15",
-        selected && tone === "warning" && "border-warning bg-warning/15",
+        selected && tone === "accent" && "border-accent bg-accent-soft",
+        selected && tone === "warning" && "border-warning bg-warning-soft",
       )}
     >
       <span className="flex items-center gap-1.5 font-ui text-sm font-semibold text-foreground">

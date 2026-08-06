@@ -606,8 +606,8 @@ export function SecuritySettingsClient({ user, passkeys, twoFactor }: SecuritySe
                 className={cn(
                   "grid size-10 shrink-0 place-items-center rounded-full",
                   user.passwordEnabled
-                    ? "bg-success/16 text-success"
-                    : "bg-warning/16 text-warning",
+                    ? "bg-success-soft text-success"
+                    : "bg-warning-soft text-warning",
                 )}
               >
                 <LockKeyhole className="size-5" aria-hidden="true" />
@@ -770,7 +770,7 @@ export function SecuritySettingsClient({ user, passkeys, twoFactor }: SecuritySe
         </CardHeader>
         <CardContent className="gap-6">
           {twoFactor.lockedUntil ? (
-            <div className="flex items-start gap-3 rounded-[var(--radius-lg)] border border-warning/40 bg-warning/10 p-4 text-sm text-warning">
+            <div className="flex items-start gap-3 rounded-[var(--radius-lg)] border border-warning/40 bg-warning-soft p-4 text-sm text-warning">
               <TriangleAlert className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
               <p>
                 {t("totp.lockedUntil", {
@@ -781,7 +781,7 @@ export function SecuritySettingsClient({ user, passkeys, twoFactor }: SecuritySe
           ) : null}
 
           {twoFactor.failedVerificationCount > 0 && !twoFactor.lockedUntil ? (
-            <div className="flex items-start gap-3 rounded-[var(--radius-lg)] border border-warning/40 bg-warning/10 p-4 text-sm text-warning">
+            <div className="flex items-start gap-3 rounded-[var(--radius-lg)] border border-warning/40 bg-warning-soft p-4 text-sm text-warning">
               <TriangleAlert className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
               <p>{t("totp.failedAttempts", { count: twoFactor.failedVerificationCount })}</p>
             </div>
@@ -812,10 +812,10 @@ export function SecuritySettingsClient({ user, passkeys, twoFactor }: SecuritySe
           ) : null}
 
           {twoFactor.enabled ? (
-            <div className="grid gap-4 rounded-[var(--radius-lg)] border border-success/35 bg-success/10 p-4">
+            <div className="grid gap-4 rounded-[var(--radius-lg)] border border-success/35 bg-success-soft p-4">
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <div className="flex items-start gap-3">
-                  <span className="grid size-10 shrink-0 place-items-center rounded-full bg-success/16 text-success">
+                  <span className="grid size-10 shrink-0 place-items-center rounded-full bg-success-soft text-success">
                     <BadgeCheck className="size-5" aria-hidden="true" />
                   </span>
                   <div>
@@ -978,9 +978,9 @@ function NoticeMessage({ notice }: { notice: Notice }) {
       role={notice.tone === "error" ? "alert" : "status"}
       className={cn(
         "rounded-[var(--radius-lg)] border px-4 py-3 text-sm",
-        notice.tone === "success" && "border-success/40 bg-success/10 text-success",
-        notice.tone === "error" && "border-destructive/40 bg-destructive/10 text-destructive",
-        notice.tone === "info" && "border-accent/40 bg-accent/10 text-accent",
+        notice.tone === "success" && "border-success/40 bg-success-soft text-success",
+        notice.tone === "error" && "border-destructive/40 bg-destructive-soft text-destructive",
+        notice.tone === "info" && "border-accent/40 bg-accent-soft text-accent",
       )}
     >
       {notice.message}
@@ -1031,7 +1031,7 @@ function BackupCodesPanel({
   const allCodes = codes.join("\n");
 
   return (
-    <div className="grid gap-3 rounded-[var(--radius-lg)] border border-warning/40 bg-warning/10 p-4">
+    <div className="grid gap-3 rounded-[var(--radius-lg)] border border-warning/40 bg-warning-soft p-4">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <p className="font-ui text-sm font-semibold text-foreground">{t("backupCodes.title")}</p>

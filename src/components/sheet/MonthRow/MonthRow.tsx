@@ -12,7 +12,7 @@ export function MonthRow({ month, meta, status, actionLabel, onClick, className 
     <ListRow
       className={cn("p-4", className)}
       leading={
-        <span className="grid size-12 place-items-center rounded-[var(--radius-md)] bg-primary/16 text-accent">
+        <span className="grid size-12 place-items-center rounded-[var(--radius-md)] bg-accent-soft text-accent">
           <CalendarDays className="size-5" aria-hidden="true" />
         </span>
       }

@@ -14,16 +14,19 @@ export const statusTone: Record<TimesheetStatus, StatusPillTone> = {
   missing: "warning",
 };
 
+// The prototype's pills are a soft fill plus the full-strength tone as text, with no ring
+// (`.ts-pill`, `.mg-badge`, `.diff-badge`). Only the neutral tone keeps a border, because its
+// fill is `--surface-2` and would otherwise have no edge at all.
 export const statusPillVariants = cva(
-  "inline-flex items-center gap-2 rounded-[var(--radius-pill)] border px-2.5 py-1 font-ui text-xs font-semibold",
+  "inline-flex items-center gap-2 rounded-[var(--radius-pill)] px-2.5 py-1 font-ui text-xs font-semibold",
   {
     variants: {
       tone: {
-        muted: "border-border bg-secondary text-muted-foreground",
-        info: "border-accent/35 bg-accent/10 text-accent",
-        success: "border-success/35 bg-success/10 text-success",
-        warning: "border-warning/35 bg-warning/10 text-warning",
-        danger: "border-destructive/35 bg-destructive/10 text-destructive",
+        muted: "border border-border bg-secondary text-muted-foreground",
+        info: "bg-accent-soft text-accent",
+        success: "bg-success-soft text-success",
+        warning: "bg-warning-soft text-warning",
+        danger: "bg-destructive-soft text-destructive",
       },
       density: {
         compact: "px-2 py-0.5 text-[11px]",

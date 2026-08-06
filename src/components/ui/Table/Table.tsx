@@ -79,7 +79,9 @@ export function DataTable<T extends Record<string, unknown>>({
         <div className={cn("overflow-x-auto", responsiveMode && "hidden md:block")}>
           <table className="min-w-full border-collapse text-sm" aria-label={ariaLabel}>
             {caption ? <caption className="sr-only">{caption}</caption> : null}
-            <thead className="bg-secondary/80 text-left font-ui text-xs uppercase tracking-wide text-muted-foreground">
+            {/* `.rv-th`: no fill of its own — the header sits on the table's surface, separated
+                only by a hairline, in the subtle text tier. */}
+            <thead className="border-b border-border text-left font-ui text-[10.5px] font-semibold uppercase tracking-[0.06em] text-subtle-foreground">
               <tr>
                 {columns.map((column) => {
                   const currentDirection =
@@ -163,7 +165,7 @@ export function DataTable<T extends Record<string, unknown>>({
                         aria-selected={selected || undefined}
                         className={cn(
                           "border-t border-border transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring",
-                          selected && "bg-primary/10",
+                          selected && "bg-accent-soft",
                           onRowClick && "cursor-pointer hover:bg-secondary/60",
                         )}
                         onClick={() => onRowClick?.(row)}
@@ -254,7 +256,7 @@ export function DataTable<T extends Record<string, unknown>>({
                 );
                 const cardClasses = cn(
                   "grid w-full gap-3 rounded-[var(--radius-md)] border border-border bg-background/40 p-3 text-left transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-                  selected && "border-primary/55 bg-primary/12",
+                  selected && "border-primary/55 bg-accent-soft",
                   interactive && "hover:bg-secondary/70",
                 );
 

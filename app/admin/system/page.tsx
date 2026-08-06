@@ -142,7 +142,7 @@ function SystemCheckCard({ check, t }: { check: SystemCheckResult; t: AdminSyste
       </div>
 
       {check.missingEnv?.length ? (
-        <div className="mt-4 rounded-[var(--radius-md)] border border-destructive/25 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+        <div className="mt-4 rounded-[var(--radius-md)] border border-destructive/25 bg-destructive-soft px-3 py-2 text-sm text-destructive">
           {t("missingEnv", { names: check.missingEnv.join(", ") })}
         </div>
       ) : null}
@@ -191,9 +191,9 @@ function getSummaryValueClassName(tone: SystemCheckStatus) {
 
 function getIconWrapClassName(status: SystemCheckStatus) {
   const base = "grid size-10 shrink-0 place-items-center rounded-[var(--radius-md)] border";
-  if (status === "pass") return `${base} border-success/25 bg-success/12 text-success`;
-  if (status === "warning") return `${base} border-warning/25 bg-warning/12 text-warning`;
-  return `${base} border-destructive/25 bg-destructive/12 text-destructive`;
+  if (status === "pass") return `${base} border-success/25 bg-success-soft text-success`;
+  if (status === "warning") return `${base} border-warning/25 bg-warning-soft text-warning`;
+  return `${base} border-destructive/25 bg-destructive-soft text-destructive`;
 }
 
 function getDetailLabel(label: string, t: AdminSystemTranslator) {

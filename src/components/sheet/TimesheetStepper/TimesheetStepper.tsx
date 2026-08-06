@@ -28,8 +28,8 @@ const statusIndex = {
 function stateClass(state: TimesheetStepState) {
   return cn(
     state === "done" && "border-success bg-success text-success-foreground",
-    state === "current" && "border-primary bg-primary/16 text-accent",
-    state === "rejected" && "border-destructive bg-destructive/14 text-destructive",
+    state === "current" && "border-primary bg-accent-soft text-accent",
+    state === "rejected" && "border-destructive bg-destructive-soft text-destructive",
     state === "locked" && "border-border bg-secondary text-muted-foreground",
     state === "todo" && "border-border bg-secondary text-muted-foreground",
   );

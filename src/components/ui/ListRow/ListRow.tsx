@@ -24,7 +24,7 @@ export function ListRow({
   );
   const classes = cn(
     "flex w-full items-center gap-3 rounded-[var(--radius-lg)] border border-border bg-card p-3 text-left transition",
-    selected && "border-primary/55 bg-primary/12",
+    selected && "border-primary/55 bg-accent-soft",
     disabled && "opacity-50",
     onClick && "hover:bg-secondary",
     className,

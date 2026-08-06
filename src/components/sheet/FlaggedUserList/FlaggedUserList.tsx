@@ -82,7 +82,7 @@ export function FlaggedUserList({
               <span className="text-xs text-muted-foreground">{selectedCopy}</span>
             </div>
             {reminderSent ? (
-              <div className="flex items-center gap-2 rounded-[var(--radius-md)] border border-success/30 bg-success/10 p-3 text-sm text-success">
+              <div className="flex items-center gap-2 rounded-[var(--radius-md)] border border-success/30 bg-success-soft p-3 text-sm text-success">
                 <CheckCircle2 className="size-4" aria-hidden="true" />
                 {labels?.sent ?? "Reminder sent"}
               </div>

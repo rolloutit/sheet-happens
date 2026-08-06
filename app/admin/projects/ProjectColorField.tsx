@@ -44,7 +44,7 @@ export function ProjectColorField({
               className="peer sr-only"
               aria-label={option.label}
             />
-            <span className="inline-flex min-h-10 items-center gap-2 rounded-full border border-border bg-background px-3 py-1.5 text-sm font-semibold text-foreground transition peer-checked:border-primary peer-checked:bg-primary/10 peer-focus-visible:ring-2 peer-focus-visible:ring-ring">
+            <span className="inline-flex min-h-10 items-center gap-2 rounded-full border border-border bg-background px-3 py-1.5 text-sm font-semibold text-foreground transition peer-checked:border-primary peer-checked:bg-accent-soft peer-focus-visible:ring-2 peer-focus-visible:ring-ring">
               <ProjectColorSwatch colorToken={option.value} />
               {option.label}
             </span>

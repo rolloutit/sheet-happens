@@ -168,7 +168,7 @@ export function Combobox({
                 }
               }}
               placeholder={searchPlaceholder}
-              className="min-w-0 flex-1 bg-transparent font-ui text-sm outline-none placeholder:text-muted-foreground"
+              className="min-w-0 flex-1 bg-transparent font-ui text-sm outline-none placeholder:text-subtle-foreground"
             />
           </div>
           <div
@@ -223,7 +223,7 @@ export function Combobox({
                     className={cn(
                       "flex items-center justify-between gap-3 rounded-[var(--radius-md)] px-3 py-2 text-left text-sm transition hover:bg-secondary disabled:pointer-events-none disabled:opacity-45",
                       isActive && "bg-secondary text-foreground",
-                      isSelected && "bg-primary/14 text-accent",
+                      isSelected && "bg-accent-soft text-accent",
                     )}
                   >
                     <span className="grid gap-0.5">

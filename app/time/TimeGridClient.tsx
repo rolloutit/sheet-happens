@@ -397,7 +397,7 @@ export function TimeGridClient({ week }: TimeGridClientProps) {
           </div>
 
           {week.weekStart === week.thisWeek ? (
-            <span className="rounded-[var(--radius-pill)] bg-accent/15 px-3 py-1.5 font-ui text-[11px] font-semibold uppercase tracking-[0.08em] text-accent">
+            <span className="rounded-[var(--radius-pill)] bg-accent-soft px-3 py-1.5 font-ui text-[11px] font-semibold uppercase tracking-[0.08em] text-accent">
               {t("labels.thisWeek")}
             </span>
           ) : (
@@ -485,7 +485,7 @@ export function TimeGridClient({ week }: TimeGridClientProps) {
               <button
                 key={project.projectId}
                 type="button"
-                className="inline-flex items-center gap-2 rounded-[var(--radius-pill)] border border-border bg-card px-3 py-2 text-sm font-medium text-foreground transition hover:border-accent/35 hover:bg-accent/10"
+                className="inline-flex items-center gap-2 rounded-[var(--radius-pill)] border border-border bg-card px-3 py-2 text-sm font-medium text-foreground transition hover:border-accent-line hover:bg-accent-soft"
                 onClick={() =>
                   setEntryModal({
                     mode: "create",
@@ -513,8 +513,8 @@ export function TimeGridClient({ week }: TimeGridClientProps) {
           className={cn(
             "flex items-center gap-2 rounded-[var(--radius-md)] border px-4 py-3 text-sm font-medium",
             notice.tone === "success"
-              ? "border-success/35 bg-success/12 text-success"
-              : "border-destructive/35 bg-destructive/12 text-destructive",
+              ? "border-success/35 bg-success-soft text-success"
+              : "border-destructive/35 bg-destructive-soft text-destructive",
           )}
         >
           {notice.tone === "success" ? (
@@ -527,7 +527,7 @@ export function TimeGridClient({ week }: TimeGridClientProps) {
       ) : null}
 
       {weekHasLockedPeriod ? (
-        <div className="flex items-start gap-3 rounded-[var(--radius-md)] border border-warning/30 bg-warning/12 px-4 py-3 text-sm text-warning">
+        <div className="flex items-start gap-3 rounded-[var(--radius-md)] border border-warning/30 bg-warning-soft px-4 py-3 text-sm text-warning">
           <AlertTriangle className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
           <div>
             <span className="font-semibold">{t("locked.title")}</span> {t("locked.description")}
@@ -693,7 +693,7 @@ export function TimeGridClient({ week }: TimeGridClientProps) {
                         key={day.isoDate}
                         className={cn(
                           "relative flex min-h-[52px] items-center justify-center gap-1 border-r border-border bg-secondary text-sm font-semibold",
-                          day.state === "today" && "bg-accent/8",
+                          day.state === "today" && "bg-accent-soft",
                           over
                             ? "text-warning"
                             : total
@@ -726,7 +726,7 @@ export function TimeGridClient({ week }: TimeGridClientProps) {
                     key={day.isoDate}
                     className={cn(
                       "rounded-[var(--radius-md)] border border-border bg-card px-1 py-2 text-center",
-                      day.state === "today" && "border-accent bg-accent/12 text-accent",
+                      day.state === "today" && "border-accent bg-accent-soft text-accent",
                     )}
                   >
                     <span className="block font-ui text-[10px] font-semibold uppercase tracking-[0.04em] text-muted-foreground">
@@ -788,7 +788,7 @@ export function TimeGridClient({ week }: TimeGridClientProps) {
                                 className={cn(
                                   "rounded-[var(--radius-sm)] border border-border bg-background px-1 py-2 text-sm font-semibold disabled:opacity-35",
                                   cell.totalMinutes > 0 &&
-                                    "border-accent/35 bg-accent/12 text-accent",
+                                    "border-accent-line bg-accent-soft text-accent",
                                 )}
                                 onClick={() => {
                                   if (cell.entries.length === 0) {
@@ -1008,7 +1008,7 @@ function TimeGridCell({
         disabled={disabled}
         className={cn(
           "relative flex min-h-14 items-center justify-center gap-1 border-b border-r border-border text-base font-semibold transition hover:bg-secondary disabled:cursor-not-allowed disabled:opacity-60",
-          day.state === "today" && "bg-accent/8",
+          day.state === "today" && "bg-accent-soft",
           warningTexts.length > 0 && "text-warning",
         )}
         onClick={onOpenBreakdown}
@@ -1031,7 +1031,7 @@ function TimeGridCell({
     <div
       className={cn(
         "relative min-h-14 border-b border-r border-border transition hover:bg-secondary",
-        day.state === "today" && "bg-accent/8",
+        day.state === "today" && "bg-accent-soft",
       )}
     >
       <input
@@ -1102,7 +1102,7 @@ function DraftRestoreBanner({
   const t = useTranslations("TimeTracking");
 
   return (
-    <div className="flex flex-col gap-3 rounded-[var(--radius-md)] border border-accent/30 bg-accent/10 px-4 py-3 text-sm text-foreground sm:flex-row sm:items-center sm:justify-between">
+    <div className="flex flex-col gap-3 rounded-[var(--radius-md)] border border-accent/30 bg-accent-soft px-4 py-3 text-sm text-foreground sm:flex-row sm:items-center sm:justify-between">
       <div className="flex items-start gap-3">
         <span className="grid size-8 shrink-0 place-items-center rounded-full bg-card text-accent">
           <Info className="size-4" aria-hidden="true" />
@@ -1175,7 +1175,7 @@ function QuickActionConfirmDialog({
           <DialogTitle>{title}</DialogTitle>
           <DialogDescription>{description}</DialogDescription>
         </DialogHeader>
-        <div className="rounded-[var(--radius-md)] border border-warning/35 bg-warning/10 px-3 py-2 text-sm text-warning">
+        <div className="rounded-[var(--radius-md)] border border-warning/35 bg-warning-soft px-3 py-2 text-sm text-warning">
           {t("quickActionConfirm.skipExisting")}
         </div>
         <DialogFooter>
@@ -1255,8 +1255,8 @@ function DayView({
               key={option.isoDate}
               type="button"
               className={cn(
-                "rounded-[var(--radius-md)] border border-border bg-card px-3 py-2 text-center transition hover:border-accent/45 hover:bg-accent/10",
-                option.isoDate === day.isoDate && "border-accent bg-accent/12 text-accent",
+                "rounded-[var(--radius-md)] border border-border bg-card px-3 py-2 text-center transition hover:border-accent/45 hover:bg-accent-soft",
+                option.isoDate === day.isoDate && "border-accent bg-accent-soft text-accent",
                 option.state === "future" && "opacity-65",
               )}
               onClick={() => onSelectDay(option.isoDate)}
@@ -1286,14 +1286,14 @@ function DayView({
       </div>
 
       {day.state === "future" ? (
-        <div className="flex items-start gap-3 rounded-[var(--radius-md)] border border-warning/30 bg-warning/12 px-4 py-3 text-sm text-warning">
+        <div className="flex items-start gap-3 rounded-[var(--radius-md)] border border-warning/30 bg-warning-soft px-4 py-3 text-sm text-warning">
           <AlertTriangle className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
           {t("warnings.futureDateAllowed")}
         </div>
       ) : null}
 
       {dailyTotalMinutes > DAILY_SOFT_WARNING_MINUTES ? (
-        <div className="flex items-start gap-3 rounded-[var(--radius-md)] border border-warning/30 bg-warning/12 px-4 py-3 text-sm text-warning">
+        <div className="flex items-start gap-3 rounded-[var(--radius-md)] border border-warning/30 bg-warning-soft px-4 py-3 text-sm text-warning">
           <AlertTriangle className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
           {t("warnings.dayOver8")}
         </div>
@@ -1312,7 +1312,7 @@ function DayView({
                 key={entry.id}
                 className={cn(
                   "grid gap-3 border-b border-border p-4 last:border-b-0 sm:grid-cols-[5.5rem_1fr_auto]",
-                  warnings.length && "bg-warning/5",
+                  warnings.length && "bg-warning-soft",
                 )}
               >
                 <div className="font-ui text-xs font-semibold uppercase tracking-[0.06em] text-muted-foreground">
@@ -1375,7 +1375,7 @@ function DayView({
                   <button
                     type="button"
                     disabled={entry.locked || isPending}
-                    className="grid size-9 place-items-center rounded-[var(--radius-sm)] text-muted-foreground transition hover:bg-destructive/12 hover:text-destructive disabled:cursor-not-allowed disabled:opacity-40"
+                    className="grid size-9 place-items-center rounded-[var(--radius-sm)] text-muted-foreground transition hover:bg-destructive-soft hover:text-destructive disabled:cursor-not-allowed disabled:opacity-40"
                     aria-label={t("actions.deleteEntry")}
                     onClick={() => onDeleteEntry(entry)}
                   >
@@ -1402,7 +1402,7 @@ function DayView({
         <button
           type="button"
           disabled={isPending}
-          className="inline-flex items-center gap-2 rounded-[var(--radius-md)] border border-dashed border-accent/45 bg-card px-4 py-2.5 text-sm font-semibold text-accent transition hover:bg-accent/10 disabled:cursor-not-allowed disabled:opacity-50"
+          className="inline-flex items-center gap-2 rounded-[var(--radius-md)] border border-dashed border-accent/45 bg-card px-4 py-2.5 text-sm font-semibold text-accent transition hover:bg-accent-soft disabled:cursor-not-allowed disabled:opacity-50"
           onClick={() => onAddEntry(day.isoDate)}
         >
           <Plus className="size-4" aria-hidden="true" />
@@ -1438,7 +1438,7 @@ function TimerComposer({
 
   if (runningTimer) {
     return (
-      <div className="flex flex-col gap-3 rounded-[var(--radius-lg)] border border-accent/35 bg-accent/12 p-4 sm:flex-row sm:items-center">
+      <div className="flex flex-col gap-3 rounded-[var(--radius-lg)] border border-accent-line bg-accent-soft p-4 sm:flex-row sm:items-center">
         <span className="relative flex size-3 shrink-0">
           <span className="absolute inline-flex size-full animate-ping rounded-full bg-accent opacity-45" />
           <span className="relative inline-flex size-3 rounded-full bg-accent" />
@@ -1517,8 +1517,8 @@ function TimerComposer({
               className={cn(
                 "inline-flex items-center gap-2 rounded-[var(--radius-pill)] border px-3 py-1.5 text-sm font-medium transition",
                 selectedProjectId === project.projectId
-                  ? "border-accent bg-accent/12 text-accent"
-                  : "border-border bg-background text-foreground hover:border-accent/35 hover:bg-accent/10",
+                  ? "border-accent bg-accent-soft text-accent"
+                  : "border-border bg-background text-foreground hover:border-accent-line hover:bg-accent-soft",
               )}
               onClick={() => setProjectId(project.projectId)}
             >
@@ -1778,7 +1778,7 @@ function EntryModal({ state, week, projects, onClose, onDone, t }: EntryModalPro
 
         <div className="grid gap-5 px-6 py-6">
           {state.mode === "create" && state.prefill && project ? (
-            <div className="flex items-center gap-3 rounded-[var(--radius-md)] border border-accent/35 bg-accent/12 p-3">
+            <div className="flex items-center gap-3 rounded-[var(--radius-md)] border border-accent-line bg-accent-soft p-3">
               <span className="grid size-9 place-items-center rounded-[var(--radius-sm)] bg-card text-accent">
                 <Grid3X3 className="size-4" aria-hidden="true" />
               </span>
@@ -1794,7 +1794,7 @@ function EntryModal({ state, week, projects, onClose, onDone, t }: EntryModalPro
                   </span>
                   <span className="text-muted-foreground">·</span>
                   <span className="text-muted-foreground">{localDate}</span>
-                  <span className="rounded-[var(--radius-pill)] border border-accent/35 bg-card px-2 py-0.5 font-ui text-[11px] font-bold text-accent">
+                  <span className="rounded-[var(--radius-pill)] border border-accent-line bg-card px-2 py-0.5 font-ui text-[11px] font-bold text-accent">
                     {formatMinutesAsHours(state.durationMinutes)}h
                   </span>
                 </div>
@@ -1809,7 +1809,7 @@ function EntryModal({ state, week, projects, onClose, onDone, t }: EntryModalPro
           {submitError ? (
             <div
               role="alert"
-              className="flex items-start gap-2 rounded-[var(--radius-md)] border border-destructive/35 bg-destructive/12 px-3 py-2 text-sm font-medium text-destructive"
+              className="flex items-start gap-2 rounded-[var(--radius-md)] border border-destructive/35 bg-destructive-soft px-3 py-2 text-sm font-medium text-destructive"
             >
               <AlertTriangle className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
               <span>{submitError}</span>
@@ -2137,7 +2137,7 @@ function BreakdownDialog({
                     <button
                       type="button"
                       disabled={entry.locked}
-                      className="grid size-8 place-items-center rounded-[var(--radius-sm)] text-muted-foreground hover:bg-destructive/12 hover:text-destructive disabled:cursor-not-allowed disabled:opacity-40"
+                      className="grid size-8 place-items-center rounded-[var(--radius-sm)] text-muted-foreground hover:bg-destructive-soft hover:text-destructive disabled:cursor-not-allowed disabled:opacity-40"
                       onClick={() => onDelete(entry)}
                       aria-label={t("actions.deleteEntry")}
                     >
@@ -2161,7 +2161,7 @@ function BreakdownDialog({
           </span>
           <button
             type="button"
-            className="inline-flex items-center gap-2 rounded-[var(--radius-md)] border border-dashed border-accent/45 px-3 py-2 text-sm font-semibold text-accent hover:bg-accent/10"
+            className="inline-flex items-center gap-2 rounded-[var(--radius-md)] border border-dashed border-accent/45 px-3 py-2 text-sm font-semibold text-accent hover:bg-accent-soft"
             onClick={onAdd}
           >
             <Plus className="size-4" aria-hidden="true" />

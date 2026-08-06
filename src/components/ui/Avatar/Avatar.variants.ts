@@ -1,7 +1,7 @@
 import { cva } from "class-variance-authority";
 
 export const avatarVariants = cva(
-  "inline-flex shrink-0 items-center justify-center overflow-hidden rounded-full border border-border font-ui font-semibold ring-1 ring-white/5",
+  "inline-flex shrink-0 items-center justify-center overflow-hidden rounded-full border border-border font-ui font-semibold",
   {
     variants: {
       size: {
@@ -11,10 +11,12 @@ export const avatarVariants = cva(
         xl: "size-16 text-lg",
       },
       tone: {
-        teal: "bg-primary/18 text-accent",
+        // The prototype's avatar is a teal→mint gradient under a soft accent glow
+        // (`.rv-av`, `.set-avbig`), not a flat tint.
+        teal: "border-transparent bg-[linear-gradient(150deg,var(--primary),var(--accent))] text-primary-foreground shadow-[0_6px_20px_-8px_var(--accent-line)]",
         amber: "bg-cta/20 text-cta",
         deep: "bg-secondary text-foreground",
-        peach: "bg-warning/20 text-warning",
+        peach: "bg-warning-soft text-warning",
         muted: "bg-muted text-muted-foreground",
       },
     },

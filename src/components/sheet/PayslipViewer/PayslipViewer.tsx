@@ -66,7 +66,7 @@ export function PayslipViewer({
           </div>
         ) : null}
         {state === "error" ? (
-          <div className="flex items-start gap-3 rounded-[var(--radius-lg)] border border-destructive/30 bg-destructive/10 p-4 text-sm text-destructive">
+          <div className="flex items-start gap-3 rounded-[var(--radius-lg)] border border-destructive/30 bg-destructive-soft p-4 text-sm text-destructive">
             <FileWarning className="mt-0.5 size-5 shrink-0" aria-hidden="true" />
             <span>{error}</span>
           </div>

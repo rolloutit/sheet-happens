@@ -1,14 +1,15 @@
 "use client";
 
-import { Moon, Sparkles, Sun, Table2 } from "lucide-react";
+import { Sparkles } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { useTransition } from "react";
 
 import { localeCookieName } from "@/src/i18n/locales";
 import { cn } from "@/src/lib/utils";
+import { BrandMark } from "../BrandMark";
 import { LanguageToggle } from "../LanguageToggle";
-import { useTheme } from "../ThemeProvider";
+import { ThemeToggle } from "../ThemeToggle";
 import type { AuthShellMood, AuthShellProps } from "./AuthShell.types";
 
 const orbitDots = Array.from({ length: 46 }, (_, index) => {
@@ -48,10 +49,7 @@ export function AuthShell({
   const t = useTranslations("AuthShell");
   const router = useRouter();
   const locale = useLocale();
-  const { setTheme, theme } = useTheme();
   const [, startLanguageTransition] = useTransition();
-  const resolvedTheme = theme;
-  const nextTheme = resolvedTheme === "dark" ? "light" : "dark";
   const moodCopy = moodTranslationKeys[mood];
 
   function handleLanguageChange(nextLanguage: string) {
@@ -110,8 +108,10 @@ export function AuthShell({
 
         <div className="relative z-10 flex w-full flex-col justify-between gap-8">
           <div className="flex items-center gap-3">
-            <span className="grid size-10 place-items-center rounded-[var(--radius-md)] border border-white/20 bg-white/12 text-[#eafbfa]">
-              <Table2 className="size-5" aria-hidden="true" />
+            {/* The frosted tile stays: it lifts the mark off the gradient and the orbit dots. The
+                panel is teal in both themes, so the mark cannot follow the palette here. */}
+            <span className="grid size-10 place-items-center rounded-[var(--radius-md)] border border-white/20 bg-white/12">
+              <BrandMark size={24} tone="onDark" />
             </span>
             <div className="leading-tight">
               <p className="font-ui text-[17px] font-semibold text-[#eafbfa]">Sheet Happens</p>
@@ -140,7 +140,9 @@ export function AuthShell({
         </div>
       </aside>
 
-      <section className="relative flex flex-1 items-start justify-center overflow-hidden bg-[radial-gradient(900px_520px_at_80%_-10%,#ffffff,#f4ebdd_60%)] px-5 pb-24 pt-24 dark:bg-[radial-gradient(900px_520px_at_80%_-10%,#173f3c,#060f0e_60%)] sm:px-6 lg:items-center lg:px-6 lg:py-10">
+      {/* auth.css:56 — the same two canvas stops as the app shell, just a tighter ellipse. Both
+          themes now come from the tokens, so this needs no `dark:` override. */}
+      <section className="relative flex flex-1 items-start justify-center overflow-hidden bg-[radial-gradient(900px_520px_at_80%_-10%,var(--canvas-glow-teal),var(--canvas-base)_60%)] px-5 pb-24 pt-24 sm:px-6 lg:items-center lg:px-6 lg:py-10">
         <div className="absolute right-5 top-5 z-10 flex items-center gap-2 sm:right-6">
           <LanguageToggle
             value={locale}
@@ -149,19 +151,7 @@ export function AuthShell({
             className="border-border/70 bg-secondary/75 shadow-[0_18px_44px_-28px_rgb(55_227_222_/_0.8)]"
             onValueChange={handleLanguageChange}
           />
-          <button
-            type="button"
-            className="inline-flex size-9 items-center justify-center rounded-[var(--radius-md)] border border-border/70 bg-secondary/75 text-muted-foreground shadow-[0_18px_44px_-28px_rgb(55_227_222_/_0.8)] transition hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-            aria-label={resolvedTheme === "dark" ? t("themeLight") : t("themeDark")}
-            title={resolvedTheme === "dark" ? t("themeLight") : t("themeDark")}
-            onClick={() => setTheme(nextTheme)}
-          >
-            {resolvedTheme === "dark" ? (
-              <Sun className="size-4" aria-hidden="true" />
-            ) : (
-              <Moon className="size-4" aria-hidden="true" />
-            )}
-          </button>
+          <ThemeToggle className="size-9 rounded-[var(--radius-md)] border-border/70 bg-secondary/75 text-muted-foreground shadow-[0_18px_44px_-28px_rgb(55_227_222_/_0.8)] hover:text-foreground" />
         </div>
         <div className={cn("w-full max-w-[408px]", contentClassName)}>{children}</div>
       </section>

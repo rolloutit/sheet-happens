@@ -76,8 +76,6 @@
     "panelFooter": "Time tracking, timesheets and invoice checks — in one place.",
     "panelTip": "Tip: passkeys get you in two seconds flat.",
     "language": "Language",
-    "themeDark": "Dark theme",
-    "themeLight": "Light theme",
     "moods": {
       "back": {
         "title": "Welcome back.",
@@ -96,6 +94,12 @@
         "subtitle": "Just making sure it's really you."
       }
     }
+  },
+  "ThemeToggle": {
+    "label": "Theme",
+    "light": "Light",
+    "dark": "Dark",
+    "system": "System"
   },
   "Login": {
     "brandSubtitle": "Rollout IT · internal",

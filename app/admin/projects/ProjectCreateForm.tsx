@@ -135,8 +135,8 @@ export function ProjectCreateForm() {
           className={cn(
             "rounded-[var(--radius-md)] border px-3 py-2 text-sm",
             state.status === "error"
-              ? "border-destructive/40 bg-destructive/10 text-destructive"
-              : "border-success/40 bg-success/10 text-success",
+              ? "border-destructive/40 bg-destructive-soft text-destructive"
+              : "border-success/40 bg-success-soft text-success",
           )}
         >
           {state.message}

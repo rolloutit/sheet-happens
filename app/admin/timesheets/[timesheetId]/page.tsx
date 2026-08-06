@@ -118,7 +118,7 @@ export default async function AdminTimesheetReviewPage({
         />
 
         {actionResultMessage ? (
-          <div className="rounded-[var(--radius-lg)] border border-accent/30 bg-accent/10 px-4 py-3 text-sm font-medium text-accent">
+          <div className="rounded-[var(--radius-lg)] border border-accent/30 bg-accent-soft px-4 py-3 text-sm font-medium text-accent">
             {actionResultMessage}
           </div>
         ) : null}
@@ -126,7 +126,7 @@ export default async function AdminTimesheetReviewPage({
         <ReviewHeader review={review} locale={locale} t={t} />
 
         {review.rejectionReason ? (
-          <div className="flex items-start gap-3 rounded-[var(--radius-lg)] border border-warning/35 bg-warning/10 px-4 py-3 text-sm text-warning">
+          <div className="flex items-start gap-3 rounded-[var(--radius-lg)] border border-warning/35 bg-warning-soft px-4 py-3 text-sm text-warning">
             <AlertTriangle className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
             <p>{t("detail.rejectionReason", { reason: review.rejectionReason })}</p>
           </div>
@@ -402,8 +402,8 @@ function InvoiceReviewCard({
                 <div
                   className={
                     comparison?.matches
-                      ? "mt-2 inline-flex items-center gap-2 rounded-full bg-success/15 px-3 py-1 text-sm font-semibold text-success"
-                      : "mt-2 inline-flex items-center gap-2 rounded-full bg-warning/15 px-3 py-1 text-sm font-semibold text-warning"
+                      ? "mt-2 inline-flex items-center gap-2 rounded-full bg-success-soft px-3 py-1 text-sm font-semibold text-success"
+                      : "mt-2 inline-flex items-center gap-2 rounded-full bg-warning-soft px-3 py-1 text-sm font-semibold text-warning"
                   }
                 >
                   {comparison?.matches ? (
@@ -523,7 +523,7 @@ function InvoiceReviewCard({
                 </form>
               </div>
             ) : canMarkPaid ? (
-              <div className="grid gap-3 rounded-[var(--radius-lg)] border border-success/30 bg-success/10 p-4">
+              <div className="grid gap-3 rounded-[var(--radius-lg)] border border-success/30 bg-success-soft p-4">
                 <div>
                   <p className="text-sm font-semibold text-success">
                     {t("invoice.readyForPayment")}
@@ -769,7 +769,7 @@ function AvatarLabel({ name }: { name: string }) {
     .toUpperCase();
 
   return (
-    <span className="grid size-12 shrink-0 place-items-center rounded-full bg-accent/20 font-ui text-sm font-bold text-accent">
+    <span className="grid size-12 shrink-0 place-items-center rounded-full bg-accent-soft font-ui text-sm font-bold text-accent">
       {initials || "TS"}
     </span>
   );

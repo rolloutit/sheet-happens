@@ -104,10 +104,10 @@ function getCellState(
 function getCellClasses(state: TimeGridCellState) {
   return cn(
     "h-11 w-full rounded-[var(--radius-sm)] border border-border bg-background text-sm font-semibold transition hover:border-primary/45 hover:bg-secondary disabled:pointer-events-none disabled:opacity-55",
-    state === "filled" && "border-primary/30 bg-primary/12 text-accent shadow-soft",
-    state === "today" && "border-primary/40 bg-primary/16 text-accent",
+    state === "filled" && "border-primary/30 bg-accent-soft text-accent shadow-soft",
+    state === "today" && "border-primary/40 bg-accent-soft text-accent",
     state === "future" && "border-dashed bg-muted/45 text-muted-foreground",
-    state === "warning" && "border-warning/45 bg-warning/12 text-warning",
+    state === "warning" && "border-warning/45 bg-warning-soft text-warning",
     state === "locked" && "border-border bg-secondary text-muted-foreground",
     state === "editing" && "border-accent bg-background ring-2 ring-ring/35",
   );
@@ -451,7 +451,7 @@ export function WeeklyTimeGrid({
                         role="gridcell"
                         className={cn(
                           "flex min-h-[4.5rem] items-center border-l border-border p-2",
-                          day.state === "today" && "bg-primary/8",
+                          day.state === "today" && "bg-accent-soft",
                           day.state === "future" && "bg-muted/45",
                         )}
                       >

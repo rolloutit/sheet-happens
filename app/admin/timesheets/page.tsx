@@ -73,7 +73,7 @@ export default async function AdminTimesheetsPage({ searchParams }: AdminTimeshe
         <SectionHead eyebrow={t("eyebrow")} title={t("title")} subtitle={t("subtitle")} />
 
         {actionResultMessage ? (
-          <div className="rounded-[var(--radius-lg)] border border-accent/30 bg-accent/10 px-4 py-3 text-sm font-medium text-accent">
+          <div className="rounded-[var(--radius-lg)] border border-accent/30 bg-accent-soft px-4 py-3 text-sm font-medium text-accent">
             {actionResultMessage}
           </div>
         ) : null}
@@ -392,7 +392,7 @@ function AvatarLabel({ name }: { name: string }) {
     .toUpperCase();
 
   return (
-    <span className="grid size-9 shrink-0 place-items-center rounded-full bg-accent/20 font-ui text-xs font-bold text-accent">
+    <span className="grid size-9 shrink-0 place-items-center rounded-full bg-accent-soft font-ui text-xs font-bold text-accent">
       {initials || "TS"}
     </span>
   );

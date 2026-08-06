@@ -1,16 +1,17 @@
 import type { ReactNode } from "react";
 
-export type ThemeName = "dark" | "light";
+import type { ResolvedTheme, ThemePreference } from "@/src/lib/theme";
 
 export type ThemeProviderProps = {
-  attribute?: "class";
   children: ReactNode;
-  defaultTheme?: ThemeName;
-  enableSystem?: boolean;
+  defaultTheme?: ThemePreference;
+  /** Overridden in Storybook so story runs do not inherit a developer's app preference. */
   storageKey?: string;
 };
 
-export type ThemeContextValue = {
-  setTheme: (theme: ThemeName) => void;
-  theme: ThemeName;
+export type UseThemeResult = {
+  preference: ThemePreference | undefined;
+  resolvedTheme: ResolvedTheme | undefined;
+  systemTheme: ResolvedTheme | undefined;
+  setTheme: (theme: ThemePreference) => void;
 };

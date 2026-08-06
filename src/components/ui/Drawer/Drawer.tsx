@@ -26,7 +26,7 @@ export const DrawerOverlay = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <DialogPrimitive.Overlay
     ref={ref}
-    className={cn("fixed inset-0 z-50 bg-background/70 backdrop-blur-sm", className)}
+    className={cn("fixed inset-0 z-50 bg-scrim backdrop-blur-[2px]", className)}
     {...props}
   />
 ));

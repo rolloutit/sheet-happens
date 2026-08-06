@@ -26,7 +26,7 @@ export function MobileBottomBar({
           const Icon = item.icon;
           const itemClassName = cn(
             "grid min-w-0 justify-items-center gap-1 rounded-[var(--radius-md)] px-2 py-1.5 text-xs font-medium text-muted-foreground transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-            active && "bg-accent/15 text-accent",
+            active && "bg-accent-soft text-accent",
             item.disabled && "pointer-events-none opacity-45",
           );
           const content = (

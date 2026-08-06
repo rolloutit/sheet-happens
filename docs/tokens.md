@@ -1,18 +1,70 @@
 # Design Tokens
 
-The token source is `app/globals.css`.
+The token source is `app/globals.css`. It is a transcription of the design prototype's
+`claude_design_proto/shell/theme.css` (gitignored). Where the prototype's Figma export
+(`claude_design_proto/_ds/**/colors_and_type.css`) disagrees — it carries a different radius scale —
+**`shell/theme.css` wins**, because that is what the prototype screens actually render with.
 
 ## Theme modes
 
-- Dark is the default mode and matches the Claude design direction.
-- Light is supported through the `.light` class.
-- Theme switching is handled by `next-themes`.
+- `:root` carries the dark palette, so dark is the baseline and `.dark` only sets `color-scheme`.
+- Light is supported through the `.light` class, which overrides the token values.
+- Theme switching is handled by `next-themes` (`src/components/layout/ThemeProvider`), which is the
+  only module allowed to import it. The preference is `light`, `dark` or `system`, stored per device
+  in `localStorage` under `theme`; **`system` is the default** when nothing is stored.
+- `app/layout.tsx` server-renders `<html class="dark">` as a baseline and next-themes' blocking
+  script rewrites it before first paint. The class is always physically present, which is what the
+  `dark:` utilities in `AuthShell`/`AuthForm` rely on.
+- `src/lib/theme.ts` holds the preference union, the storage key and the default.
+
+## How `@theme inline` constrains this file
+
+Tailwind resolves a `@theme inline` entry whose value is a `var()` reference **into the utility
+itself** — `bg-accent-soft` emits `background-color: var(--accent-soft)`, so it re-resolves per theme.
+The trade-off is that such an entry is **not** emitted as a custom property. Two consequences:
+
+- Plain CSS must read the underlying variable (`var(--elevation-pop)`), never the theme name
+  (`var(--shadow-soft)`), which would be undefined. `.sheet-panel` is the one place this matters.
+- Literal entries _are_ still emitted, which is what keeps the 130-odd
+  `rounded-[var(--radius-lg)]` call sites working.
 
 ## Token families
 
-- Color: `background`, `foreground`, `card`, `popover`, `primary`, `accent`, `cta`, `success`, `warning`, `destructive`, `border`, `input`, `ring`.
-- Radius: `xs`, `sm`, `md`, `lg`, `xl`, `pill`.
-- Font: Lexend-like sans token and Poppins-like UI token.
-- Shadow: `soft` and `panel`.
+- **Color, base:** `background`, `foreground`, `card`, `popover`, `primary`, `secondary`, `muted`,
+  `accent`, `cta`, `success`, `warning`, `destructive`, `border`, `input`, `ring`, `sidebar`.
+- **Color, second tier** — the prototype's derived set, preferred over ad-hoc opacity modifiers:
+  - `accent-soft` / `success-soft` / `warning-soft` / `destructive-soft` — the one canonical tint per
+    tone. Use `bg-success-soft`, not `bg-success/12`. In light theme these are solid pastels, which a
+    percentage of the full-strength colour cannot reproduce.
+  - `accent-line` — the accent border colour (`border-accent-line`).
+  - `border-strong` — the stronger edge used on inputs, dropdowns, popovers and tooltips. `--input`
+    is an alias of it, so `border-input` and `border-border-strong` are the same colour.
+  - `subtle-foreground` — the third text tier below `muted-foreground`: table headers, placeholders,
+    de-emphasised numbers.
+  - `cta-hover`, `header` (the translucent sticky-header fill), `scrim` (overlay backdrops),
+    `sidebar-border`.
+- **Backdrop:** `--canvas-base`, `--canvas-glow-teal`, `--canvas-glow-warm` feed the three-layer
+  `.sheet-canvas` gradient — a teal glow off the top-right, a warm one off the bottom-left, over the
+  base. Raw CSS variables, not Tailwind color tokens.
+- **Radius:** `xs` 6 · `sm` 9 · `md` 12 · `lg` 16 · `xl` 22 · `pill` 999.
+- **Font:** Lexend sans token and Poppins UI token (`font-ui`).
+- **Shadow:** the prototype has exactly **one** elevation. `--elevation-pop` holds it per theme —
+  teal-tinted in light, near-black in dark, each with a hairline ring as its second layer — and both
+  `shadow-soft` and `shadow-panel` resolve to it. `shadow-accent-glow` is the separate glow that sits
+  under gradient primary buttons and avatars.
+- **Layout:** `--sidebar-w` 256px, `--sidebar-w-collapsed` 76px, `--header-h` 64px.
+- **Motion:** `--ease-standard`.
 
-Component code should use Tailwind token classes such as `bg-background`, `text-foreground`, `border-border`, `bg-cta`, and `text-accent`.
+## Conventions
+
+- Component code uses Tailwind token classes: `bg-background`, `text-foreground`, `border-border`,
+  `bg-cta`, `text-accent`, `bg-success-soft`, `text-subtle-foreground`.
+- **Surfaces are opaque.** Cards, tables, panels and popovers use flat `bg-card` — the canvas
+  gradient sits behind them rather than showing through. A translucent card samples whatever it
+  happens to be over and so never lands on the intended surface colour. Translucency is reserved for
+  the two places the prototype uses it: the sticky header (`bg-header`) and overlay scrims
+  (`bg-scrim`), both paired with a backdrop blur.
+- `AppShell`'s root carries `.sheet-canvas` itself, because it owns the `h-screen`/`overflow-hidden`
+  scroll container and an opaque fill there would hide the body's gradient entirely.
+- Percentage opacity on a tone colour (`bg-warning/55`) is still correct for chart and
+  distribution-bar fills, where the value is data-driven rather than a UI tint.

@@ -12,8 +12,8 @@ export function MarkdownArticle({ markdown, className }: MarkdownArticleProps) {
     <article
       className={cn(
         "max-w-3xl text-sm leading-7 text-foreground sm:text-base",
-        "[&_a]:border-b [&_a]:border-accent/35 [&_a]:text-accent [&_a]:transition hover:[&_a]:border-accent",
-        "[&_blockquote]:mb-4 [&_blockquote]:rounded-r-[var(--radius-md)] [&_blockquote]:border-l-4 [&_blockquote]:border-accent [&_blockquote]:bg-accent/10 [&_blockquote]:px-4 [&_blockquote]:py-3 [&_blockquote]:text-muted-foreground",
+        "[&_a]:border-b [&_a]:border-accent-line [&_a]:text-accent [&_a]:transition hover:[&_a]:border-accent",
+        "[&_blockquote]:mb-4 [&_blockquote]:rounded-r-[var(--radius-md)] [&_blockquote]:border-l-4 [&_blockquote]:border-accent [&_blockquote]:bg-accent-soft [&_blockquote]:px-4 [&_blockquote]:py-3 [&_blockquote]:text-muted-foreground",
         "[&_code]:rounded [&_code]:bg-secondary [&_code]:px-1.5 [&_code]:py-0.5 [&_code]:font-mono [&_code]:text-[0.88em] [&_code]:text-accent",
         "[&_h1]:mb-5 [&_h1]:font-display [&_h1]:text-3xl [&_h1]:font-semibold [&_h1]:tracking-tight",
         "[&_h2]:mb-3 [&_h2]:mt-8 [&_h2]:font-display [&_h2]:text-xl [&_h2]:font-semibold [&_h2]:tracking-tight",

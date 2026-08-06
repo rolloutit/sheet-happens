@@ -1,24 +1,30 @@
 import { cva } from "class-variance-authority";
 
+// Surfaces are opaque. The prototype's cards are a flat `--surface`, and the page's canvas gradient
+// sits behind them rather than showing through — a translucent card samples whatever it happens to
+// be over and so never lands on the intended `#11221F` / `#FFFFFF`.
 export const cardVariants = cva(
   "rounded-[var(--radius-lg)] border transition duration-200 ease-[var(--ease-standard)]",
   {
     variants: {
       variant: {
-        flat: "border-border bg-card/72",
-        elevated: "border-border bg-card/88 shadow-soft",
+        flat: "border-border bg-card",
+        elevated: "border-border bg-card shadow-soft",
+        // `.ts-featured`: a 9% accent wash pulled from the top-right corner, on the xl radius.
         featured:
-          "border-primary/30 bg-[radial-gradient(circle_at_top_right,rgb(55_227_222_/_0.20),transparent_18rem),color-mix(in_srgb,var(--card)_86%,transparent)] shadow-panel",
-        warning: "border-warning/35 bg-warning/10 text-foreground",
-        selected: "border-primary/55 bg-primary/12 shadow-soft",
+          "rounded-[var(--radius-xl)] border-border bg-[radial-gradient(120%_140%_at_100%_0%,color-mix(in_srgb,var(--accent)_9%,transparent),transparent_55%),var(--card)] shadow-panel",
+        // `.mg-segbtn.on`: full-strength accent edge over the soft fill.
+        selected: "border-accent bg-accent-soft shadow-soft",
+        warning: "border-warning/35 bg-warning-soft text-foreground",
       },
       density: {
         sm: "p-3",
         md: "p-5",
         lg: "p-6",
       },
+      // `.lift:hover` — a 2px rise, a stronger edge, and the one elevation.
       clickable: {
-        true: "cursor-pointer hover:-translate-y-0.5 hover:border-primary/45 hover:shadow-panel",
+        true: "cursor-pointer hover:-translate-y-0.5 hover:border-border-strong hover:shadow-panel",
         false: "",
       },
     },

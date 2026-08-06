@@ -10,7 +10,7 @@ export const iconButtonVariants = cva(
           "border-transparent bg-transparent text-muted-foreground hover:bg-secondary hover:text-foreground",
         primary: "border-primary/30 bg-primary text-primary-foreground hover:bg-primary/90",
         danger:
-          "border-destructive/35 bg-destructive/12 text-destructive hover:bg-destructive hover:text-destructive-foreground",
+          "border-destructive/35 bg-destructive-soft text-destructive hover:bg-destructive hover:text-destructive-foreground",
       },
       size: {
         sm: "size-8",
@@ -18,7 +18,7 @@ export const iconButtonVariants = cva(
         lg: "size-12",
       },
       active: {
-        true: "border-primary/55 bg-primary/16 text-accent",
+        true: "border-primary/55 bg-accent-soft text-accent",
         false: "",
       },
     },

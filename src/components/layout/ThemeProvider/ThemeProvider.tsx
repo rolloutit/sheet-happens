@@ -1,115 +1,50 @@
 "use client";
 
+import { ThemeProvider as NextThemesProvider, useTheme as useNextTheme } from "next-themes";
+
 import {
-  createContext,
-  useCallback,
-  useContext,
-  useEffect,
-  useMemo,
-  useSyncExternalStore,
-} from "react";
-
-import type { ThemeContextValue, ThemeName, ThemeProviderProps } from "./ThemeProvider.types";
-
-const defaultStorageKey = "theme";
-const themeListeners = new Set<() => void>();
-const fallbackContext: ThemeContextValue = {
-  setTheme: () => undefined,
-  theme: "dark",
-};
-
-const ThemeContext = createContext<ThemeContextValue>(fallbackContext);
-
-function normalizeTheme(value: unknown, fallback: ThemeName): ThemeName {
-  return value === "light" || value === "dark" ? value : fallback;
-}
-
-function readStoredTheme(storageKey: string, fallback: ThemeName): ThemeName {
-  if (typeof window === "undefined") {
-    return fallback;
-  }
-
-  try {
-    return normalizeTheme(window.localStorage.getItem(storageKey), fallback);
-  } catch {
-    return fallback;
-  }
-}
-
-function applyTheme(theme: ThemeName) {
-  document.documentElement.classList.remove("dark", "light");
-  document.documentElement.classList.add(theme);
-  document.documentElement.style.colorScheme = theme;
-}
-
-function notifyThemeListeners() {
-  for (const listener of themeListeners) {
-    listener();
-  }
-}
-
-function subscribeToTheme(listener: () => void) {
-  themeListeners.add(listener);
-
-  return () => {
-    themeListeners.delete(listener);
-  };
-}
+  defaultThemePreference,
+  isResolvedTheme,
+  isThemePreference,
+  themeStorageKey,
+  type ThemePreference,
+} from "@/src/lib/theme";
+import type { ThemeProviderProps, UseThemeResult } from "./ThemeProvider.types";
 
 export function ThemeProvider({
   children,
-  defaultTheme = "dark",
-  storageKey = defaultStorageKey,
+  defaultTheme = defaultThemePreference,
+  storageKey = themeStorageKey,
 }: ThemeProviderProps) {
-  const theme = useSyncExternalStore(
-    subscribeToTheme,
-    () => readStoredTheme(storageKey, defaultTheme),
-    () => defaultTheme,
+  return (
+    <NextThemesProvider
+      attribute="class"
+      defaultTheme={defaultTheme}
+      enableSystem
+      enableColorScheme
+      // Replaces the prototype's `html.theme-anim-off` + double-rAF trick: next-themes injects a
+      // `* { transition: none !important }` style, flushes layout, then removes it next tick.
+      disableTransitionOnChange
+      storageKey={storageKey}
+    >
+      {children}
+    </NextThemesProvider>
   );
-
-  useEffect(() => {
-    applyTheme(theme);
-  }, [theme]);
-
-  useEffect(() => {
-    function handleStorage(event: StorageEvent) {
-      if (event.key === storageKey) {
-        notifyThemeListeners();
-      }
-    }
-
-    window.addEventListener("storage", handleStorage);
-
-    return () => {
-      window.removeEventListener("storage", handleStorage);
-    };
-  }, [storageKey]);
-
-  const setTheme = useCallback(
-    (nextTheme: ThemeName) => {
-      try {
-        window.localStorage.setItem(storageKey, nextTheme);
-      } catch {
-        // The DOM theme still changes when storage is unavailable.
-      }
-
-      applyTheme(nextTheme);
-      notifyThemeListeners();
-    },
-    [storageKey],
-  );
-
-  const value = useMemo<ThemeContextValue>(
-    () => ({
-      setTheme,
-      theme,
-    }),
-    [setTheme, theme],
-  );
-
-  return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>;
 }
 
-export function useTheme() {
-  return useContext(ThemeContext);
+/**
+ * next-themes types `theme` and `resolvedTheme` as loose strings. Narrow them once here so this
+ * folder stays the only module importing next-themes and no caller has to re-validate.
+ */
+export function useTheme(): UseThemeResult {
+  const { resolvedTheme, setTheme, systemTheme, theme } = useNextTheme();
+
+  return {
+    /** What the user picked. `undefined` on the server and on the first client render. */
+    preference: isThemePreference(theme) ? theme : undefined,
+    /** What is actually painted. `undefined` on the server and on the first client render. */
+    resolvedTheme: isResolvedTheme(resolvedTheme) ? resolvedTheme : undefined,
+    systemTheme: isResolvedTheme(systemTheme) ? systemTheme : undefined,
+    setTheme: (next: ThemePreference) => setTheme(next),
+  };
 }

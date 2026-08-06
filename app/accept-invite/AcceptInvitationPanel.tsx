@@ -182,7 +182,7 @@ function InvitationResult({
 
   return (
     <div className="text-center">
-      <span className="mb-5 inline-flex size-[74px] items-center justify-center rounded-full bg-success/15 text-success">
+      <span className="mb-5 inline-flex size-[74px] items-center justify-center rounded-full bg-success-soft text-success">
         <Icon className="size-6" aria-hidden="true" />
       </span>
       <h2 className="font-ui text-[30px] font-semibold leading-tight text-foreground">{title}</h2>

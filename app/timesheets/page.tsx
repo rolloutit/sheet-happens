@@ -104,8 +104,8 @@ export default async function TimesheetsPage({ searchParams }: TimesheetsPagePro
           <div
             className={
               actionResult.tone === "success"
-                ? "flex items-start gap-3 rounded-[var(--radius-lg)] border border-success/35 bg-success/10 px-4 py-3 text-sm text-success"
-                : "flex items-start gap-3 rounded-[var(--radius-lg)] border border-destructive/35 bg-destructive/10 px-4 py-3 text-sm text-destructive"
+                ? "flex items-start gap-3 rounded-[var(--radius-lg)] border border-success/35 bg-success-soft px-4 py-3 text-sm text-success"
+                : "flex items-start gap-3 rounded-[var(--radius-lg)] border border-destructive/35 bg-destructive-soft px-4 py-3 text-sm text-destructive"
             }
           >
             {actionResult.tone === "success" ? (
@@ -257,7 +257,7 @@ function PreviewWarnings({
       {warnings.map((warning) => (
         <div
           key={warning}
-          className="flex items-start gap-3 rounded-[var(--radius-lg)] border border-warning/35 bg-warning/10 px-4 py-3 text-sm text-warning"
+          className="flex items-start gap-3 rounded-[var(--radius-lg)] border border-warning/35 bg-warning-soft px-4 py-3 text-sm text-warning"
         >
           <AlertTriangle className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
           <p>{warning}</p>
@@ -360,7 +360,7 @@ function InvoicePanel({
         ) : (
           <div className="grid gap-4">
             {workflow.kind === "cancellation" || workflow.kind === "replacement" ? (
-              <div className="flex items-start gap-3 rounded-[var(--radius-lg)] border border-destructive/35 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+              <div className="flex items-start gap-3 rounded-[var(--radius-lg)] border border-destructive/35 bg-destructive-soft px-4 py-3 text-sm text-destructive">
                 <AlertTriangle className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
                 <p>
                   {t("invoice.rejectedReason", {

@@ -94,7 +94,7 @@ export function SubmitTimesheetButton({
             {labels.details}
           </div>
           {state.status === "error" ? (
-            <p className="flex items-start gap-2 rounded-[var(--radius-md)] border border-destructive/35 bg-destructive/10 px-3 py-2 text-sm leading-5 text-destructive">
+            <p className="flex items-start gap-2 rounded-[var(--radius-md)] border border-destructive/35 bg-destructive-soft px-3 py-2 text-sm leading-5 text-destructive">
               <AlertTriangle className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
               <span>{state.message}</span>
             </p>

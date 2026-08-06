@@ -223,7 +223,7 @@ export function AdminRatesTable({
               value={query}
               onChange={(event) => setQuery(event.target.value)}
               placeholder={t("filters.searchPlaceholder")}
-              className="min-w-0 flex-1 bg-transparent text-sm text-foreground outline-none placeholder:text-muted-foreground"
+              className="min-w-0 flex-1 bg-transparent text-sm text-foreground outline-none placeholder:text-subtle-foreground"
             />
           </label>
           <div className="min-w-0 max-w-full overflow-x-auto">
@@ -362,7 +362,7 @@ export function AdminRatesTable({
                           {formatRateValue(row.currentRate)}
                         </p>
                       ) : (
-                        <span className="inline-flex items-center gap-1 rounded-[var(--radius-pill)] bg-warning/12 px-2.5 py-1 text-xs font-semibold text-warning">
+                        <span className="inline-flex items-center gap-1 rounded-[var(--radius-pill)] bg-warning-soft px-2.5 py-1 text-xs font-semibold text-warning">
                           <MinusCircle className="size-3" aria-hidden="true" />
                           {t("labels.missing")}
                         </span>
@@ -371,7 +371,7 @@ export function AdminRatesTable({
                     <td className="hidden px-4 py-3 md:table-cell">
                       {row.memberProfile === "CONTRACTOR" && overrideCount > 0 ? (
                         <span className="inline-flex items-center gap-1 text-sm text-foreground">
-                          <span className="rounded-[var(--radius-pill)] bg-primary/12 px-2 py-0.5 font-ui text-xs font-semibold text-accent">
+                          <span className="rounded-[var(--radius-pill)] bg-accent-soft px-2 py-0.5 font-ui text-xs font-semibold text-accent">
                             {overrideCount}
                           </span>
                           {t("table.overrideCount", { count: overrideCount })}
@@ -532,7 +532,7 @@ function RateManagementDrawer({
                   <p className="text-xs text-muted-foreground">{t("labels.currentRate")}</p>
                 </>
               ) : (
-                <span className="inline-flex items-center gap-1 rounded-[var(--radius-pill)] bg-warning/12 px-2.5 py-1 text-xs font-semibold text-warning">
+                <span className="inline-flex items-center gap-1 rounded-[var(--radius-pill)] bg-warning-soft px-2.5 py-1 text-xs font-semibold text-warning">
                   <MinusCircle className="size-3" aria-hidden="true" />
                   {t("labels.missing")}
                 </span>
@@ -547,8 +547,8 @@ function RateManagementDrawer({
                 className={cn(
                   "rounded-[var(--radius-md)] border px-3 py-2 text-sm",
                   actionState.status === "error"
-                    ? "border-destructive/40 bg-destructive/10 text-destructive"
-                    : "border-success/40 bg-success/10 text-success",
+                    ? "border-destructive/40 bg-destructive-soft text-destructive"
+                    : "border-success/40 bg-success-soft text-success",
                 )}
               >
                 {actionState.message}

@@ -28,6 +28,7 @@ import {
   Drawer,
   DrawerContent,
   DrawerDescription,
+  DrawerFooter,
   DrawerHeader,
   DrawerTitle,
   DrawerTrigger,
@@ -35,10 +36,12 @@ import {
 import { authClient } from "@/src/lib/auth-client";
 import { cn } from "@/src/lib/utils";
 import { setLocaleAction } from "@/src/i18n/actions";
+import { BrandMark } from "../BrandMark";
 import { CommandPill } from "../CommandPill";
 import { LanguageToggle } from "../LanguageToggle";
 import { MobileBottomBar } from "../MobileBottomBar";
 import { NotificationButton } from "../NotificationButton";
+import { ThemeToggle } from "../ThemeToggle";
 import { UserMenu } from "../UserMenu";
 import type { AppShellProps, AppShellTimer } from "./AppShell.types";
 
@@ -221,17 +224,17 @@ export function AppShell({
   return (
     <div
       className={cn(
-        "min-h-screen bg-background text-foreground lg:grid lg:h-screen lg:overflow-hidden",
-        isCollapsed ? "lg:grid-cols-[80px_1fr]" : "lg:grid-cols-[256px_1fr]",
+        "sheet-canvas min-h-screen text-foreground lg:grid lg:h-screen lg:overflow-hidden",
+        isCollapsed
+          ? "lg:grid-cols-[var(--sidebar-w-collapsed)_1fr]"
+          : "lg:grid-cols-[var(--sidebar-w)_1fr]",
       )}
     >
-      <aside className="hidden min-h-screen border-r border-border bg-[#0a1917] lg:flex lg:h-screen lg:flex-col lg:overflow-hidden">
+      <aside className="hidden min-h-screen border-r border-sidebar-border bg-sidebar lg:flex lg:h-screen lg:flex-col lg:overflow-hidden">
         <div
           className={cn("flex h-16 items-center gap-3 px-4", isCollapsed && "justify-center px-3")}
         >
-          <div className="grid size-10 place-items-center rounded-[var(--radius-md)] bg-accent text-sm font-bold text-accent-foreground shadow-soft">
-            SH
-          </div>
+          <BrandMark />
           {!isCollapsed ? (
             <div className="min-w-0">
               <p className="truncate text-base font-semibold leading-tight">Sheet Happens</p>
@@ -282,7 +285,7 @@ export function AppShell({
           <a
             href="/help"
             className={cn(
-              "flex items-center gap-3 rounded-[var(--radius-md)] px-3 py-2 text-sm font-medium text-muted-foreground transition hover:bg-secondary hover:text-foreground aria-[current=page]:bg-accent/15 aria-[current=page]:font-semibold aria-[current=page]:text-accent",
+              "flex items-center gap-3 rounded-[var(--radius-md)] px-3 py-2 text-sm font-medium text-muted-foreground transition hover:bg-secondary hover:text-foreground aria-[current=page]:bg-accent-soft aria-[current=page]:font-semibold aria-[current=page]:text-accent",
               isCollapsed && "justify-center px-0",
             )}
             aria-current={current === "help" ? "page" : undefined}
@@ -312,7 +315,7 @@ export function AppShell({
         </div>
       </aside>
       <div className="min-w-0 lg:h-screen lg:overflow-y-auto">
-        <header className="sticky top-0 z-20 border-b border-border bg-background/80 backdrop-blur-xl">
+        <header className="sticky top-0 z-20 border-b border-border bg-header backdrop-blur-[14px]">
           <div className="flex h-16 items-center justify-between px-4 sm:px-6 lg:px-8">
             <div className="flex items-center gap-3">
               <Drawer open={mobileOpen} onOpenChange={setMobileOpen}>
@@ -329,13 +332,11 @@ export function AppShell({
                 </DrawerTrigger>
                 <DrawerContent
                   side="left"
-                  className="w-[min(20rem,100vw)] border-border bg-[#0a1917] p-0"
+                  className="flex w-[min(20rem,100vw)] flex-col border-border bg-sidebar p-0"
                 >
                   <DrawerHeader className="border-b border-border p-4">
                     <div className="flex items-center gap-3">
-                      <div className="grid size-10 place-items-center rounded-[var(--radius-md)] bg-accent text-sm font-bold text-accent-foreground shadow-soft">
-                        SH
-                      </div>
+                      <BrandMark />
                       <div className="min-w-0">
                         <DrawerTitle className="truncate text-base font-semibold leading-tight">
                           Sheet Happens
@@ -347,7 +348,7 @@ export function AppShell({
                     </div>
                   </DrawerHeader>
                   <nav
-                    className="grid gap-1 overflow-y-auto px-[18px] py-4"
+                    className="grid flex-1 auto-rows-min gap-1 overflow-y-auto px-[18px] py-4"
                     aria-label={t("mobileNavigation")}
                   >
                     <NavGroup
@@ -380,6 +381,16 @@ export function AppShell({
                       </>
                     ) : null}
                   </nav>
+                  {/* The header control cluster is desktop-only, so the drawer is where mobile
+                      reaches language and theme. */}
+                  <DrawerFooter className="items-center justify-between border-t border-border p-4">
+                    <LanguageToggle
+                      value={selectedLanguage}
+                      label={t("language")}
+                      onValueChange={handleLanguageChange}
+                    />
+                    <ThemeToggle />
+                  </DrawerFooter>
                 </DrawerContent>
               </Drawer>
               <div>
@@ -414,6 +425,7 @@ export function AppShell({
                 label={t("language")}
                 onValueChange={handleLanguageChange}
               />
+              <ThemeToggle />
               <NotificationButton
                 notifications={resolvedNotifications}
                 labels={{
@@ -473,7 +485,7 @@ function HeaderTimerPill({
     <div className="relative">
       <button
         type="button"
-        className="inline-flex max-w-[15rem] items-center gap-2 rounded-[var(--radius-pill)] border border-accent/35 bg-accent/12 px-3 py-1.5 text-sm text-foreground shadow-soft transition hover:bg-accent/18"
+        className="inline-flex max-w-[15rem] items-center gap-2 rounded-[var(--radius-pill)] border border-accent-line bg-accent-soft px-3 py-1.5 text-sm text-foreground shadow-soft transition hover:bg-accent/25"
         title={timer.description || timer.projectName}
         onClick={onOpen}
       >
@@ -491,7 +503,7 @@ function HeaderTimerPill({
       </button>
       <button
         type="button"
-        className="absolute -right-1 -top-1 grid size-5 place-items-center rounded-full border border-destructive/40 bg-card text-destructive shadow-soft transition hover:bg-destructive/12 disabled:cursor-not-allowed disabled:opacity-50"
+        className="absolute -right-1 -top-1 grid size-5 place-items-center rounded-full border border-destructive/40 bg-card text-destructive shadow-soft transition hover:bg-destructive-soft disabled:cursor-not-allowed disabled:opacity-50"
         aria-label={stopLabel}
         disabled={disabled}
         onClick={(event) => {
@@ -587,7 +599,7 @@ function NavGroup({
                 onNavigate?.(item.id);
               }}
               className={cn(
-                "relative flex items-center gap-3 rounded-[var(--radius-md)] px-3 py-2.5 text-sm font-medium text-muted-foreground transition hover:bg-secondary hover:text-foreground aria-[current=page]:bg-accent/15 aria-[current=page]:font-semibold aria-[current=page]:text-accent",
+                "relative flex items-center gap-3 rounded-[var(--radius-md)] px-3 py-2.5 text-sm font-medium text-muted-foreground transition hover:bg-secondary hover:text-foreground aria-[current=page]:bg-accent-soft aria-[current=page]:font-semibold aria-[current=page]:text-accent",
                 collapsed && "justify-center px-0",
               )}
               aria-label={collapsed ? t(item.labelKey) : undefined}

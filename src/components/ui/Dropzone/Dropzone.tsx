@@ -83,7 +83,7 @@ export function Dropzone({
           if (!disabled) handleIncomingFiles(event.dataTransfer.files);
         }}
         className={cn(
-          "grid min-h-36 cursor-pointer place-items-center rounded-[var(--radius-lg)] border border-dashed border-primary/35 bg-primary/8 p-6 text-center transition hover:bg-primary/12",
+          "grid min-h-36 cursor-pointer place-items-center rounded-[var(--radius-lg)] border border-dashed border-primary/35 bg-accent-soft p-6 text-center transition hover:bg-accent-soft",
           dragging && "border-cta bg-cta/10",
           disabled && "cursor-not-allowed border-border bg-secondary opacity-60",
         )}
@@ -103,7 +103,7 @@ export function Dropzone({
           }}
         />
         <span className="grid justify-items-center gap-2">
-          <span className="inline-flex size-11 items-center justify-center rounded-full bg-primary/18 text-accent">
+          <span className="inline-flex size-11 items-center justify-center rounded-full bg-accent-soft text-accent">
             <UploadCloud className="size-5" aria-hidden="true" />
           </span>
           <span className="font-ui text-sm font-semibold text-foreground">{label}</span>

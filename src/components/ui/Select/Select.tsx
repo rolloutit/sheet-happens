@@ -48,7 +48,7 @@ export const Select = React.forwardRef<HTMLButtonElement, SelectProps>(
           position="popper"
           sideOffset={8}
           className={cn(
-            "z-50 max-h-72 min-w-[var(--radix-select-trigger-width)] overflow-hidden rounded-[var(--radius-lg)] border border-border bg-popover p-1 text-popover-foreground shadow-panel",
+            "z-50 max-h-72 min-w-[var(--radix-select-trigger-width)] overflow-hidden rounded-[var(--radius-lg)] border border-border-strong bg-popover p-1 text-popover-foreground shadow-panel",
             contentClassName,
           )}
         >

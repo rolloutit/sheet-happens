@@ -2,6 +2,12 @@
 
 @custom-variant dark (&:is(.dark *));
 
+/* Every value below that is a `var()` reference is deliberately declared here rather than as a
+ * literal: `@theme inline` resolves references into the utility itself, so `bg-accent-soft` emits
+ * `var(--accent-soft)` and follows the theme. The trade-off is that a referencing entry is *not*
+ * emitted as a custom property, so plain CSS must read the underlying variable
+ * (`var(--elevation-pop)`), never the theme name (`var(--shadow-soft)`). Literal entries such as
+ * the radii *are* emitted, which is what keeps `rounded-[var(--radius-lg)]` working. */
 @theme inline {
   --font-sans: var(--font-lexend);
   --font-ui: var(--font-poppins);
@@ -18,19 +24,31 @@
   --color-secondary-foreground: var(--secondary-foreground);
   --color-muted: var(--muted);
   --color-muted-foreground: var(--muted-foreground);
+  --color-subtle-foreground: var(--text-subtle);
   --color-accent: var(--accent);
   --color-accent-foreground: var(--accent-foreground);
+  --color-accent-soft: var(--accent-soft);
+  --color-accent-line: var(--accent-line);
   --color-cta: var(--cta);
+  --color-cta-hover: var(--cta-hover);
   --color-cta-foreground: var(--cta-foreground);
   --color-destructive: var(--destructive);
+  --color-destructive-soft: var(--destructive-soft);
   --color-destructive-foreground: var(--destructive-foreground);
   --color-success: var(--success);
+  --color-success-soft: var(--success-soft);
   --color-success-foreground: var(--success-foreground);
   --color-warning: var(--warning);
+  --color-warning-soft: var(--warning-soft);
   --color-warning-foreground: var(--warning-foreground);
   --color-border: var(--border);
+  --color-border-strong: var(--border-strong);
   --color-input: var(--input);
   --color-ring: var(--ring);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-header: var(--header-bg);
+  --color-scrim: var(--scrim);
 
   --radius-xs: 6px;
   --radius-sm: 9px;
@@ -39,8 +57,11 @@
   --radius-xl: 22px;
   --radius-pill: 999px;
 
-  --shadow-soft: 0 18px 48px rgb(0 0 0 / 0.24);
-  --shadow-panel: 0 22px 70px rgb(0 0 0 / 0.34);
+  /* The prototype has exactly one elevation. Both names are kept so existing call sites stand;
+     both resolve to the theme-aware `--elevation-pop`. */
+  --shadow-soft: var(--elevation-pop);
+  --shadow-panel: var(--elevation-pop);
+  --shadow-accent-glow: 0 10px 26px -12px var(--accent-line);
 }
 
 :root {
@@ -50,6 +71,12 @@
   --font-poppins:
     "Poppins", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 
+  /* Canvas layers, consumed by `.sheet-canvas`. The teal glow is opaque — the gradient's
+     `transparent` stop is what fades it, so it carries no alpha of its own. */
+  --canvas-base: #060f0e;
+  --canvas-glow-teal: #173f3c;
+  --canvas-glow-warm: rgb(255 171 99 / 0.085);
+
   --background: #0a1716;
   --foreground: #ecf6f3;
   --card: #11221f;
@@ -57,24 +84,48 @@
   --popover: #11221f;
   --popover-foreground: #ecf6f3;
   --primary: #19a8a3;
-  --primary-foreground: #062624;
+  --primary-foreground: #042322;
   --secondary: #1a302c;
   --secondary-foreground: #ecf6f3;
   --muted: #244039;
-  --muted-foreground: #9eb9b1;
+  --muted-foreground: #a4bab3;
+  --text-subtle: #71908a;
   --accent: #37e3de;
-  --accent-foreground: #062624;
+  --accent-foreground: #042322;
+  --accent-soft: rgb(55 227 222 / 0.15);
+  --accent-line: rgb(55 227 222 / 0.52);
   --cta: #ffc68b;
-  --cta-foreground: #2f1802;
-  --destructive: #ff6b6b;
+  --cta-hover: #ffb76c;
+  --cta-foreground: #2a1608;
+  --destructive: #ff8f86;
+  --destructive-soft: rgb(255 143 134 / 0.16);
   --destructive-foreground: #240707;
   --success: #5fdaa8;
+  --success-soft: rgb(95 218 168 / 0.16);
   --success-foreground: #082313;
   --warning: #fcba63;
+  --warning-soft: rgb(252 186 99 / 0.16);
   --warning-foreground: #2e2100;
   --border: rgb(143 240 228 / 0.1);
-  --input: rgb(236 246 243 / 0.14);
+  --border-strong: rgb(153 245 232 / 0.2);
+  /* Input borders are the prototype's `--border-strong`. Declared once: `var()` resolves at the
+     use site, so re-binding `--border-strong` in `.light` carries `--input` with it. */
+  --input: var(--border-strong);
   --ring: #37e3de;
+  --sidebar: #0a1917;
+  --sidebar-border: rgb(120 232 220 / 0.07);
+  --header-bg: rgb(10 23 22 / 0.7);
+  --scrim: rgb(4 12 11 / 0.62);
+
+  /* Skeleton shimmer stops. Raw variables — they feed a gradient, not a colour utility. */
+  --skeleton: rgb(143 240 228 / 0.055);
+  --skeleton-sheen: rgb(163 245 232 / 0.11);
+
+  --elevation-pop: 0 22px 58px -14px rgb(0 0 0 / 0.68), 0 0 0 1px rgb(120 240 228 / 0.06);
+
+  --sidebar-w: 256px;
+  --sidebar-w-collapsed: 76px;
+  --header-h: 64px;
 
   --ease-standard: cubic-bezier(0.2, 0.7, 0.2, 1);
 }
@@ -85,6 +136,12 @@
 
 .light {
   color-scheme: light;
+
+  /* Warm cream canvas: white glow off the top-right, peach off the bottom-left. */
+  --canvas-base: #f4ebdd;
+  --canvas-glow-teal: #ffffff;
+  --canvas-glow-warm: rgb(255 183 122 / 0.2);
+
   --background: #fdfaf4;
   --foreground: #0a2930;
   --card: #ffffff;
@@ -92,24 +149,40 @@
   --popover: #ffffff;
   --popover-foreground: #0a2930;
   --primary: #1f7475;
-  --primary-foreground: #f7fffc;
+  --primary-foreground: #ffffff;
   --secondary: #faf5ee;
   --secondary-foreground: #0a2930;
   --muted: #f4ece1;
   --muted-foreground: #5b6266;
+  --text-subtle: #8a938f;
   --accent: #1f7475;
-  --accent-foreground: #f7fffc;
+  --accent-foreground: #ffffff;
+  --accent-soft: #e4f7f6;
+  --accent-line: rgb(31 116 117 / 0.4);
   --cta: #ffcb97;
-  --cta-foreground: #2f1802;
-  --destructive: #c84747;
+  --cta-hover: #f9c088;
+  --cta-foreground: #20140a;
+  --destructive: #c0514b;
+  --destructive-soft: #fbe7e5;
   --destructive-foreground: #fff7f7;
-  --success: #257a4a;
+  --success: #2e8f6f;
+  --success-soft: #e1f4ec;
   --success-foreground: #f7fff9;
-  --warning: #9a6500;
+  --warning: #b07a1e;
+  --warning-soft: #fbefd6;
   --warning-foreground: #fff8e7;
   --border: #ece4d8;
-  --input: rgb(10 41 48 / 0.16);
+  --border-strong: #dccfc0;
   --ring: #1f7475;
+  --sidebar: #ffffff;
+  --sidebar-border: #ece4d8;
+  --header-bg: rgb(253 250 244 / 0.82);
+  --scrim: rgb(12 30 28 / 0.32);
+
+  --skeleton: rgb(10 41 48 / 0.05);
+  --skeleton-sheen: rgb(10 41 48 / 0.025);
+
+  --elevation-pop: 0 18px 44px -14px rgb(12 66 63 / 0.22), 0 0 0 1px rgb(12 66 63 / 0.05);
 }
 
 * {
@@ -118,19 +191,25 @@
 
 html {
   min-height: 100%;
-  background: var(--background);
+  background: var(--canvas-base);
 }
 
 body {
   min-height: 100vh;
   margin: 0;
-  background:
-    radial-gradient(circle at top left, rgb(55 227 222 / 0.12), transparent 30rem),
-    radial-gradient(circle at 80% 10%, rgb(255 198 139 / 0.14), transparent 24rem),
-    var(--background);
   color: var(--foreground);
   font-family: var(--font-lexend);
   text-rendering: geometricPrecision;
+}
+
+/* The app canvas. `AppShell` needs its own copy of this because it owns the
+   `h-screen`/`overflow-hidden` scroll container and would otherwise paint over the body. */
+body,
+.sheet-canvas {
+  background:
+    radial-gradient(1150px 700px at 100% -8%, var(--canvas-glow-teal), transparent 58%),
+    radial-gradient(880px 600px at -8% 112%, var(--canvas-glow-warm), transparent 60%),
+    var(--canvas-base);
 }
 
 button,
@@ -169,10 +248,33 @@ textarea {
   font-family: var(--font-poppins);
 }
 
+/* Reads `--elevation-pop`, not `--shadow-soft`: the latter is a referencing `@theme inline` entry
+   and so is never emitted as a custom property. */
 .sheet-panel {
   border: 1px solid var(--border);
-  background: color-mix(in srgb, var(--card) 92%, transparent);
-  box-shadow: var(--shadow-soft);
+  background: var(--card);
+  box-shadow: var(--elevation-pop);
+}
+
+.sheet-shimmer {
+  background: linear-gradient(
+    90deg,
+    var(--skeleton) 25%,
+    var(--skeleton-sheen) 50%,
+    var(--skeleton) 75%
+  );
+  background-size: 220% 100%;
+  animation: sheet-shimmer 1.6s var(--ease-standard) infinite;
+}
+
+@keyframes sheet-shimmer {
+  from {
+    background-position: -180% 0;
+  }
+
+  to {
+    background-position: 180% 0;
+  }
 }
 
 .auth-shell-orbit-ring {

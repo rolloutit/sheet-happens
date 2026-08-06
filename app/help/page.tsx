@@ -223,7 +223,7 @@ function ManualTopicCard({
         {topic.accessible ? (
           <MarkdownArticle markdown={topic.bodyMarkdown} />
         ) : (
-          <div className="flex items-start gap-3 rounded-[var(--radius-lg)] border border-warning/35 bg-warning/10 p-4 text-sm leading-6 text-muted-foreground">
+          <div className="flex items-start gap-3 rounded-[var(--radius-lg)] border border-warning/35 bg-warning-soft p-4 text-sm leading-6 text-muted-foreground">
             <Lock className="mt-0.5 size-4 shrink-0 text-warning" aria-hidden="true" />
             <p>{labels.restrictedMessage}</p>
           </div>

@@ -40,7 +40,7 @@ export const ChipButton = React.forwardRef<HTMLButtonElement, ChipButtonProps>(
           onClick={onRemove}
           className={cn(
             "inline-flex h-8 items-center justify-center rounded-r-[var(--radius-pill)] border border-border bg-secondary px-2 text-muted-foreground transition hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50",
-            selected && "border-primary/60 bg-primary/18 text-accent",
+            selected && "border-primary/60 bg-accent-soft text-accent",
           )}
         >
           <X className="size-3" aria-hidden="true" />
