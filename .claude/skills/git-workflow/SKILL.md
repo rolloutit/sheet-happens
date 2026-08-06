@@ -2,7 +2,7 @@
 name: git-workflow
 description: Git workflow for this repo — feature branches off develop, Conventional Commit messages, staging and reviewing a diff, integrating develop, PR handoff, and local history repair. Never pushes to a remote.
 when_to_use: Use when creating or switching branches, staging changes, writing a commit message, splitting or amending commits, rebasing on develop, resolving conflicts, preparing a pull request, or recovering from a bad git state.
-allowed-tools: Bash(git status:*) Bash(git diff:*) Bash(git log:*) Bash(git show:*) Bash(git branch:*) Bash(git rev-parse:*) Bash(git add:*) Bash(git commit:*)
+allowed-tools: Bash(git add:*) Bash(git branch:*) Bash(git commit:*) Bash(git fetch:*) Bash(git switch:*)
 ---
 
 # Git workflow
@@ -93,7 +93,8 @@ Copy this checklist and tick items off:
 - [ ] 3. Implement, then run the gates the change touches
 - [ ] 4. Stage explicit paths, read git diff --cached
 - [ ] 5. Commit with a Conventional Commit subject
-- [ ] 6. Report branch + commits, hand push/PR to the developer
+- [ ] 6. Run /code-review on the branch diff, fix what it finds
+- [ ] 7. Report branch + commits, hand push/PR to the developer
 ```
 
 Step 3 gates, matched to the change (full chain is `pnpm verify` — `pnpm ci` is a pnpm built-in that
@@ -104,7 +105,7 @@ runs a clean install, not the gates):
 - component or story changes: `pnpm test-storybook`, and `pnpm test:visual` if visuals moved
 - route or flow changes: `pnpm e2e`
 
-Step 6 output — give the developer exactly this, do not run it:
+Step 7 output — give the developer exactly this, do not run it:
 
 ```bash
 git push -u origin <branch>
