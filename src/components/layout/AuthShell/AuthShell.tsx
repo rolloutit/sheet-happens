@@ -72,10 +72,11 @@ export function AuthShell({
             the cage, so these say where the hub goes and the cage hangs off it. The cage is wider than
             the panel by design — it bleeds out both sides and the arcs sweep behind the copy.
 
-            `74%` is the vertical corridor the drift runs along, and `AuthGyroscope` owns the amplitude
-            that keeps the hub inside it; the reasoning is with the numbers, in `globals.css`. Nothing
-            here may set `translate` or `scale` — the drift animates both. */}
-        <AuthGyroscope className="absolute left-[calc(100%_-_12.5rem)] top-[calc(50%_-_8.5rem)] size-[17rem] lg:left-[calc(50%_-_18rem)] lg:top-[calc(74%_-_18rem)] lg:size-[36rem]" />
+            `55% + 118px` is the centre of the clear band between the copy and the footer, measured
+            rather than picked; `AuthGyroscope` owns how far the hub may wander from it, and the
+            derivation is with the numbers in `globals.css`. Nothing here may set `translate` or `scale` —
+            the drift animates both, on two elements. */}
+        <AuthGyroscope className="absolute left-[calc(100%_-_12.5rem)] top-[calc(50%_-_8.5rem)] size-[17rem] lg:left-[calc(50%_-_18rem)] lg:top-[calc(55%_+_118px_-_18rem)] lg:size-[36rem]" />
 
         {/* Below `lg` the footer is hidden, so `justify-between` is what pins the copy to the bottom of
             the banner and it has to stay. On `lg` the copy would otherwise be distributed to the middle

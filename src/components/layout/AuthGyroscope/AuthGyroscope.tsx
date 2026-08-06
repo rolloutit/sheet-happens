@@ -133,162 +133,168 @@ function Satellite({ angle, size, tone = "teal", trail = false }: SatelliteProps
  */
 export function AuthGyroscope({ className }: AuthGyroscopeProps) {
   return (
+    // Two nested elements because the drift needs two clocks. One element has a single `translate`, so
+    // both axes would have to share a timeline and the cage would retrace one closed loop. Split across
+    // a parent and a child they run at coprime periods and the composite path is a Lissajous figure
+    // that does not close — see `globals.css`.
     <div className={cn("auth-gyro", className)} aria-hidden="true">
-      <span className="auth-gyro-aura" />
+      <div className="auth-gyro-stage">
+        <span className="auth-gyro-aura" />
 
-      {/* The one shape that never turns. It gives the cage a horizon, so the composition still holds
-          when motion is off and every ring is frozen at frame 0. */}
-      <div
-        className="auth-gyro-layer grid place-items-center"
-        style={{ "--gyro-in-delay": "0ms" } as CSSProperties}
-      >
+        {/* The one shape that never turns. It gives the cage a horizon, so the composition still holds
+            when motion is off and every ring is frozen at frame 0. */}
         <div
-          className="auth-gyro-plane"
-          style={
-            {
-              "--gyro-diameter": "94%",
-              "--gyro-tilt-x": "5deg",
-              "--gyro-tilt-z": "0deg",
-            } as CSSProperties
-          }
+          className="auth-gyro-layer grid place-items-center"
+          style={{ "--gyro-in-delay": "0ms" } as CSSProperties}
+        >
+          <div
+            className="auth-gyro-plane"
+            style={
+              {
+                "--gyro-diameter": "94%",
+                "--gyro-tilt-x": "5deg",
+                "--gyro-tilt-z": "0deg",
+              } as CSSProperties
+            }
+          >
+            <svg viewBox="0 0 200 200" className="absolute inset-0 size-full" fill="none">
+              <circle
+                cx="100"
+                cy="100"
+                r="99"
+                stroke="rgba(234,251,250,0.22)"
+                strokeWidth="1.2"
+                vectorEffect="non-scaling-stroke"
+              />
+            </svg>
+          </div>
+        </div>
+
+        {/* Outer dial, tipped back to a near-horizontal ellipse. */}
+        <Ring diameter="100%" tiltX="58deg" tiltZ="0deg" duration="26s" phase="0deg" delay="60ms">
+          <svg viewBox="0 0 200 200" className="absolute inset-0 size-full">
+            {dialTicks.map((tick, index) => (
+              <line
+                key={index}
+                x1={tick.x1}
+                y1={tick.y1}
+                x2={tick.x2}
+                y2={tick.y2}
+                stroke={tick.major ? "rgba(234,251,250,0.8)" : "rgba(234,251,250,0.34)"}
+                strokeWidth={tick.major ? 2.2 : 1.2}
+                vectorEffect="non-scaling-stroke"
+              />
+            ))}
+            <circle
+              cx="100"
+              cy="100"
+              r="99"
+              fill="none"
+              stroke="rgba(234,251,250,0.34)"
+              strokeWidth="1.4"
+              vectorEffect="non-scaling-stroke"
+            />
+          </svg>
+          <Satellite angle="0deg" size="14px" trail />
+          <Satellite angle="208deg" size="6px" />
+        </Ring>
+
+        {/* The sweep rides the dial's plane on its own clock — five seconds, where the dial takes
+            twenty-six. It is the one element that reads as fast without anything moving quickly. */}
+        <Ring
+          className="hidden lg:grid"
+          diameter="100%"
+          tiltX="58deg"
+          tiltZ="0deg"
+          duration="5.2s"
+          phase="140deg"
+          delay="420ms"
+        >
+          <span className="auth-gyro-comet">
+            <span className="auth-gyro-comet-arc" />
+          </span>
+        </Ring>
+
+        {/* Swung a quarter turn off the dial, so the two cross at right angles: this is the ring that
+            makes the cage read as a gyroscope rather than as stacked ellipses. Counter-rotating, and at
+            a close enough radius that its dashes beat against the dial's ticks. */}
+        <Ring
+          diameter="84%"
+          tiltX="64deg"
+          tiltZ="84deg"
+          duration="17s"
+          reverse
+          phase="12deg"
+          delay="160ms"
         >
           <svg viewBox="0 0 200 200" className="absolute inset-0 size-full" fill="none">
             <circle
               cx="100"
               cy="100"
               r="99"
-              stroke="rgba(234,251,250,0.22)"
-              strokeWidth="1.2"
+              stroke="rgba(132,244,244,0.62)"
+              strokeDasharray="4 11"
+              strokeWidth="2"
               vectorEffect="non-scaling-stroke"
             />
           </svg>
-        </div>
-      </div>
+          <Satellite angle="0deg" size="10px" trail />
+          <Satellite angle="168deg" size="6px" tone="amber" />
+        </Ring>
 
-      {/* Outer dial, tipped back to a near-horizontal ellipse. */}
-      <Ring diameter="100%" tiltX="58deg" tiltZ="0deg" duration="26s" phase="0deg" delay="60ms">
-        <svg viewBox="0 0 200 200" className="absolute inset-0 size-full">
-          {dialTicks.map((tick, index) => (
-            <line
-              key={index}
-              x1={tick.x1}
-              y1={tick.y1}
-              x2={tick.x2}
-              y2={tick.y2}
-              stroke={tick.major ? "rgba(234,251,250,0.8)" : "rgba(234,251,250,0.34)"}
-              strokeWidth={tick.major ? 2.2 : 1.2}
+        <Ring
+          className="hidden lg:grid"
+          diameter="84%"
+          tiltX="64deg"
+          tiltZ="84deg"
+          duration="7.6s"
+          reverse
+          phase="20deg"
+          delay="480ms"
+        >
+          <span className="auth-gyro-comet auth-gyro-comet--soft">
+            <span className="auth-gyro-comet-arc" />
+          </span>
+        </Ring>
+
+        {/* Third axis, tipped the other way, so it cuts diagonally across both of the others. */}
+        <Ring
+          className="hidden lg:grid"
+          diameter="62%"
+          tiltX="-44deg"
+          tiltZ="36deg"
+          duration="34s"
+          phase="40deg"
+          delay="260ms"
+        >
+          <svg viewBox="0 0 200 200" className="absolute inset-0 size-full" fill="none">
+            <circle
+              cx="100"
+              cy="100"
+              r="99"
+              stroke="rgba(253,207,174,0.48)"
+              strokeDasharray="7 10"
+              strokeWidth="1.6"
               vectorEffect="non-scaling-stroke"
             />
-          ))}
-          <circle
-            cx="100"
-            cy="100"
-            r="99"
-            fill="none"
-            stroke="rgba(234,251,250,0.34)"
-            strokeWidth="1.4"
-            vectorEffect="non-scaling-stroke"
-          />
-        </svg>
-        <Satellite angle="0deg" size="14px" trail />
-        <Satellite angle="208deg" size="6px" />
-      </Ring>
+          </svg>
+          <Satellite angle="96deg" size="9px" tone="amber" trail />
+        </Ring>
 
-      {/* The sweep rides the dial's plane on its own clock — five seconds, where the dial takes
-          twenty-six. It is the one element that reads as fast without anything moving quickly. */}
-      <Ring
-        className="hidden lg:grid"
-        diameter="100%"
-        tiltX="58deg"
-        tiltZ="0deg"
-        duration="5.2s"
-        phase="140deg"
-        delay="420ms"
-      >
-        <span className="auth-gyro-comet">
-          <span className="auth-gyro-comet-arc" />
-        </span>
-      </Ring>
+        {/* A timesheet app should tick. Two pings, half a cycle apart. */}
+        <span className="auth-gyro-pulse" style={{ "--gyro-delay": "0s" } as CSSProperties} />
+        <span className="auth-gyro-pulse" style={{ "--gyro-delay": "3s" } as CSSProperties} />
 
-      {/* Swung a quarter turn off the dial, so the two cross at right angles: this is the ring that
-          makes the cage read as a gyroscope rather than as stacked ellipses. Counter-rotating, and at
-          a close enough radius that its dashes beat against the dial's ticks. */}
-      <Ring
-        diameter="84%"
-        tiltX="64deg"
-        tiltZ="84deg"
-        duration="17s"
-        reverse
-        phase="12deg"
-        delay="160ms"
-      >
-        <svg viewBox="0 0 200 200" className="absolute inset-0 size-full" fill="none">
-          <circle
-            cx="100"
-            cy="100"
-            r="99"
-            stroke="rgba(132,244,244,0.62)"
-            strokeDasharray="4 11"
-            strokeWidth="2"
-            vectorEffect="non-scaling-stroke"
-          />
-        </svg>
-        <Satellite angle="0deg" size="10px" trail />
-        <Satellite angle="168deg" size="6px" tone="amber" />
-      </Ring>
-
-      <Ring
-        className="hidden lg:grid"
-        diameter="84%"
-        tiltX="64deg"
-        tiltZ="84deg"
-        duration="7.6s"
-        reverse
-        phase="20deg"
-        delay="480ms"
-      >
-        <span className="auth-gyro-comet auth-gyro-comet--soft">
-          <span className="auth-gyro-comet-arc" />
-        </span>
-      </Ring>
-
-      {/* Third axis, tipped the other way, so it cuts diagonally across both of the others. */}
-      <Ring
-        className="hidden lg:grid"
-        diameter="62%"
-        tiltX="-44deg"
-        tiltZ="36deg"
-        duration="34s"
-        phase="40deg"
-        delay="260ms"
-      >
-        <svg viewBox="0 0 200 200" className="absolute inset-0 size-full" fill="none">
-          <circle
-            cx="100"
-            cy="100"
-            r="99"
-            stroke="rgba(253,207,174,0.48)"
-            strokeDasharray="7 10"
-            strokeWidth="1.6"
-            vectorEffect="non-scaling-stroke"
-          />
-        </svg>
-        <Satellite angle="96deg" size="9px" tone="amber" trail />
-      </Ring>
-
-      {/* A timesheet app should tick. Two pings, half a cycle apart. */}
-      <span className="auth-gyro-pulse" style={{ "--gyro-delay": "0s" } as CSSProperties} />
-      <span className="auth-gyro-pulse" style={{ "--gyro-delay": "3s" } as CSSProperties} />
-
-      {/* Below `lg` the panel is a 13rem banner and the cage is cropped to arcs, so the hub would
-          land on top of the headline. The brand row already shows the mark there. */}
-      <div className="auth-gyro-hub hidden lg:grid">
-        <span className="auth-gyro-hub-core">
-          <span className="auth-gyro-hub-halo" />
-          <span className="auth-gyro-hub-tile size-24">
-            <BrandMark size={48} tone="onDark" />
+        {/* Below `lg` the panel is a 13rem banner and the cage is cropped to arcs, so the hub would
+            land on top of the headline. The brand row already shows the mark there. */}
+        <div className="auth-gyro-hub hidden lg:grid">
+          <span className="auth-gyro-hub-core">
+            <span className="auth-gyro-hub-halo" />
+            <span className="auth-gyro-hub-tile size-24">
+              <BrandMark size={48} tone="onDark" />
+            </span>
           </span>
-        </span>
+        </div>
       </div>
     </div>
   );

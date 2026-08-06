@@ -300,66 +300,55 @@ textarea {
       animations to frame 0 and fast-forwards finite ones to their end. Frame 0 of each loop is
       therefore the frame any visual baseline would capture, so the ring phases that make up frame 0
       are chosen as a composition rather than left at zero. */
-/* The cage roams rather than sitting in one corner. `translate` and `scale` are used instead of
-   `transform` because they are independent properties: the ring planes inside own `transform`
-   outright, and a group transform here would have to be composed into every one of them.
+/* The cage wanders rather than sitting still, and the two axes are deliberately on separate elements.
+   An element has one `translate`, so driving x and y from a single animation puts them on one clock and
+   the cage retraces one closed loop — recognisable within a minute. Split over the root and the stage
+   they run at 53s and 79s, both prime, so the composite path is a Lissajous figure that only closes
+   after their product: 4189s, or about 70 minutes. The 37s swell is prime to both again.
 
-   Two periods that do not divide into each other, so the cage is never twice in the same place at the
-   same size. Linear, not eased: the drift is eight keyframes around an ellipse, and an ease would pulse
-   at each one. Frame 0 is the resting position — horizontally centred — which is where a frozen
-   screenshot and `prefers-reduced-motion` both land. */
+   `translate` and `scale` rather than `transform`, because they are independent properties: the ring
+   planes inside own `transform` outright, and a group transform here would have to be composed into
+   every one of them.
+
+   Frame 0 of all three is the resting state — cage centred in its box, unscaled — which is where both a
+   frozen screenshot and `prefers-reduced-motion` land. */
 .auth-gyro {
   --gyro-drift-x: 4rem;
   --gyro-drift-y: 1rem;
 
   pointer-events: none;
+  /* The keyframes carry their own per-segment easing; this only fills the shorthand. */
+  animation: auth-gyro-drift-x 53s linear infinite;
+}
+
+.auth-gyro-stage {
+  position: absolute;
+  inset: 0;
   perspective: 1100px;
   transform-style: preserve-3d;
   animation:
-    auth-gyro-drift 54s linear infinite,
-    auth-gyro-swell 29s var(--ease-standard) infinite;
+    auth-gyro-drift-y 79s linear infinite,
+    auth-gyro-swell 37s var(--ease-standard) infinite;
 }
 
-/* The hub can only travel where a 6rem tile clears the copy. Measured panel-relative, the copy block
-   runs x 48–408 at every size, so at the narrowest panel `lg` produces (471px) there is no corridor
-   beside it at all. What there is, is a clear band between the copy — which packs to the top of the
-   panel on `lg` — and the footer. `AuthShell` parks the cage at 74% of panel height, inside that band,
-   and these are the amplitudes that keep the tile there. The footer is the binding edge: it sits a
-   fixed distance off the bottom, so the shorter the window the less room there is beneath 74%.
+/* How far it may wander, in one expression per axis instead of a ladder of breakpoints.
 
-   The two reaches key off different axes, because their limits do. Horizontally the panel is `46%`
-   capped at `620px`, so it is 471px wide at `lg` and only reaches the cap around `xl` — a reach wide
-   enough for the cap would run the tile off the narrow panel's left edge. Vertically the room follows
-   the window's height and nothing else, so a short 2560px-wide window is every bit as tight as a short
-   narrow one. Hence width queries for one and height queries for the other. */
+   The hub is a 6rem tile and it may not touch the copy, the footer, or the panel's edge. Measured
+   panel-relative across all four moods in both locales, the copy block bottoms out at `0.1H + 331` and
+   the footer starts at `H - 96`, which puts the clear band between them at `0.55H + 118` — the `top`
+   `AuthShell` uses — with a half-height of `0.45H - 280`. `45dvh - 300px` is that half-height less a
+   20px margin, at every window height, which is why no height queries are needed. Horizontally the
+   panel is `46%` of the window capped at `620px`, so half of it is `min(23vw, 310px)`, and 70px off
+   that clears the tile's own half-width plus the same kind of margin.
+
+   Both clamp at 0: under about 590px tall the copy and footer leave no room for the tile at all, and a
+   still hub is the honest answer there rather than one that wanders into text. The x and y limits are
+   independent — the band sits entirely below the copy, so how far across the panel the hub is cannot
+   put it back into the text — which is what makes two separate axes safe in the first place. */
 @media (width >= 64rem) {
   .auth-gyro {
-    --gyro-drift-x: 9.5rem;
-    --gyro-drift-y: 1.25rem;
-  }
-}
-
-@media (width >= 80rem) {
-  .auth-gyro {
-    --gyro-drift-x: 12rem;
-  }
-}
-
-@media (width >= 96rem) {
-  .auth-gyro {
-    --gyro-drift-x: 13rem;
-  }
-}
-
-@media (width >= 64rem) and (height >= 50rem) {
-  .auth-gyro {
-    --gyro-drift-y: 2rem;
-  }
-}
-
-@media (width >= 64rem) and (height >= 64rem) {
-  .auth-gyro {
-    --gyro-drift-y: 3rem;
+    --gyro-drift-x: max(0px, calc(min(23vw, 310px) - 70px));
+    --gyro-drift-y: max(0px, calc(45dvh - 300px));
   }
 }
 
@@ -543,40 +532,54 @@ textarea {
   animation: auth-gyro-breathe 5s var(--ease-standard) infinite;
 }
 
-/* An ellipse, walked at constant speed: wide across the band, shallow up and down it. 0.707 is the
-   sine and cosine of 45°, so the eight stops are evenly spaced around it. */
-@keyframes auth-gyro-drift {
-  0%,
-  100% {
-    translate: 0 calc(-1 * var(--gyro-drift-y));
-  }
+/* One axis, swung from the middle out to each extreme and back — the shape of a sine, built from four
+   stops rather than sampled into a dozen.
 
-  12.5% {
-    translate: calc(0.707 * var(--gyro-drift-x)) calc(-0.707 * var(--gyro-drift-y));
+   The per-keyframe easings are what make it a sine and not a bounce. Centre to extreme decelerates
+   (`ease-out`), extreme through centre to the far extreme is `ease-in-out`, and the last quarter back to
+   the middle accelerates (`ease-in`). Every join therefore meets zero velocity against zero velocity at
+   the extremes, and full velocity against full velocity where the loop closes — so nothing snaps, and
+   0% is the centre rather than an endpoint. Starting at an extreme instead, which `alternate` would do,
+   would leave a frozen page resting hard against one side. */
+@keyframes auth-gyro-drift-x {
+  0% {
+    translate: 0 0;
+    animation-timing-function: ease-out;
   }
 
   25% {
     translate: var(--gyro-drift-x) 0;
-  }
-
-  37.5% {
-    translate: calc(0.707 * var(--gyro-drift-x)) calc(0.707 * var(--gyro-drift-y));
-  }
-
-  50% {
-    translate: 0 var(--gyro-drift-y);
-  }
-
-  62.5% {
-    translate: calc(-0.707 * var(--gyro-drift-x)) calc(0.707 * var(--gyro-drift-y));
+    animation-timing-function: ease-in-out;
   }
 
   75% {
     translate: calc(-1 * var(--gyro-drift-x)) 0;
+    animation-timing-function: ease-in;
   }
 
-  87.5% {
-    translate: calc(-0.707 * var(--gyro-drift-x)) calc(-0.707 * var(--gyro-drift-y));
+  100% {
+    translate: 0 0;
+  }
+}
+
+@keyframes auth-gyro-drift-y {
+  0% {
+    translate: 0 0;
+    animation-timing-function: ease-out;
+  }
+
+  25% {
+    translate: 0 var(--gyro-drift-y);
+    animation-timing-function: ease-in-out;
+  }
+
+  75% {
+    translate: 0 calc(-1 * var(--gyro-drift-y));
+    animation-timing-function: ease-in;
+  }
+
+  100% {
+    translate: 0 0;
   }
 }
 
