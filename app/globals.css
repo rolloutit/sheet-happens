@@ -300,10 +300,68 @@ textarea {
       animations to frame 0 and fast-forwards finite ones to their end. Frame 0 of each loop is
       therefore the frame any visual baseline would capture, so the ring phases that make up frame 0
       are chosen as a composition rather than left at zero. */
+/* The cage roams rather than sitting in one corner. `translate` and `scale` are used instead of
+   `transform` because they are independent properties: the ring planes inside own `transform`
+   outright, and a group transform here would have to be composed into every one of them.
+
+   Two periods that do not divide into each other, so the cage is never twice in the same place at the
+   same size. Linear, not eased: the drift is eight keyframes around an ellipse, and an ease would pulse
+   at each one. Frame 0 is the resting position — horizontally centred — which is where a frozen
+   screenshot and `prefers-reduced-motion` both land. */
 .auth-gyro {
+  --gyro-drift-x: 4rem;
+  --gyro-drift-y: 1rem;
+
   pointer-events: none;
   perspective: 1100px;
   transform-style: preserve-3d;
+  animation:
+    auth-gyro-drift 54s linear infinite,
+    auth-gyro-swell 29s var(--ease-standard) infinite;
+}
+
+/* The hub can only travel where a 6rem tile clears the copy. Measured panel-relative, the copy block
+   runs x 48–408 at every size, so at the narrowest panel `lg` produces (471px) there is no corridor
+   beside it at all. What there is, is a clear band below it — and because the copy is vertically
+   centred while the footer sits a fixed distance off the bottom, that band stays at roughly 74% of
+   panel height from 768px tall to 1180px and up. `AuthShell` parks the cage there, and these are the
+   amplitudes that keep the tile inside it.
+
+   The two reaches key off different axes, because their limits do. Horizontally the panel is `46%`
+   capped at `620px`, so it is 471px wide at `lg` and only reaches the cap around `xl` — a reach wide
+   enough for the cap would run the tile off the narrow panel's left edge. Vertically the band is
+   squeezed between the centred copy and the footer, so its height follows the window's height and
+   nothing else: at 700px tall it is only ~80px, and a short 2560px-wide window is every bit as tight
+   as a short narrow one. Hence width queries for one and height queries for the other. */
+@media (width >= 64rem) {
+  .auth-gyro {
+    --gyro-drift-x: 9.5rem;
+    --gyro-drift-y: 1.25rem;
+  }
+}
+
+@media (width >= 80rem) {
+  .auth-gyro {
+    --gyro-drift-x: 12rem;
+  }
+}
+
+@media (width >= 96rem) {
+  .auth-gyro {
+    --gyro-drift-x: 13rem;
+  }
+}
+
+@media (width >= 64rem) and (height >= 50rem) {
+  .auth-gyro {
+    --gyro-drift-y: 2rem;
+  }
+}
+
+@media (width >= 64rem) and (height >= 64rem) {
+  .auth-gyro {
+    --gyro-drift-y: 3rem;
+  }
 }
 
 /* `display` deliberately stays out of this rule and is a `grid` utility on the element instead.
@@ -484,6 +542,56 @@ textarea {
     0 0 42px -6px rgb(58 255 255 / 0.42);
   backdrop-filter: blur(10px);
   animation: auth-gyro-breathe 5s var(--ease-standard) infinite;
+}
+
+/* An ellipse, walked at constant speed: wide across the band, shallow up and down it. 0.707 is the
+   sine and cosine of 45°, so the eight stops are evenly spaced around it. */
+@keyframes auth-gyro-drift {
+  0%,
+  100% {
+    translate: 0 calc(-1 * var(--gyro-drift-y));
+  }
+
+  12.5% {
+    translate: calc(0.707 * var(--gyro-drift-x)) calc(-0.707 * var(--gyro-drift-y));
+  }
+
+  25% {
+    translate: var(--gyro-drift-x) 0;
+  }
+
+  37.5% {
+    translate: calc(0.707 * var(--gyro-drift-x)) calc(0.707 * var(--gyro-drift-y));
+  }
+
+  50% {
+    translate: 0 var(--gyro-drift-y);
+  }
+
+  62.5% {
+    translate: calc(-0.707 * var(--gyro-drift-x)) calc(0.707 * var(--gyro-drift-y));
+  }
+
+  75% {
+    translate: calc(-1 * var(--gyro-drift-x)) 0;
+  }
+
+  87.5% {
+    translate: calc(-0.707 * var(--gyro-drift-x)) calc(-0.707 * var(--gyro-drift-y));
+  }
+}
+
+/* Scales about the cage's own centre, which is where the hub sits — so the rings swell and the tile
+   stays put. That keeps the swell out of the clearance arithmetic above. */
+@keyframes auth-gyro-swell {
+  0%,
+  100% {
+    scale: 1;
+  }
+
+  50% {
+    scale: 1.06;
+  }
 }
 
 @keyframes auth-gyro-turn {

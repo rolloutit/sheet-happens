@@ -68,15 +68,14 @@ export function AuthShell({
               "radial-gradient(40% 30% at 80% 75%, rgba(41,198,198,0.22), transparent 70%), radial-gradient(30% 24% at 95% 20%, rgba(255,203,151,0.12), transparent 70%)",
           }}
         />
-        {/* Bled off the right edge on purpose: a cage wider than its frame reads as a system that
-            carries on past the panel, and the arcs sweep behind the headline on the way out.
+        {/* Positioned by its centre rather than by an edge: every offset is `50%` (or `74%`) less half
+            the cage, so these say where the hub goes and the cage hangs off it. The cage is wider than
+            the panel by design — it bleeds out both sides and the arcs sweep behind the copy.
 
-            `7rem - 18rem` is the same -11rem a plain value would give — written as the hub's inset
-            minus half the 36rem cage so that resizing the cage keeps the hub 7rem from the panel's
-            right edge. `70%` is what actually clears the copy: the panel is `46%` capped at `620px`,
-            so at 1024px it is narrow enough that the 22.5rem copy block spans almost all of it, and
-            only dropping the hub below that block keeps the two from meeting. */}
-        <AuthGyroscope className="absolute right-[-4.5rem] top-1/2 size-[17rem] -translate-y-1/2 lg:right-[calc(7rem-18rem)] lg:top-[70%] lg:size-[36rem]" />
+            `74%` is the vertical corridor the drift runs along, and `AuthGyroscope` owns the amplitude
+            that keeps the hub inside it; the reasoning is with the numbers, in `globals.css`. Nothing
+            here may set `translate` or `scale` — the drift animates both. */}
+        <AuthGyroscope className="absolute left-[calc(100%_-_12.5rem)] top-[calc(50%_-_8.5rem)] size-[17rem] lg:left-[calc(50%_-_18rem)] lg:top-[calc(74%_-_18rem)] lg:size-[36rem]" />
 
         <div className="relative z-10 flex w-full flex-col justify-between gap-8">
           <div className="flex items-center gap-3">

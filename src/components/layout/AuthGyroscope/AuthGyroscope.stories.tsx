@@ -33,7 +33,9 @@ const meta = {
     ),
   ],
   args: {
-    className: "absolute left-1/2 top-1/2 size-[30rem] -translate-x-1/2 -translate-y-1/2",
+    // Centred by offsetting half the cage, never by `-translate-*`: the drift animates `translate`,
+    // and an animation outranks a utility, so a translate-based centring would be thrown away.
+    className: "absolute left-[calc(50%_-_15rem)] top-[calc(50%_-_15rem)] size-[30rem]",
   },
 } satisfies Meta<typeof AuthGyroscope>;
 
@@ -63,10 +65,21 @@ export const Centered: Story = {
   },
 };
 
-/** How the auth panel actually places it: hub on the right, rings bleeding off the edge. */
-export const BledOffPanelEdge: Story = {
+/**
+ * How the auth panel actually places it, in a frame the size of the panel at a 1440×900 window: hub
+ * parked in the clear band at 74% height, cage bleeding out both sides. Drifting, so where the hub
+ * sits depends on when you look.
+ */
+export const PanelPlacement: Story = {
+  decorators: [
+    (Story) => (
+      <div className="relative h-[900px] w-[620px] overflow-hidden bg-[radial-gradient(120%_90%_at_18%_8%,#2c7c7c_0%,#0c423f_55%,#08302d_100%)]">
+        <Story />
+      </div>
+    ),
+  ],
   args: {
-    className: "absolute right-[-8rem] top-1/2 size-[38rem] -translate-y-1/2",
+    className: "absolute left-[calc(50%_-_18rem)] top-[calc(74%_-_18rem)] size-[36rem]",
   },
 };
 
@@ -89,6 +102,6 @@ export const MobileBanner: Story = {
     ),
   ],
   args: {
-    className: "absolute right-[-4.5rem] top-1/2 size-[17rem] -translate-y-1/2",
+    className: "absolute left-[calc(100%_-_12.5rem)] top-[calc(50%_-_8.5rem)] size-[17rem]",
   },
 };
