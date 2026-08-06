@@ -2083,6 +2083,38 @@ Expected result:
   teal either way, so a deep-teal mark there would be a bug, not a theme.
 - Both files are requested once and the mark stays crisp on a retina display.
 
+### Auth Panel Gyroscope
+
+1. Sign out, then open `https://{DOMAIN_NAME}/login` on a desktop width and watch the teal panel for
+   the first two seconds without touching anything.
+2. Keep watching for about a minute.
+3. Narrow the window from full width down to roughly 1024px, watching the Rollout IT mark at the
+   centre of the rings and the copy block on its left.
+4. Narrow past the `lg` breakpoint so the panel becomes a banner.
+5. Repeat step 1 on `/set-password`, `/reset-password`, and the two-factor challenge screen.
+6. Switch the theme between light, dark, and system while the panel is on screen.
+7. In the operating system accessibility settings turn on reduce motion, then hard-reload `/login`.
+
+Expected result:
+
+- The rings fade and scale into place one after another over roughly a second, and the mark blooms in
+  last. Nothing jumps or lands in the wrong place.
+- Four rings turn, at different speeds and in different directions, on three visibly different axes —
+  the cage reads as a gyroscope, not as stacked ellipses. Two bright arcs sweep round much faster than
+  the rings they ride. Glowing beads travel the rings with short tails behind them, and pass in front
+  of and behind the centre. Two faint rings ping outward from the mark every few seconds.
+- The Rollout IT mark stays upright and perfectly still on its frosted tile throughout — it never
+  rotates with the rings. It breathes very slightly, out of step with the glow behind it.
+- The mark is the cream version at every width and in every theme, since the panel is teal in both.
+- The mark's tile never touches or overlaps the headline, the tip pill, or the footer line at any
+  width, including at 1024px where the panel is narrowest.
+- On the mobile banner the mark, the two fast arcs, and the innermost ring are gone; the two remaining
+  rings are cropped to arcs and still turn.
+- Under reduce motion everything is still and the panel still looks composed and deliberate — rings
+  crossing on three axes with the mark centred. No ring is stranded mid-expansion and nothing is
+  missing except the pings.
+- Scrolling and typing in the form on the right stay smooth with the animation running.
+
 ## Regression Checklist For Every Release
 
 - Invitation activation works for a new invited user.
