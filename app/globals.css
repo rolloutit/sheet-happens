@@ -213,12 +213,16 @@
   --cta: #ffcb97;
   --cta-hover: #f9c088;
   --cta-foreground: #20140a;
-  --destructive: #c0514b;
-  --destructive-soft: #fbe7e5;
-  --destructive-foreground: #fff7f7;
-  --success: #2e8f6f;
-  --success-soft: #e1f4ec;
-  --success-foreground: #f7fff9;
+  /* Success and danger share their dark-mode hues (152.7° green, 14.8° rose) so a status means
+     the same colour in both themes. Tuned against this theme's own surfaces: every text pairing —
+     on white, on `--background`, on `--secondary`, and on its own soft — clears 4.5:1, which the
+     previous values did not. */
+  --destructive: #be3c52;
+  --destructive-soft: #fee8e9;
+  --destructive-foreground: #ffffff;
+  --success: #247f48;
+  --success-soft: #e5faea;
+  --success-foreground: #ffffff;
   --warning: #b07a1e;
   --warning-soft: #fbefd6;
   --warning-foreground: #fff8e7;
