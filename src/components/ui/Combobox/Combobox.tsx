@@ -134,7 +134,7 @@ export function Combobox({
           </Button>
         </PopoverTrigger>
         <PopoverContent align="start" className="w-[min(22rem,calc(100vw-2rem))] p-2">
-          <div className="flex h-9 items-center gap-2 rounded-[var(--radius-md)] border border-input bg-card px-3">
+          <div className="flex h-9 items-center gap-2 rounded-[var(--radius-md)] border border-input bg-surface-inset px-3">
             <Search className="size-4 text-muted-foreground" aria-hidden="true" />
             <input
               id={searchId}
