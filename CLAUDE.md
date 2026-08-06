@@ -8,6 +8,8 @@ Prisma/Postgres, Better Auth, Tailwind v4, next-intl (HU/EN), Storybook.
 
 pnpm only — `packageManager: pnpm@11.5.3`, Node `24.14.0` (`.nvmrc`). Never npm or yarn.
 
+- `pnpm setup:git` — run once per clone: installs the pre-push guard and the push defaults that
+  keep a feature branch off `develop`. Local git config only, never global.
 - `pnpm dev` — Next dev server (Turbopack) on `:3000`
 - `pnpm db:dev` — start Postgres 17 + MinIO in Docker, migrate, seed. Also `db:dev:reset`,
   `db:dev:seed`, `db:dev:stop`. Requires Docker running.
@@ -89,6 +91,8 @@ Detailed workflow lives in the `/git-workflow` skill (`.claude/skills/git-workfl
 
 - Branch off `develop`; never commit directly on `develop` or `main`. Names: `feature/<topic>`,
   `fix/<topic>`, `chore/<topic>`, `docs/<topic>`.
+- Create branches with `git switch -c <name> --no-track origin/develop`; push with
+  `git push -u origin <branch>`, never a `HEAD:<other-branch>` refspec.
 - Conventional Commits: `type(scope): imperative subject`, lowercase, no trailing period.
 - **YOU MUST NEVER push to a remote** and never rewrite history that exists on `origin`. Commit
   locally, then hand the push and PR to the developer. `git push` is blocked by a deny rule in
