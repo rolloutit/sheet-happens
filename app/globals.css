@@ -322,17 +322,16 @@ textarea {
 
 /* The hub can only travel where a 6rem tile clears the copy. Measured panel-relative, the copy block
    runs x 48–408 at every size, so at the narrowest panel `lg` produces (471px) there is no corridor
-   beside it at all. What there is, is a clear band below it — and because the copy is vertically
-   centred while the footer sits a fixed distance off the bottom, that band stays at roughly 74% of
-   panel height from 768px tall to 1180px and up. `AuthShell` parks the cage there, and these are the
-   amplitudes that keep the tile inside it.
+   beside it at all. What there is, is a clear band between the copy — which packs to the top of the
+   panel on `lg` — and the footer. `AuthShell` parks the cage at 74% of panel height, inside that band,
+   and these are the amplitudes that keep the tile there. The footer is the binding edge: it sits a
+   fixed distance off the bottom, so the shorter the window the less room there is beneath 74%.
 
    The two reaches key off different axes, because their limits do. Horizontally the panel is `46%`
    capped at `620px`, so it is 471px wide at `lg` and only reaches the cap around `xl` — a reach wide
-   enough for the cap would run the tile off the narrow panel's left edge. Vertically the band is
-   squeezed between the centred copy and the footer, so its height follows the window's height and
-   nothing else: at 700px tall it is only ~80px, and a short 2560px-wide window is every bit as tight
-   as a short narrow one. Hence width queries for one and height queries for the other. */
+   enough for the cap would run the tile off the narrow panel's left edge. Vertically the room follows
+   the window's height and nothing else, so a short 2560px-wide window is every bit as tight as a short
+   narrow one. Hence width queries for one and height queries for the other. */
 @media (width >= 64rem) {
   .auth-gyro {
     --gyro-drift-x: 9.5rem;

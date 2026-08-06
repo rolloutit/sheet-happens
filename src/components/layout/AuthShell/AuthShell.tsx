@@ -77,7 +77,11 @@ export function AuthShell({
             here may set `translate` or `scale` — the drift animates both. */}
         <AuthGyroscope className="absolute left-[calc(100%_-_12.5rem)] top-[calc(50%_-_8.5rem)] size-[17rem] lg:left-[calc(50%_-_18rem)] lg:top-[calc(74%_-_18rem)] lg:size-[36rem]" />
 
-        <div className="relative z-10 flex w-full flex-col justify-between gap-8">
+        {/* Below `lg` the footer is hidden, so `justify-between` is what pins the copy to the bottom of
+            the banner and it has to stay. On `lg` the copy would otherwise be distributed to the middle
+            of a full-height panel, right where the gyroscope drifts — so the column packs to the top
+            there and the footer takes itself back down with `mt-auto`. */}
+        <div className="relative z-10 flex w-full flex-col justify-between gap-8 lg:justify-start">
           <div className="flex items-center gap-3">
             {/* The frosted tile stays: it lifts the mark off the gradient and the orbit dots. The
                 panel is teal in both themes, so the mark cannot follow the palette here. */}
@@ -92,7 +96,9 @@ export function AuthShell({
             </div>
           </div>
 
-          <div className="max-w-[22.5rem]">
+          {/* `dvh` to match the panel's own `min-h-dvh`, so the copy keeps its share of the panel
+              rather than a fixed offset that reads high on a laptop and cramped on a tall display. */}
+          <div className="max-w-[22.5rem] lg:mt-[10dvh]">
             <h1 className="font-ui text-3xl font-medium leading-[1.05] text-white lg:text-[46px]">
               {t(moodCopy.title)}
             </h1>
@@ -105,7 +111,7 @@ export function AuthShell({
             </div>
           </div>
 
-          <p className="hidden max-w-[21rem] text-[13px] leading-6 text-[#eafbfa]/55 lg:block">
+          <p className="hidden max-w-[21rem] text-[13px] leading-6 text-[#eafbfa]/55 lg:mt-auto lg:block">
             {t("panelFooter")}
           </p>
         </div>
