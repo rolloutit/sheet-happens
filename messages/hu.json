@@ -3,6 +3,22 @@
     "name": "Sheet Happens",
     "company": "Rollout IT"
   },
+  "Pickers": {
+    "search": "Keresés",
+    "searchPlaceholder": "Keresés...",
+    "noResults": "Nincs találat",
+    "clear": "Törlés",
+    "done": "Kész",
+    "today": "Ma",
+    "thisMonth": "Aktuális hónap",
+    "calendar": "Naptár",
+    "selectMonth": "Hónap kiválasztása",
+    "rangeEnd": "Záró dátum",
+    "previousMonth": "Előző hónap",
+    "nextMonth": "Következő hónap",
+    "previousYear": "Előző év",
+    "nextYear": "Következő év"
+  },
   "AppShell": {
     "brand": {
       "subtitle": "Rollout IT · belső"

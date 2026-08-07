@@ -3,6 +3,22 @@
     "name": "Sheet Happens",
     "company": "Rollout IT"
   },
+  "Pickers": {
+    "search": "Search",
+    "searchPlaceholder": "Search...",
+    "noResults": "No results",
+    "clear": "Clear",
+    "done": "Done",
+    "today": "Today",
+    "thisMonth": "This month",
+    "calendar": "Calendar",
+    "selectMonth": "Select month",
+    "rangeEnd": "End date",
+    "previousMonth": "Previous month",
+    "nextMonth": "Next month",
+    "previousYear": "Previous year",
+    "nextYear": "Next year"
+  },
   "AppShell": {
     "brand": {
       "subtitle": "Rollout IT · internal"
