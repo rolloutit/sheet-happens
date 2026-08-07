@@ -2176,6 +2176,48 @@ Expected result:
   stranded mid-expansion and nothing is missing except the pings.
 - Scrolling and typing in the form on the right stay smooth with the animation running.
 
+### Brand Typefaces Load From The App Itself
+
+Lexend and Poppins are self-hosted from `public/fonts`. Before this they were named in CSS but never
+loaded, so every screen silently fell back to the OS UI font. The point of this scenario is to catch
+a **silent** regression: on a machine that happens to have Lexend or Poppins installed locally, a
+broken `@font-face` still looks correct. Test with DevTools, not with your eyes alone.
+
+1. Open `/dashboard` with DevTools → Network, filtered to **Font**, and hard-reload.
+2. Confirm `lexend-variable-latin.woff2` and `lexend-variable-latin-ext.woff2` are both fetched from
+   this app's own origin (`/fonts/…`), status 200 — not from `fonts.gstatic.com`.
+3. Confirm the two Lexend files start loading immediately on navigation, not after the page paints.
+4. Scroll to any table header or uppercase micro-label (`.font-ui`) and confirm `poppins-*.woff2`
+   files are fetched too.
+5. In DevTools → Elements, select a paragraph of body copy and read the **Computed → Rendered Fonts**
+   readout at the bottom of the pane. It must say `Lexend`.
+6. Select a table header or a stat-card label and confirm its rendered font is `Poppins`.
+7. Switch the app to Hungarian and open a screen with accented copy — `/time` or `/timesheets`.
+8. Find a word containing **ő** or **ű** (`Időszak`, `Hétfő`, `Törlés`, `űrlap`) and confirm the
+   rendered font for that text is still `Lexend`, with `lexend-variable-latin-ext.woff2` in the
+   Network list.
+9. Repeat step 8 on a `.font-ui` label containing ő/ű and confirm it is still `Poppins`.
+10. Throttle the network to Slow 3G and reload. Watch the first paint of body text.
+11. Open `/login` and repeat steps 5 and 8 — the auth screens sit outside the app shell.
+12. Repeat steps 5–6 in the other theme.
+
+Expected result:
+
+- Every font file comes from this origin. **No request to `fonts.googleapis.com` or
+  `fonts.gstatic.com` on any screen** — the app must render correctly with the machine offline from
+  Google, and with Lexend and Poppins uninstalled from the OS.
+- Body copy renders as Lexend and `.font-ui` labels render as Poppins, in both themes and both
+  locales, on `/login` as well as inside the app shell.
+- Hungarian ő and ű are the **same** typeface as the letters around them. A word where ő or ű is
+  visibly narrower, differently shaped, or sitting on a different baseline than its neighbours means
+  the `latin-ext` file failed to load and the glyph fell back to a system face.
+- Nothing renders in a heavier or lighter weight than designed. Poppins only ships 400/500/600/700
+  here; a label that looks artificially smeared or squeezed means markup asked for a weight with no
+  file behind it.
+- Under Slow 3G, text may appear briefly in the fallback face and then swap once — acceptable. Text
+  must never be **invisible** while the font loads, and the swap must not reflow the page enough to
+  move what you were about to click.
+
 ## Regression Checklist For Every Release
 
 - Invitation activation works for a new invited user.
@@ -2199,3 +2241,5 @@ Expected result:
   render without layout breakage on desktop and mobile widths.
 - The light, dark, and system theme preferences all apply with no flash, survive a reload, and leave
   every screen readable in both themes.
+- Body copy renders in Lexend and `.font-ui` labels in Poppins, served from this origin with no
+  request to Google, and Hungarian ő/ű match the typeface of the letters beside them.
