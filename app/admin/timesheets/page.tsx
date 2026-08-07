@@ -1,4 +1,4 @@
-import { CalendarDays, Eye, Filter, X } from "lucide-react";
+import { CalendarDays, Eye } from "lucide-react";
 import type { Route } from "next";
 import Link from "next/link";
 import { getLocale, getTranslations } from "next-intl/server";
@@ -14,8 +14,6 @@ import {
   CardHeader,
   CardTitle,
 } from "@/src/components/ui/Card";
-import { Field } from "@/src/components/ui/Field";
-import { Input } from "@/src/components/ui/Input";
 import { SectionHead } from "@/src/components/ui/SectionHead";
 import {
   mapMemberToShellProfile,
@@ -28,6 +26,7 @@ import {
   type AdminTimesheetRow,
   type AdminTimesheetSearchParams,
 } from "@/src/server/timesheets";
+import { TimesheetFilterBar } from "./TimesheetFilterBar";
 import {
   formatCount,
   formatHours,
@@ -47,9 +46,6 @@ type AdminTimesheetsPageProps = {
 };
 
 type AdminTimesheetsTranslator = Awaited<ReturnType<typeof getTranslations>>;
-
-const selectClassName =
-  "flex h-10 w-full rounded-[var(--radius-md)] border border-input bg-background/50 px-3 py-2 text-sm text-foreground shadow-sm transition focus-visible:border-ring focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/35";
 
 export default async function AdminTimesheetsPage({ searchParams }: AdminTimesheetsPageProps) {
   const resolvedSearchParams = (await searchParams) ?? {};
@@ -102,7 +98,15 @@ export default async function AdminTimesheetsPage({ searchParams }: AdminTimeshe
             <CardDescription>{t("filters.description")}</CardDescription>
           </CardHeader>
           <CardContent>
-            <TimesheetFilters result={result} t={t} />
+            <TimesheetFilterBar
+              query={result.filters.query}
+              status={result.filters.status}
+              contractorMemberId={result.filters.contractorMemberId}
+              projectId={result.filters.projectId}
+              month={result.filters.month}
+              contractorOptions={result.contractorOptions}
+              projectOptions={result.projectOptions}
+            />
           </CardContent>
         </Card>
 
@@ -124,102 +128,6 @@ export default async function AdminTimesheetsPage({ searchParams }: AdminTimeshe
         </Card>
       </section>
     </AppShell>
-  );
-}
-
-function TimesheetFilters({
-  result,
-  t,
-}: {
-  result: AdminTimesheetListResult;
-  t: AdminTimesheetsTranslator;
-}) {
-  return (
-    <form className="grid gap-4" action="/admin/timesheets">
-      <div className="grid gap-3 lg:grid-cols-[minmax(15rem,1fr)_repeat(4,minmax(10rem,13rem))]">
-        <Field label={t("filters.search")} htmlFor="timesheet-search">
-          <Input
-            id="timesheet-search"
-            name="q"
-            type="search"
-            defaultValue={result.filters.query}
-            placeholder={t("filters.searchPlaceholder")}
-          />
-        </Field>
-        <Field label={t("filters.status")} htmlFor="timesheet-status">
-          <select
-            id="timesheet-status"
-            name="status"
-            defaultValue={result.filters.status}
-            className={selectClassName}
-          >
-            <option value="">{t("filters.allStatuses")}</option>
-            {[
-              "SUBMITTED",
-              "REJECTED",
-              "APPROVED",
-              "ACCEPTED",
-              "INVOICED",
-              "INVOICE_REJECTED",
-              "PAID",
-            ].map((status) => (
-              <option key={status} value={status}>
-                {getStatusLabel(status, t)}
-              </option>
-            ))}
-          </select>
-        </Field>
-        <Field label={t("filters.contractor")} htmlFor="timesheet-contractor">
-          <select
-            id="timesheet-contractor"
-            name="contractor"
-            defaultValue={result.filters.contractorMemberId}
-            className={selectClassName}
-          >
-            <option value="">{t("filters.allContractors")}</option>
-            {result.contractorOptions.map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.email ? `${option.label} (${option.email})` : option.label}
-              </option>
-            ))}
-          </select>
-        </Field>
-        <Field label={t("filters.project")} htmlFor="timesheet-project">
-          <select
-            id="timesheet-project"
-            name="project"
-            defaultValue={result.filters.projectId}
-            className={selectClassName}
-          >
-            <option value="">{t("filters.allProjects")}</option>
-            {result.projectOptions.map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-          </select>
-        </Field>
-        <Field label={t("filters.month")} htmlFor="timesheet-month">
-          <Input
-            id="timesheet-month"
-            name="month"
-            type="month"
-            defaultValue={result.filters.month}
-          />
-        </Field>
-      </div>
-      <div className="flex flex-wrap gap-2">
-        <Button type="submit" icon={Filter}>
-          {t("filters.apply")}
-        </Button>
-        <Button asChild variant="ghost">
-          <Link href={"/admin/timesheets" as Route}>
-            <X className="size-4" aria-hidden />
-            {t("filters.clear")}
-          </Link>
-        </Button>
-      </div>
-    </form>
   );
 }
 

@@ -1438,7 +1438,15 @@ async function createReviewAuditLog(
   });
 }
 
-function normalizeMonthInput(value: string) {
+/**
+ * Narrows the `month` search param to `YYYY-MM`, or drops it entirely.
+ *
+ * Exported for the test that pins this against what `MonthPicker` emits. The coupling is
+ * worth stating out loud: anything else — `YYYY-MM-01` most plausibly — silently becomes an
+ * empty string, which removes the filter with no error and no visible signal, and the admin
+ * sees every month's timesheets at once.
+ */
+export function normalizeMonthInput(value: string) {
   const trimmed = value.trim();
   return MONTH_INPUT_PATTERN.test(trimmed) ? trimmed : "";
 }
