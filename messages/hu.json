@@ -1079,6 +1079,7 @@
       "noProjects": "Nincs projekt ebben a csoportban.",
       "removeProjectLabel": "{project} eltávolítása innen: {group}",
       "chooseProject": "Projekt kiválasztása",
+      "addProjectLabel": "Hozzáadandó projekt",
       "allProjectsLinked": "Minden projekt ebben a csoportban van",
       "editTitle": "{name} szerkesztése",
       "editDescription": "A csoportmódosítások a szűrést és a projektek szervezését érintik. Nem módosítják a projekthozzárendeléseket vagy számlázási szabályokat.",

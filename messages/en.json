@@ -1079,6 +1079,7 @@
       "noProjects": "No projects in this group.",
       "removeProjectLabel": "Remove {project} from {group}",
       "chooseProject": "Choose project",
+      "addProjectLabel": "Project to add",
       "allProjectsLinked": "All projects are in this group",
       "editTitle": "Edit {name}",
       "editDescription": "Group changes affect filtering and project organization. They do not change project assignment or billing rules.",

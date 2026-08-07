@@ -1,14 +1,16 @@
 "use client";
 
 import { FolderPlus } from "lucide-react";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { useActionState, useEffect, useRef } from "react";
 import { useFormStatus } from "react-dom";
 
 import { Button } from "@/src/components/ui/Button";
+import { DatePicker } from "@/src/components/ui/DatePicker";
 import { Field } from "@/src/components/ui/Field";
 import { Input } from "@/src/components/ui/Input";
 import { Textarea } from "@/src/components/ui/Textarea";
+import { usePickerLabels } from "@/src/i18n/picker-labels";
 import { cn } from "@/src/lib/utils";
 import { createProjectAction } from "./actions";
 import type { ProjectActionState } from "./actions.types";
@@ -22,6 +24,8 @@ const initialState: ProjectActionState = {
 
 export function ProjectCreateForm() {
   const t = useTranslations("AdminProjects");
+  const locale = useLocale();
+  const pickerLabels = usePickerLabels();
   const [state, formAction] = useActionState(createProjectAction, initialState);
   const formRef = useRef<HTMLFormElement>(null);
 
@@ -79,23 +83,27 @@ export function ProjectCreateForm() {
       <div className="grid gap-4 md:grid-cols-[minmax(9rem,1fr)_minmax(9rem,1fr)_minmax(14rem,1.25fr)]">
         <Field label={t("form.startsOn")} reserveMessageSpace error={state.fieldErrors?.startsOn}>
           {({ id, describedBy, invalid }) => (
-            <Input
+            <DatePicker
               id={id}
               name="startsOn"
-              type="date"
+              label={t("form.startsOn")}
+              locale={locale}
               aria-describedby={describedBy}
               invalid={invalid}
+              labels={pickerLabels.date}
             />
           )}
         </Field>
         <Field label={t("form.endsOn")} reserveMessageSpace error={state.fieldErrors?.endsOn}>
           {({ id, describedBy, invalid }) => (
-            <Input
+            <DatePicker
               id={id}
               name="endsOn"
-              type="date"
+              label={t("form.endsOn")}
+              locale={locale}
               aria-describedby={describedBy}
               invalid={invalid}
+              labels={pickerLabels.date}
             />
           )}
         </Field>
