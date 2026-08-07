@@ -85,7 +85,22 @@ The trade-off is that such an entry is **not** emitted as a custom property. Two
   **theme-stable** (`.light` does not override it). Violet and blue are **chart-only** and must
   never appear in UI chrome. Single-series charts use `var(--chart-1)`, not `var(--primary)`.
 - **Radius:** `xs` 6 · `sm` 9 · `md` 12 · `lg` 16 · `xl` 22 · `pill` 999.
-- **Font:** Lexend sans token and Poppins UI token (`font-ui`).
+- **Font:** Lexend sans token (`--font-sans`, applied to `body`) and Poppins UI token (`font-ui`).
+  Both are **self-hosted** from `public/fonts`, declared as `@font-face` at the top of
+  `app/globals.css` rather than loaded through `next/font`. That is deliberate:
+  `app/layout.tsx` and `.storybook/preview.tsx` both import `globals.css`, and
+  `@storybook/nextjs-vite` ships no `next/font` transform — a loader in the layout would leave
+  Storybook and all 26 Playwright baselines rendering system-ui while production rendered Lexend.
+  It also matches the PDF pipeline's bundled Inter (`src/server/pdf/templates/lib/theme.typ`), so a
+  render is identical on a dev machine, in Docker and in CI, with no build-time network call.
+  - Both the `latin` **and** `latin-ext` subsets are required. Hungarian ő (U+0151) and ű (U+0171)
+    live in `latin-ext`; shipping only `latin` silently falls back to a system face mid-word.
+  - Lexend has a real `wght` axis, so one variable file per subset serves 100–900. Poppins has no
+    variable release, so each weight is its own file — **400/500/600/700 only**. Using a weight
+    outside that set (e.g. `font-extrabold`) gets a synthesised approximation, not a real cut; add
+    the file first.
+  - `unicode-range` values are copied verbatim from the Google Fonts CSS API and stay paired with
+    the file they were fetched with. Re-fetch both together or matching breaks.
 - **Shadow:** the prototype has exactly **one** elevation. `--elevation-pop` holds it per theme —
   teal-tinted in light, near-black in dark, each with a hairline ring as its second layer — and both
   `shadow-soft` and `shadow-panel` resolve to it. `shadow-accent-glow` is the separate glow that sits
