@@ -1918,6 +1918,11 @@
     "filters": {
       "start": "Kezdő",
       "end": "Záró",
+      "periodStart": "Időszak kezdete",
+      "periodEnd": "Időszak vége",
+      "anchorMonth": "Hónap",
+      "anchorDate": "Dátum",
+      "anchorYear": "Év",
       "project": "Projekt",
       "group": "Projektcsoport",
       "member": "Tag",

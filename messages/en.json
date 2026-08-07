@@ -1918,6 +1918,11 @@
     "filters": {
       "start": "From",
       "end": "To",
+      "periodStart": "Period start",
+      "periodEnd": "Period end",
+      "anchorMonth": "Month",
+      "anchorDate": "Date",
+      "anchorYear": "Year",
       "project": "Project",
       "group": "Project group",
       "member": "Member",
