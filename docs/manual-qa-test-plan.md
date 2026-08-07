@@ -2090,9 +2090,11 @@ Expected result:
 - Every pill tone is distinguishable at a glance — danger is unmistakably rose, warning amber,
   success green, info mint — each with a faint border of its own hue. The distribution bar's three
   segments never read as two warm blushes.
-- The gutters show a faint dot lattice, soft corner glows, and a barely-there grain; none of it
-  shows through cards, tables, or dialogs, and a dense financial table stays calm. The auth screen
-  shows the same atmosphere behind the form panel only, never over the teal brand panel.
+- The gutters show a faint dot lattice, a barely-there grain, and the brand shapes as soft light:
+  two blob glows whose silhouettes are readable via their thin outline echoes, a wave ridge along
+  the bottom, and a line-art swoosh off the top-right corner. None of it shows through cards,
+  tables, or dialogs, and a dense financial table stays calm. The auth screen shows the same
+  atmosphere behind the form panel only, never over the teal brand panel.
 - With reduce motion on, the corner glows sit still, centred and unscaled, and the page looks
   composed — nothing is caught mid-drift.
 - Inputs sit slightly below the surface (a darker inset fill in dark, a warm cream fill in light)
