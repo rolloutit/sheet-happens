@@ -64,7 +64,22 @@ Visual baseline workflow:
 
 Implemented coverage:
 
-- UI primitives: Avatar, Badge, BulkBar, Button, Card, Checkbox, ChipButton, CodeInput, Combobox, DataTable, DatePicker, Dialog, Drawer, Dropdown, Dropzone, ErrorState, Field, FormMessage, FormSection, IconButton, Input, ListRow, LockedState, Pager, PasswordInput, Popover, SectionHead, SegmentedControl, Select, Skeleton, StrengthMeter, Switch, Tabs, Textarea, Tooltip.
+- UI primitives: Avatar, Badge, BulkBar, Button, Calendar, Card, Checkbox, ChipButton, CodeInput, Combobox, Command, DataTable, DatePicker, DateRangePicker, Dialog, Drawer, Dropdown, Dropzone, ErrorState, Field, FormMessage, FormSection, IconButton, Input, ListRow, LockedState, MonthPicker, Pager, PasswordInput, Popover, SectionHead, SegmentedControl, Select, Skeleton, StrengthMeter, Switch, Tabs, Textarea, TimeInput, Tooltip.
+
+Form control conventions:
+
+- `Select` is the default single-select. It renders a Radix menu, and switches to the
+  searchable `Combobox` above `defaultSearchThreshold` options. Reach for `Combobox`
+  directly only when a list must always be searchable. Both paths honour `name`,
+  `defaultValue`, `required`, `invalid`, and `form.reset()`, and share one trigger surface
+  (`controlSurface.ts`) so the switch is invisible.
+- Dates are `YYYY-MM-DD` strings and months are `YYYY-MM` strings, never `Date` objects —
+  `DatePicker`, `DateRangePicker`, and `MonthPicker` all convert at their own boundary. See
+  `src/lib/date-values.ts`.
+- Pickers take a required `locale` and a `labels` object; like every other primitive they
+  never call `useTranslations` themselves.
+- `TimeInput` is a styling wrapper around the native `<input type="time">`, deliberately not
+  a popover. See the note on the component before changing it.
 - Product blocks: AuthScreens, ChartPrimitives, DashboardCards, DayDetailPanel, DocumentPreview, EmptyState, FlaggedUserList, InfoPageEditor, InvoiceUploadPanel, MonthRow, NotificationPreferences, PayslipAdminTable, PayslipMonthList, Payslips, PayslipSummaryCard, PayslipUploadPanel, PayslipViewer, PdfViewer, PeopleTable, PreferenceControls, ProfileSettingsPanel, ProjectDrawer, RateDrawer, ReportChartCard, ReportExportDialog, ReportFilterBar, Reports, ReportStatTile, RejectDialog, ReviewActionBar, ReviewDiffList, ReviewQueueTable, SecurityMethodList, SettingsPanels, StatCard, StatusOverview, StatusPill, SubmitTimesheetDialog, TimeBreakdownDialog, TimeEntryForm, TimeGridTimer, TimesheetStepper, TimesheetSummaryCard, TotpSetupDialog, WeeklyTimeGrid, TimesheetComponents, AdminReview, ManagementViews, Toast, TweaksPanel.
 - Layout blocks: AppShell, CommandPalette, CommandPill, LanguageToggle, MobileBottomBar, NotificationButton, ThemeProvider, UserMenu.
 
