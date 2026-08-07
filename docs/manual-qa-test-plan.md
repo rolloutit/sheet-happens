@@ -2218,6 +2218,62 @@ Expected result:
   must never be **invisible** while the font loads, and the swap must not reflow the page enough to
   move what you were about to click.
 
+### Brand Dropdowns And Date Pickers
+
+Every native `<select>` and `<input type="date">` in the app is replaced by a brand-aware control,
+and dropdowns above eight options grow a search field. The controls submit through hidden native
+fields, so the whole point of this scenario is that the **submitted values are unchanged** — a
+picker that looks right but sends the wrong shape fails silently, filtering nothing or saving
+nothing, with no error on screen.
+
+1. Open `/admin/timesheets`, pick a month in the month picker, and Apply.
+2. Read the address bar. It must carry `month=2026-08` — **four digits, a dash, two digits**. A
+   `month=2026-08-01` means the filter was dropped: the list will show every month with no error.
+3. Confirm the list actually narrowed to that month, then use Clear and confirm the filter resets.
+4. On the same page, open the contractor dropdown, type part of an email address, and confirm the
+   match is found by email even though the trigger shows only the name.
+5. Open `/admin/reports` and click through all five period pills — Month, Week, Day, Year, Custom.
+6. Confirm the control beneath them changes shape each time: a month grid, a calendar, a calendar, a
+   plain year number field, and a start/end pair.
+7. For each period, Apply and confirm the URL carries `anchor=` for the first four and `start=`
+   plus `end=` only for Custom. A URL carrying both is wrong.
+8. Open `/admin/people` → Invite member. Choose a currency and a timezone by typing in the search
+   field rather than scrolling (roughly 300 and 400 options respectively).
+9. Send the invite. After the success message, confirm the form is **fully** reset — including the
+   currency and timezone triggers, not just the text fields. A trigger still showing the previous
+   choice means the next invite will submit an empty value.
+10. Open `/admin/rates`, add a rate period, and confirm the currency picker saves. Then open a
+    replacement period and confirm days outside the period being replaced are greyed out and
+    unclickable.
+11. Open `/admin/people` → edit a member → change the timezone. This picker lives inside a drawer:
+    confirm the panel opens, the search field takes focus, typing filters, and Enter selects.
+12. Open `/time`, open the entry form, and confirm the date picker only offers days inside the open
+    week. Confirm the start and end time fields are still the native time inputs, so typing `0930`
+    fills them without opening anything.
+13. Repeat steps 1, 5 and 12 in Hungarian, then repeat them in the other theme.
+14. Repeat step 5 and step 12 at 390px width.
+15. Keyboard only, no mouse: tab to a dropdown, open it with Enter, type to filter, arrow to a row,
+    Enter to choose, and confirm focus lands back on the trigger. Then open a date picker, arrow
+    between days, and press Escape.
+
+Expected result:
+
+- The month filter URL is `YYYY-MM` and the day filters are `YYYY-MM-DD`. Nothing submits a
+  partially-padded value such as `2026-8-5`.
+- Every "All …" dropdown shows its "All …" label on the trigger when nothing is selected, never a
+  blank trigger.
+- Search appears on the long lists (currency, timezone, project, member, contractor) and does not
+  appear on the short ones (status, role, profile, project type).
+- Searching ignores accents in both directions: typing `arvizturo` finds `Árvíztűrő`, and typing
+  `Árvíz` finds it too.
+- Inside a drawer or dialog the picker panel takes focus and keeps it. Focus snapping back to the
+  drawer the instant a panel opens is a failure.
+- Every control returns focus to its own trigger when closed, by selection or by Escape.
+- Hungarian weekday headers read H / K / Sze / Cs / P / Szo / V and the month caption is lowercase
+  (`2026. június`, not `2026. Június`).
+- At 390px the calendar and the option lists stay inside the viewport — no horizontal scrolling of
+  the page itself.
+
 ## Regression Checklist For Every Release
 
 - Invitation activation works for a new invited user.
@@ -2243,3 +2299,12 @@ Expected result:
   every screen readable in both themes.
 - Body copy renders in Lexend and `.font-ui` labels in Poppins, served from this origin with no
   request to Google, and Hungarian ő/ű match the typeface of the letters beside them.
+- No native `<select>` or date input remains on any screen; dropdowns above eight options offer
+  search, and searching ignores accents.
+- The timesheet month filter submits `YYYY-MM` and actually narrows the list.
+- The reports period pills each render their own control shape and submit `anchor` or `start`+`end`,
+  never both.
+- Currency, timezone, project and member pickers save correctly, and a form reset clears their
+  triggers along with the text fields.
+- Pickers opened inside a drawer or dialog keep focus, and every control returns focus to its
+  trigger on close.
