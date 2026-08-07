@@ -124,7 +124,8 @@ export const KeyboardSelection: Story = {
   ),
   play: async ({ args, canvas, userEvent }) => {
     await userEvent.click(canvas.getByRole(trigger.role, { name: trigger.name }));
-    await expect(screen.getByRole(search.role, { name: search.name })).toHaveFocus();
+    // Focus moves on the next frame, so it deliberately lags the click.
+    await waitFor(() => expect(screen.getByRole(search.role, { name: search.name })).toHaveFocus());
 
     await userEvent.keyboard("{ArrowDown}{Enter}");
     // Opening highlights the current choice, so one step down lands on the next option.
