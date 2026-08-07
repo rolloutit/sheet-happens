@@ -1584,6 +1584,7 @@
     "timer": {
       "trackedWithTimer": "Időmérővel rögzítve",
       "placeholder": "Min dolgozol?",
+      "projectLabel": "Időmérő projekt",
       "start": "Indítás",
       "stop": "Leállítás"
     },
