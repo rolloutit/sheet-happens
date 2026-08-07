@@ -18,12 +18,22 @@ const toneText: Record<StatCardTone, string> = {
   danger: "text-destructive",
 };
 
+// Quiet bars with only the final one at full strength (docs/dark-mode-redesign.md §6) — the
+// sparkline reports a trend, so the accent belongs on "now", not on every bar.
 const toneBar: Record<StatCardTone, string> = {
   neutral: "bg-muted",
-  info: "bg-primary/45",
-  success: "bg-success/55",
-  warning: "bg-warning/55",
-  danger: "bg-destructive/55",
+  info: "bg-primary/30",
+  success: "bg-success/30",
+  warning: "bg-warning/30",
+  danger: "bg-destructive/30",
+};
+
+const toneBarFinal: Record<StatCardTone, string> = {
+  neutral: "bg-muted-foreground/40",
+  info: "bg-primary",
+  success: "bg-success",
+  warning: "bg-warning",
+  danger: "bg-destructive",
 };
 
 function normalizeSparkline(sparkline: StatCardProps["sparkline"]): StatCardSparkline | undefined {
@@ -58,7 +68,12 @@ function StatSparkline({ sparkline, tone }: { sparkline: StatCardSparkline; tone
         points.map((point, index) => (
           <span
             key={`${point}-${index}`}
-            className={cn("w-full rounded-t", toneBar[sparkline.tone ?? tone])}
+            className={cn(
+              "w-full rounded-t",
+              index === points.length - 1
+                ? toneBarFinal[sparkline.tone ?? tone]
+                : toneBar[sparkline.tone ?? tone],
+            )}
             style={{ height: `${normalizePoint(point, max)}%` }}
           />
         ))
@@ -91,7 +106,17 @@ export function StatCard({
         : "text-success";
 
   return (
-    <Card variant={warning ? "warning" : "elevated"} className={className} aria-busy={loading}>
+    <Card
+      variant={warning ? "warning" : "elevated"}
+      className={cn("relative overflow-hidden", className)}
+      aria-busy={loading}
+    >
+      {/* The brand quarter-circle, clipped by the card's own overflow — how the atmosphere's
+          language reaches inside an opaque surface (docs/dark-mode-redesign.md §5, Layer 5). */}
+      <span
+        aria-hidden="true"
+        className="pointer-events-none absolute -right-9 -top-9 size-24 rounded-full border border-accent-line bg-[radial-gradient(circle_at_center,var(--accent-soft),transparent_72%)]"
+      />
       <CardHeader>
         <CardTitle>{label}</CardTitle>
         {StatusIcon ? (
@@ -107,7 +132,7 @@ export function StatCard({
           </>
         ) : (
           <>
-            <p className="text-3xl font-semibold">{value}</p>
+            <p className="text-3xl font-medium tracking-[-0.02em] tabular-nums">{value}</p>
             {trend ? (
               <span
                 className={cn("inline-flex items-center gap-1 text-sm", trendTone)}

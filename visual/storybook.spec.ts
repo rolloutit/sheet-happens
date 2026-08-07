@@ -44,6 +44,13 @@ const storyCases: StoryVisualCase[] = [
     projects: ["desktop"],
   },
   {
+    id: "layout-atmosphere--over-canvas",
+    slug: "atmosphere-over-canvas-dark",
+    theme: "dark",
+    locale: "en",
+    projects: ["desktop"],
+  },
+  {
     id: "layout-appshell--mobile-navigation",
     slug: "app-shell-mobile-drawer-dark",
     theme: "dark",

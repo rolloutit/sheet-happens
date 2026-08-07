@@ -591,11 +591,20 @@ function buildConicGradient(segments: Array<{ percentage: number; color: string 
   return `conic-gradient(${stops.join(", ")})`;
 }
 
-const userChartColors = ["#29C6C6", "#5FE0DA", "#1F7475", "#FAAB59", "#F08A82", "#B58B2C"];
+// The categorical ramp from `app/globals.css`, assigned in fixed order — never regenerated or
+// re-cycled when the series count changes, so a member keeps their colour across filters.
+const userChartColors = [
+  "var(--chart-1)",
+  "var(--chart-2)",
+  "var(--chart-3)",
+  "var(--chart-4)",
+  "var(--chart-5)",
+  "var(--chart-6)",
+];
 
 function getGroupColor(view: ReportView, color: string | null, index: number) {
   if (view === "PROJECT" && color) return color;
-  return userChartColors[index % userChartColors.length] ?? "#29C6C6";
+  return userChartColors[index % userChartColors.length] ?? "var(--chart-1)";
 }
 
 function ReportDetail({

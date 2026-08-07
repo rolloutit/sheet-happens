@@ -7,6 +7,7 @@ import { useTransition } from "react";
 
 import { localeCookieName } from "@/src/i18n/locales";
 import { cn } from "@/src/lib/utils";
+import { Atmosphere } from "../Atmosphere";
 import { AuthGyroscope } from "../AuthGyroscope";
 import { BrandMark } from "../BrandMark";
 import { LanguageToggle } from "../LanguageToggle";
@@ -118,20 +119,23 @@ export function AuthShell({
         </div>
       </aside>
 
-      {/* auth.css:56 — the same two canvas stops as the app shell, just a tighter ellipse. Both
-          themes now come from the tokens, so this needs no `dark:` override. */}
-      <section className="relative flex flex-1 items-start justify-center overflow-hidden bg-[radial-gradient(900px_520px_at_80%_-10%,var(--canvas-glow-teal),var(--canvas-base)_60%)] px-5 pb-24 pt-24 sm:px-6 lg:items-center lg:px-6 lg:py-10">
+      {/* auth.css:56 — the same aurora stops as the app canvas, just a tighter ellipse. Both
+          themes come from the tokens, so this needs no `dark:` override. */}
+      <section className="relative flex flex-1 items-start justify-center overflow-hidden bg-[radial-gradient(900px_520px_at_80%_-10%,var(--atmo-mint),var(--canvas-base)_60%)] px-5 pb-24 pt-24 sm:px-6 lg:items-center lg:px-6 lg:py-10">
+        <Atmosphere />
         <div className="absolute right-5 top-5 z-10 flex items-center gap-2 sm:right-6">
           <LanguageToggle
             value={locale}
             label={t("language")}
             size="sm"
-            className="border-border/70 bg-secondary/75 shadow-[0_18px_44px_-28px_rgb(55_227_222_/_0.8)]"
+            className="border-border/70 bg-secondary/75 shadow-[0_18px_44px_-28px_var(--accent-line)]"
             onValueChange={handleLanguageChange}
           />
-          <ThemeToggle className="size-9 rounded-[var(--radius-md)] border-border/70 bg-secondary/75 text-muted-foreground shadow-[0_18px_44px_-28px_rgb(55_227_222_/_0.8)] hover:text-foreground" />
+          <ThemeToggle className="size-9 rounded-[var(--radius-md)] border-border/70 bg-secondary/75 text-muted-foreground shadow-[0_18px_44px_-28px_var(--accent-line)] hover:text-foreground" />
         </div>
-        <div className={cn("w-full max-w-[408px]", contentClassName)}>{children}</div>
+        <div className={cn("relative z-[2] w-full max-w-[408px]", contentClassName)}>
+          {children}
+        </div>
       </section>
     </main>
   );

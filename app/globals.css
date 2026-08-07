@@ -49,6 +49,16 @@
   --color-sidebar-border: var(--sidebar-border);
   --color-header: var(--header-bg);
   --color-scrim: var(--scrim);
+  --color-surface-inset: var(--surface-inset);
+  --color-ink-mint: var(--ink-mint);
+  --color-ink-amber: var(--ink-amber);
+  --color-ink-rose: var(--ink-rose);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --color-chart-6: var(--chart-6);
 
   --radius-xs: 6px;
   --radius-sm: 9px;
@@ -71,57 +81,99 @@
   --font-poppins:
     "Poppins", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 
-  /* Canvas layers, consumed by `.sheet-canvas`. The teal glow is opaque — the gradient's
-     `transparent` stop is what fades it, so it carries no alpha of its own. */
-  --canvas-base: #060f0e;
-  --canvas-glow-teal: #173f3c;
-  --canvas-glow-warm: rgb(255 171 99 / 0.085);
+  /* Atmosphere — "Graphite Aurora" (docs/dark-mode-redesign.md §5). `--canvas-base` is the void
+     behind everything; `--canvas-aurora` carries the two glow layers so each theme owns its own
+     geometry as well as its colours. The dark aurora is deliberately huge and faint: mint at 10%
+     lifts the void from L 0.145 to L 0.217, a presence rather than a spotlight. */
+  --canvas-base: #090a0c;
+  --atmo-mint: rgb(41 198 198 / 0.1);
+  --atmo-peach: rgb(255 203 151 / 0.06);
+  --atmo-dot: rgb(132 244 244 / 0.055);
+  --atmo-blob-mint: rgb(41 198 198 / 0.1);
+  --atmo-blob-peach: rgb(255 203 151 / 0.085);
+  --atmo-line-mint: rgb(132 244 244 / 0.12);
+  --atmo-line-peach: rgb(255 203 151 / 0.1);
+  --atmo-grain: 0.04;
+  --canvas-aurora:
+    radial-gradient(1600px 1000px at 100% -12%, var(--atmo-mint), transparent 62%),
+    radial-gradient(1300px 900px at -10% 115%, var(--atmo-peach), transparent 64%);
 
-  --background: #0a1716;
-  --foreground: #ecf6f3;
-  --card: #11221f;
-  --card-foreground: #ecf6f3;
-  --popover: #11221f;
-  --popover-foreground: #ecf6f3;
-  --primary: #19a8a3;
-  --primary-foreground: #042322;
-  --secondary: #1a302c;
-  --secondary-foreground: #ecf6f3;
-  --muted: #244039;
-  --muted-foreground: #a4bab3;
-  --text-subtle: #71908a;
-  --accent: #37e3de;
-  --accent-foreground: #042322;
-  --accent-soft: rgb(55 227 222 / 0.15);
-  --accent-line: rgb(55 227 222 / 0.52);
-  --cta: #ffc68b;
-  --cta-hover: #ffb76c;
-  --cta-foreground: #2a1608;
-  --destructive: #ff8f86;
-  --destructive-soft: rgb(255 143 134 / 0.16);
-  --destructive-foreground: #240707;
-  --success: #5fdaa8;
-  --success-soft: rgb(95 218 168 / 0.16);
-  --success-foreground: #082313;
-  --warning: #fcba63;
-  --warning-soft: rgb(252 186 99 / 0.16);
-  --warning-foreground: #2e2100;
-  --border: rgb(143 240 228 / 0.1);
-  --border-strong: rgb(153 245 232 / 0.2);
+  /* Chassis — cool graphite (H ≈ 264°), chroma rising with elevation (C 0.005 → 0.016).
+     inset < base < raised (card) < hover (secondary) < over (popover/muted). The sidebar sits
+     *below* the canvas: navigation recedes, content comes forward. */
+  --background: #0e1014;
+  --surface-inset: #0b0c0f;
+  --card: #15181e;
+  --popover: #1e222a;
+  --secondary: #1a1d24;
+  --muted: #1e222a;
+  --sidebar: #0b0c0f;
+
+  /* Type — warm ivory (H ≈ 79°, from the brand Beige ramp) on the cool chassis. All three live
+     tiers clear 4.5:1 on every surface up to `--popover`. */
+  --foreground: #f3efe9;
+  --card-foreground: #f3efe9;
+  --popover-foreground: #f3efe9;
+  --secondary-foreground: #f3efe9;
+  --muted-foreground: #b7b2aa;
+  --text-subtle: #948f87;
+
+  /* Inks — dark text for full-strength signal fills. One per family; every pairing clears 6:1. */
+  --ink-mint: #04211f;
+  --ink-amber: #2a1608;
+  --ink-rose: #2a0a10;
+
+  /* Signals — mint is a signal, never a surface. The four families sit ≥ 42° apart in hue so the
+     16% `*-soft` tints stay distinguishable over the neutral card. */
+  --primary: #29c6c6;
+  --primary-foreground: var(--ink-mint);
+  --accent: #84f4f4;
+  --accent-foreground: var(--ink-mint);
+  --accent-soft: rgb(41 198 198 / 0.16);
+  --accent-line: rgb(132 244 244 / 0.3);
+  --cta: #ffcb97;
+  --cta-hover: #fab976;
+  --cta-foreground: var(--ink-amber);
+  --success: #5ce08c;
+  --success-soft: rgb(92 224 140 / 0.16);
+  --success-foreground: var(--ink-mint);
+  --warning: #faab59;
+  --warning-soft: rgb(250 171 89 / 0.16);
+  --warning-foreground: var(--ink-amber);
+  --destructive: #ff6a7e;
+  --destructive-soft: rgb(255 106 126 / 0.16);
+  --destructive-foreground: var(--ink-rose);
+
+  /* Edges, depth, chrome — neutral hairlines; a mint edge is reserved for elements that carry
+     the accent. */
+  --border: rgb(232 236 242 / 0.08);
+  --border-strong: rgb(232 236 242 / 0.16);
   /* Input borders are the prototype's `--border-strong`. Declared once: `var()` resolves at the
      use site, so re-binding `--border-strong` in `.light` carries `--input` with it. */
   --input: var(--border-strong);
-  --ring: #37e3de;
-  --sidebar: #0a1917;
-  --sidebar-border: rgb(120 232 220 / 0.07);
-  --header-bg: rgb(10 23 22 / 0.7);
-  --scrim: rgb(4 12 11 / 0.62);
+  --ring: #84f4f4;
+  --sidebar-border: rgb(232 236 242 / 0.06);
+  --header-bg: rgb(14 16 20 / 0.72);
+  --scrim: rgb(9 10 12 / 0.66);
 
   /* Skeleton shimmer stops. Raw variables — they feed a gradient, not a colour utility. */
-  --skeleton: rgb(143 240 228 / 0.055);
-  --skeleton-sheen: rgb(163 245 232 / 0.11);
+  --skeleton: rgb(232 236 242 / 0.05);
+  --skeleton-sheen: rgb(232 236 242 / 0.1);
 
-  --elevation-pop: 0 22px 58px -14px rgb(0 0 0 / 0.68), 0 0 0 1px rgb(120 240 228 / 0.06);
+  --elevation-pop: 0 20px 48px -16px rgb(0 0 0 / 0.72), 0 0 0 1px rgb(232 236 242 / 0.06);
+
+  /* Charts — categorical ramp in the redesign's hue order (mint, amber, violet, green, rose,
+     blue; §7), with each step snapped into the dataviz validator's mark-lightness band. The
+     proposal's literal values failed that gate (too bright for marks, peach under the chroma
+     floor); these pass all six checks against both the dark card and white, so the ramp is
+     deliberately theme-stable — `.light` does not override it. Violet and blue are chart-only;
+     they never appear in chrome. */
+  --chart-1: #2ca2a2;
+  --chart-2: #c08442;
+  --chart-3: #715cc7;
+  --chart-4: #3fa164;
+  --chart-5: #b23a4e;
+  --chart-6: #427bc6;
 
   --sidebar-w: 256px;
   --sidebar-w-collapsed: 76px;
@@ -137,12 +189,18 @@
 .light {
   color-scheme: light;
 
-  /* Warm cream canvas: white glow off the top-right, peach off the bottom-left. */
+  /* Warm cream canvas: white glow off the top-right, peach off the bottom-left. The atmosphere
+     layers (§5) do not ship to light mode in this pass — only the aurora vars carry over, holding
+     the same composition light mode has always had. */
   --canvas-base: #f4ebdd;
-  --canvas-glow-teal: #ffffff;
-  --canvas-glow-warm: rgb(255 183 122 / 0.2);
+  --atmo-mint: #ffffff;
+  --atmo-peach: rgb(255 183 122 / 0.2);
+  --canvas-aurora:
+    radial-gradient(1150px 700px at 100% -8%, var(--atmo-mint), transparent 58%),
+    radial-gradient(880px 600px at -8% 112%, var(--atmo-peach), transparent 60%);
 
   --background: #fdfaf4;
+  --surface-inset: #faf5ee;
   --foreground: #0a2930;
   --card: #ffffff;
   --card-foreground: #0a2930;
@@ -162,12 +220,16 @@
   --cta: #ffcb97;
   --cta-hover: #f9c088;
   --cta-foreground: #20140a;
-  --destructive: #c0514b;
-  --destructive-soft: #fbe7e5;
-  --destructive-foreground: #fff7f7;
-  --success: #2e8f6f;
-  --success-soft: #e1f4ec;
-  --success-foreground: #f7fff9;
+  /* Success and danger share their dark-mode hues (152.7° green, 14.8° rose) so a status means
+     the same colour in both themes. Tuned against this theme's own surfaces: every text pairing —
+     on white, on `--background`, on `--secondary`, and on its own soft — clears 4.5:1, which the
+     previous values did not. */
+  --destructive: #be3c52;
+  --destructive-soft: #fee8e9;
+  --destructive-foreground: #ffffff;
+  --success: #247f48;
+  --success-soft: #e5faea;
+  --success-foreground: #ffffff;
   --warning: #b07a1e;
   --warning-soft: #fbefd6;
   --warning-foreground: #fff8e7;
@@ -206,10 +268,194 @@ body {
    `h-screen`/`overflow-hidden` scroll container and would otherwise paint over the body. */
 body,
 .sheet-canvas {
-  background:
-    radial-gradient(1150px 700px at 100% -8%, var(--canvas-glow-teal), transparent 58%),
-    radial-gradient(880px 600px at -8% 112%, var(--canvas-glow-warm), transparent 60%),
-    var(--canvas-base);
+  background: var(--canvas-aurora), var(--canvas-base);
+}
+
+/* Atmosphere — the brand layer behind the app (docs/dark-mode-redesign.md §5). Dark-only in this
+   pass: light mode is the brand kit's native habitat and gets its own treatment later. Mounted by
+   `AppShell` and `AuthShell` inside their own positioned roots, so `absolute` rather than the
+   usual `fixed` — the auth screen must keep it off the brand panel. Content sits at z-index 2,
+   above both layers; surfaces stay opaque, so on dense screens the atmosphere lives only in the
+   gutters. */
+.sheet-atmosphere {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  pointer-events: none;
+  contain: strict; /* isolates paint; the layer never reflows with content */
+}
+
+/* The dot lattice appears only toward the edges: transparent at the centre-top where content
+   lives, opaque toward the gutters. */
+.sheet-atmosphere::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image: radial-gradient(circle at 1px 1px, var(--atmo-dot) 1px, transparent 0);
+  background-size: 24px 24px;
+  mask-image: radial-gradient(120% 90% at 50% 0%, transparent 34%, #000 100%);
+}
+
+/* Brand blobs as light, not ink: the styleguide silhouettes, gradient-lit at single-digit alpha
+   with a soft blur — enough that the form still reads, not so little that it becomes a sticker.
+   The offset outline echo inside each SVG carries the edge, exactly as the styleguide's Group
+   compositions draw it. Anchored to opposite corners and bleeding off-canvas — a glimpsed shape
+   reads as depth, a complete one reads as clip art.
+
+   Drift follows the AuthGyroscope rules established above: one translate axis per element, the
+   swell on the independent `scale` property, and frame 0 of every loop is the resting state —
+   centred and unscaled — because `prefers-reduced-motion` collapses each loop to one iteration
+   and the visual baselines freeze infinite animations at frame 0. The wave and the swoosh are
+   still: two moving glows are a mood, four are a screensaver. */
+.sheet-blob {
+  position: absolute;
+}
+
+/* Fill and echo carry different blurs: the fill dissolves into a glow, the echo stays a
+   near-crisp line so the silhouette's form survives. Anchors keep each blob's lit lobe clear of
+   the opaque sidebar and the header, which would otherwise swallow it. */
+.sheet-blob-fill,
+.sheet-blob-echo {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.sheet-blob-fill {
+  filter: blur(26px);
+}
+
+.sheet-blob-echo {
+  filter: blur(1.5px);
+}
+
+.sheet-blob--mint {
+  top: -14%;
+  left: 9%;
+  width: 56vmax;
+  height: auto;
+  aspect-ratio: 652 / 628;
+  animation:
+    sheet-blob-drift-x 120s linear infinite,
+    sheet-blob-swell 90s var(--ease-standard) infinite;
+}
+
+.sheet-blob--peach {
+  right: -10%;
+  bottom: -18%;
+  width: 50vmax;
+  height: auto;
+  aspect-ratio: 616 / 652;
+  animation:
+    sheet-blob-drift-y 170s linear infinite,
+    sheet-blob-swell 90s var(--ease-standard) infinite;
+}
+
+/* The wave ridge sits on the bottom edge like a horizon line; the swoosh bleeds off the top-right
+   corner alongside the aurora. Both are stationary and quieter than the blobs. */
+.sheet-wave {
+  position: absolute;
+  bottom: -4%;
+  left: 24%;
+  width: 26vmax;
+  height: auto;
+  aspect-ratio: 250 / 91;
+  filter: blur(6px);
+}
+
+.sheet-arc {
+  position: absolute;
+  top: 2%;
+  right: -7%;
+  width: 32vmax;
+  height: auto;
+  aspect-ratio: 479 / 278;
+  filter: blur(2px);
+}
+
+/* The same four-stop sine as the gyroscope drift: ease-out to one extreme, ease-in-out across to
+   the other, ease-in home — zero velocity meets zero velocity at the extremes, and 0% is the
+   centre rather than an endpoint. */
+@keyframes sheet-blob-drift-x {
+  0% {
+    translate: 0 0;
+    animation-timing-function: ease-out;
+  }
+
+  25% {
+    translate: 3rem 0;
+    animation-timing-function: ease-in-out;
+  }
+
+  75% {
+    translate: -3rem 0;
+    animation-timing-function: ease-in;
+  }
+
+  100% {
+    translate: 0 0;
+  }
+}
+
+@keyframes sheet-blob-drift-y {
+  0% {
+    translate: 0 0;
+    animation-timing-function: ease-out;
+  }
+
+  25% {
+    translate: 0 2.5rem;
+    animation-timing-function: ease-in-out;
+  }
+
+  75% {
+    translate: 0 -2.5rem;
+    animation-timing-function: ease-in;
+  }
+
+  100% {
+    translate: 0 0;
+  }
+}
+
+@keyframes sheet-blob-swell {
+  0%,
+  100% {
+    scale: 1;
+  }
+
+  50% {
+    scale: 1.03;
+  }
+}
+
+/* Grain, so the faint aurora gradients don't band on 8-bit panels. The turbulence noise is moved
+   into *alpha* by the feColorMatrix (white with varying opacity), because `mix-blend-mode:
+   overlay` preserves blacks and would do almost nothing at this lightness. `stitchTiles` makes
+   the 160px tile seamless. `baseFrequency` and `--atmo-grain` are the two numbers to tune on real
+   hardware; if paint cost shows up, rasterise the tile to a WebP in `public/`. */
+.sheet-grain {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  opacity: var(--atmo-grain);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix type='matrix' values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0.28 0.28 0.28 0 0'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23g)'/%3E%3C/svg%3E");
+}
+
+.light .sheet-atmosphere,
+.light .sheet-grain {
+  display: none;
+}
+
+/* Reduced motion is handled by the global block at the end of this file (every loop collapses to
+   its frame-0 resting state). Reduced transparency switches the drift off as well. */
+@media (prefers-reduced-transparency: reduce) {
+  .sheet-blob {
+    animation: none;
+  }
 }
 
 button,
@@ -220,7 +466,7 @@ textarea {
 }
 
 ::selection {
-  background: rgb(55 227 222 / 0.28);
+  background: rgb(41 198 198 / 0.26);
 }
 
 :focus-visible {
