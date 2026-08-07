@@ -11,10 +11,13 @@ written, and why:
   carries no override.
 - **Atmosphere positioning (§5.2):** `absolute` within each shell's positioned root rather than
   `fixed`, so the auth screen keeps the layer off the brand panel.
-- **Blobs (§5, Layer 2):** shipped as provisional superellipse stubs; still blocked on the SVG
-  export from the styleguide's _Graphical elements_ frame.
-- **Empty-state doodles (§5, Layer 5):** not shipped — same asset dependency as the blobs, and a
-  redrawn-by-eye foreground brand mark is worse than none.
+- **Blobs (§5, Layer 2):** initially shipped as superellipse stubs; replaced with the real
+  styleguide silhouettes once the _Graphical elements_ exports landed in
+  `src/components/layout/Atmosphere/svgs/`. The shipped composition goes slightly beyond the
+  proposal's two-blob budget on request: two echo-outlined blob glows plus a stationary wave
+  ridge and line-art swoosh, with a gentler blur so the forms read to the eye.
+- **Empty-state doodles (§5, Layer 5):** not shipped in the redesign pass — the line-art exports
+  now exist in the same folder, so this is unblocked as a follow-up.
 - **Tables (§6):** zebra striping and sticky headers do not exist in the current table markup;
   introducing them is structural work deferred to its own change. Tables did move to the new
   raised surface and neutral hairlines via the tokens.

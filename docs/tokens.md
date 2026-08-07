@@ -70,13 +70,15 @@ The trade-off is that such an entry is **not** emitted as a custom property. Two
   void from L 0.145 to L 0.217); light keeps its original composition. Raw CSS variables, not
   Tailwind color tokens.
 - **Atmosphere:** `--atmo-mint`, `--atmo-peach`, `--atmo-dot`, `--atmo-blob-mint`,
-  `--atmo-blob-peach`, `--atmo-grain` drive the decorative layer (`.sheet-atmosphere` +
-  `.sheet-grain`) that `AppShell` and `AuthShell` mount via the `Atmosphere` component: corner
-  blob glows, a gutter-masked dot lattice, and feTurbulence grain that keeps the aurora from
-  banding. **Dark-only** — `.light` hides both layers. Content sits above at `z-index: 2`;
-  surfaces stay opaque, so on dense screens the atmosphere lives only in the gutters. The blob
-  silhouettes are provisional superellipse stubs until the brand shapes are exported from the
-  styleguide's _Graphical elements_ frame.
+  `--atmo-blob-peach`, `--atmo-line-mint`, `--atmo-line-peach`, `--atmo-grain` drive the
+  decorative layer (`.sheet-atmosphere` + `.sheet-grain`) that `AppShell` and `AuthShell` mount
+  via the `Atmosphere` component: the styleguide's blob silhouettes as gradient-lit glows with
+  offset outline echoes, a wave ridge on the bottom edge, a line-art swoosh off the top-right
+  corner, a gutter-masked dot lattice, and feTurbulence grain that keeps the aurora from banding.
+  Geometry lives in `Atmosphere.shapes.ts`, taken verbatim from the raw styleguide exports in
+  `src/components/layout/Atmosphere/svgs/` — never redrawn by eye. **Dark-only** — `.light` hides
+  both layers. Content sits above at `z-index: 2`; surfaces stay opaque, so on dense screens the
+  atmosphere lives only in the gutters.
 - **Charts:** `--chart-1` … `--chart-6` — the categorical ramp (mint, amber, violet, green, rose,
   blue), assigned in fixed order and never cycled or re-ranked. Each step passes the `dataviz`
   skill validator against both the dark card and white, so the ramp is deliberately
