@@ -11,10 +11,9 @@ const meta = {
       description: {
         component:
           "The decorative brand layer `AppShell` and `AuthShell` render behind their content: " +
-          "corner blob glows, a gutter dot lattice, and the grain that keeps the aurora from " +
-          "banding. Dark-only — in the light theme both layers render nothing. The blob " +
-          "silhouettes are provisional superellipse stubs until the brand shapes are exported " +
-          "from the styleguide.",
+          "the styleguide's blob silhouettes as gradient-lit glows with outline echoes, a wave " +
+          "ridge, a line-art swoosh, a gutter dot lattice, and the grain that keeps the aurora " +
+          "from banding. Dark-only — in the light theme both layers render nothing.",
       },
     },
   },

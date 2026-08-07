@@ -89,8 +89,10 @@
   --atmo-mint: rgb(41 198 198 / 0.1);
   --atmo-peach: rgb(255 203 151 / 0.06);
   --atmo-dot: rgb(132 244 244 / 0.055);
-  --atmo-blob-mint: rgb(41 198 198 / 0.055);
-  --atmo-blob-peach: rgb(255 203 151 / 0.045);
+  --atmo-blob-mint: rgb(41 198 198 / 0.1);
+  --atmo-blob-peach: rgb(255 203 151 / 0.085);
+  --atmo-line-mint: rgb(132 244 244 / 0.12);
+  --atmo-line-peach: rgb(255 203 151 / 0.1);
   --atmo-grain: 0.04;
   --canvas-aurora:
     radial-gradient(1600px 1000px at 100% -12%, var(--atmo-mint), transparent 62%),
@@ -295,37 +297,82 @@ body,
   mask-image: radial-gradient(120% 90% at 50% 0%, transparent 34%, #000 100%);
 }
 
-/* Brand blobs as light, not ink: a colour→transparent gradient fill at ~5%, blurred until only a
-   glow in the blob's shape remains. Anchored to opposite corners and bleeding off-canvas — a
-   glimpsed shape reads as depth, a complete one reads as clip art.
+/* Brand blobs as light, not ink: the styleguide silhouettes, gradient-lit at single-digit alpha
+   with a soft blur — enough that the form still reads, not so little that it becomes a sticker.
+   The offset outline echo inside each SVG carries the edge, exactly as the styleguide's Group
+   compositions draw it. Anchored to opposite corners and bleeding off-canvas — a glimpsed shape
+   reads as depth, a complete one reads as clip art.
 
    Drift follows the AuthGyroscope rules established above: one translate axis per element, the
    swell on the independent `scale` property, and frame 0 of every loop is the resting state —
    centred and unscaled — because `prefers-reduced-motion` collapses each loop to one iteration
-   and the visual baselines freeze infinite animations at frame 0. */
+   and the visual baselines freeze infinite animations at frame 0. The wave and the swoosh are
+   still: two moving glows are a mood, four are a screensaver. */
 .sheet-blob {
   position: absolute;
-  filter: blur(72px);
+}
+
+/* Fill and echo carry different blurs: the fill dissolves into a glow, the echo stays a
+   near-crisp line so the silhouette's form survives. Anchors keep each blob's lit lobe clear of
+   the opaque sidebar and the header, which would otherwise swallow it. */
+.sheet-blob-fill,
+.sheet-blob-echo {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.sheet-blob-fill {
+  filter: blur(26px);
+}
+
+.sheet-blob-echo {
+  filter: blur(1.5px);
 }
 
 .sheet-blob--mint {
-  top: -22%;
-  left: -14%;
-  width: 58vmax;
-  height: 58vmax;
+  top: -14%;
+  left: 9%;
+  width: 56vmax;
+  height: auto;
+  aspect-ratio: 652 / 628;
   animation:
     sheet-blob-drift-x 120s linear infinite,
     sheet-blob-swell 90s var(--ease-standard) infinite;
 }
 
 .sheet-blob--peach {
-  right: -18%;
-  bottom: -26%;
-  width: 52vmax;
-  height: 52vmax;
+  right: -10%;
+  bottom: -18%;
+  width: 50vmax;
+  height: auto;
+  aspect-ratio: 616 / 652;
   animation:
     sheet-blob-drift-y 170s linear infinite,
     sheet-blob-swell 90s var(--ease-standard) infinite;
+}
+
+/* The wave ridge sits on the bottom edge like a horizon line; the swoosh bleeds off the top-right
+   corner alongside the aurora. Both are stationary and quieter than the blobs. */
+.sheet-wave {
+  position: absolute;
+  bottom: -4%;
+  left: 24%;
+  width: 26vmax;
+  height: auto;
+  aspect-ratio: 250 / 91;
+  filter: blur(6px);
+}
+
+.sheet-arc {
+  position: absolute;
+  top: 2%;
+  right: -7%;
+  width: 32vmax;
+  height: auto;
+  aspect-ratio: 479 / 278;
+  filter: blur(2px);
 }
 
 /* The same four-stop sine as the gyroscope drift: ease-out to one extreme, ease-in-out across to

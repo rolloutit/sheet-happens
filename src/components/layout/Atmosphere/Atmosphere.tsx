@@ -1,35 +1,63 @@
-/* The decorative brand layer behind the app: blobs and a dot lattice (`.sheet-atmosphere`), plus
- * the grain overlay (`.sheet-grain`) that keeps the aurora from banding. All geometry, motion and
- * theming live in `app/globals.css`; this component only supplies the DOM. Rendered once by
- * `AppShell` and once by `AuthShell`, inside a positioned container, with the shell's own content
- * lifted to `z-index: 2`. Dark-only — `.light` hides both layers.
+import { arc, mintBlob, peachBlob, wave } from "./Atmosphere.shapes";
+
+/* The decorative brand layer behind the app: blob glows, a wave ridge, a line-art swoosh, the dot
+ * lattice (`.sheet-atmosphere`), and the grain overlay (`.sheet-grain`) that keeps the aurora from
+ * banding. All geometry comes from the styleguide exports in `Atmosphere.shapes.ts`; positioning,
+ * motion and theming live in `app/globals.css`. Rendered once by `AppShell` and once by
+ * `AuthShell`, inside a positioned container, with the shell's own content lifted to `z-index: 2`.
+ * Dark-only — `.light` hides both layers.
  *
- * PROVISIONAL SHAPES: the paths below are superellipse stubs. The real silhouettes must be
- * exported as SVG from the styleguide's "Graphical elements" frame — the specific shapes are the
- * brand, and redrawing them by eye is not an option (docs/dark-mode-redesign.md §5, Layer 2).
+ * Each blob is the brand's signature composition: a gradient-lit fill plus the same silhouette as
+ * an offset outline echo (see `svgs/Group-1.svg`). The echo is what lets the eye read the shape's
+ * form without the fill getting loud — the glow carries light, the line carries edge.
  */
 
-/* A superellipse (|x/100|⁴ + |y/100|⁴ = 1) approximated with one cubic per quadrant. */
-const stubBlobPath =
-  "M100 2 C 154 2 198 46 198 100 C 198 154 154 198 100 198 C 46 198 2 154 2 100 C 2 46 46 2 100 2 Z";
-
-type StubBlobProps = {
-  className: string;
-  gradientId: string;
-  colorVar: string;
+type BlobShape = {
+  viewBox: string;
+  d: string;
 };
 
-function StubBlob({ className, gradientId, colorVar }: StubBlobProps) {
+type EchoBlobProps = {
+  className: string;
+  shape: BlobShape;
+  gradientId: string;
+  fillVar: string;
+  lineVar: string;
+  /* CSS `translate` for the echo layer, mirroring the Group compositions' offset outline. */
+  echoOffset: string;
+};
+
+function EchoBlob({ className, shape, gradientId, fillVar, lineVar, echoOffset }: EchoBlobProps) {
+  /* Fill and echo are separate SVG layers because they need different blurs: the fill is blurred
+     into a glow, while the echo keeps a near-crisp edge — one shared filter would either sharpen
+     the glow into a sticker or dissolve the line. The container carries the drift animations. */
   return (
-    <svg className={className} viewBox="0 0 200 200" fill="none">
-      <defs>
-        <radialGradient id={gradientId} cx="50%" cy="50%" r="50%">
-          <stop offset="0%" style={{ stopColor: `var(${colorVar})` }} />
-          <stop offset="100%" stopColor="transparent" />
-        </radialGradient>
-      </defs>
-      <path d={stubBlobPath} fill={`url(#${gradientId})`} />
-    </svg>
+    <div className={className}>
+      <svg className="sheet-blob-fill" viewBox={shape.viewBox} fill="none">
+        <defs>
+          <radialGradient id={gradientId} cx="38%" cy="34%" r="78%">
+            <stop offset="0%" style={{ stopColor: `var(${fillVar})` }} />
+            <stop offset="100%" stopColor="transparent" />
+          </radialGradient>
+        </defs>
+        <path d={shape.d} fill={`url(#${gradientId})`} />
+      </svg>
+      <svg
+        className="sheet-blob-echo"
+        viewBox={shape.viewBox}
+        fill="none"
+        style={{ translate: echoOffset }}
+      >
+        <path
+          d={shape.d}
+          style={{ stroke: `var(${lineVar})` }}
+          strokeWidth={2}
+          vectorEffect="non-scaling-stroke"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+      </svg>
+    </div>
   );
 }
 
@@ -37,16 +65,33 @@ export function Atmosphere() {
   return (
     <>
       <div className="sheet-atmosphere" aria-hidden="true">
-        <StubBlob
+        <EchoBlob
           className="sheet-blob sheet-blob--mint"
-          gradientId="atmo-blob-gradient-mint"
-          colorVar="--atmo-blob-mint"
+          shape={mintBlob}
+          gradientId="atmo-grad-mint"
+          fillVar="--atmo-blob-mint"
+          lineVar="--atmo-line-mint"
+          echoOffset="3.5% 3%"
         />
-        <StubBlob
+        <EchoBlob
           className="sheet-blob sheet-blob--peach"
-          gradientId="atmo-blob-gradient-peach"
-          colorVar="--atmo-blob-peach"
+          shape={peachBlob}
+          gradientId="atmo-grad-peach"
+          fillVar="--atmo-blob-peach"
+          lineVar="--atmo-line-peach"
+          echoOffset="-3% 3%"
         />
+        <svg className="sheet-wave" viewBox={wave.viewBox} fill="none">
+          <path d={wave.d} style={{ fill: "var(--atmo-blob-peach)" }} />
+        </svg>
+        <svg className="sheet-arc" viewBox={arc.viewBox} fill="none">
+          <path
+            d={arc.d}
+            style={{ stroke: "var(--atmo-line-mint)" }}
+            strokeWidth={15}
+            strokeMiterlimit={10}
+          />
+        </svg>
       </div>
       <div className="sheet-grain" aria-hidden="true" />
     </>
