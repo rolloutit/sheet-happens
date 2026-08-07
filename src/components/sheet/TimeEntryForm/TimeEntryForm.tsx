@@ -24,6 +24,7 @@ const defaultValue: TimeEntryFormValue = {
 export function TimeEntryForm({
   projects,
   value,
+  locale = "en",
   labels,
   disabled,
   className,
@@ -74,6 +75,7 @@ export function TimeEntryForm({
             />
             <DatePicker
               label={labels?.date ?? "Date"}
+              locale={locale}
               value={currentValue.date}
               disabled={disabled}
               onValueChange={(date) => updateField("date", date)}
