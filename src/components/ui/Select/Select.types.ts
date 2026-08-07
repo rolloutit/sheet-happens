@@ -13,7 +13,8 @@ export type SelectOption = {
 };
 
 export type SelectProps = {
-  options: SelectOption[];
+  /** Readonly so callers can pass frozen option tables straight through. */
+  options: readonly SelectOption[];
   /** Controlled value. Omit and use `defaultValue` inside a Server Action form. */
   value?: string;
   defaultValue?: string;

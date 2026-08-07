@@ -23,7 +23,8 @@ export type ComboboxProps = Omit<
   HTMLAttributes<HTMLDivElement>,
   "onChange" | "defaultValue" | "children"
 > & {
-  options: ComboboxOption[];
+  /** Readonly so callers can pass frozen option tables straight through. */
+  options: readonly ComboboxOption[];
   /** Controlled value. Omit and use `defaultValue` inside a Server Action form. */
   value?: string;
   defaultValue?: string;

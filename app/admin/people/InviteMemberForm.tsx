@@ -8,11 +8,12 @@ import { useFormStatus } from "react-dom";
 import { Button } from "@/src/components/ui/Button";
 import { Field } from "@/src/components/ui/Field";
 import { Input } from "@/src/components/ui/Input";
+import { Select } from "@/src/components/ui/Select";
+import { usePickerLabels } from "@/src/i18n/picker-labels";
 import type { MemberPreferenceOptions } from "@/src/lib/member-preferences";
 import { cn } from "@/src/lib/utils";
 import { inviteMemberAction } from "./actions";
 import type { InviteMemberActionState } from "./actions.types";
-import { nativeSelectClassName } from "./formStyles";
 
 const initialState: InviteMemberActionState = {
   status: "idle",
@@ -24,6 +25,7 @@ export type InviteMemberFormProps = {
 
 export function InviteMemberForm({ preferenceOptions }: InviteMemberFormProps) {
   const t = useTranslations("AdminPeople");
+  const pickerLabels = usePickerLabels();
   const [state, formAction] = useActionState(inviteMemberAction, initialState);
   const formRef = useRef<HTMLFormElement>(null);
 
@@ -99,34 +101,38 @@ export function InviteMemberForm({ preferenceOptions }: InviteMemberFormProps) {
           error={state.fieldErrors?.profile}
         >
           {({ id, describedBy, invalid, required }) => (
-            <select
+            <Select
               id={id}
               name="profile"
+              label={t("form.profile")}
               defaultValue="CONTRACTOR"
               aria-describedby={describedBy}
-              aria-invalid={invalid}
+              invalid={invalid}
               required={required}
-              className={nativeSelectClassName}
-            >
-              <option value="CONTRACTOR">{t("profiles.contractor")}</option>
-              <option value="EMPLOYEE">{t("profiles.employee")}</option>
-            </select>
+              labels={pickerLabels.combobox}
+              options={[
+                { value: "CONTRACTOR", label: t("profiles.contractor") },
+                { value: "EMPLOYEE", label: t("profiles.employee") },
+              ]}
+            />
           )}
         </Field>
         <Field label={t("form.role")} required reserveMessageSpace error={state.fieldErrors?.role}>
           {({ id, describedBy, invalid, required }) => (
-            <select
+            <Select
               id={id}
               name="role"
+              label={t("form.role")}
               defaultValue="MEMBER"
               aria-describedby={describedBy}
-              aria-invalid={invalid}
+              invalid={invalid}
               required={required}
-              className={nativeSelectClassName}
-            >
-              <option value="MEMBER">{t("roles.member")}</option>
-              <option value="ADMIN">{t("roles.admin")}</option>
-            </select>
+              labels={pickerLabels.combobox}
+              options={[
+                { value: "MEMBER", label: t("roles.member") },
+                { value: "ADMIN", label: t("roles.admin") },
+              ]}
+            />
           )}
         </Field>
         <Field
@@ -137,21 +143,17 @@ export function InviteMemberForm({ preferenceOptions }: InviteMemberFormProps) {
           error={state.fieldErrors?.defaultCurrencyCode}
         >
           {({ id, describedBy, invalid, required }) => (
-            <select
+            <Select
               id={id}
               name="defaultCurrencyCode"
+              label={t("form.currency")}
               defaultValue="HUF"
               aria-describedby={describedBy}
-              aria-invalid={invalid}
+              invalid={invalid}
               required={required}
-              className={nativeSelectClassName}
-            >
-              {preferenceOptions.currencies.map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
+              labels={pickerLabels.combobox}
+              options={preferenceOptions.currencies}
+            />
           )}
         </Field>
         <Field
@@ -161,21 +163,17 @@ export function InviteMemberForm({ preferenceOptions }: InviteMemberFormProps) {
           error={state.fieldErrors?.timezone}
         >
           {({ id, describedBy, invalid, required }) => (
-            <select
+            <Select
               id={id}
               name="timezone"
+              label={t("form.timezone")}
               defaultValue="Europe/Budapest"
               aria-describedby={describedBy}
-              aria-invalid={invalid}
+              invalid={invalid}
               required={required}
-              className={nativeSelectClassName}
-            >
-              {preferenceOptions.timezones.map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
+              labels={pickerLabels.combobox}
+              options={preferenceOptions.timezones}
+            />
           )}
         </Field>
         <Field
@@ -185,21 +183,17 @@ export function InviteMemberForm({ preferenceOptions }: InviteMemberFormProps) {
           error={state.fieldErrors?.locale}
         >
           {({ id, describedBy, invalid, required }) => (
-            <select
+            <Select
               id={id}
               name="locale"
+              label={t("form.locale")}
               defaultValue="hu"
               aria-describedby={describedBy}
-              aria-invalid={invalid}
+              invalid={invalid}
               required={required}
-              className={nativeSelectClassName}
-            >
-              {preferenceOptions.locales.map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
+              labels={pickerLabels.combobox}
+              options={preferenceOptions.locales}
+            />
           )}
         </Field>
       </div>

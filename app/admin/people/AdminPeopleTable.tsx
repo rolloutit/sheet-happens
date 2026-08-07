@@ -21,6 +21,7 @@ import { type FormEvent, useState, useTransition } from "react";
 import { PeopleTable } from "@/src/components/sheet/PeopleTable";
 import type { PersonRoleValue, PersonTableRow } from "@/src/components/sheet/PeopleTable";
 import { Button } from "@/src/components/ui/Button";
+import { Select } from "@/src/components/ui/Select";
 import {
   Dialog,
   DialogClose,
@@ -43,6 +44,7 @@ import { IconButton } from "@/src/components/ui/IconButton";
 import { Input } from "@/src/components/ui/Input";
 import { Pager } from "@/src/components/ui/Pager";
 import type { MemberPreferenceOptions } from "@/src/lib/member-preferences";
+import { usePickerLabels } from "@/src/i18n/picker-labels";
 import { cn } from "@/src/lib/utils";
 import type { AdminPersonRow, PeopleListResult } from "@/src/server/users";
 import {
@@ -83,9 +85,6 @@ type FilterFormState = {
   role: PeopleListResult["filters"]["role"];
   state: PeopleListResult["filters"]["state"];
 };
-
-const selectClassName =
-  "flex h-10 w-full rounded-[var(--radius-md)] border border-input bg-background/50 px-3 py-2 text-sm text-foreground shadow-sm transition focus-visible:border-ring focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/35";
 
 export function AdminPeopleTable({
   result,
@@ -320,6 +319,7 @@ function PeopleFiltersForm({
   onClear: () => void;
 }) {
   const t = useTranslations("AdminPeople");
+  const pickerLabels = usePickerLabels();
   const [filterForm, setFilterForm] = useState<FilterFormState>(() => ({
     query: result.filters.query,
     state: result.filters.state,
@@ -365,67 +365,79 @@ function PeopleFiltersForm({
             }}
           />
         </Field>
-        <Field label={t("filters.state")} htmlFor="people-state">
-          <select
-            id="people-state"
-            name="state"
-            value={filterForm.state}
-            className={selectClassName}
-            onChange={(event) => {
-              const state = event.currentTarget.value as FilterFormState["state"];
+        <Field label={t("filters.state")}>
+          {({ id }) => (
+            <Select
+              id={id}
+              label={t("filters.state")}
+              placeholder={t("filters.allStates")}
+              value={filterForm.state}
+              labels={pickerLabels.combobox}
+              onValueChange={(value) => {
+                const state = value as FilterFormState["state"];
 
-              setFilterForm((current) => ({
-                ...current,
-                state,
-              }));
-            }}
-          >
-            <option value="">{t("filters.allStates")}</option>
-            <option value="active">{t("states.active")}</option>
-            <option value="inactive">{t("states.inactive")}</option>
-            <option value="invited">{t("states.invited")}</option>
-            <option value="locked">{t("states.locked")}</option>
-          </select>
+                setFilterForm((current) => ({
+                  ...current,
+                  state,
+                }));
+              }}
+              options={[
+                { value: "", label: t("filters.allStates") },
+                { value: "active", label: t("states.active") },
+                { value: "inactive", label: t("states.inactive") },
+                { value: "invited", label: t("states.invited") },
+                { value: "locked", label: t("states.locked") },
+              ]}
+            />
+          )}
         </Field>
-        <Field label={t("filters.role")} htmlFor="people-role">
-          <select
-            id="people-role"
-            name="role"
-            value={filterForm.role}
-            className={selectClassName}
-            onChange={(event) => {
-              const role = event.currentTarget.value as FilterFormState["role"];
+        <Field label={t("filters.role")}>
+          {({ id }) => (
+            <Select
+              id={id}
+              label={t("filters.role")}
+              placeholder={t("filters.allRoles")}
+              value={filterForm.role}
+              labels={pickerLabels.combobox}
+              onValueChange={(value) => {
+                const role = value as FilterFormState["role"];
 
-              setFilterForm((current) => ({
-                ...current,
-                role,
-              }));
-            }}
-          >
-            <option value="">{t("filters.allRoles")}</option>
-            <option value="ADMIN">{t("roles.admin")}</option>
-            <option value="MEMBER">{t("roles.member")}</option>
-          </select>
+                setFilterForm((current) => ({
+                  ...current,
+                  role,
+                }));
+              }}
+              options={[
+                { value: "", label: t("filters.allRoles") },
+                { value: "ADMIN", label: t("roles.admin") },
+                { value: "MEMBER", label: t("roles.member") },
+              ]}
+            />
+          )}
         </Field>
-        <Field label={t("filters.profile")} htmlFor="people-profile">
-          <select
-            id="people-profile"
-            name="profile"
-            value={filterForm.profile}
-            className={selectClassName}
-            onChange={(event) => {
-              const profile = event.currentTarget.value as FilterFormState["profile"];
+        <Field label={t("filters.profile")}>
+          {({ id }) => (
+            <Select
+              id={id}
+              label={t("filters.profile")}
+              placeholder={t("filters.allProfiles")}
+              value={filterForm.profile}
+              labels={pickerLabels.combobox}
+              onValueChange={(value) => {
+                const profile = value as FilterFormState["profile"];
 
-              setFilterForm((current) => ({
-                ...current,
-                profile,
-              }));
-            }}
-          >
-            <option value="">{t("filters.allProfiles")}</option>
-            <option value="CONTRACTOR">{t("profiles.contractor")}</option>
-            <option value="EMPLOYEE">{t("profiles.employee")}</option>
-          </select>
+                setFilterForm((current) => ({
+                  ...current,
+                  profile,
+                }));
+              }}
+              options={[
+                { value: "", label: t("filters.allProfiles") },
+                { value: "CONTRACTOR", label: t("profiles.contractor") },
+                { value: "EMPLOYEE", label: t("profiles.employee") },
+              ]}
+            />
+          )}
         </Field>
       </div>
       <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
