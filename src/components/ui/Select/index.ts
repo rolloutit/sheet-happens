@@ -1,2 +1,3 @@
-export { Select } from "./Select";
-export type { SelectOption, SelectProps } from "./Select.types";
+export { defaultSearchThreshold, Select } from "./Select";
+export { SelectMenu } from "./SelectMenu";
+export type { SelectMenuProps, SelectOption, SelectProps } from "./Select.types";
