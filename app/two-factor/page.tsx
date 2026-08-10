@@ -10,6 +10,7 @@ import {
   sanitizeCallbackURL,
   securitySetupRoute,
 } from "@/src/server/auth/app-access";
+import { hasPendingBetterAuthSecondFactorChallenge } from "@/src/server/auth/second-factor";
 
 type TwoFactorPageProps = {
   searchParams: Promise<{
@@ -22,13 +23,16 @@ export const dynamic = "force-dynamic";
 export default async function TwoFactorPage({ searchParams }: TwoFactorPageProps) {
   const params = await searchParams;
   const callbackURL = sanitizeCallbackURL(getSingleParam(params.callbackURL));
-  const access = await getAppAccessState();
+  const [access, hasPasswordSecondFactorChallenge] = await Promise.all([
+    getAppAccessState(),
+    hasPendingBetterAuthSecondFactorChallenge(),
+  ]);
 
   if (access.status === "active") {
     redirect(callbackURL as Route);
   }
 
-  if (access.status === "anonymous") {
+  if (access.status === "anonymous" && !hasPasswordSecondFactorChallenge) {
     redirect(loginRoute(callbackURL));
   }
 
@@ -36,7 +40,7 @@ export default async function TwoFactorPage({ searchParams }: TwoFactorPageProps
     redirect(securitySetupRoute(callbackURL));
   }
 
-  if (access.status !== "second_factor_required") {
+  if (access.status !== "second_factor_required" && access.status !== "anonymous") {
     redirect(accountStatusRoute(callbackURL));
   }
 

@@ -113,6 +113,7 @@ export function SecuritySettingsClient({ user, passkeys, twoFactor }: SecuritySe
   const [isPending, startTransition] = useTransition();
   const [pendingAction, setPendingAction] = useState<PendingAction | null>(null);
   const [notice, setNotice] = useState<Notice | null>(null);
+  const [passwordNotice, setPasswordNotice] = useState<Notice | null>(null);
   const [passkeyName, setPasskeyName] = useState(defaultPasskeyName);
   const [passkeyNameEdits, setPasskeyNameEdits] = useState<Record<string, string>>({});
   const [totpSetup, setTotpSetup] = useState<TotpSetupState>({ status: "idle" });
@@ -323,6 +324,7 @@ export function SecuritySettingsClient({ user, passkeys, twoFactor }: SecuritySe
   async function requestPasswordReset() {
     setPendingAction("password-reset");
     setNotice(null);
+    setPasswordNotice(null);
 
     const result = await authClient.requestPasswordReset({
       email: user.email,
@@ -332,14 +334,14 @@ export function SecuritySettingsClient({ user, passkeys, twoFactor }: SecuritySe
     setPendingAction(null);
 
     if (result.error) {
-      setNotice({
+      setPasswordNotice({
         tone: "error",
         message: getAuthErrorMessage(result.error, t("errors.passwordEmailFailed"), t),
       });
       return;
     }
 
-    setNotice({
+    setPasswordNotice({
       tone: "success",
       message: t("notices.passwordLinkSent"),
     });
@@ -634,6 +636,7 @@ export function SecuritySettingsClient({ user, passkeys, twoFactor }: SecuritySe
               {user.passwordEnabled ? t("password.sendResetLink") : t("password.sendSetupLink")}
             </Button>
           </div>
+          {passwordNotice ? <NoticeMessage notice={passwordNotice} /> : null}
           {user.googleAvailable ? (
             <div className="flex items-start gap-3 rounded-[var(--radius-lg)] border border-border bg-secondary/50 p-4 text-sm text-muted-foreground">
               <Building2 className="mt-0.5 size-4 shrink-0 text-accent" aria-hidden="true" />
