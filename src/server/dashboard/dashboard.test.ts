@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  buildEmployeeMonthlyProjectBreakdown,
   calculateAverageWeekMinutes,
   deriveFlaggedUsers,
   deriveMissingTimesheetCount,
@@ -14,6 +15,157 @@ function dateOnly(value: string) {
 }
 
 describe("dashboard helpers", () => {
+  it("builds employee monthly project breakdown from effective own rates", () => {
+    const breakdown = buildEmployeeMonthlyProjectBreakdown({
+      entries: [
+        {
+          id: "entry-1",
+          projectId: "project-1",
+          localDate: dateOnly("2026-07-10"),
+          durationMinutes: 120,
+          project: {
+            id: "project-1",
+            name: "Client Portal",
+            colorToken: "violet",
+          },
+        },
+        {
+          id: "entry-2",
+          projectId: "project-1",
+          localDate: dateOnly("2026-07-20"),
+          durationMinutes: 60,
+          project: {
+            id: "project-1",
+            name: "Client Portal",
+            colorToken: "violet",
+          },
+        },
+        {
+          id: "entry-3",
+          projectId: "project-2",
+          localDate: dateOnly("2026-07-15"),
+          durationMinutes: 30,
+          project: {
+            id: "project-2",
+            name: "Internal Tools",
+            colorToken: "teal",
+          },
+        },
+      ],
+      ratePeriods: [
+        {
+          id: "rate-1",
+          validFrom: dateOnly("2026-07-01"),
+          validTo: dateOnly("2026-07-15"),
+          hourlyRate: "100.00",
+          currencyCode: "EUR",
+        },
+        {
+          id: "rate-2",
+          validFrom: dateOnly("2026-07-15"),
+          validTo: null,
+          hourlyRate: "120.00",
+          currencyCode: "EUR",
+        },
+      ],
+    });
+
+    expect(breakdown).toEqual([
+      expect.objectContaining({
+        projectId: "project-1",
+        totalMinutes: 180,
+        entryCount: 2,
+        singleRate: null,
+        mixedRates: true,
+        missingRateLineCount: 0,
+        costTotals: [{ currencyCode: "EUR", amount: "320.00" }],
+      }),
+      expect.objectContaining({
+        projectId: "project-2",
+        totalMinutes: 30,
+        entryCount: 1,
+        singleRate: {
+          hourlyRate: "120.00",
+          currencyCode: "EUR",
+        },
+        mixedRates: false,
+        missingRateLineCount: 0,
+        costTotals: [{ currencyCode: "EUR", amount: "60.00" }],
+      }),
+    ]);
+  });
+
+  it("marks employee project lines with missing or mixed-currency rates", () => {
+    const breakdown = buildEmployeeMonthlyProjectBreakdown({
+      entries: [
+        {
+          id: "entry-1",
+          projectId: "project-1",
+          localDate: dateOnly("2026-06-30"),
+          durationMinutes: 60,
+          project: {
+            id: "project-1",
+            name: "Client Portal",
+            colorToken: "violet",
+          },
+        },
+        {
+          id: "entry-2",
+          projectId: "project-1",
+          localDate: dateOnly("2026-07-20"),
+          durationMinutes: 60,
+          project: {
+            id: "project-1",
+            name: "Client Portal",
+            colorToken: "violet",
+          },
+        },
+        {
+          id: "entry-3",
+          projectId: "project-1",
+          localDate: dateOnly("2026-08-01"),
+          durationMinutes: 60,
+          project: {
+            id: "project-1",
+            name: "Client Portal",
+            colorToken: "violet",
+          },
+        },
+      ],
+      ratePeriods: [
+        {
+          id: "rate-1",
+          validFrom: dateOnly("2026-07-01"),
+          validTo: dateOnly("2026-08-01"),
+          hourlyRate: "100.00",
+          currencyCode: "EUR",
+        },
+        {
+          id: "rate-2",
+          validFrom: dateOnly("2026-08-01"),
+          validTo: null,
+          hourlyRate: "100.00",
+          currencyCode: "HUF",
+        },
+      ],
+    });
+
+    expect(breakdown[0]).toEqual(
+      expect.objectContaining({
+        projectId: "project-1",
+        totalMinutes: 180,
+        singleRate: null,
+        mixedRates: true,
+        mixedCurrency: true,
+        missingRateLineCount: 1,
+        costTotals: [
+          { currencyCode: "EUR", amount: "100.00" },
+          { currencyCode: "HUF", amount: "100.00" },
+        ],
+      }),
+    );
+  });
+
   it("flags active member/project pairs only when no weekly entry or inactive marker exists", () => {
     const flagged = deriveFlaggedUsers({
       assignments: [

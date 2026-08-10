@@ -1,5 +1,6 @@
 export {
   calculateAverageWeekMinutes,
+  buildEmployeeMonthlyProjectBreakdown,
   deriveFlaggedUsers,
   deriveMissingTimesheetCount,
   deriveMissingTimesheetRows,
@@ -25,5 +26,9 @@ export {
   type DashboardPeriod,
   type DashboardWeeklyProject,
   type EmployeeDashboardData,
+  type EmployeeDashboardCurrencyTotal,
+  type EmployeeDashboardProject,
+  type EmployeeDashboardRate,
+  type EmployeeMonthStatus,
   type MemberDashboardBase,
 } from "./dashboard";

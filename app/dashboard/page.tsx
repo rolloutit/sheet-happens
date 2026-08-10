@@ -16,7 +16,6 @@ import {
   Lock,
   Plus,
   Timer,
-  TrendingUp,
   Wallet,
   X,
 } from "lucide-react";
@@ -131,12 +130,17 @@ function EmployeeDashboard({
       <DashboardGreeting
         name={dashboard.greetingName}
         subtitle={t("member.subtitle", {
+          status: t(`member.status.${dashboard.monthStatus}`),
           month: formatMonth(dashboard.period.monthStart, locale),
           week: formatWeekRange(dashboard.period, locale),
         })}
         t={t}
       />
       <MemberStats dashboard={dashboard} locale={locale} t={t} />
+      <div className="grid gap-4 lg:grid-cols-[1.35fr_0.9fr]">
+        <EmployeeProjectBreakdown dashboard={dashboard} locale={locale} t={t} />
+        <EmployeeMonthStatusPanel dashboard={dashboard} locale={locale} t={t} />
+      </div>
       <WeeklyChecklist projects={dashboard.weeklyProjects} t={t} />
     </>
   );
@@ -281,10 +285,10 @@ function MemberStats({
           accent: "#FAAB59",
         }
       : {
-          id: "average",
-          label: t("stats.averageWeek"),
-          value: formatHoursWithUnit(dashboard.averageWeekMinutes, locale),
-          icon: TrendingUp,
+          id: "internalCost",
+          label: t("stats.internalCost"),
+          value: formatEmployeeCost(dashboard, locale, t),
+          icon: Coins,
           accent: "#FAAB59",
         },
   ];
@@ -331,6 +335,198 @@ function MetricPanel({
         </p>
       </div>
     </DashboardPanel>
+  );
+}
+
+function EmployeeProjectBreakdown({
+  dashboard,
+  locale,
+  t,
+}: {
+  dashboard: EmployeeDashboardData;
+  locale: string;
+  t: DashboardTranslator;
+}) {
+  return (
+    <DashboardPanel className="overflow-hidden p-0">
+      <div className="flex flex-col gap-4 border-b border-border p-5 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <p className="mb-3 font-ui text-[11px] font-bold uppercase tracking-[0.16em] text-accent">
+            {t("member.projectBreakdown.title")}
+          </p>
+          <h2 className="font-display text-lg font-medium text-foreground">
+            {t("member.projectBreakdown.heading")}
+          </h2>
+          <p className="mt-2 text-sm text-muted-foreground">
+            {t("member.projectBreakdown.description")}
+          </p>
+        </div>
+        <Button asChild variant="soft" size="sm">
+          <Link href={"/time" as Route}>
+            <Plus className="size-4" aria-hidden="true" />
+            {t("weekly.log")}
+          </Link>
+        </Button>
+      </div>
+
+      {dashboard.projectBreakdown.length === 0 ? (
+        <DashboardEmptyState>{t("member.projectBreakdown.empty")}</DashboardEmptyState>
+      ) : (
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[44rem] border-collapse">
+            <thead>
+              <tr className="border-b border-border bg-background/35">
+                <DrilldownHeadCell>{t("member.projectBreakdown.table.project")}</DrilldownHeadCell>
+                <DrilldownHeadCell>{t("member.projectBreakdown.table.hours")}</DrilldownHeadCell>
+                <DrilldownHeadCell>{t("member.projectBreakdown.table.rate")}</DrilldownHeadCell>
+                <DrilldownHeadCell>{t("member.projectBreakdown.table.cost")}</DrilldownHeadCell>
+                <DrilldownHeadCell align="right">
+                  {t("member.projectBreakdown.table.entries")}
+                </DrilldownHeadCell>
+              </tr>
+            </thead>
+            <tbody>
+              {dashboard.projectBreakdown.map((project) => (
+                <tr key={project.projectId} className="border-b border-border last:border-b-0">
+                  <td className="px-5 py-4">
+                    <span className="flex min-w-0 items-center gap-3">
+                      <span
+                        className="size-2.5 shrink-0 rounded-full"
+                        style={{ backgroundColor: project.projectColor }}
+                      />
+                      <span className="truncate text-sm font-semibold text-foreground">
+                        {project.projectName}
+                      </span>
+                    </span>
+                  </td>
+                  <td className="px-5 py-4 text-sm font-semibold text-foreground">
+                    {formatHoursWithUnit(project.totalMinutes, locale)}
+                  </td>
+                  <td className="px-5 py-4">
+                    <EmployeeRateLabel
+                      singleRate={project.singleRate}
+                      mixedRates={project.mixedRates}
+                      missingRateLineCount={project.missingRateLineCount}
+                      locale={locale}
+                      t={t}
+                    />
+                  </td>
+                  <td className="px-5 py-4 text-sm font-semibold text-foreground">
+                    {formatEmployeeCostTotals(project.costTotals, locale, t)}
+                    {project.missingRateLineCount > 0 ? (
+                      <span className="mt-1 block text-xs font-medium text-warning">
+                        {t("member.projectBreakdown.missingRates", {
+                          count: project.missingRateLineCount,
+                        })}
+                      </span>
+                    ) : null}
+                  </td>
+                  <td className="px-5 py-4 text-right text-sm text-muted-foreground">
+                    {project.entryCount}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </DashboardPanel>
+  );
+}
+
+function EmployeeMonthStatusPanel({
+  dashboard,
+  locale,
+  t,
+}: {
+  dashboard: EmployeeDashboardData;
+  locale: string;
+  t: DashboardTranslator;
+}) {
+  const statusTone =
+    dashboard.monthStatus === "tracked"
+      ? "success"
+      : dashboard.monthStatus === "missing_rates"
+        ? "warning"
+        : "neutral";
+
+  return (
+    <DashboardPanel className="p-6">
+      <p className="mb-4 font-ui text-[11px] font-bold uppercase tracking-[0.16em] text-accent">
+        {t("member.statusPanel.title")}
+      </p>
+      <div className="mb-5 flex items-start justify-between gap-4">
+        <div>
+          <h2 className="font-display text-xl font-semibold leading-tight text-foreground">
+            {t(`member.status.${dashboard.monthStatus}`)}
+          </h2>
+          <p className="mt-2 text-sm leading-6 text-muted-foreground">
+            {t(`member.statusPanel.${dashboard.monthStatus}`)}
+          </p>
+        </div>
+        <Badge tone={statusTone}>{t("member.statusPanel.current")}</Badge>
+      </div>
+      <div className="grid gap-3">
+        <StatusMetric
+          label={t("member.statusPanel.totalCost")}
+          value={formatEmployeeCost(dashboard, locale, t)}
+        />
+        <StatusMetric
+          label={t("stats.averageWeek")}
+          value={formatHoursWithUnit(dashboard.averageWeekMinutes, locale)}
+        />
+        <StatusMetric
+          label={t("member.statusPanel.missingRates")}
+          value={formatNumber(dashboard.missingRateLineCount, locale)}
+        />
+      </div>
+    </DashboardPanel>
+  );
+}
+
+function EmployeeRateLabel({
+  singleRate,
+  mixedRates,
+  missingRateLineCount,
+  locale,
+  t,
+}: {
+  singleRate: EmployeeDashboardData["projectBreakdown"][number]["singleRate"];
+  mixedRates: boolean;
+  missingRateLineCount: number;
+  locale: string;
+  t: DashboardTranslator;
+}) {
+  if (mixedRates) {
+    return <Badge tone="warning">{t("member.projectBreakdown.mixedRates")}</Badge>;
+  }
+
+  if (!singleRate) {
+    return (
+      <Badge tone={missingRateLineCount > 0 ? "warning" : "neutral"}>
+        {t("member.projectBreakdown.noRate")}
+      </Badge>
+    );
+  }
+
+  return (
+    <span className="text-sm font-semibold text-foreground">
+      {formatMoney(singleRate.hourlyRate, singleRate.currencyCode, locale, {
+        display: "code",
+      })}
+      /h
+    </span>
+  );
+}
+
+function StatusMetric({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-[var(--radius-md)] border border-border bg-background/35 px-4 py-3">
+      <p className="font-ui text-[10px] font-bold uppercase tracking-[0.12em] text-muted-foreground">
+        {label}
+      </p>
+      <p className="mt-1 text-sm font-semibold text-foreground">{value}</p>
+    </div>
   );
 }
 
@@ -1093,6 +1289,37 @@ function formatContractorAmount(
   if (!dashboard.timesheet.totalAmount || !dashboard.timesheet.currencyCode)
     return t("stats.noAmount");
   return formatMoney(dashboard.timesheet.totalAmount, dashboard.timesheet.currencyCode, locale, {
+    display: "code",
+  });
+}
+
+function formatEmployeeCost(
+  dashboard: EmployeeDashboardData,
+  locale: string,
+  t: DashboardTranslator,
+) {
+  if (dashboard.mixedCurrency) return t("stats.mixedCurrency");
+  if (dashboard.costTotals.length === 0 && dashboard.missingRateLineCount > 0) {
+    return t("stats.missingRate");
+  }
+  if (dashboard.costTotals.length === 0) return t("stats.noAmount");
+
+  const [total] = dashboard.costTotals;
+  return formatMoney(total.amount, total.currencyCode, locale, {
+    display: "code",
+  });
+}
+
+function formatEmployeeCostTotals(
+  totals: EmployeeDashboardData["costTotals"],
+  locale: string,
+  t: DashboardTranslator,
+) {
+  if (totals.length === 0) return t("stats.noAmount");
+  if (totals.length > 1) return t("stats.mixedCurrency");
+
+  const [total] = totals;
+  return formatMoney(total.amount, total.currencyCode, locale, {
     display: "code",
   });
 }

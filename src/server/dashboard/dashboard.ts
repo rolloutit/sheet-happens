@@ -11,6 +11,8 @@ import {
   parseDateOnly,
 } from "@/src/server/time-tracking";
 import {
+  calculateLineAmountCents,
+  centsToMoney,
   getContractorTimesheetMonthlyPreview,
   getTimesheetMonthEnd,
   listTimesheetsForAdmin,
@@ -74,6 +76,36 @@ export type ContractorDashboardData = MemberDashboardBase & {
 
 export type EmployeeDashboardData = MemberDashboardBase & {
   kind: "employee";
+  monthStatus: EmployeeMonthStatus;
+  projectBreakdown: EmployeeDashboardProject[];
+  costTotals: EmployeeDashboardCurrencyTotal[];
+  missingRateLineCount: number;
+  mixedCurrency: boolean;
+};
+
+export type EmployeeMonthStatus = "no_projects" | "not_started" | "tracked" | "missing_rates";
+
+export type EmployeeDashboardRate = {
+  hourlyRate: string;
+  currencyCode: string;
+};
+
+export type EmployeeDashboardCurrencyTotal = {
+  currencyCode: string;
+  amount: string;
+};
+
+export type EmployeeDashboardProject = {
+  projectId: string;
+  projectName: string;
+  projectColor: string;
+  totalMinutes: number;
+  entryCount: number;
+  singleRate: EmployeeDashboardRate | null;
+  mixedRates: boolean;
+  missingRateLineCount: number;
+  costTotals: EmployeeDashboardCurrencyTotal[];
+  mixedCurrency: boolean;
 };
 
 export type ContractorMonthEndStep = {
@@ -240,6 +272,26 @@ type DashboardMissingTimeEntry = {
   member: DashboardMemberIdentity;
 };
 
+type EmployeeDashboardRatePeriod = {
+  id: string;
+  validFrom: Date;
+  validTo: Date | null;
+  hourlyRate: { toString(): string } | string | number;
+  currencyCode: string;
+};
+
+type EmployeeDashboardTimeEntry = {
+  id: string;
+  projectId: string;
+  localDate: Date;
+  durationMinutes: number;
+  project: {
+    id: string;
+    name: string;
+    colorToken: string;
+  };
+};
+
 const dashboardStatusOrder: AdminStatusSegment["id"][] = [
   "submitted",
   "rejected",
@@ -394,6 +446,89 @@ export function deriveMissingTimesheetRows(input: {
   );
 }
 
+export function buildEmployeeMonthlyProjectBreakdown(input: {
+  entries: EmployeeDashboardTimeEntry[];
+  ratePeriods: EmployeeDashboardRatePeriod[];
+}) {
+  const projects = new Map<
+    string,
+    EmployeeDashboardProject & {
+      rateKeys: Set<string>;
+      costTotalCentsByCurrency: Map<string, number>;
+    }
+  >();
+
+  for (const entry of input.entries) {
+    const project =
+      projects.get(entry.projectId) ??
+      ({
+        projectId: entry.projectId,
+        projectName: entry.project.name,
+        projectColor: resolveProjectColor(entry.project.colorToken),
+        totalMinutes: 0,
+        entryCount: 0,
+        singleRate: null,
+        mixedRates: false,
+        missingRateLineCount: 0,
+        costTotals: [],
+        mixedCurrency: false,
+        rateKeys: new Set<string>(),
+        costTotalCentsByCurrency: new Map<string, number>(),
+      } satisfies EmployeeDashboardProject & {
+        rateKeys: Set<string>;
+        costTotalCentsByCurrency: Map<string, number>;
+      });
+    const rate = findEffectiveEmployeeRate(input.ratePeriods, entry.localDate);
+
+    project.totalMinutes += entry.durationMinutes;
+    project.entryCount += 1;
+
+    if (!rate) {
+      project.missingRateLineCount += 1;
+    } else {
+      const hourlyRate = rate.hourlyRate.toString();
+      const rateKey = `${hourlyRate}:${rate.currencyCode}`;
+      const amountCents = calculateLineAmountCents(entry.durationMinutes, hourlyRate);
+
+      project.rateKeys.add(rateKey);
+      project.costTotalCentsByCurrency.set(
+        rate.currencyCode,
+        (project.costTotalCentsByCurrency.get(rate.currencyCode) ?? 0) + amountCents,
+      );
+      project.singleRate = {
+        hourlyRate,
+        currencyCode: rate.currencyCode,
+      };
+    }
+
+    project.mixedRates = project.rateKeys.size > 1;
+    project.costTotals = buildDashboardCurrencyTotals(project.costTotalCentsByCurrency);
+    project.mixedCurrency = project.costTotals.length > 1;
+    if (project.mixedRates) project.singleRate = null;
+
+    projects.set(entry.projectId, project);
+  }
+
+  return [...projects.values()]
+    .map((project) => ({
+      projectId: project.projectId,
+      projectName: project.projectName,
+      projectColor: project.projectColor,
+      totalMinutes: project.totalMinutes,
+      entryCount: project.entryCount,
+      singleRate: project.singleRate,
+      mixedRates: project.mixedRates,
+      missingRateLineCount: project.missingRateLineCount,
+      costTotals: project.costTotals,
+      mixedCurrency: project.mixedCurrency,
+    }))
+    .sort((left, right) => {
+      const minutesCompare = right.totalMinutes - left.totalMinutes;
+      if (minutesCompare !== 0) return minutesCompare;
+      return left.projectName.localeCompare(right.projectName);
+    });
+}
+
 export function calculateAverageWeekMinutes(input: {
   monthMinutes: number;
   monthStart: string;
@@ -463,9 +598,20 @@ async function getProfileDashboard(
   };
 
   if (member.currentProfile !== "CONTRACTOR") {
+    const employeeMonth = await getEmployeeMonthlyBreakdown(member.id, period);
+
     return {
       ...base,
       kind: "employee",
+      monthStatus: getEmployeeMonthStatus({
+        activeProjectCount,
+        monthMinutes,
+        missingRateLineCount: employeeMonth.missingRateLineCount,
+      }),
+      projectBreakdown: employeeMonth.projectBreakdown,
+      costTotals: employeeMonth.costTotals,
+      missingRateLineCount: employeeMonth.missingRateLineCount,
+      mixedCurrency: employeeMonth.costTotals.length > 1,
     };
   }
 
@@ -490,6 +636,87 @@ async function getProfileDashboard(
     },
     monthEndSteps: getContractorMonthEndSteps(timesheet.status),
   };
+}
+
+async function getEmployeeMonthlyBreakdown(memberId: string, period: DashboardPeriod) {
+  const ratePeriodWhere = {
+    memberId,
+    validFrom: {
+      lte: parseDateOnly(period.monthEnd),
+    },
+    OR: [{ validTo: null }, { validTo: { gt: parseDateOnly(period.monthStart) } }],
+  };
+  const [entries, ratePeriods] = await Promise.all([
+    prisma.timeEntry.findMany({
+      where: {
+        memberId,
+        deletedAt: null,
+        localDate: {
+          gte: parseDateOnly(period.monthStart),
+          lte: parseDateOnly(period.monthEnd),
+        },
+      },
+      orderBy: [{ localDate: "asc" }, { project: { name: "asc" } }],
+      select: {
+        id: true,
+        projectId: true,
+        localDate: true,
+        durationMinutes: true,
+        project: {
+          select: {
+            id: true,
+            name: true,
+            colorToken: true,
+          },
+        },
+      },
+    }),
+    prisma.memberDefaultRatePeriod.findMany({
+      where: ratePeriodWhere,
+      orderBy: [{ validFrom: "asc" }],
+      select: {
+        id: true,
+        validFrom: true,
+        validTo: true,
+        hourlyRate: true,
+        currencyCode: true,
+      },
+    }),
+  ]);
+  const projectBreakdown = buildEmployeeMonthlyProjectBreakdown({
+    entries,
+    ratePeriods,
+  });
+  const totalCentsByCurrency = new Map<string, number>();
+  let missingRateLineCount = 0;
+
+  for (const project of projectBreakdown) {
+    missingRateLineCount += project.missingRateLineCount;
+
+    for (const total of project.costTotals) {
+      totalCentsByCurrency.set(
+        total.currencyCode,
+        (totalCentsByCurrency.get(total.currencyCode) ?? 0) + moneyToCents(total.amount),
+      );
+    }
+  }
+
+  return {
+    projectBreakdown,
+    costTotals: buildDashboardCurrencyTotals(totalCentsByCurrency),
+    missingRateLineCount,
+  };
+}
+
+function getEmployeeMonthStatus(input: {
+  activeProjectCount: number;
+  monthMinutes: number;
+  missingRateLineCount: number;
+}): EmployeeMonthStatus {
+  if (input.activeProjectCount === 0) return "no_projects";
+  if (input.monthMinutes === 0) return "not_started";
+  if (input.missingRateLineCount > 0) return "missing_rates";
+  return "tracked";
 }
 
 async function getAdminDashboard(
@@ -1021,6 +1248,29 @@ function dashboardDrilldownToTimesheetStatus(id: AdminDashboardStoredStatusDrill
   if (id === "approved") return "APPROVED";
   if (id === "invoiced") return "INVOICED";
   return "ACCEPTED";
+}
+
+function findEffectiveEmployeeRate(rates: EmployeeDashboardRatePeriod[], localDate: Date) {
+  return (
+    rates
+      .filter((rate) => rate.validFrom <= localDate && (!rate.validTo || rate.validTo > localDate))
+      .sort((left, right) => right.validFrom.getTime() - left.validFrom.getTime())[0] ?? null
+  );
+}
+
+function buildDashboardCurrencyTotals(
+  totalCentsByCurrency: Map<string, number>,
+): EmployeeDashboardCurrencyTotal[] {
+  return [...totalCentsByCurrency.entries()]
+    .map(([currencyCode, amountCents]) => ({
+      currencyCode,
+      amount: centsToMoney(amountCents),
+    }))
+    .sort((left, right) => left.currencyCode.localeCompare(right.currencyCode));
+}
+
+function moneyToCents(value: string) {
+  return Math.round(Number(value) * 100);
 }
 
 function getMemberProjectKey(input: { memberId: string; projectId: string }) {
