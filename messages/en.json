@@ -1717,7 +1717,7 @@
       "adminTotpDescription": "Admin tools require authenticator-app verification. Enable an authenticator app before returning to management screens.",
       "memberDescription": "Add a passkey or enable an authenticator app before continuing.",
       "noFurtherAction": "No further security action is required right now.",
-      "adminTotpHint": "Use the authenticator-app controls below to satisfy the admin 2FA requirement. Passkeys remain available for sign-in, but they do not replace admin TOTP in v1.",
+      "adminTotpHint": "Use the authenticator-app controls below to satisfy the admin setup requirement. Passkey sign-in can skip the code challenge after authenticator setup is complete.",
       "memberHint": "Use the passkey or authenticator-app controls below to satisfy this requirement."
     },
     "states": {
@@ -1832,7 +1832,7 @@
       "codeHint": "Enter the current code from your authenticator app.",
       "codeInputLabel": "Authenticator code",
       "verifyAndEnable": "Verify and enable",
-      "footer": "TOTP is the v1 admin second factor. Email passwords and passkeys remain sign-in methods, not admin 2FA replacements."
+      "footer": "Authenticator-app setup is required for admin accounts. Passkey sign-in satisfies the sign-in challenge without an extra code."
     },
     "backupCodes": {
       "title": "Backup codes",

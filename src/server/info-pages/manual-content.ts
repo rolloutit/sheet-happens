@@ -247,11 +247,13 @@ const manualTopics: Record<HelpLocale, ManualTopic[]> = {
 
         ### Authenticator app and backup codes
 
-        - TOTP authenticator-app verification is the v1 second factor.
+        - Authenticator-app setup is required for admin accounts.
+        - Password, magic-link, and Google sign-in can require a TOTP challenge.
+        - Passkey sign-in satisfies the sign-in challenge without an extra TOTP code.
         - Scan the QR code during setup.
         - Save backup codes when they are generated.
         - Backup codes are one-time recovery codes; do not reuse them.
-        - Admin management screens require authenticator-app setup.
+        - Admin management screens require authenticator-app setup, even when passkey sign-in is used.
 
         ### Personal preferences
 
@@ -264,7 +266,7 @@ const manualTopics: Record<HelpLocale, ManualTopic[]> = {
         - Lost authenticator app and backup codes: ask an admin to reset your TOTP setup.
         - Passkey login does not work: try another sign-in method, then check or remove the passkey in Settings.
         - Magic link opens but no member profile is linked: sign in with the email that was activated from the invitation.
-        - Admin tools still blocked: set up authenticator-app verification; a passkey alone is not the v1 admin second factor.
+        - Admin tools still blocked: set up authenticator-app verification first, then passkey sign-in can skip the code prompt.
       `,
     },
     {
@@ -761,11 +763,13 @@ const manualTopics: Record<HelpLocale, ManualTopic[]> = {
 
         ### Authenticator app és tartalék kódok
 
-        - A v1 második faktor az authenticator-app alapú TOTP.
+        - Admin fiókoknál kötelező az authenticator alkalmazás beállítása.
+        - Jelszavas, mágikus linkes és Google belépésnél szükség lehet TOTP ellenőrzésre.
+        - A passkey belépés külön TOTP kód nélkül teljesíti a belépési ellenőrzést.
         - Beállításkor olvasd be a QR kódot.
         - A generált tartalék kódokat mentsd el.
         - A tartalék kódok egyszer használatos helyreállítási kódok.
-        - Az admin kezelőfelületekhez authenticator-app beállítás szükséges.
+        - Az admin kezelőfelületekhez authenticator-app beállítás szükséges akkor is, ha passkey-vel lépsz be.
 
         ### Személyes preferenciák
 
@@ -778,7 +782,7 @@ const manualTopics: Record<HelpLocale, ManualTopic[]> = {
         - Elveszett authenticator app és tartalék kódok: kérj admin TOTP resetet.
         - Passkey belépés nem működik: lépj be másik módszerrel, majd ellenőrizd vagy töröld a passkey-t a Beállításokban.
         - Mágikus link után nincs kapcsolt tagprofil: azzal az email címmel lépj be, amellyel a meghívót aktiváltad.
-        - Admin eszközök továbbra is blokkoltak: állíts be authenticator-app ellenőrzést; a passkey önmagában nem v1 admin második faktor.
+        - Admin eszközök továbbra is blokkoltak: először állíts be authenticator-app ellenőrzést, utána a passkey belépés átugorhatja a kódkérést.
       `,
     },
     {

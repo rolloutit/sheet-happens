@@ -1717,7 +1717,7 @@
       "adminTotpDescription": "Az admin eszközökhöz authenticator alkalmazásos ellenőrzés szükséges. Kapcsold be, mielőtt visszatérsz a kezelőfelületekre.",
       "memberDescription": "Adj hozzá passkey-t vagy kapcsold be az authenticator alkalmazást a folytatás előtt.",
       "noFurtherAction": "Most nincs további biztonsági teendő.",
-      "adminTotpHint": "Az alábbi authenticator alkalmazásos vezérlőkkel teljesítheted az admin 2FA követelményt. A passkey továbbra is elérhető bejelentkezéshez, de v1-ben nem váltja ki az admin TOTP-t.",
+      "adminTotpHint": "Az alábbi authenticator alkalmazásos vezérlőkkel teljesítheted az admin beállítási követelményt. Ha ez kész, a passkey belépés külön kódkérés nélkül használható.",
       "memberHint": "Az alábbi passkey vagy authenticator alkalmazásos vezérlőkkel teljesítheted ezt a követelményt."
     },
     "states": {
@@ -1832,7 +1832,7 @@
       "codeHint": "Add meg az authenticator alkalmazás aktuális kódját.",
       "codeInputLabel": "Authenticator kód",
       "verifyAndEnable": "Ellenőrzés és bekapcsolás",
-      "footer": "A TOTP a v1 admin második faktor. Az emailes jelszó és a passkey bejelentkezési módok maradnak, nem váltják ki az admin 2FA-t."
+      "footer": "Admin fiókoknál kötelező az authenticator alkalmazás beállítása. A passkey belépés külön kódkérés nélkül teljesíti a belépési ellenőrzést."
     },
     "backupCodes": {
       "title": "Tartalék kódok",
