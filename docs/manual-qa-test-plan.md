@@ -204,7 +204,8 @@ Expected result:
 
 Expected result:
 
-- If 2FA is enabled, the user lands on `https://{DOMAIN_NAME}/two-factor?...`.
+- If 2FA is enabled and the browser is not trusted, the user lands on
+  `https://{DOMAIN_NAME}/two-factor?...`.
 - If the user has no passkey and no TOTP yet, the user lands on `/settings?setup=required...`.
 - Otherwise, the user lands on `https://{DOMAIN_NAME}/dashboard`.
 
@@ -249,7 +250,8 @@ Expected result:
 
 Expected result:
 
-- If 2FA is enabled, the user lands on `https://{DOMAIN_NAME}/two-factor?...`.
+- If 2FA is enabled and the browser is not trusted, the user lands on
+  `https://{DOMAIN_NAME}/two-factor?...`.
 - Otherwise, the user lands on `https://{DOMAIN_NAME}/dashboard`.
 - Public sign-up is not available from the login screen.
 
@@ -281,7 +283,8 @@ Expected result:
 - Google sign-in succeeds only for the configured company Workspace domain.
 - If this is the first Google sign-in for the activated account, the Google account is linked
   automatically.
-- The user is then routed through the normal app gates: `/two-factor`, `/settings`, or `/dashboard`.
+- The user is then routed through the normal app gates: `/two-factor` when TOTP is enabled and the
+  browser is not trusted, `/settings`, or `/dashboard`.
 
 ### Private Google Login Is Blocked
 
@@ -1419,8 +1422,10 @@ Expected result:
 
 Expected result:
 
-- The user lands on `/dashboard`, unless 2FA is enabled.
-- If 2FA is enabled, the user lands on `/two-factor`.
+- The user lands on `/dashboard`, even when authenticator-app 2FA is enabled.
+- The app does not show `/two-factor` after a user-verified passkey login.
+- If the passkey belongs to an admin account without authenticator-app setup, normal pages open but
+  admin screens still redirect to `/settings?setup=required&...reason=admin-totp-required...`.
 
 ### Remove Passkey
 
@@ -1489,6 +1494,23 @@ Expected result:
 - After the magic-link email is opened, the app redirects to `/two-factor`.
 - The magic-link sign-in does not satisfy the 2FA challenge by itself.
 - `/dashboard` is not accessible until the TOTP code is verified.
+
+### Passkey Login With TOTP Enabled
+
+1. Make sure TOTP is enabled for `{ADMIN_EMAIL}` or `{CONTRACTOR_EMAIL}`.
+2. Make sure the same account has a registered passkey on `{PASSKEY_DEVICE}`.
+3. Sign out.
+4. Open `https://{DOMAIN_NAME}/login`.
+5. Click `Continue with passkey`.
+6. Complete the passkey prompt on `{PASSKEY_DEVICE}`.
+
+Expected result:
+
+- The passkey prompt requires normal device verification, such as biometrics, PIN, or password.
+- The app redirects to `/dashboard` or the original callback URL.
+- The app does not show `/two-factor`.
+- Signing out and using password, magic link, or Google on an untrusted browser still shows
+  `/two-factor` for the same TOTP-enabled account.
 
 ### Verify TOTP Challenge
 
@@ -2234,6 +2256,7 @@ Expected result:
 - Admin people page can invite, resend, edit, deactivate, reactivate, archive, and restore members.
 - Admin people page can revoke member sessions.
 - Passkey add, login, rename, and remove still work.
+- Passkey login skips the `/two-factor` challenge for TOTP-enabled accounts.
 - TOTP setup, challenge, invalid-code handling, trusted device, backup-code fallback, and disable
   still work.
 - TOTP disablement and backup-code regeneration create audit rows without storing secrets.
