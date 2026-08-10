@@ -361,18 +361,180 @@
     }
   },
   "Dashboard": {
-    "eyebrow": "Kezdőlap",
+    "eyebrow": "Mindenki",
     "title": "Irányítópult",
-    "subtitle": "Még nincs implementálva.",
-    "placeholder": {
-      "title": "Elérhető gyorslinkek",
-      "description": "Ezek a linkek használhatók, amíg a dashboard elkészül."
+    "greeting": "Szia, {name}!",
+    "member": {
+      "subtitle": "{status} · {month} · {week}",
+      "status": {
+        "no_projects": "Nincs aktív projekt",
+        "not_started": "Nincs rögzített idő",
+        "tracked": "Van rögzített idő",
+        "missing_rates": "Hiányzó óradíj"
+      },
+      "projectBreakdown": {
+        "title": "Havi munka",
+        "heading": "Projekt bontás",
+        "description": "Saját rögzített idő és belső költség a saját óradíj-időszakok alapján.",
+        "empty": "Nincs rögzített idő a kiválasztott hónapban.",
+        "mixedRates": "Vegyes óradíj",
+        "noRate": "Nincs óradíj",
+        "missingRates": "{count} bejegyzéshez nincs óradíj",
+        "table": {
+          "project": "Projekt",
+          "hours": "Óra",
+          "rate": "Óradíj",
+          "cost": "Belső költség",
+          "entries": "Bejegyzés"
+        }
+      },
+      "statusPanel": {
+        "title": "Havi státusz",
+        "current": "Aktuális",
+        "no_projects": "Erre a hónapra jelenleg nincs elvárt aktív projekt-hozzárendelés.",
+        "not_started": "Van aktív projekt, de ebben a hónapban még nincs rögzített idő.",
+        "tracked": "Ebben a hónapban van rögzített idő.",
+        "missing_rates": "Néhány rögzített bejegyzés dátumára nincs érvényes alkalmazotti óradíj.",
+        "totalCost": "Belső költség",
+        "missingRates": "Hiányzó óradíjas bejegyzés"
+      }
     },
-    "actions": {
-      "time": "Időkövetés megnyitása",
-      "settings": "Beállítások megnyitása",
-      "people": "Emberek megnyitása",
-      "projects": "Projektek megnyitása"
+    "contractor": {
+      "subtitle": "{status} · {month}",
+      "stepperTitle": "Havi timesheet",
+      "monthEnd": "Hónap végi checklist",
+      "next": "Következő",
+      "steps": {
+        "assemble": "Timesheet összeállítása",
+        "submit": "Beküldés jóváhagyásra",
+        "invoice": "Számla feltöltése jóváhagyás után"
+      },
+      "stepper": {
+        "create": "Összeállítás",
+        "submit": "Beküldés",
+        "approve": "Jóváhagyás",
+        "invoice": "Számla",
+        "paid": "Kifizetés"
+      },
+      "cta": {
+        "openTimesheet": "Timesheet megnyitása",
+        "uploadInvoice": "Számla feltöltése",
+        "viewTimesheet": "Timesheet megtekintése"
+      }
+    },
+    "stats": {
+      "activeProjects": "Aktív projekt",
+      "hours": "Ledolgozott óra",
+      "averageWeek": "Heti átlag",
+      "internalCost": "Belső költség",
+      "expectedAmount": "Várható összeg",
+      "mixedCurrency": "Vegyes deviza",
+      "missingRate": "Hiányzó óradíj",
+      "noAmount": "Nincs összeg"
+    },
+    "weekly": {
+      "title": "Heti checklist",
+      "question": "Rögzítettél időt minden aktív projekten ezen a héten?",
+      "log": "Rögzítés",
+      "logged": "Rögzítve",
+      "inactive": "Inaktív",
+      "missing": "Hiányzik",
+      "empty": "Nincs aktív projekt erre a hétre.",
+      "allClear": "Minden teljesítve",
+      "allClearDescription": "Minden aktív projekten van rögzített idő vagy inaktív heti jelölés."
+    },
+    "admin": {
+      "subtitle": "{submitted} jóváhagyásra vár · {accepted} kifizetésre vár",
+      "priority": {
+        "submitted": "Jóváhagyásra vár",
+        "approved": "Jóváhagyva, számlára vár",
+        "invoiced": "Számla ellenőrzésre vár",
+        "accepted": "Kifizetésre vár",
+        "missing": "Hiányzó timesheet"
+      },
+      "flagged": {
+        "title": "Flagged felhasználók",
+        "description": "Van aktív projektjük, de nincs órájuk ezen a héten és nincs inaktív jelölés.",
+        "name": "Név",
+        "project": "Aktív projekt",
+        "lastLogged": "Utolsó óra",
+        "empty": "Nincs flagged felhasználó az aktuális hétre.",
+        "never": "Soha",
+        "lastWeek": "A múlt héten",
+        "twoWeeksAgo": "2 hete",
+        "viewDrilldown": "Részletek"
+      },
+      "drilldown": {
+        "eyebrow": "Részletezés",
+        "openFullList": "Teljes lista",
+        "openReport": "Riport megnyitása",
+        "close": "Bezárás",
+        "review": "Ellenőrzés",
+        "empty": "Nincs elem ebben a listában.",
+        "limited": "{shown} / {total} megjelenítve. A teljes lista külön megnyitható.",
+        "notAvailable": "Nincs adat",
+        "activeProjectCount": "{count} aktív",
+        "submitted": {
+          "title": "{count} jóváhagyásra váró timesheet",
+          "description": "{month} hónapban beküldött, admin jóváhagyásra váró timesheetek."
+        },
+        "approved": {
+          "title": "{count} jóváhagyott, számlára váró timesheet",
+          "description": "{month} hónapban jóváhagyott timesheetek, amelyekhez a kontraktornak még számlát kell feltöltenie."
+        },
+        "invoiced": {
+          "title": "{count} ellenőrzésre váró számla",
+          "description": "{month} hónapban feltöltött számlával rendelkező timesheetek, amelyek számlaellenőrzésre várnak."
+        },
+        "accepted": {
+          "title": "{count} kifizetésre váró elfogadott számla",
+          "description": "{month} hónapban elfogadott számlák, amelyek kifizetés jelölésére várnak."
+        },
+        "missing": {
+          "title": "{count} hiányzó timesheet",
+          "description": "Kontraktorok, akiktől {month} hónapra timesheet várható, de még nincs timesheetjük."
+        },
+        "flagged": {
+          "title": "{count} flagged tag/projekt pár",
+          "description": "Aktív tag/projekt hozzárendelések rögzített idő nélkül erre a hétre: {week}; inaktív heti jelölés sincs."
+        },
+        "table": {
+          "contractor": "Kontraktor",
+          "month": "Hónap",
+          "status": "Státusz",
+          "hours": "Óra",
+          "amount": "Összeg",
+          "updated": "Frissítve",
+          "activeProjects": "Aktív projektek",
+          "lastLogged": "Utolsó óra",
+          "action": "Művelet"
+        }
+      },
+      "status": {
+        "title": "Idő- és számlázáskövetés",
+        "caption": "havi timesheet állapot",
+        "segment": {
+          "submitted": "Beküldve",
+          "rejected": "Elutasítva",
+          "approved": "Jóváhagyva",
+          "invoiced": "Számla feltöltve",
+          "invoice_rejected": "Számla elutasítva",
+          "accepted": "Kifizetésre vár",
+          "paid": "Kifizetve",
+          "missing": "Hiányzó"
+        }
+      }
+    },
+    "timesheetStatus": {
+      "not_created": "Nincs beküldve",
+      "submitted": "Beküldve",
+      "rejected": "Elutasítva",
+      "approved": "Jóváhagyva",
+      "invoiced": "Számla feltöltve",
+      "invoice_rejected": "Számla elutasítva",
+      "accepted": "Kifizetésre vár",
+      "paid": "Kifizetve",
+      "missing": "Hiányzó"
     }
   },
   "Timesheets": {
