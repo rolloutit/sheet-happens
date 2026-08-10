@@ -12,7 +12,7 @@ import {
   AuthPasswordInput,
   AuthScreenHead,
 } from "@/src/components/layout/AuthForm";
-import { authClient } from "@/src/lib/auth-client";
+import { authClient, getSecondFactorChallengeURL } from "@/src/lib/auth-client";
 
 export type LoginPanelProps = {
   callbackURL: string;
@@ -27,6 +27,11 @@ type LoginStatus = {
 };
 
 type PendingAction = "google" | "magic-link" | "passkey" | "password" | "password-reset";
+
+type PasswordSignInData = {
+  twoFactorRedirect?: boolean;
+  url?: string;
+};
 
 export function LoginPanel({
   callbackURL,
@@ -127,7 +132,6 @@ export function LoginPanel({
     const result = await authClient.signIn.email({
       email: normalizedEmail,
       password,
-      callbackURL,
     });
 
     setPendingAction(null);
@@ -140,7 +144,14 @@ export function LoginPanel({
       return;
     }
 
-    window.location.assign(result.data?.url ?? callbackURL);
+    const data = result.data as PasswordSignInData | null | undefined;
+
+    if (data?.twoFactorRedirect) {
+      window.location.assign(getSecondFactorChallengeURL(callbackURL));
+      return;
+    }
+
+    window.location.assign(data?.url ?? callbackURL);
   }
 
   async function requestPasswordReset() {
