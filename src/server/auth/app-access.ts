@@ -2,6 +2,7 @@ import type { Route } from "next";
 import { redirect } from "next/navigation";
 
 import { AuthenticationError, AuthorizationError, getSession } from "./session";
+import { hasPasskeySatisfiedSecondFactor } from "./passkey-second-factor";
 import { hasSatisfiedSecondFactor } from "./second-factor";
 import { prisma } from "@/src/server/db/client";
 
@@ -176,7 +177,7 @@ export async function getAppAccessState(): Promise<AppAccessState> {
 
   if (
     resolvedAuthUser.twoFactorEnabled &&
-    !(await hasSatisfiedSecondFactor({
+    !(await hasSatisfiedStrongAuthentication({
       userId: session.user.id,
       sessionToken: session.session.token,
     }))
@@ -204,6 +205,14 @@ export async function getAppAccessState(): Promise<AppAccessState> {
     member,
     authUser: resolvedAuthUser,
   };
+}
+
+async function hasSatisfiedStrongAuthentication(input: { userId: string; sessionToken: string }) {
+  if (await hasSatisfiedSecondFactor(input)) {
+    return true;
+  }
+
+  return hasPasskeySatisfiedSecondFactor(input);
 }
 
 export async function requireActiveAppMember(callbackURL: string): Promise<ActiveAppAccess> {

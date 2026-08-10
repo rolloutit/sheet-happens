@@ -1,6 +1,6 @@
 import { passkey } from "@better-auth/passkey";
 import { prismaAdapter } from "@better-auth/prisma-adapter";
-import { betterAuth } from "better-auth";
+import { APIError, betterAuth } from "better-auth";
 import { nextCookies } from "better-auth/next-js";
 import { magicLink, twoFactor } from "better-auth/plugins";
 
@@ -11,6 +11,7 @@ import {
   getGoogleAuthSettings,
   isAllowedGoogleWorkspaceProfile,
 } from "@/src/server/auth/sign-in-methods";
+import { createPasskeySecondFactorSessionMarker } from "@/src/server/auth/passkey-second-factor";
 import { prisma } from "@/src/server/db/client";
 
 const appName = "Sheet Happens";
@@ -54,6 +55,16 @@ type PasskeyAuditRecord = {
   transports?: unknown;
 };
 
+type AuthSessionRecord = {
+  userId?: unknown;
+  token?: unknown;
+  expiresAt?: unknown;
+};
+
+type AuthHookContext = {
+  path?: string;
+} | null;
+
 export const auth = betterAuth({
   appName,
   baseURL: authBaseURLConfig,
@@ -78,6 +89,13 @@ export const auth = betterAuth({
       create: {
         after: async (passkey: PasskeyAuditRecord) => {
           await auditPasskeyAdded(passkey);
+        },
+      },
+    },
+    session: {
+      create: {
+        after: async (session: AuthSessionRecord, context: AuthHookContext) => {
+          await markPasskeySessionAsSecondFactor(session, context);
         },
       },
     },
@@ -159,6 +177,18 @@ export const auth = betterAuth({
       ...(passkeyRpID ? { rpID: passkeyRpID } : {}),
       rpName: appName,
       origin: passkeyOrigins,
+      authentication: {
+        afterVerification: ({ verification }) => {
+          if (verification.authenticationInfo.userVerified) {
+            return;
+          }
+
+          throw new APIError("UNAUTHORIZED", {
+            code: "PASSKEY_USER_VERIFICATION_REQUIRED",
+            message: "Passkey user verification is required.",
+          });
+        },
+      },
     }),
     twoFactor({
       allowPasswordless: true,
@@ -212,6 +242,41 @@ async function auditPasskeyAdded(passkey: PasskeyAuditRecord) {
       },
     },
   });
+}
+
+async function markPasskeySessionAsSecondFactor(
+  session: AuthSessionRecord,
+  context: AuthHookContext,
+) {
+  if (!context?.path?.includes("/passkey/verify-authentication")) return;
+
+  const expiresAt = getSessionExpiresAt(session.expiresAt);
+
+  if (typeof session.userId !== "string" || typeof session.token !== "string" || !expiresAt) {
+    return;
+  }
+
+  await createPasskeySecondFactorSessionMarker({
+    userId: session.userId,
+    sessionToken: session.token,
+    expiresAt,
+  });
+}
+
+function getSessionExpiresAt(expiresAt: unknown) {
+  if (expiresAt instanceof Date && Number.isFinite(expiresAt.getTime())) {
+    return expiresAt;
+  }
+
+  if (typeof expiresAt === "string" || typeof expiresAt === "number") {
+    const parsed = new Date(expiresAt);
+
+    if (Number.isFinite(parsed.getTime())) {
+      return parsed;
+    }
+  }
+
+  return null;
 }
 
 async function auditPasswordReset(authUserId: string, request?: Request) {
