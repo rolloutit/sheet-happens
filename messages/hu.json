@@ -402,13 +402,6 @@
     "contractor": {
       "subtitle": "{status} · {month}",
       "stepperTitle": "Havi timesheet",
-      "monthEnd": "Hónap végi checklist",
-      "next": "Következő",
-      "steps": {
-        "assemble": "Timesheet összeállítása",
-        "submit": "Beküldés jóváhagyásra",
-        "invoice": "Számla feltöltése jóváhagyás után"
-      },
       "stepper": {
         "create": "Összeállítás",
         "submit": "Beküldés",
@@ -416,10 +409,68 @@
         "invoice": "Számla",
         "paid": "Kifizetés"
       },
-      "cta": {
-        "openTimesheet": "Timesheet megnyitása",
-        "uploadInvoice": "Számla feltöltése",
-        "viewTimesheet": "Timesheet megtekintése"
+      "nextAction": {
+        "eyebrow": "Következő teendő",
+        "record_time": {
+          "title": "Rögzíts időt erre a hónapra",
+          "description": "A kiválasztott hónapra még nincs rögzített idő.",
+          "cta": "Időkövetés megnyitása"
+        },
+        "resolve_rates": {
+          "title": "Kérd az admin segítségét az óradíjakhoz",
+          "description": "A hónap nem küldhető be, amíg az admin nem javítja a hiányzó vagy vegyes óradíjakat.",
+          "cta": "Timesheet részletek"
+        },
+        "review_and_submit": {
+          "title": "Ellenőrizd és küldd be a timesheetet",
+          "description": "A rögzített idő készen áll az átnézésre és a jóváhagyásra küldésre.",
+          "cta": "Timesheet ellenőrzése"
+        },
+        "correct_timesheet": {
+          "title": "Javítsd és küldd be újra a timesheetet",
+          "description": "Az admin visszaküldte a timesheetet. Nézd át a visszajelzést, javítsd a bejegyzéseket, majd küldd be újra.",
+          "cta": "Timesheet javítása"
+        },
+        "awaiting_approval": {
+          "title": "Admin jóváhagyásra vár",
+          "description": "A beküldött timesheet az admin ellenőrzése alatt zárolt.",
+          "cta": "Timesheet megtekintése"
+        },
+        "upload_invoice": {
+          "title": "Töltsd fel a számlát",
+          "description": "A timesheet jóváhagyott. Töltsd fel a jóváhagyott összeghez tartozó számla PDF-et.",
+          "cta": "Számla feltöltése"
+        },
+        "upload_cancellation_invoice": {
+          "title": "Töltsd fel a sztornó számlát",
+          "description": "Az előző számla elutasított. A helyesbítő számla kiállítása előtt töltsd fel az előző negatív sztornó számláját.",
+          "cta": "Sztornó számla feltöltése"
+        },
+        "upload_replacement_invoice": {
+          "title": "Töltsd fel a javított helyettesítő számlát",
+          "description": "A sztornó számla rögzítve van. Most töltsd fel a javított helyettesítő számlát.",
+          "cta": "Helyettesítő számla feltöltése"
+        },
+        "review_invoice_rejection": {
+          "title": "Nézd át az elutasított számlát",
+          "description": "A korrekciós folyamat folytatása előtt ezt a számlát át kell nézni.",
+          "cta": "Számlarészletek megtekintése"
+        },
+        "awaiting_invoice_review": {
+          "title": "Számlaellenőrzésre vár",
+          "description": "A számla feltöltve, és admin ellenőrzésre vár.",
+          "cta": "Számla megtekintése"
+        },
+        "awaiting_payment": {
+          "title": "Kifizetésre vár",
+          "description": "A számla elfogadott, és arra vár, hogy egy admin kifizetettnek jelölje.",
+          "cta": "Számla megtekintése"
+        },
+        "complete": {
+          "title": "A hónap lezárva",
+          "description": "A timesheet és a számla kifizetett. A havi folyamat lezárult.",
+          "cta": "Timesheet megtekintése"
+        }
       }
     },
     "stats": {

@@ -402,13 +402,6 @@
     "contractor": {
       "subtitle": "{status} · {month}",
       "stepperTitle": "Monthly timesheet",
-      "monthEnd": "Month-end checklist",
-      "next": "Next",
-      "steps": {
-        "assemble": "Assemble timesheet",
-        "submit": "Submit for approval",
-        "invoice": "Upload invoice after approval"
-      },
       "stepper": {
         "create": "Assemble",
         "submit": "Submit",
@@ -416,10 +409,68 @@
         "invoice": "Invoice",
         "paid": "Paid"
       },
-      "cta": {
-        "openTimesheet": "Open timesheet",
-        "uploadInvoice": "Upload invoice",
-        "viewTimesheet": "View timesheet"
+      "nextAction": {
+        "eyebrow": "Next action",
+        "record_time": {
+          "title": "Record time for this month",
+          "description": "No time has been tracked for the selected month yet.",
+          "cta": "Open time tracking"
+        },
+        "resolve_rates": {
+          "title": "Ask an admin to resolve the rates",
+          "description": "This month cannot be submitted until the missing or mixed rates are corrected by an admin.",
+          "cta": "View timesheet details"
+        },
+        "review_and_submit": {
+          "title": "Review and submit the timesheet",
+          "description": "Tracked time is ready for you to review before sending it for approval.",
+          "cta": "Review timesheet"
+        },
+        "correct_timesheet": {
+          "title": "Correct and resubmit the timesheet",
+          "description": "An admin returned this timesheet. Review the feedback, correct the entries, then submit again.",
+          "cta": "Correct timesheet"
+        },
+        "awaiting_approval": {
+          "title": "Awaiting admin approval",
+          "description": "Your submitted timesheet is locked while an admin reviews it.",
+          "cta": "View timesheet"
+        },
+        "upload_invoice": {
+          "title": "Upload the invoice",
+          "description": "The timesheet is approved. Upload the invoice PDF for the approved total.",
+          "cta": "Upload invoice"
+        },
+        "upload_cancellation_invoice": {
+          "title": "Upload the cancellation invoice",
+          "description": "The previous invoice was rejected. Upload its negative cancellation invoice before issuing a replacement.",
+          "cta": "Upload cancellation invoice"
+        },
+        "upload_replacement_invoice": {
+          "title": "Upload the corrected replacement invoice",
+          "description": "The cancellation invoice is recorded. Upload the corrected replacement invoice next.",
+          "cta": "Upload replacement invoice"
+        },
+        "review_invoice_rejection": {
+          "title": "Review the rejected invoice",
+          "description": "This invoice needs review before the correction flow can continue.",
+          "cta": "View invoice details"
+        },
+        "awaiting_invoice_review": {
+          "title": "Awaiting invoice review",
+          "description": "The invoice is uploaded and waiting for an admin decision.",
+          "cta": "View invoice"
+        },
+        "awaiting_payment": {
+          "title": "Awaiting payment",
+          "description": "The invoice is accepted and waiting to be marked as paid by an admin.",
+          "cta": "View invoice"
+        },
+        "complete": {
+          "title": "Month complete",
+          "description": "The timesheet and invoice are paid. This monthly workflow is complete.",
+          "cta": "View timesheet"
+        }
       }
     },
     "stats": {
