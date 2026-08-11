@@ -71,7 +71,7 @@ export type ContractorDashboardData = MemberDashboardBase & {
     totalMinutes: number;
     invoiceUploaded: boolean;
   };
-  monthEndSteps: ContractorMonthEndStep[];
+  nextAction: ContractorDashboardNextAction;
 };
 
 export type EmployeeDashboardData = MemberDashboardBase & {
@@ -108,9 +108,23 @@ export type EmployeeDashboardProject = {
   mixedCurrency: boolean;
 };
 
-export type ContractorMonthEndStep = {
-  id: "assemble" | "submit" | "invoice";
-  state: "done" | "active" | "disabled";
+export type ContractorDashboardActionId =
+  | "record_time"
+  | "resolve_rates"
+  | "review_and_submit"
+  | "correct_timesheet"
+  | "awaiting_approval"
+  | "upload_invoice"
+  | "upload_cancellation_invoice"
+  | "upload_replacement_invoice"
+  | "review_invoice_rejection"
+  | "awaiting_invoice_review"
+  | "awaiting_payment"
+  | "complete";
+
+export type ContractorDashboardNextAction = {
+  id: ContractorDashboardActionId;
+  href: string;
 };
 
 export type AdminPriorityMetric = {
@@ -545,30 +559,57 @@ export function calculateAverageWeekMinutes(input: {
   return Math.round(input.monthMinutes / elapsedWeeks);
 }
 
-export function getContractorMonthEndSteps(
-  status: TimesheetPreviewStatus,
-): ContractorMonthEndStep[] {
-  const submitted = !["not_created", "missing", "rejected"].includes(status);
-  const invoiceUploaded = ["invoiced", "accepted", "paid"].includes(status);
+export function getContractorDashboardNextAction(input: {
+  status: TimesheetPreviewStatus;
+  selectedMonth: string;
+  totalMinutes: number;
+  missingRateLineCount: number;
+  mixedCurrency: boolean;
+  invoices: Array<{
+    id: string;
+    role: "original" | "replacement" | "cancellation" | "corrected";
+    status: "uploaded" | "accepted" | "rejected" | "replaced" | "cancelled" | "deleted";
+    referencesInvoiceId: string | null;
+  }>;
+}): ContractorDashboardNextAction {
+  const timesheetHref = `/timesheets?month=${encodeURIComponent(input.selectedMonth)}`;
+  const hasRateIssue = input.missingRateLineCount > 0 || input.mixedCurrency;
 
-  return [
-    {
-      id: "assemble",
-      state: submitted ? "done" : "active",
-    },
-    {
-      id: "submit",
-      state: submitted ? "done" : "disabled",
-    },
-    {
-      id: "invoice",
-      state: invoiceUploaded
-        ? "done"
-        : status === "approved" || status === "invoice_rejected"
-          ? "active"
-          : "disabled",
-    },
-  ];
+  if (input.status === "not_created" || input.status === "missing") {
+    if (hasRateIssue) return { id: "resolve_rates", href: timesheetHref };
+    if (input.totalMinutes === 0) return { id: "record_time", href: "/time" };
+    return { id: "review_and_submit", href: timesheetHref };
+  }
+
+  if (input.status === "rejected") {
+    if (hasRateIssue) return { id: "resolve_rates", href: timesheetHref };
+    return { id: "correct_timesheet", href: timesheetHref };
+  }
+
+  if (input.status === "submitted") return { id: "awaiting_approval", href: timesheetHref };
+  if (input.status === "approved") return { id: "upload_invoice", href: timesheetHref };
+
+  if (input.status === "invoice_rejected") {
+    const rejectedInvoice = input.invoices.find(
+      (invoice) => invoice.role !== "cancellation" && invoice.status === "rejected",
+    );
+    if (!rejectedInvoice) return { id: "review_invoice_rejection", href: timesheetHref };
+
+    const cancellationInvoice = input.invoices.find(
+      (invoice) =>
+        invoice.role === "cancellation" &&
+        invoice.referencesInvoiceId === rejectedInvoice.id &&
+        invoice.status !== "deleted",
+    );
+
+    return cancellationInvoice
+      ? { id: "upload_replacement_invoice", href: timesheetHref }
+      : { id: "upload_cancellation_invoice", href: timesheetHref };
+  }
+
+  if (input.status === "invoiced") return { id: "awaiting_invoice_review", href: timesheetHref };
+  if (input.status === "accepted") return { id: "awaiting_payment", href: timesheetHref };
+  return { id: "complete", href: timesheetHref };
 }
 
 async function getProfileDashboard(
@@ -634,7 +675,14 @@ async function getProfileDashboard(
       totalMinutes: timesheet.totalMinutes,
       invoiceUploaded: Boolean(timesheet.invoice),
     },
-    monthEndSteps: getContractorMonthEndSteps(timesheet.status),
+    nextAction: getContractorDashboardNextAction({
+      status: timesheet.status,
+      selectedMonth: timesheet.selectedMonth,
+      totalMinutes: timesheet.totalMinutes,
+      missingRateLineCount: timesheet.missingRateLineCount,
+      mixedCurrency: timesheet.mixedCurrency,
+      invoices: timesheet.invoices,
+    }),
   };
 }
 
