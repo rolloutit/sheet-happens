@@ -18,7 +18,7 @@ const meta = {
     projects,
     value: {
       projectId: "apollo",
-      date: new Date("2026-06-24T00:00:00"),
+      date: "2026-06-24",
       hours: 6,
       description: "Invoice reconciliation",
       billable: true,
@@ -36,7 +36,7 @@ export const Default: Story = {
   render: (args) => {
     const [value, setValue] = useState<TimeEntryFormValue>({
       projectId: "apollo",
-      date: new Date("2026-06-24T00:00:00"),
+      date: "2026-06-24",
       hours: 6,
       description: "Invoice reconciliation",
       billable: true,

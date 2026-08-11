@@ -3,6 +3,22 @@
     "name": "Sheet Happens",
     "company": "Rollout IT"
   },
+  "Pickers": {
+    "search": "Search",
+    "searchPlaceholder": "Search...",
+    "noResults": "No results",
+    "clear": "Clear",
+    "done": "Done",
+    "today": "Today",
+    "thisMonth": "This month",
+    "calendar": "Calendar",
+    "selectMonth": "Select month",
+    "rangeEnd": "End date",
+    "previousMonth": "Previous month",
+    "nextMonth": "Next month",
+    "previousYear": "Previous year",
+    "nextYear": "Next year"
+  },
   "AppShell": {
     "brand": {
       "subtitle": "Rollout IT · internal"
@@ -745,6 +761,7 @@
       "project": "Project",
       "allProjects": "All projects",
       "month": "Month",
+      "allMonths": "All months",
       "apply": "Apply filters",
       "clear": "Clear"
     },
@@ -1225,6 +1242,7 @@
       "noProjects": "No projects in this group.",
       "removeProjectLabel": "Remove {project} from {group}",
       "chooseProject": "Choose project",
+      "addProjectLabel": "Project to add",
       "allProjectsLinked": "All projects are in this group",
       "editTitle": "Edit {name}",
       "editDescription": "Group changes affect filtering and project organization. They do not change project assignment or billing rules.",
@@ -1555,8 +1573,8 @@
       "allTargets": "All targets",
       "actor": "Actor",
       "allActors": "All actors",
-      "from": "From",
-      "to": "To",
+      "period": "Period",
+      "allDates": "All dates",
       "apply": "Apply",
       "clear": "Clear",
       "empty": "No audit events match the current filters.",
@@ -1729,6 +1747,7 @@
     "timer": {
       "trackedWithTimer": "Tracked with timer",
       "placeholder": "What are you working on?",
+      "projectLabel": "Timer project",
       "start": "Start",
       "stop": "Stop"
     },
@@ -2061,6 +2080,11 @@
     "filters": {
       "start": "From",
       "end": "To",
+      "periodStart": "Period start",
+      "periodEnd": "Period end",
+      "anchorMonth": "Month",
+      "anchorDate": "Date",
+      "anchorYear": "Year",
       "project": "Project",
       "group": "Project group",
       "member": "Member",

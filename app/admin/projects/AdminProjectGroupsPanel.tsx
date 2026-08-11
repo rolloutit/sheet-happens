@@ -7,6 +7,8 @@ import { useState, useTransition } from "react";
 
 import { Badge } from "@/src/components/ui/Badge";
 import { Button } from "@/src/components/ui/Button";
+import { Combobox } from "@/src/components/ui/Combobox";
+import { Select } from "@/src/components/ui/Select";
 import {
   Dialog,
   DialogClose,
@@ -28,6 +30,7 @@ import { Field } from "@/src/components/ui/Field";
 import { IconButton } from "@/src/components/ui/IconButton";
 import { Input } from "@/src/components/ui/Input";
 import { Textarea } from "@/src/components/ui/Textarea";
+import { usePickerLabels } from "@/src/i18n/picker-labels";
 import { cn } from "@/src/lib/utils";
 import type { AdminProjectGroupRow, AdminProjectOptionRow } from "@/src/server/projects";
 import {
@@ -42,7 +45,7 @@ import type {
   ProjectGroupProjectActionState,
   UpdateProjectGroupActionInput,
 } from "./actions.types";
-import { nativeCheckboxClassName, nativeSelectClassName } from "./formStyles";
+import { nativeCheckboxClassName } from "./formStyles";
 import { ProjectColorSwatch } from "./ProjectColorField";
 
 export type AdminProjectGroupsPanelProps = {
@@ -65,6 +68,7 @@ type ProjectGroupOccupancyFilter = "all" | "empty" | "withProjects";
 
 export function AdminProjectGroupsPanel({ groups, projects }: AdminProjectGroupsPanelProps) {
   const t = useTranslations("AdminProjects");
+  const pickerLabels = usePickerLabels();
   const router = useRouter();
   const [groupQuery, setGroupQuery] = useState("");
   const [groupStateFilter, setGroupStateFilter] = useState<ProjectGroupStateFilter>("all");
@@ -248,33 +252,39 @@ export function AdminProjectGroupsPanel({ groups, projects }: AdminProjectGroups
               onChange={(event) => setGroupQuery(event.currentTarget.value)}
             />
           </Field>
-          <Field label={t("groupsPanel.filters.state")} htmlFor="project-group-state">
-            <select
-              id="project-group-state"
-              value={groupStateFilter}
-              className={nativeSelectClassName}
-              onChange={(event) =>
-                setGroupStateFilter(event.currentTarget.value as ProjectGroupStateFilter)
-              }
-            >
-              <option value="all">{t("filters.all")}</option>
-              <option value="active">{t("states.active")}</option>
-              <option value="inactive">{t("states.inactive")}</option>
-            </select>
+          <Field label={t("groupsPanel.filters.state")}>
+            {({ id }) => (
+              <Select
+                id={id}
+                label={t("groupsPanel.filters.state")}
+                value={groupStateFilter}
+                labels={pickerLabels.combobox}
+                onValueChange={(value) => setGroupStateFilter(value as ProjectGroupStateFilter)}
+                options={[
+                  { value: "all", label: t("filters.all") },
+                  { value: "active", label: t("states.active") },
+                  { value: "inactive", label: t("states.inactive") },
+                ]}
+              />
+            )}
           </Field>
-          <Field label={t("groupsPanel.filters.projects")} htmlFor="project-group-occupancy">
-            <select
-              id="project-group-occupancy"
-              value={groupOccupancyFilter}
-              className={nativeSelectClassName}
-              onChange={(event) =>
-                setGroupOccupancyFilter(event.currentTarget.value as ProjectGroupOccupancyFilter)
-              }
-            >
-              <option value="all">{t("filters.all")}</option>
-              <option value="withProjects">{t("groupsPanel.filters.withProjects")}</option>
-              <option value="empty">{t("groupsPanel.filters.empty")}</option>
-            </select>
+          <Field label={t("groupsPanel.filters.projects")}>
+            {({ id }) => (
+              <Select
+                id={id}
+                label={t("groupsPanel.filters.projects")}
+                value={groupOccupancyFilter}
+                labels={pickerLabels.combobox}
+                onValueChange={(value) =>
+                  setGroupOccupancyFilter(value as ProjectGroupOccupancyFilter)
+                }
+                options={[
+                  { value: "all", label: t("filters.all") },
+                  { value: "withProjects", label: t("groupsPanel.filters.withProjects") },
+                  { value: "empty", label: t("groupsPanel.filters.empty") },
+                ]}
+              />
+            )}
           </Field>
         </div>
         <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
@@ -401,6 +411,7 @@ function ProjectGroupCard({
   onRemoveProject: (projectId: string) => void;
 }) {
   const t = useTranslations("AdminProjects");
+  const pickerLabels = usePickerLabels();
   const linkedProjectIds = new Set(group.projects.map((project) => project.id));
   const availableProjects = projects.filter((project) => !linkedProjectIds.has(project.id));
 
@@ -496,23 +507,21 @@ function ProjectGroupCard({
           form.reset();
         }}
       >
-        <select
+        <Combobox
           name="projectId"
-          defaultValue=""
-          className={nativeSelectClassName}
-          disabled={availableProjects.length === 0}
-        >
-          <option value="" disabled>
-            {availableProjects.length
+          label={t("groupsPanel.addProjectLabel")}
+          placeholder={
+            availableProjects.length
               ? t("groupsPanel.chooseProject")
-              : t("groupsPanel.allProjectsLinked")}
-          </option>
-          {availableProjects.map((project) => (
-            <option key={project.id} value={project.id}>
-              {project.name}
-            </option>
-          ))}
-        </select>
+              : t("groupsPanel.allProjectsLinked")
+          }
+          disabled={availableProjects.length === 0}
+          labels={pickerLabels.combobox}
+          options={availableProjects.map((project) => ({
+            value: project.id,
+            label: project.name,
+          }))}
+        />
         <Button
           type="submit"
           variant="ghost"

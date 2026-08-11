@@ -1,13 +1,16 @@
 "use client";
 
 import { BadgeDollarSign, ChevronRight, MinusCircle, Plus, RefreshCw, Search } from "lucide-react";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { useMemo, useState, useTransition } from "react";
 
 import { Badge } from "@/src/components/ui/Badge";
 import type { BadgeProps } from "@/src/components/ui/Badge";
 import { Button } from "@/src/components/ui/Button";
+import { Combobox } from "@/src/components/ui/Combobox";
+import { DatePicker } from "@/src/components/ui/DatePicker";
+import { Select } from "@/src/components/ui/Select";
 import {
   Drawer,
   DrawerContent,
@@ -20,6 +23,7 @@ import { Field } from "@/src/components/ui/Field";
 import { Input } from "@/src/components/ui/Input";
 import { SegmentedControl } from "@/src/components/ui/SegmentedControl";
 import type { SelectOption } from "@/src/lib/member-preferences";
+import { usePickerLabels } from "@/src/i18n/picker-labels";
 import { cn } from "@/src/lib/utils";
 import type { AdminProjectRow } from "@/src/server/projects";
 import type {
@@ -43,7 +47,6 @@ import type {
   ReplaceAssignmentOverrideRateActionInput,
   ReplaceMemberDefaultRateActionInput,
 } from "./actions.types";
-import { nativeSelectClassName } from "./formStyles";
 
 export type AdminRatesTableProps = {
   rows: AdminMemberRateRow[];
@@ -74,6 +77,7 @@ export function AdminRatesTable({
   todayDate,
 }: AdminRatesTableProps) {
   const t = useTranslations("AdminRates");
+  const pickerLabels = usePickerLabels();
   const router = useRouter();
   const profileLabels: Record<RateMemberProfile, string> = {
     CONTRACTOR: t("profiles.contractor"),
@@ -258,36 +262,34 @@ export function AdminRatesTable({
             <span className="font-ui text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
               {t("filters.project")}
             </span>
-            <select
+            <Combobox
+              label={t("filters.project")}
               value={projectFilter}
-              onChange={(event) => setProjectFilter(event.target.value)}
-              className="min-w-0 bg-transparent text-sm font-semibold text-foreground outline-none"
-            >
-              <option value="all">{t("filters.all")}</option>
-              {projects.map((project) => (
-                <option key={project.id} value={project.id}>
-                  {project.name}
-                </option>
-              ))}
-            </select>
+              onValueChange={setProjectFilter}
+              labels={pickerLabels.combobox}
+              triggerClassName="h-auto border-0 bg-transparent px-0 font-semibold shadow-none focus:ring-0"
+              options={[
+                { value: "all", label: t("filters.all") },
+                ...projects.map((project) => ({ value: project.id, label: project.name })),
+              ]}
+            />
           </label>
           <label className="grid h-10 min-w-[min(14rem,100%)] flex-[1_1_14rem] grid-cols-[auto_minmax(0,1fr)] items-center gap-2 rounded-[var(--radius-md)] border border-border bg-card px-3 shadow-soft sm:max-w-72">
             <span className="font-ui text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
               {t("filters.group")}
             </span>
-            <select
+            <Combobox
+              label={t("filters.group")}
               value={groupFilter}
-              onChange={(event) => setGroupFilter(event.target.value)}
-              className="min-w-0 bg-transparent text-sm font-semibold text-foreground outline-none"
-            >
-              <option value="all">{t("filters.all")}</option>
-              <option value="ungrouped">{t("filters.ungrouped")}</option>
-              {groupOptions.map((group) => (
-                <option key={group.id} value={group.id}>
-                  {group.name}
-                </option>
-              ))}
-            </select>
+              onValueChange={setGroupFilter}
+              labels={pickerLabels.combobox}
+              triggerClassName="h-auto border-0 bg-transparent px-0 font-semibold shadow-none focus:ring-0"
+              options={[
+                { value: "all", label: t("filters.all") },
+                { value: "ungrouped", label: t("filters.ungrouped") },
+                ...groupOptions.map((group) => ({ value: group.id, label: group.name })),
+              ]}
+            />
           </label>
         </div>
       </div>
@@ -816,6 +818,7 @@ function OverrideRateForm({
   onSubmit: (input: CreateAssignmentOverrideRateActionInput) => void;
 }) {
   const t = useTranslations("AdminRates");
+  const pickerLabels = usePickerLabels();
   const [assignmentId, setAssignmentId] = useState(
     initialAssignmentId ?? assignments[0]?.assignmentId ?? "",
   );
@@ -824,20 +827,19 @@ function OverrideRateForm({
     <div className="grid gap-4">
       <Field label={t("fields.project")} required reserveMessageSpace>
         {({ id, describedBy, required }) => (
-          <select
+          <Combobox
             id={id}
+            label={t("fields.project")}
             value={assignmentId}
-            onChange={(event) => setAssignmentId(event.target.value)}
+            onValueChange={setAssignmentId}
             aria-describedby={describedBy}
             required={required}
-            className={nativeSelectClassName}
-          >
-            {assignments.map((assignment) => (
-              <option key={assignment.assignmentId} value={assignment.assignmentId}>
-                {assignment.projectName}
-              </option>
-            ))}
-          </select>
+            labels={pickerLabels.combobox}
+            options={assignments.map((assignment) => ({
+              value: assignment.assignmentId,
+              label: assignment.projectName,
+            }))}
+          />
         )}
       </Field>
       <RatePeriodForm
@@ -947,6 +949,8 @@ function RatePeriodForm({
   onSubmit: (input: Omit<CreateMemberDefaultRateActionInput, "memberId">) => void;
 }) {
   const t = useTranslations("AdminRates");
+  const locale = useLocale();
+  const pickerLabels = usePickerLabels();
 
   return (
     <form
@@ -972,14 +976,16 @@ function RatePeriodForm({
           error={actionState.fieldErrors?.validFrom}
         >
           {({ id, describedBy, invalid, required }) => (
-            <Input
+            <DatePicker
               id={id}
               name="validFrom"
-              type="date"
+              label={t("fields.validFrom")}
+              locale={locale}
               defaultValue={todayDate}
               aria-describedby={describedBy}
               invalid={invalid}
               required={required}
+              labels={pickerLabels.date}
             />
           )}
         </Field>
@@ -989,12 +995,14 @@ function RatePeriodForm({
           error={actionState.fieldErrors?.validTo}
         >
           {({ id, describedBy, invalid }) => (
-            <Input
+            <DatePicker
               id={id}
               name="validTo"
-              type="date"
+              label={t("fields.validTo")}
+              locale={locale}
               aria-describedby={describedBy}
               invalid={invalid}
+              labels={pickerLabels.date}
             />
           )}
         </Field>
@@ -1026,21 +1034,17 @@ function RatePeriodForm({
           error={actionState.fieldErrors?.currencyCode}
         >
           {({ id, describedBy, invalid, required }) => (
-            <select
+            <Select
               id={id}
               name="currencyCode"
+              label={t("fields.currency")}
               defaultValue={defaultCurrency}
               aria-describedby={describedBy}
-              aria-invalid={invalid}
+              invalid={invalid}
               required={required}
-              className={nativeSelectClassName}
-            >
-              {currencyOptions.map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
+              labels={pickerLabels.combobox}
+              options={currencyOptions}
+            />
           )}
         </Field>
       </div>
@@ -1096,6 +1100,8 @@ function RateReplacementForm({
   onSubmit: (input: RateReplacementFormInput) => void;
 }) {
   const t = useTranslations("AdminRates");
+  const locale = useLocale();
+  const pickerLabels = usePickerLabels();
 
   return (
     <form
@@ -1124,16 +1130,18 @@ function RateReplacementForm({
           error={actionState.fieldErrors?.validFrom}
         >
           {({ id, describedBy, invalid, required }) => (
-            <Input
+            <DatePicker
               id={id}
               name="validFrom"
-              type="date"
+              label={t("fields.replaceFrom")}
+              locale={locale}
               min={period.validFrom}
               max={period.validTo ?? undefined}
               defaultValue={getDefaultReplacementStart(period, todayDate)}
               aria-describedby={describedBy}
               invalid={invalid}
               required={required}
+              labels={pickerLabels.date}
             />
           )}
         </Field>
@@ -1166,21 +1174,17 @@ function RateReplacementForm({
           error={actionState.fieldErrors?.currencyCode}
         >
           {({ id, describedBy, invalid, required }) => (
-            <select
+            <Select
               id={id}
               name="currencyCode"
+              label={t("fields.currency")}
               defaultValue={defaultCurrency}
               aria-describedby={describedBy}
-              aria-invalid={invalid}
+              invalid={invalid}
               required={required}
-              className={nativeSelectClassName}
-            >
-              {currencyOptions.map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
+              labels={pickerLabels.combobox}
+              options={currencyOptions}
+            />
           )}
         </Field>
         <Field label={t("fields.reason")} reserveMessageSpace error={actionState.fieldErrors?.note}>

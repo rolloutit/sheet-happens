@@ -27,6 +27,7 @@ import type { Route } from "next";
 import { useRouter } from "next/navigation";
 import {
   useEffect,
+  useId,
   useRef,
   useMemo,
   useState,
@@ -34,9 +35,12 @@ import {
   useTransition,
   type ReactNode,
 } from "react";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 
 import { Button } from "@/src/components/ui/Button";
+import { Combobox } from "@/src/components/ui/Combobox";
+import { DatePicker } from "@/src/components/ui/DatePicker";
+import { TimeInput } from "@/src/components/ui/TimeInput";
 import {
   Dialog,
   DialogContent,
@@ -47,6 +51,7 @@ import {
 } from "@/src/components/ui/Dialog";
 import { parseDurationToMinutes } from "@/src/lib/duration";
 import { DAILY_HARD_LIMIT_MINUTES, DAILY_SOFT_WARNING_MINUTES } from "@/src/lib/time-entry-limits";
+import { usePickerLabels } from "@/src/i18n/picker-labels";
 import { cn } from "@/src/lib/utils";
 import type {
   TimeGridAssignedProject,
@@ -1430,6 +1435,7 @@ function TimerComposer({
   onStop: () => void;
   t: TimeTrackingTranslator;
 }) {
+  const pickerLabels = usePickerLabels();
   const [description, setDescription] = useState("");
   const [projectId, setProjectId] = useState(projects[0]?.projectId ?? "");
   const selectedProjectId = projectId || (projects[0]?.projectId ?? "");
@@ -1480,17 +1486,17 @@ function TimerComposer({
           className={inputClassName(false)}
           onChange={(event) => setDescription(event.target.value)}
         />
-        <select
+        <Combobox
+          label={t("timer.projectLabel")}
           value={selectedProjectId}
-          className={inputClassName(false)}
-          onChange={(event) => setProjectId(event.target.value)}
-        >
-          {projects.map((project) => (
-            <option key={project.projectId} value={project.projectId}>
-              {project.name}
-            </option>
-          ))}
-        </select>
+          onValueChange={setProjectId}
+          labels={pickerLabels.combobox}
+          triggerClassName="bg-card"
+          options={projects.map((project) => ({
+            value: project.projectId,
+            label: project.name,
+          }))}
+        />
         <button
           type="button"
           disabled={disabled || !ready}
@@ -1546,6 +1552,8 @@ type EntryModalProps = {
 };
 
 function EntryModal({ state, week, projects, onClose, onDone, t }: EntryModalProps) {
+  const locale = useLocale();
+  const pickerLabels = usePickerLabels();
   const [isPending, startTransition] = useTransition();
   const initialProjectId = state.mode === "edit" ? state.entry.projectId : state.projectId;
   const initialLocalDate = state.mode === "edit" ? state.entry.localDate : state.localDate;
@@ -1831,37 +1839,51 @@ function EntryModal({ state, week, projects, onClose, onDone, t }: EntryModalPro
           </Field>
 
           <Field label={t("fields.project")} required error={fieldErrors?.projectId}>
-            <select
-              value={projectId}
-              className={inputClassName(Boolean(fieldErrors?.projectId))}
-              onChange={(event) => {
-                clearSubmitFeedback();
-                setProjectId(event.target.value);
-                markDraftDirty();
-              }}
-            >
-              {projects.map((option) => (
-                <option key={option.projectId} value={option.projectId}>
-                  {option.name}
-                </option>
-              ))}
-            </select>
+            {({ id, describedBy, invalid, required }) => (
+              <Combobox
+                id={id}
+                label={t("fields.project")}
+                value={projectId}
+                aria-describedby={describedBy}
+                invalid={invalid}
+                required={required}
+                labels={pickerLabels.combobox}
+                options={projects.map((option) => ({
+                  value: option.projectId,
+                  label: option.name,
+                }))}
+                onValueChange={(value) => {
+                  clearSubmitFeedback();
+                  setProjectId(value);
+                  markDraftDirty();
+                }}
+              />
+            )}
           </Field>
 
           <div className="grid gap-4 sm:grid-cols-[1fr_160px]">
             <Field label={t("fields.date")} required error={fieldErrors?.localDate}>
-              <input
-                type="date"
-                value={localDate}
-                min={week.weekStart}
-                max={week.weekEnd}
-                className={inputClassName(Boolean(fieldErrors?.localDate))}
-                onChange={(event) => {
-                  clearSubmitFeedback();
-                  setLocalDate(event.target.value);
-                  markDraftDirty();
-                }}
-              />
+              {({ id, describedBy, invalid, required }) => (
+                <DatePicker
+                  id={id}
+                  label={t("fields.date")}
+                  locale={locale}
+                  value={localDate}
+                  min={week.weekStart}
+                  max={week.weekEnd}
+                  aria-describedby={describedBy}
+                  invalid={invalid}
+                  required={required}
+                  // The action rejects an empty date, so there is nothing to clear to.
+                  clearable={false}
+                  labels={pickerLabels.date}
+                  onValueChange={(value) => {
+                    clearSubmitFeedback();
+                    setLocalDate(value ?? "");
+                    markDraftDirty();
+                  }}
+                />
+              )}
             </Field>
             <Field label={t("fields.mode")} required>
               <div className="inline-flex rounded-[var(--radius-pill)] border border-border bg-secondary p-1">
@@ -1918,28 +1940,36 @@ function EntryModal({ state, week, projects, onClose, onDone, t }: EntryModalPro
           ) : (
             <div className="grid gap-4 sm:grid-cols-[1fr_1fr_auto] sm:items-end">
               <Field label={t("fields.start")} required error={fieldErrors?.startTime}>
-                <input
-                  type="time"
-                  value={startTime}
-                  className={inputClassName(Boolean(fieldErrors?.startTime))}
-                  onChange={(event) => {
-                    clearSubmitFeedback();
-                    setStartTime(event.target.value);
-                    markDraftDirty();
-                  }}
-                />
+                {({ id, describedBy, invalid, required }) => (
+                  <TimeInput
+                    id={id}
+                    value={startTime}
+                    aria-describedby={describedBy}
+                    invalid={invalid}
+                    required={required}
+                    onChange={(event) => {
+                      clearSubmitFeedback();
+                      setStartTime(event.target.value);
+                      markDraftDirty();
+                    }}
+                  />
+                )}
               </Field>
               <Field label={t("fields.end")} required error={fieldErrors?.endTime}>
-                <input
-                  type="time"
-                  value={endTime}
-                  className={inputClassName(Boolean(fieldErrors?.endTime))}
-                  onChange={(event) => {
-                    clearSubmitFeedback();
-                    setEndTime(event.target.value);
-                    markDraftDirty();
-                  }}
-                />
+                {({ id, describedBy, invalid, required }) => (
+                  <TimeInput
+                    id={id}
+                    value={endTime}
+                    aria-describedby={describedBy}
+                    invalid={invalid}
+                    required={required}
+                    onChange={(event) => {
+                      clearSubmitFeedback();
+                      setEndTime(event.target.value);
+                      markDraftDirty();
+                    }}
+                  />
+                )}
               </Field>
               <div className="pb-2 text-xl font-semibold text-accent">
                 {formatMinutesAsHours(intervalMinutes)}h
@@ -2173,6 +2203,24 @@ function BreakdownDialog({
   );
 }
 
+type TimeFieldRenderProps = {
+  id: string;
+  describedBy?: string;
+  invalid: boolean;
+  required?: boolean;
+};
+
+const timeFieldLabelClassName =
+  "font-ui text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground";
+
+/**
+ * The entry modal's own field wrapper, kept local because its label is smaller and
+ * uppercase compared with `src/components/ui/Field`.
+ *
+ * Takes either a plain node — wrapped in a `<label>`, which implicitly labels a single
+ * input — or a render prop, which is what the popover-based controls need: a `<label>`
+ * cannot wrap a button trigger, so those get an explicit `htmlFor` instead.
+ */
 function Field({
   label,
   required,
@@ -2182,16 +2230,37 @@ function Field({
   label: string;
   required?: boolean;
   error?: string;
-  children: ReactNode;
+  children: ReactNode | ((field: TimeFieldRenderProps) => ReactNode);
 }) {
+  const generatedId = useId();
+
+  if (typeof children !== "function") {
+    return (
+      <label className="grid gap-2">
+        <span className={timeFieldLabelClassName}>
+          {label} {required ? <span className="text-destructive">*</span> : null}
+        </span>
+        {children}
+        {error ? <span className="text-xs font-medium text-destructive">{error}</span> : null}
+      </label>
+    );
+  }
+
+  const controlId = `time-field-${generatedId}`;
+  const errorId = error ? `${controlId}-error` : undefined;
+
   return (
-    <label className="grid gap-2">
-      <span className="font-ui text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
+    <div className="grid gap-2">
+      <label htmlFor={controlId} className={timeFieldLabelClassName}>
         {label} {required ? <span className="text-destructive">*</span> : null}
-      </span>
-      {children}
-      {error ? <span className="text-xs font-medium text-destructive">{error}</span> : null}
-    </label>
+      </label>
+      {children({ id: controlId, describedBy: errorId, invalid: Boolean(error), required })}
+      {error ? (
+        <span id={errorId} className="text-xs font-medium text-destructive">
+          {error}
+        </span>
+      ) : null}
+    </div>
   );
 }
 

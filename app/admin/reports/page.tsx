@@ -1,12 +1,7 @@
-import { CalendarDays, FolderKanban, Users, X } from "lucide-react";
-import type { Route } from "next";
-import Link from "next/link";
 import { getLocale, getTranslations } from "next-intl/server";
 
 import { AppShell } from "@/src/components/layout/AppShell";
 import { Badge } from "@/src/components/ui/Badge";
-import { Button } from "@/src/components/ui/Button";
-import { Input } from "@/src/components/ui/Input";
 import { SectionHead } from "@/src/components/ui/SectionHead";
 import { defaultLocale, resolveLocale, supportedLocales, type AppLocale } from "@/src/i18n/locales";
 import {
@@ -27,7 +22,6 @@ import {
   parseReportSearchParams,
   reportExportFieldsFromFilters,
   type ReportCostFreeLine,
-  type ReportFilterOption,
   type ReportPeriodMode,
   type ReportSearchParams,
   type ReportSnapshot,
@@ -35,6 +29,7 @@ import {
 } from "@/src/server/reports";
 import { formatDateOnly, getMonday, parseDateOnly } from "@/src/server/time-tracking";
 
+import { ReportFiltersBar } from "./ReportFiltersBar";
 import { ReportExportModal } from "./ReportExportModal";
 
 export const dynamic = "force-dynamic";
@@ -44,9 +39,6 @@ type AdminReportsPageProps = {
 };
 
 type AdminReportsTranslator = Awaited<ReturnType<typeof getTranslations>>;
-
-const selectClassName =
-  "h-11 min-w-0 rounded-[var(--radius-md)] border border-border bg-background px-4 py-2.5 font-body text-sm font-semibold text-foreground shadow-[0_14px_40px_-30px_rgba(0,0,0,0.45)] transition focus-visible:border-ring focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30";
 
 export default async function AdminReportsPage({ searchParams }: AdminReportsPageProps) {
   const resolvedSearchParams = (await searchParams) ?? {};
@@ -87,12 +79,24 @@ export default async function AdminReportsPage({ searchParams }: AdminReportsPag
           />
         </div>
 
-        <ReportFilters
-          snapshot={snapshot}
-          options={options}
-          filters={filters}
-          locale={locale}
-          t={t}
+        <ReportFiltersBar
+          period={filters.period}
+          view={snapshot.view}
+          anchor={filters.anchor}
+          periodStart={snapshot.period.start}
+          periodEnd={snapshot.period.end}
+          periodSummary={formatPeriod(snapshot.period.start, snapshot.period.end, locale)}
+          projectId={snapshot.filters.projectId ?? ""}
+          groupId={snapshot.filters.projectGroupId ?? ""}
+          memberId={snapshot.filters.memberId ?? ""}
+          projects={options.projects}
+          projectGroups={options.projectGroups}
+          members={options.members}
+          periodHrefs={buildPeriodHrefs(filters, snapshot)}
+          viewHrefs={{
+            USER: buildViewHref("USER", filters, snapshot),
+            PROJECT: buildViewHref("PROJECT", filters, snapshot),
+          }}
         />
 
         <div className="grid gap-3 md:grid-cols-4">
@@ -164,174 +168,6 @@ export default async function AdminReportsPage({ searchParams }: AdminReportsPag
   );
 }
 
-function ReportFilters({
-  snapshot,
-  options,
-  filters,
-  locale,
-  t,
-}: {
-  snapshot: ReportSnapshot;
-  options: Awaited<ReturnType<typeof listReportFilterOptions>>;
-  filters: ReturnType<typeof parseReportSearchParams>;
-  locale: string;
-  t: AdminReportsTranslator;
-}) {
-  const baseParams = new URLSearchParams();
-  if (snapshot.filters.projectId) baseParams.set("project", snapshot.filters.projectId);
-  if (snapshot.filters.projectGroupId) baseParams.set("group", snapshot.filters.projectGroupId);
-  if (snapshot.filters.memberId) baseParams.set("member", snapshot.filters.memberId);
-  baseParams.set("view", snapshot.view);
-
-  return (
-    <form
-      className="rounded-[var(--radius-lg)] border border-border bg-card px-4 py-4 shadow-soft"
-      action="/admin/reports"
-    >
-      <input type="hidden" name="period" value={filters.period} />
-      <input type="hidden" name="view" value={snapshot.view} />
-
-      <div className="flex flex-wrap items-center gap-2">
-        <div className="inline-flex rounded-[var(--radius-pill)] bg-secondary p-1">
-          {(["month", "week", "day", "year", "custom"] as const).map((period) => (
-            <Link
-              key={period}
-              href={buildPeriodHref(period, filters, snapshot, baseParams) as Route}
-              className={`inline-flex h-9 items-center rounded-[var(--radius-pill)] px-4 font-body text-sm font-semibold transition ${
-                filters.period === period
-                  ? "bg-primary text-primary-foreground shadow-soft"
-                  : "text-muted-foreground hover:text-foreground"
-              }`}
-            >
-              {t(`period.${period}`)}
-            </Link>
-          ))}
-        </div>
-
-        {filters.period === "custom" ? (
-          <div className="flex flex-wrap items-center gap-2">
-            <Input
-              id="report-start"
-              name="start"
-              type="date"
-              defaultValue={snapshot.period.start}
-              className="h-11 w-[10.75rem]"
-            />
-            <span className="text-muted-foreground">-</span>
-            <Input
-              id="report-end"
-              name="end"
-              type="date"
-              defaultValue={snapshot.period.end}
-              className="h-11 w-[10.75rem]"
-            />
-          </div>
-        ) : (
-          <Input
-            id="report-anchor"
-            name="anchor"
-            type={
-              filters.period === "month" ? "month" : filters.period === "year" ? "number" : "date"
-            }
-            defaultValue={
-              filters.period === "month"
-                ? filters.anchor.slice(0, 7)
-                : filters.period === "year"
-                  ? filters.anchor.slice(0, 4)
-                  : filters.anchor
-            }
-            min={filters.period === "year" ? "2000" : undefined}
-            max={filters.period === "year" ? "2100" : undefined}
-            className="h-11 w-[10.75rem]"
-          />
-        )}
-
-        <div className="hidden h-10 w-px bg-border lg:block" />
-
-        <select
-          id="report-project"
-          name="project"
-          defaultValue={snapshot.filters.projectId ?? ""}
-          className={`${selectClassName} w-full sm:w-[15rem]`}
-          aria-label={t("filters.project")}
-        >
-          <option value="">{t("filters.projectAll")}</option>
-          {options.projects.map((option) => (
-            <ReportOption key={option.value} option={option} />
-          ))}
-        </select>
-        <select
-          id="report-group"
-          name="group"
-          defaultValue={snapshot.filters.projectGroupId ?? ""}
-          className={`${selectClassName} w-full sm:w-[15rem]`}
-          aria-label={t("filters.group")}
-        >
-          <option value="">{t("filters.groupAll")}</option>
-          {options.projectGroups.map((option) => (
-            <ReportOption key={option.value} option={option} />
-          ))}
-        </select>
-        <select
-          id="report-member"
-          name="member"
-          defaultValue={snapshot.filters.memberId ?? ""}
-          className={`${selectClassName} w-full sm:w-[15rem]`}
-          aria-label={t("filters.member")}
-        >
-          <option value="">{t("filters.memberAll")}</option>
-          {options.members.map((option) => (
-            <ReportOption key={option.value} option={option} />
-          ))}
-        </select>
-
-        <div className="ml-auto inline-flex rounded-[var(--radius-pill)] border border-border bg-secondary p-1">
-          <Link
-            href={buildViewHref("USER", filters, snapshot) as Route}
-            className={`inline-flex h-9 items-center gap-2 rounded-[var(--radius-pill)] px-4 font-body text-sm font-semibold transition ${
-              snapshot.view === "USER"
-                ? "bg-primary text-primary-foreground shadow-soft"
-                : "text-muted-foreground hover:text-foreground"
-            }`}
-          >
-            <Users className="size-4" aria-hidden />
-            {t("views.user")}
-          </Link>
-          <Link
-            href={buildViewHref("PROJECT", filters, snapshot) as Route}
-            className={`inline-flex h-9 items-center gap-2 rounded-[var(--radius-pill)] px-4 font-body text-sm font-semibold transition ${
-              snapshot.view === "PROJECT"
-                ? "bg-primary text-primary-foreground shadow-soft"
-                : "text-muted-foreground hover:text-foreground"
-            }`}
-          >
-            <FolderKanban className="size-4" aria-hidden />
-            {t("views.project")}
-          </Link>
-        </div>
-      </div>
-
-      <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
-        <div className="inline-flex items-center gap-2 text-xs text-muted-foreground">
-          <CalendarDays className="size-4 text-accent" aria-hidden />
-          {formatPeriod(snapshot.period.start, snapshot.period.end, locale)}
-        </div>
-        <div className="flex flex-wrap gap-2">
-          <Button type="submit" variant="soft">
-            {t("filters.apply")}
-          </Button>
-          <Button asChild variant="ghost">
-            <Link href={"/admin/reports" as Route}>
-              <X className="size-4" aria-hidden />
-              {t("filters.clear")}
-            </Link>
-          </Button>
-        </div>
-      </div>
-    </form>
-  );
-}
-
 function buildViewHref(
   view: ReportView,
   filters: ReturnType<typeof parseReportSearchParams>,
@@ -369,18 +205,34 @@ function buildPeriodHref(
   return `/admin/reports?${params.toString()}`;
 }
 
+/**
+ * All five period links, resolved server-side. The client filter bar receives plain strings
+ * so the snapshot-reading href logic never has to cross the boundary and `typedRoutes` keeps
+ * checking these at the one place they are built.
+ */
+function buildPeriodHrefs(
+  filters: ReturnType<typeof parseReportSearchParams>,
+  snapshot: ReportSnapshot,
+) {
+  const baseParams = new URLSearchParams();
+  if (snapshot.filters.projectId) baseParams.set("project", snapshot.filters.projectId);
+  if (snapshot.filters.projectGroupId) baseParams.set("group", snapshot.filters.projectGroupId);
+  if (snapshot.filters.memberId) baseParams.set("member", snapshot.filters.memberId);
+  baseParams.set("view", snapshot.view);
+
+  return {
+    month: buildPeriodHref("month", filters, snapshot, baseParams),
+    week: buildPeriodHref("week", filters, snapshot, baseParams),
+    day: buildPeriodHref("day", filters, snapshot, baseParams),
+    year: buildPeriodHref("year", filters, snapshot, baseParams),
+    custom: buildPeriodHref("custom", filters, snapshot, baseParams),
+  };
+}
+
 function normalizeAnchorForPeriod(anchor: string, period: ReportPeriodMode) {
   if (period === "month") return anchor.slice(0, 7);
   if (period === "year") return anchor.slice(0, 4);
   return anchor;
-}
-
-function ReportOption({ option }: { option: ReportFilterOption }) {
-  return (
-    <option value={option.value}>
-      {option.caption ? `${option.label} (${option.caption})` : option.label}
-    </option>
-  );
 }
 
 function SummaryCard({ label, value }: { label: string; value: string }) {

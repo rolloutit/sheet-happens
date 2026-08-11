@@ -10,11 +10,25 @@
  * opposite direction.
  */
 
-export type DateLabelStyle = "medium" | "short";
+export type DateLabelStyle = "full" | "medium" | "short";
 
 export type FormatDateLabelOptions = {
-  /** `medium` renders `Jul 1, 2026`, `short` renders `Jul 1`. */
+  /**
+   * `medium` renders `Jul 1, 2026`, `short` renders `Jul 1`, and `full` renders
+   * `Wednesday, July 1, 2026`. `full` exists for the calendar grid, where each day button
+   * needs a self-contained accessible name.
+   */
   style?: DateLabelStyle;
+};
+
+export type FormatWeekdayLabelOptions = {
+  /** `short` renders `Wed`, `narrow` renders `W`, `long` renders `Wednesday`. */
+  style?: "short" | "narrow" | "long";
+};
+
+export type FormatMonthNameOptions = {
+  /** `short` renders `Jul`, `long` renders `July`. */
+  style?: "short" | "long";
 };
 
 export type FormatTimeOptions = {
@@ -26,16 +40,51 @@ function dateOnlyToInstant(isoDate: string) {
   return new Date(`${isoDate}T00:00:00.000Z`);
 }
 
-/** `Jul 1, 2026` (medium) or `Jul 1` (short) from a `YYYY-MM-DD` string. */
+/** `Jul 1, 2026` (medium), `Jul 1` (short), or `Wednesday, July 1, 2026` (full). */
 export function formatDateLabel(
   isoDate: string,
   locale: string,
   options: FormatDateLabelOptions = {},
 ) {
+  const instant = dateOnlyToInstant(isoDate);
+
+  if (options.style === "full") {
+    return new Intl.DateTimeFormat(locale, { dateStyle: "full", timeZone: "UTC" }).format(instant);
+  }
+
   return new Intl.DateTimeFormat(locale, {
     ...(options.style === "short" ? {} : { year: "numeric" }),
     month: "short",
     day: "numeric",
+    timeZone: "UTC",
+  }).format(instant);
+}
+
+/** `Wed` (short), `W` (narrow), or `Wednesday` (long) from a `YYYY-MM-DD` string. */
+export function formatWeekdayLabel(
+  isoDate: string,
+  locale: string,
+  options: FormatWeekdayLabelOptions = {},
+) {
+  return new Intl.DateTimeFormat(locale, {
+    weekday: options.style ?? "short",
+    timeZone: "UTC",
+  }).format(dateOnlyToInstant(isoDate));
+}
+
+/**
+ * `Jul` (short) or `July` (long) — the month name alone.
+ *
+ * Distinct from `formatMonthLabel`, which always carries the year. The month grid renders
+ * twelve cells under a single year heading, so repeating the year in every cell is noise.
+ */
+export function formatMonthName(
+  isoDate: string,
+  locale: string,
+  options: FormatMonthNameOptions = {},
+) {
+  return new Intl.DateTimeFormat(locale, {
+    month: options.style ?? "short",
     timeZone: "UTC",
   }).format(dateOnlyToInstant(isoDate));
 }

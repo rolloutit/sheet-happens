@@ -5,6 +5,8 @@ import { headers } from "next/headers";
 import { getTranslations } from "next-intl/server";
 import { z } from "zod";
 
+import { isDateValue } from "@/src/lib/date-values";
+
 import { DAILY_HARD_LIMIT_MINUTES } from "@/src/lib/time-entry-limits";
 import { requireActiveAppMemberForAction } from "@/src/server/auth/app-access";
 import { AuthenticationError, AuthorizationError } from "@/src/server/auth/session";
@@ -680,10 +682,16 @@ const knownMessageKeys: Record<string, string> = {
   "Could not format date in timezone.": "errors.dateTimezoneFormatFailed",
 };
 
+/**
+ * Date validity for this module's schemas, where a date is always required.
+ *
+ * Deliberately stricter than the same-named helper in `app/admin/projects` and
+ * `app/admin/rates`, which accept `""` to mean "no date". Keeping the difference explicit
+ * and local is what stops a future consolidation from quietly making required dates
+ * optional, or vice versa.
+ */
 function isDateInputValue(value: string) {
-  if (!value) return false;
-  const date = new Date(`${value}T00:00:00.000Z`);
-  return !Number.isNaN(date.getTime()) && date.toISOString().slice(0, 10) === value;
+  return isDateValue(value);
 }
 
 function isTimeInputValue(value: string) {

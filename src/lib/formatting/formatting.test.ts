@@ -7,10 +7,12 @@ import {
   formatHours,
   formatHoursWithUnit,
   formatMonthLabel,
+  formatMonthName,
   formatMoney,
   formatPeriodRange,
   formatRate,
   formatTimestamp,
+  formatWeekdayLabel,
 } from "./index";
 
 /**
@@ -82,6 +84,13 @@ describe("formatDateLabel", () => {
     expect(formatDateLabel("2026-07-12", "en", { style: "short" })).toBe("Jul 12");
   });
 
+  it("names the weekday in full style, for calendar day buttons", () => {
+    expect(formatDateLabel("2026-07-12", "en", { style: "full" })).toBe("Sunday, July 12, 2026");
+    expect(formatDateLabel("2026-07-12", "hu", { style: "full" })).toBe(
+      "2026. július 12., vasárnap",
+    );
+  });
+
   it("pins UTC so a date-only value never shifts a day", () => {
     // Without the pin this renders Dec 31, 2025 on any host west of UTC.
     expect(formatDateLabel("2026-01-01", "en")).toBe("Jan 1, 2026");
@@ -97,6 +106,58 @@ describe("formatDateLabel", () => {
   it("renders a month label", () => {
     expect(formatMonthLabel("2026-07-01", "en")).toBe("July 2026");
     expect(formatMonthLabel("2026-07-01", "hu")).toBe("2026. július");
+  });
+});
+
+describe("calendar chrome", () => {
+  /** Monday 2026-06-22 through Sunday 2026-06-28 — the calendar grid is Monday-first. */
+  const week = [
+    "2026-06-22",
+    "2026-06-23",
+    "2026-06-24",
+    "2026-06-25",
+    "2026-06-26",
+    "2026-06-27",
+    "2026-06-28",
+  ];
+
+  it("renders unique weekday abbreviations in both locales", () => {
+    expect(week.map((day) => formatWeekdayLabel(day, "en"))).toEqual([
+      "Mon",
+      "Tue",
+      "Wed",
+      "Thu",
+      "Fri",
+      "Sat",
+      "Sun",
+    ]);
+    expect(week.map((day) => formatWeekdayLabel(day, "hu"))).toEqual([
+      "H",
+      "K",
+      "Sze",
+      "Cs",
+      "P",
+      "Szo",
+      "V",
+    ]);
+  });
+
+  /**
+   * The calendar header uses `short`, not `narrow`, because Hungarian narrow collapses both
+   * Szerda and Szombat to `Sz` — two identical column headers in a seven-column grid.
+   */
+  it("keeps narrow weekdays out of the header by documenting the collision", () => {
+    const narrow = week.map((day) => formatWeekdayLabel(day, "hu", { style: "narrow" }));
+
+    expect(new Set(narrow).size).toBeLessThan(narrow.length);
+    expect(new Set(week.map((day) => formatWeekdayLabel(day, "hu"))).size).toBe(7);
+  });
+
+  it("renders a bare month name without the year", () => {
+    expect(formatMonthName("2026-07-01", "en")).toBe("Jul");
+    expect(formatMonthName("2026-07-01", "hu")).toBe("júl.");
+    expect(formatMonthName("2026-07-01", "en", { style: "long" })).toBe("July");
+    expect(formatMonthName("2026-07-01", "hu", { style: "long" })).toBe("július");
   });
 });
 

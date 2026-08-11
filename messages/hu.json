@@ -3,6 +3,22 @@
     "name": "Sheet Happens",
     "company": "Rollout IT"
   },
+  "Pickers": {
+    "search": "Keresés",
+    "searchPlaceholder": "Keresés...",
+    "noResults": "Nincs találat",
+    "clear": "Törlés",
+    "done": "Kész",
+    "today": "Ma",
+    "thisMonth": "Aktuális hónap",
+    "calendar": "Naptár",
+    "selectMonth": "Hónap kiválasztása",
+    "rangeEnd": "Záró dátum",
+    "previousMonth": "Előző hónap",
+    "nextMonth": "Következő hónap",
+    "previousYear": "Előző év",
+    "nextYear": "Következő év"
+  },
   "AppShell": {
     "brand": {
       "subtitle": "Rollout IT · belső"
@@ -745,6 +761,7 @@
       "project": "Projekt",
       "allProjects": "Minden projekt",
       "month": "Hónap",
+      "allMonths": "Összes hónap",
       "apply": "Szűrők alkalmazása",
       "clear": "Törlés"
     },
@@ -1225,6 +1242,7 @@
       "noProjects": "Nincs projekt ebben a csoportban.",
       "removeProjectLabel": "{project} eltávolítása innen: {group}",
       "chooseProject": "Projekt kiválasztása",
+      "addProjectLabel": "Hozzáadandó projekt",
       "allProjectsLinked": "Minden projekt ebben a csoportban van",
       "editTitle": "{name} szerkesztése",
       "editDescription": "A csoportmódosítások a szűrést és a projektek szervezését érintik. Nem módosítják a projekthozzárendeléseket vagy számlázási szabályokat.",
@@ -1555,8 +1573,8 @@
       "allTargets": "Összes célpont",
       "actor": "Szereplő",
       "allActors": "Összes szereplő",
-      "from": "Ettől",
-      "to": "Eddig",
+      "period": "Időszak",
+      "allDates": "Összes dátum",
       "apply": "Alkalmaz",
       "clear": "Törlés",
       "empty": "Nincs a szűrőknek megfelelő naplóesemény.",
@@ -1729,6 +1747,7 @@
     "timer": {
       "trackedWithTimer": "Időmérővel rögzítve",
       "placeholder": "Min dolgozol?",
+      "projectLabel": "Időmérő projekt",
       "start": "Indítás",
       "stop": "Leállítás"
     },
@@ -2061,6 +2080,11 @@
     "filters": {
       "start": "Kezdő",
       "end": "Záró",
+      "periodStart": "Időszak kezdete",
+      "periodEnd": "Időszak vége",
+      "anchorMonth": "Hónap",
+      "anchorDate": "Dátum",
+      "anchorYear": "Év",
       "project": "Projekt",
       "group": "Projektcsoport",
       "member": "Tag",

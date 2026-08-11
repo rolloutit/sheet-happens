@@ -4,6 +4,8 @@ import { revalidatePath } from "next/cache";
 import { getTranslations } from "next-intl/server";
 import { z } from "zod";
 
+import { isDateValue, parseDateValue } from "@/src/lib/date-values";
+
 import { requireAdminAppMemberForAction } from "@/src/server/auth/app-access";
 import { AuthenticationError, AuthorizationError } from "@/src/server/auth/session";
 import {
@@ -555,18 +557,22 @@ function formatInvitationCount(count: number, t: Awaited<ReturnType<typeof getTr
   return t("counts.invitations", { count });
 }
 
+/**
+ * Date validity for this module's schemas, where a date is always required.
+ *
+ * Deliberately stricter than the same-named helper in `app/admin/projects` and
+ * `app/admin/rates`, which accept `""` to mean "no date". Keeping the difference explicit
+ * and local is what stops a future consolidation from quietly making required dates
+ * optional, or vice versa.
+ */
 function isDateInputValue(value: string) {
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
-
-  const date = parseDateInputValue(value);
-  return !Number.isNaN(date.valueOf()) && formatDateInputValue(date) === value;
+  return isDateValue(value);
 }
 
+/**
+ * Turns a validated `YYYY-MM-DD` into the UTC-midnight `Date` the domain layer expects.
+ * Only ever reached after `isDateInputValue`, so the non-null assertion holds.
+ */
 function parseDateInputValue(value: string) {
-  const [year, month, day] = value.split("-").map(Number);
-  return new Date(Date.UTC(year, month - 1, day));
-}
-
-function formatDateInputValue(value: Date) {
-  return value.toISOString().slice(0, 10);
+  return parseDateValue(value)!;
 }

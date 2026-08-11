@@ -27,10 +27,39 @@ export { Checkbox } from "./Checkbox";
 export type { CheckboxProps } from "./Checkbox";
 export { ChipButton, chipButtonVariants } from "./ChipButton";
 export type { ChipButtonProps } from "./ChipButton";
+export { Calendar, calendarClassNames, useCalendarMonthCount } from "./Calendar";
+export type {
+  CalendarLabels,
+  CalendarProps,
+  CalendarRangeProps,
+  CalendarRangeValue,
+  CalendarSingleProps,
+} from "./Calendar";
 export { CodeInput } from "./CodeInput";
 export type { CodeInputProps } from "./CodeInput";
-export { Combobox } from "./Combobox";
-export type { ComboboxOption, ComboboxProps } from "./Combobox";
+export { Combobox, useFormReset } from "./Combobox";
+export type { ComboboxLabels, ComboboxOption, ComboboxProps } from "./Combobox";
+export {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+  CommandSeparator,
+  commandFilter,
+  foldText,
+} from "./Command";
+export type {
+  CommandEmptyProps,
+  CommandGroupProps,
+  CommandInputProps,
+  CommandItemProps,
+  CommandListProps,
+  CommandProps,
+  CommandSeparatorProps,
+} from "./Command";
+export { controlPanelClassName, controlTriggerClassName } from "./controlSurface";
 export { DataTable } from "./Table";
 export type {
   DataTableProps,
@@ -41,7 +70,13 @@ export type {
   TableSortDirection,
 } from "./Table";
 export { DatePicker } from "./DatePicker";
-export type { DatePickerProps } from "./DatePicker";
+export type { DatePickerLabels, DatePickerProps } from "./DatePicker";
+export { DateRangePicker } from "./DateRangePicker";
+export type {
+  DateRangePickerLabels,
+  DateRangePickerProps,
+  DateRangeValue,
+} from "./DateRangePicker";
 export {
   Dialog,
   DialogClose,
@@ -121,6 +156,8 @@ export { ListRow } from "./ListRow";
 export type { ListRowProps } from "./ListRow";
 export { LockedState } from "./LockedState";
 export type { LockedStateProps } from "./LockedState";
+export { MonthPicker } from "./MonthPicker";
+export type { MonthPickerLabels, MonthPickerProps } from "./MonthPicker";
 export { Pager } from "./Pager";
 export type { PagerLabels, PagerProps } from "./Pager";
 export { PasswordInput } from "./PasswordInput";
@@ -131,8 +168,8 @@ export { SectionHead } from "./SectionHead";
 export type { SectionHeadProps } from "./SectionHead";
 export { SegmentedControl } from "./SegmentedControl";
 export type { SegmentItem, SegmentedControlProps } from "./SegmentedControl";
-export { Select } from "./Select";
-export type { SelectOption, SelectProps } from "./Select";
+export { defaultSearchThreshold, Select, SelectMenu } from "./Select";
+export type { SelectMenuProps, SelectOption, SelectProps } from "./Select";
 export { Skeleton } from "./Skeleton";
 export type { SkeletonProps, SkeletonVariant } from "./Skeleton";
 export { StrengthMeter, evaluatePasswordStrength } from "./StrengthMeter";
@@ -149,5 +186,7 @@ export { Tabs, TabsContent, TabsList, TabsTrigger } from "./Tabs";
 export type { TabsContentProps, TabsListProps, TabsTriggerProps } from "./Tabs";
 export { Textarea } from "./Textarea";
 export type { TextareaProps } from "./Textarea";
+export { TimeInput } from "./TimeInput";
+export type { TimeInputProps } from "./TimeInput";
 export { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "./Tooltip";
 export type { TooltipContentProps } from "./Tooltip";

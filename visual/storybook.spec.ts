@@ -157,6 +157,70 @@ const storyCases: StoryVisualCase[] = [
     locale: "en",
     projects: ["desktop"],
   },
+  /**
+   * The brand form controls. The interesting pixels are all inside a popover, so each of
+   * these has to be captured open.
+   *
+   * The two below ride on their story's own `play` function, which Storybook runs on load
+   * and which already leaves the control open. Clicking again from `prepare` cannot work:
+   * these popovers are modal, so while one is open the trigger sits in an `aria-hidden`
+   * subtree and no role query will find it.
+   */
+  {
+    id: "ui-select--threshold-boundary",
+    slug: "select-search-dark",
+    theme: "dark",
+    locale: "en",
+    projects: ["desktop"],
+    prepare: async (page) => {
+      await expect(page.getByRole("combobox", { name: /search/i })).toBeVisible();
+    },
+  },
+  {
+    id: "ui-combobox--empty-results",
+    slug: "combobox-empty-light",
+    theme: "light",
+    locale: "en",
+    projects: ["desktop"],
+    prepare: async (page) => {
+      await expect(page.getByText(/no projects found/i)).toBeVisible();
+    },
+  },
+  {
+    // Hungarian weekday abbreviations and month name are the highest-risk locale detail
+    // in the calendar, and mobile is where the popover width is tightest.
+    id: "ui-datepicker--hungarian",
+    slug: "date-picker-open-dark-hu",
+    theme: "dark",
+    locale: "hu",
+    projects: ["desktop", "mobile"],
+    prepare: async (page) => {
+      await page.getByRole("button", { name: /entry date/i }).click();
+      await expect(page.getByRole("grid")).toBeVisible();
+    },
+  },
+  {
+    id: "ui-daterangepicker--default",
+    slug: "date-range-picker-open-dark",
+    theme: "dark",
+    locale: "en",
+    projects: ["desktop"],
+    prepare: async (page) => {
+      await page.getByRole("button", { name: /period/i }).click();
+      await expect(page.getByRole("grid").first()).toBeVisible();
+    },
+  },
+  {
+    id: "ui-monthpicker--default",
+    slug: "month-picker-open-light",
+    theme: "light",
+    locale: "en",
+    projects: ["desktop"],
+    prepare: async (page) => {
+      await page.getByRole("button", { name: /^month$/i }).click();
+      await expect(page.getByRole("grid", { name: /select month/i })).toBeVisible();
+    },
+  },
 ];
 
 async function openStory(page: Page, story: StoryVisualCase) {

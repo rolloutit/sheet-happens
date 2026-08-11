@@ -2,7 +2,8 @@ import type { ComboboxOption } from "@/src/components/ui/Combobox";
 
 export type TimeEntryFormValue = {
   projectId: string;
-  date?: Date;
+  /** `YYYY-MM-DD`, matching what the time-tracking Server Actions accept. */
+  date?: string;
   hours: number;
   description: string;
   billable: boolean;
@@ -23,6 +24,8 @@ export type TimeEntryFormLabels = {
 export type TimeEntryFormProps = {
   projects: ComboboxOption[];
   value?: Partial<TimeEntryFormValue>;
+  /** BCP-47 tag for the date picker. Pass `useLocale()` from the screen. */
+  locale?: string;
   labels?: TimeEntryFormLabels;
   disabled?: boolean;
   className?: string;

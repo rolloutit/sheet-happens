@@ -16,7 +16,7 @@ import {
   X,
 } from "lucide-react";
 import Link from "next/link";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import type { Route } from "next";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Children, type FormEvent, useState, useTransition, type ReactNode } from "react";
@@ -24,6 +24,9 @@ import { Children, type FormEvent, useState, useTransition, type ReactNode } fro
 import { Badge } from "@/src/components/ui/Badge";
 import type { BadgeProps } from "@/src/components/ui/Badge";
 import { Button } from "@/src/components/ui/Button";
+import { Combobox } from "@/src/components/ui/Combobox";
+import { DatePicker } from "@/src/components/ui/DatePicker";
+import { Select } from "@/src/components/ui/Select";
 import {
   Dialog,
   DialogClose,
@@ -60,6 +63,7 @@ import {
   isProjectColorToken,
   type ProjectColorToken,
 } from "@/src/lib/project-colors";
+import { usePickerLabels } from "@/src/i18n/picker-labels";
 import { cn } from "@/src/lib/utils";
 import type {
   AdminProjectAssignmentRow,
@@ -93,7 +97,7 @@ import type {
   UpdateProjectAssignmentActionInput,
   UpdateProjectActionInput,
 } from "./actions.types";
-import { nativeCheckboxClassName, nativeSelectClassName } from "./formStyles";
+import { nativeCheckboxClassName } from "./formStyles";
 import { ProjectColorField, ProjectColorSwatch } from "./ProjectColorField";
 
 export type AdminProjectsTableProps = {
@@ -536,6 +540,7 @@ function ProjectDirectoryFilters({
   onClear: () => void;
 }) {
   const t = useTranslations("AdminProjects");
+  const pickerLabels = usePickerLabels();
   const [filterForm, setFilterForm] = useState<ProjectFilterFormState>(() => ({
     query: result.filters.query,
     status: result.filters.status,
@@ -584,105 +589,121 @@ function ProjectDirectoryFilters({
             }}
           />
         </Field>
-        <Field label={t("filters.state")} htmlFor="project-status">
-          <select
-            id="project-status"
-            name="status"
-            value={filterForm.status}
-            className={nativeSelectClassName}
-            onChange={(event) => {
-              const status = event.currentTarget.value as ProjectFilterFormState["status"];
-              setFilterForm((current) => ({
-                ...current,
-                status,
-              }));
-            }}
-          >
-            <option value="">{t("filters.all")}</option>
-            <option value="ACTIVE">{t("states.active")}</option>
-            <option value="INACTIVE">{t("states.inactive")}</option>
-          </select>
+        <Field label={t("filters.state")}>
+          {({ id }) => (
+            <Select
+              id={id}
+              label={t("filters.state")}
+              placeholder={t("filters.all")}
+              value={filterForm.status}
+              labels={pickerLabels.combobox}
+              onValueChange={(value) => {
+                const status = value as ProjectFilterFormState["status"];
+                setFilterForm((current) => ({
+                  ...current,
+                  status,
+                }));
+              }}
+              options={[
+                { value: "", label: t("filters.all") },
+                { value: "ACTIVE", label: t("states.active") },
+                { value: "INACTIVE", label: t("states.inactive") },
+              ]}
+            />
+          )}
         </Field>
-        <Field label={t("filters.type")} htmlFor="project-type">
-          <select
-            id="project-type"
-            name="type"
-            value={filterForm.type}
-            className={nativeSelectClassName}
-            onChange={(event) => {
-              const type = event.currentTarget.value as ProjectFilterFormState["type"];
-              setFilterForm((current) => ({
-                ...current,
-                type,
-              }));
-            }}
-          >
-            <option value="">{t("filters.all")}</option>
-            <option value="external">{t("states.external")}</option>
-            <option value="internal">{t("states.internal")}</option>
-          </select>
+        <Field label={t("filters.type")}>
+          {({ id }) => (
+            <Select
+              id={id}
+              label={t("filters.type")}
+              placeholder={t("filters.all")}
+              value={filterForm.type}
+              labels={pickerLabels.combobox}
+              onValueChange={(value) => {
+                const type = value as ProjectFilterFormState["type"];
+                setFilterForm((current) => ({
+                  ...current,
+                  type,
+                }));
+              }}
+              options={[
+                { value: "", label: t("filters.all") },
+                { value: "external", label: t("states.external") },
+                { value: "internal", label: t("states.internal") },
+              ]}
+            />
+          )}
         </Field>
-        <Field label={t("filters.timeline")} htmlFor="project-timeline">
-          <select
-            id="project-timeline"
-            name="timeline"
-            value={filterForm.timeline}
-            className={nativeSelectClassName}
-            onChange={(event) => {
-              const timeline = event.currentTarget.value as ProjectFilterFormState["timeline"];
-              setFilterForm((current) => ({
-                ...current,
-                timeline,
-              }));
-            }}
-          >
-            <option value="">{t("filters.all")}</option>
-            <option value="current">{t("filters.current")}</option>
-            <option value="future">{t("filters.future")}</option>
-            <option value="ended">{t("filters.ended")}</option>
-          </select>
+        <Field label={t("filters.timeline")}>
+          {({ id }) => (
+            <Select
+              id={id}
+              label={t("filters.timeline")}
+              placeholder={t("filters.all")}
+              value={filterForm.timeline}
+              labels={pickerLabels.combobox}
+              onValueChange={(value) => {
+                const timeline = value as ProjectFilterFormState["timeline"];
+                setFilterForm((current) => ({
+                  ...current,
+                  timeline,
+                }));
+              }}
+              options={[
+                { value: "", label: t("filters.all") },
+                { value: "current", label: t("filters.current") },
+                { value: "future", label: t("filters.future") },
+                { value: "ended", label: t("filters.ended") },
+              ]}
+            />
+          )}
         </Field>
-        <Field label={t("filters.group")} htmlFor="project-group">
-          <select
-            id="project-group"
-            name="group"
-            value={filterForm.group}
-            className={nativeSelectClassName}
-            onChange={(event) => {
-              const group = event.currentTarget.value;
-              setFilterForm((current) => ({
-                ...current,
-                group,
-              }));
-            }}
-          >
-            <option value="">{t("filters.all")}</option>
-            <option value="ungrouped">{t("states.ungrouped")}</option>
-            {groups.map((group) => (
-              <option key={group.id} value={group.id}>
-                {group.name}
-              </option>
-            ))}
-          </select>
+        <Field label={t("filters.group")}>
+          {({ id }) => (
+            <Select
+              id={id}
+              label={t("filters.group")}
+              placeholder={t("filters.all")}
+              value={filterForm.group}
+              labels={pickerLabels.combobox}
+              onValueChange={(value) => {
+                const group = value;
+                setFilterForm((current) => ({
+                  ...current,
+                  group,
+                }));
+              }}
+              options={[
+                { value: "", label: t("filters.all") },
+                { value: "ungrouped", label: t("states.ungrouped") },
+                ...groups.map((group) => ({ value: group.id, label: group.name })),
+              ]}
+            />
+          )}
         </Field>
-        <Field label={t("filters.assignment")} htmlFor="project-assignment">
-          <select
-            id="project-assignment"
-            name="assignment"
-            value={filterForm.assignment}
-            className={nativeSelectClassName}
-            onChange={(event) => {
-              const assignment = event.currentTarget.value as ProjectFilterFormState["assignment"];
-              setFilterForm((current) => ({
-                ...current,
-                assignment,
-              }));
-            }}
-          >
-            <option value="">{t("filters.all")}</option>
-            <option value="assigned">{t("filters.assigned")}</option>
-            <option value="unassigned">{t("filters.unassigned")}</option>
-          </select>
+        <Field label={t("filters.assignment")}>
+          {({ id }) => (
+            <Select
+              id={id}
+              label={t("filters.assignment")}
+              placeholder={t("filters.all")}
+              value={filterForm.assignment}
+              labels={pickerLabels.combobox}
+              onValueChange={(value) => {
+                const assignment = value as ProjectFilterFormState["assignment"];
+                setFilterForm((current) => ({
+                  ...current,
+                  assignment,
+                }));
+              }}
+              options={[
+                { value: "", label: t("filters.all") },
+                { value: "assigned", label: t("filters.assigned") },
+                { value: "unassigned", label: t("filters.unassigned") },
+              ]}
+            />
+          )}
         </Field>
       </div>
       <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
@@ -811,6 +832,8 @@ function BulkAssignmentDialog({
   onSubmit: (input: BulkAssignProjectMembersActionInput) => void;
 }) {
   const t = useTranslations("AdminProjects");
+  const locale = useLocale();
+  const pickerLabels = usePickerLabels();
   const [mode, setMode] = useState<BulkAssignmentMode>("people-to-projects");
   const [memberQuery, setMemberQuery] = useState("");
   const [projectQuery, setProjectQuery] = useState("");
@@ -1002,14 +1025,16 @@ function BulkAssignmentDialog({
               error={actionState?.fieldErrors?.validFrom}
             >
               {({ id, describedBy, invalid, required }) => (
-                <Input
+                <DatePicker
                   id={id}
-                  type="date"
+                  label={t("assignment.validFrom")}
+                  locale={locale}
                   value={validFrom}
-                  onChange={(event) => setValidFrom(event.target.value)}
+                  onValueChange={(value) => setValidFrom(value ?? "")}
                   aria-describedby={describedBy}
                   invalid={invalid}
                   required={required}
+                  labels={pickerLabels.date}
                 />
               )}
             </Field>
@@ -1019,13 +1044,15 @@ function BulkAssignmentDialog({
               error={actionState?.fieldErrors?.validTo}
             >
               {({ id, describedBy, invalid }) => (
-                <Input
+                <DatePicker
                   id={id}
-                  type="date"
+                  label={t("assignment.validTo")}
+                  locale={locale}
                   value={validTo}
-                  onChange={(event) => setValidTo(event.target.value)}
+                  onValueChange={(value) => setValidTo(value ?? "")}
                   aria-describedby={describedBy}
                   invalid={invalid}
+                  labels={pickerLabels.date}
                 />
               )}
             </Field>
@@ -1233,6 +1260,8 @@ function ProjectDetailDrawer({
   onClose: (input: CloseProjectAssignmentActionInput) => void;
 }) {
   const t = useTranslations("AdminProjects");
+  const locale = useLocale();
+  const pickerLabels = usePickerLabels();
   const [editingAssignmentId, setEditingAssignmentId] = useState<string | null>(null);
   const assignPending = project ? pendingKey === `${project.id}:assign` : false;
   const nextActive = project?.status !== "ACTIVE";
@@ -1370,25 +1399,23 @@ function ProjectDetailDrawer({
                   error={actionState?.fieldErrors?.memberId}
                 >
                   {({ id, describedBy, invalid, required }) => (
-                    <select
+                    <Combobox
                       id={id}
                       name="memberId"
-                      defaultValue=""
+                      label={t("assignment.member")}
+                      placeholder={t("assignment.chooseMember")}
                       aria-describedby={describedBy}
-                      aria-invalid={invalid}
+                      invalid={invalid}
                       required={required}
-                      className={nativeSelectClassName}
-                    >
-                      <option value="" disabled>
-                        {t("assignment.chooseMember")}
-                      </option>
-                      {assignableMembers.map((member) => (
-                        <option key={member.id} value={member.id}>
-                          {member.name} - {getAssignmentProfileLabel(member.profile, t)},{" "}
-                          {getAssignmentStatusLabel(member.status, t)}
-                        </option>
-                      ))}
-                    </select>
+                      labels={pickerLabels.combobox}
+                      options={assignableMembers.map((member) => ({
+                        value: member.id,
+                        label: member.name,
+                        // Profile and status drop to the second line so the trigger stays
+                        // readable, and both stay searchable.
+                        meta: `${getAssignmentProfileLabel(member.profile, t)}, ${getAssignmentStatusLabel(member.status, t)}`,
+                      }))}
+                    />
                   )}
                 </Field>
                 <Field
@@ -1398,14 +1425,16 @@ function ProjectDetailDrawer({
                   error={actionState?.fieldErrors?.validFrom}
                 >
                   {({ id, describedBy, invalid, required }) => (
-                    <Input
+                    <DatePicker
                       id={id}
                       name="validFrom"
-                      type="date"
+                      label={t("assignment.validFrom")}
+                      locale={locale}
                       defaultValue={todayDate}
                       aria-describedby={describedBy}
                       invalid={invalid}
                       required={required}
+                      labels={pickerLabels.date}
                     />
                   )}
                 </Field>
@@ -1415,12 +1444,14 @@ function ProjectDetailDrawer({
                   error={actionState?.fieldErrors?.validTo}
                 >
                   {({ id, describedBy, invalid }) => (
-                    <Input
+                    <DatePicker
                       id={id}
                       name="validTo"
-                      type="date"
+                      label={t("assignment.validTo")}
+                      locale={locale}
                       aria-describedby={describedBy}
                       invalid={invalid}
+                      labels={pickerLabels.date}
                     />
                   )}
                 </Field>
@@ -1607,6 +1638,8 @@ function ProjectAssignmentEditForm({
   onSubmit: (input: UpdateProjectAssignmentActionInput) => void;
 }) {
   const t = useTranslations("AdminProjects");
+  const locale = useLocale();
+  const pickerLabels = usePickerLabels();
 
   return (
     <form
@@ -1632,14 +1665,16 @@ function ProjectAssignmentEditForm({
           error={actionState?.fieldErrors?.validFrom}
         >
           {({ id, describedBy, invalid, required }) => (
-            <Input
+            <DatePicker
               id={id}
               name="validFrom"
-              type="date"
+              label={t("assignment.validFrom")}
+              locale={locale}
               defaultValue={assignment.validFrom}
               aria-describedby={describedBy}
               invalid={invalid}
               required={required}
+              labels={pickerLabels.date}
             />
           )}
         </Field>
@@ -1649,13 +1684,15 @@ function ProjectAssignmentEditForm({
           error={actionState?.fieldErrors?.validTo}
         >
           {({ id, describedBy, invalid }) => (
-            <Input
+            <DatePicker
               id={id}
               name="validTo"
-              type="date"
+              label={t("assignment.validTo")}
+              locale={locale}
               defaultValue={assignment.validTo ?? ""}
               aria-describedby={describedBy}
               invalid={invalid}
+              labels={pickerLabels.date}
             />
           )}
         </Field>
@@ -1707,6 +1744,8 @@ function ProjectEditDialog({
   onSubmit: (input: UpdateProjectActionInput) => void;
 }) {
   const t = useTranslations("AdminProjects");
+  const locale = useLocale();
+  const pickerLabels = usePickerLabels();
 
   return (
     <Dialog open={Boolean(project)} onOpenChange={onOpenChange}>
@@ -1787,13 +1826,15 @@ function ProjectEditDialog({
                 error={actionState?.fieldErrors?.startsOn}
               >
                 {({ id, describedBy, invalid }) => (
-                  <Input
+                  <DatePicker
                     id={id}
                     name="startsOn"
-                    type="date"
+                    label={t("form.startsOn")}
+                    locale={locale}
                     defaultValue={project.startsOn ?? ""}
                     aria-describedby={describedBy}
                     invalid={invalid}
+                    labels={pickerLabels.date}
                   />
                 )}
               </Field>
@@ -1803,13 +1844,15 @@ function ProjectEditDialog({
                 error={actionState?.fieldErrors?.endsOn}
               >
                 {({ id, describedBy, invalid }) => (
-                  <Input
+                  <DatePicker
                     id={id}
                     name="endsOn"
-                    type="date"
+                    label={t("form.endsOn")}
+                    locale={locale}
                     defaultValue={project.endsOn ?? ""}
                     aria-describedby={describedBy}
                     invalid={invalid}
+                    labels={pickerLabels.date}
                   />
                 )}
               </Field>
