@@ -595,15 +595,27 @@ textarea {
   background: rgb(41 198 198 / 0.26);
 }
 
-:focus-visible {
-  outline: 2px solid var(--ring);
-  outline-offset: 2px;
-}
+/* The only layered rules in this file, and they have to be. A control that wants a different focus
+   treatment cancels this one with `focus-visible:outline-none`, and that utility compiles into
+   Tailwind's `@layer utilities` — unlayered, the rule below would outrank it (the mechanism the
+   `.auth-gyro-layer` note relies on), which is how every such call site ended up compositing a
+   second ring on top of this outline instead of replacing it. Layered, `base` loses to `utilities`
+   and the cancel works.
 
-[data-auth-input]:focus,
-[data-auth-input]:focus-visible {
-  outline: none;
-  outline-offset: 0;
+   Two treatments live on top of this: controls with their own visible border brighten that border
+   instead (`focusChromeClassName`), and borderless controls declare nothing and take the outline
+   below. See `docs/tokens.md`. `[data-auth-input]` still wins here on specificity. */
+@layer base {
+  :focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: 2px;
+  }
+
+  [data-auth-input]:focus,
+  [data-auth-input]:focus-visible {
+    outline: none;
+    outline-offset: 0;
+  }
 }
 
 [data-auth-input]:-webkit-autofill,
@@ -725,9 +737,9 @@ textarea {
 }
 
 /* `display` deliberately stays out of this rule and is a `grid` utility on the element instead.
-   Everything in this file is unlayered, and unlayered declarations outrank Tailwind's `@layer
-   utilities` — a `display: grid` here would quietly beat the `hidden` that hides three of these
-   layers below `lg`. */
+   Everything in this file bar the focus block is unlayered, and unlayered declarations outrank
+   Tailwind's `@layer utilities` — a `display: grid` here would quietly beat the `hidden` that hides
+   three of these layers below `lg`. */
 .auth-gyro-layer {
   position: absolute;
   inset: 0;
