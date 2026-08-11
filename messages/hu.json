@@ -157,6 +157,8 @@
       "passkeyIncomplete": "A passkey bejelentkezés nem fejeződött be.",
       "passwordRequired": "A jelszó megadása kötelező.",
       "emailPasswordIncorrect": "Az email vagy a jelszó hibás.",
+      "passwordSignInRateLimited": "Túl sok sikertelen jelszavas bejelentkezési próbálkozás történt. Próbáld újra később.",
+      "rateLimited": "Túl sok kérés érkezett. Próbáld újra később.",
       "passwordResetSendFailed": "Nem sikerült elküldeni a jelszó-visszaállító emailt.",
       "googleStartFailed": "Nem sikerült elindítani a Google bejelentkezést.",
       "emailRequired": "Az email megadása kötelező.",
