@@ -109,7 +109,7 @@ export function Pager({
                       : (labels?.page?.(item) ?? `Go to page ${item}`)
                   }
                   className={cn(
-                    "grid size-8 place-items-center rounded-[var(--radius-md)] font-ui text-sm font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                    "grid size-8 place-items-center rounded-[var(--radius-md)] font-ui text-sm font-semibold transition",
                     current
                       ? "bg-primary text-primary-foreground"
                       : "text-muted-foreground hover:bg-secondary hover:text-foreground",

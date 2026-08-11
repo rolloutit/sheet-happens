@@ -164,7 +164,7 @@ export function MonthPicker({
                     setOpen(false);
                   }}
                   className={cn(
-                    "rounded-[var(--radius-md)] px-2 py-2 font-ui text-sm capitalize transition hover:bg-secondary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-30",
+                    "rounded-[var(--radius-md)] px-2 py-2 font-ui text-sm capitalize transition hover:bg-secondary disabled:pointer-events-none disabled:opacity-30",
                     month === currentMonth && "border border-primary/35 text-accent",
                     isSelected && "bg-primary text-primary-foreground hover:bg-primary",
                   )}
@@ -226,7 +226,7 @@ function YearStepButton({
       type="button"
       aria-label={label}
       onClick={onClick}
-      className="inline-flex size-8 items-center justify-center rounded-[var(--radius-pill)] text-muted-foreground transition hover:bg-secondary hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+      className="inline-flex size-8 items-center justify-center rounded-[var(--radius-pill)] text-muted-foreground transition hover:bg-secondary hover:text-foreground"
     >
       {children}
     </button>

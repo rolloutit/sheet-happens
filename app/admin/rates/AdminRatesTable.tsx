@@ -20,6 +20,7 @@ import {
   DrawerTitle,
 } from "@/src/components/ui/Drawer";
 import { Field } from "@/src/components/ui/Field";
+import { focusChromeWithinClassName } from "@/src/components/ui/focusRing";
 import { Input } from "@/src/components/ui/Input";
 import { SegmentedControl } from "@/src/components/ui/SegmentedControl";
 import type { SelectOption } from "@/src/lib/member-preferences";
@@ -220,7 +221,12 @@ export function AdminRatesTable({
 
       <div className="grid gap-3">
         <div className="flex flex-wrap items-center gap-3">
-          <label className="flex h-10 min-w-[min(16rem,100%)] flex-[1_1_18rem] items-center gap-2 rounded-[var(--radius-md)] border border-border bg-card px-3 shadow-soft">
+          <label
+            className={cn(
+              "flex h-10 min-w-[min(16rem,100%)] flex-[1_1_18rem] items-center gap-2 rounded-[var(--radius-md)] border border-border bg-card px-3 shadow-soft",
+              focusChromeWithinClassName,
+            )}
+          >
             <Search className="size-4 text-muted-foreground" aria-hidden="true" />
             <span className="sr-only">{t("filters.search")}</span>
             <input
@@ -258,7 +264,12 @@ export function AdminRatesTable({
               ]}
             />
           </div>
-          <label className="grid h-10 min-w-[min(14rem,100%)] flex-[1_1_14rem] grid-cols-[auto_minmax(0,1fr)] items-center gap-2 rounded-[var(--radius-md)] border border-border bg-card px-3 shadow-soft sm:max-w-72">
+          <label
+            className={cn(
+              "grid h-10 min-w-[min(14rem,100%)] flex-[1_1_14rem] grid-cols-[auto_minmax(0,1fr)] items-center gap-2 rounded-[var(--radius-md)] border border-border bg-card px-3 shadow-soft sm:max-w-72",
+              focusChromeWithinClassName,
+            )}
+          >
             <span className="font-ui text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
               {t("filters.project")}
             </span>
@@ -267,14 +278,19 @@ export function AdminRatesTable({
               value={projectFilter}
               onValueChange={setProjectFilter}
               labels={pickerLabels.combobox}
-              triggerClassName="h-auto border-0 bg-transparent px-0 font-semibold shadow-none focus:ring-0"
+              triggerClassName="h-auto border-0 bg-transparent px-0 font-semibold shadow-none"
               options={[
                 { value: "all", label: t("filters.all") },
                 ...projects.map((project) => ({ value: project.id, label: project.name })),
               ]}
             />
           </label>
-          <label className="grid h-10 min-w-[min(14rem,100%)] flex-[1_1_14rem] grid-cols-[auto_minmax(0,1fr)] items-center gap-2 rounded-[var(--radius-md)] border border-border bg-card px-3 shadow-soft sm:max-w-72">
+          <label
+            className={cn(
+              "grid h-10 min-w-[min(14rem,100%)] flex-[1_1_14rem] grid-cols-[auto_minmax(0,1fr)] items-center gap-2 rounded-[var(--radius-md)] border border-border bg-card px-3 shadow-soft sm:max-w-72",
+              focusChromeWithinClassName,
+            )}
+          >
             <span className="font-ui text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
               {t("filters.group")}
             </span>
@@ -283,7 +299,7 @@ export function AdminRatesTable({
               value={groupFilter}
               onValueChange={setGroupFilter}
               labels={pickerLabels.combobox}
-              triggerClassName="h-auto border-0 bg-transparent px-0 font-semibold shadow-none focus:ring-0"
+              triggerClassName="h-auto border-0 bg-transparent px-0 font-semibold shadow-none"
               options={[
                 { value: "all", label: t("filters.all") },
                 { value: "ungrouped", label: t("filters.ungrouped") },
@@ -338,7 +354,7 @@ export function AdminRatesTable({
                         setActionState(initialActionState);
                       }
                     }}
-                    className="cursor-pointer border-b border-border transition hover:bg-secondary/45 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring last:border-b-0"
+                    className="cursor-pointer border-b border-border transition hover:bg-secondary/45 last:border-b-0"
                   >
                     <td className="px-4 py-3">
                       <div className="flex min-w-0 items-center gap-3">

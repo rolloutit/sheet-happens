@@ -40,6 +40,7 @@ import { useLocale, useTranslations } from "next-intl";
 import { Button } from "@/src/components/ui/Button";
 import { Combobox } from "@/src/components/ui/Combobox";
 import { DatePicker } from "@/src/components/ui/DatePicker";
+import { focusChromeClassName } from "@/src/components/ui/focusRing";
 import { TimeInput } from "@/src/components/ui/TimeInput";
 import {
   Dialog,
@@ -1046,8 +1047,11 @@ function TimeGridCell({
         placeholder="0"
         disabled={disabled}
         aria-label={`${project.name}, ${day.label}`}
+        // An inset ring rather than the global outline or a border brighten: the cell's own edge is
+        // only the shared bottom/right hairline of the grid, so there is no full border to brighten,
+        // and an outward outline would spill over the neighbouring cells.
         className={cn(
-          "h-full min-h-14 w-full border-0 bg-transparent px-2 text-center text-base font-medium text-foreground outline-none focus:shadow-[inset_0_0_0_2px_var(--ring)] disabled:cursor-not-allowed disabled:text-muted-foreground",
+          "h-full min-h-14 w-full border-0 bg-transparent px-2 text-center text-base font-medium text-foreground outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring disabled:cursor-not-allowed disabled:text-muted-foreground",
           warningTexts.length > 0 && "text-warning",
         )}
         onChange={(event) => scheduleIdleEditorOpen(event.currentTarget)}
@@ -2266,7 +2270,8 @@ function Field({
 
 function inputClassName(error: boolean) {
   return cn(
-    "w-full rounded-[var(--radius-md)] border bg-card px-3 py-2.5 text-sm text-foreground outline-none transition focus:border-accent focus:shadow-[0_0_0_3px_rgb(55_227_222/0.14)]",
+    "w-full rounded-[var(--radius-md)] border bg-card px-3 py-2.5 text-sm text-foreground outline-none transition",
+    focusChromeClassName,
     error ? "border-destructive" : "border-border",
   );
 }

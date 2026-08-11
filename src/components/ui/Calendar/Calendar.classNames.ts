@@ -26,9 +26,9 @@ export const calendarClassNames: Partial<ClassNames> = {
   // The nav sits across the caption row, so it must not swallow clicks on the label.
   nav: "pointer-events-none absolute inset-x-0 top-0 flex w-full items-center justify-between",
   button_previous:
-    "pointer-events-auto inline-flex size-8 items-center justify-center rounded-[var(--radius-pill)] text-muted-foreground transition hover:bg-secondary hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring aria-disabled:pointer-events-none aria-disabled:opacity-40",
+    "pointer-events-auto inline-flex size-8 items-center justify-center rounded-[var(--radius-pill)] text-muted-foreground transition hover:bg-secondary hover:text-foreground aria-disabled:pointer-events-none aria-disabled:opacity-40",
   button_next:
-    "pointer-events-auto inline-flex size-8 items-center justify-center rounded-[var(--radius-pill)] text-muted-foreground transition hover:bg-secondary hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring aria-disabled:pointer-events-none aria-disabled:opacity-40",
+    "pointer-events-auto inline-flex size-8 items-center justify-center rounded-[var(--radius-pill)] text-muted-foreground transition hover:bg-secondary hover:text-foreground aria-disabled:pointer-events-none aria-disabled:opacity-40",
   chevron: "size-4",
 
   month_caption: "flex h-8 items-center justify-center px-9",
@@ -50,7 +50,7 @@ export const calendarClassNames: Partial<ClassNames> = {
 
   day: "group/day relative aspect-square flex-1 p-0 text-center",
   day_button:
-    "flex size-full items-center justify-center rounded-[var(--radius-md)] font-ui text-sm transition hover:bg-secondary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none",
+    "flex size-full items-center justify-center rounded-[var(--radius-md)] font-ui text-sm transition hover:bg-secondary disabled:pointer-events-none",
 
   today: "[&>button]:border [&>button]:border-primary/35 [&>button]:text-accent",
   selected: "[&>button]:bg-primary [&>button]:text-primary-foreground [&>button]:hover:bg-primary",

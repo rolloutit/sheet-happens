@@ -483,7 +483,7 @@ function ProjectGroupCard({
                   })}
                   disabled={pending}
                   onClick={() => onRemoveProject(project.id)}
-                  className="rounded-full text-muted-foreground outline-none transition hover:text-destructive focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50"
+                  className="rounded-full text-muted-foreground transition hover:text-destructive disabled:opacity-50"
                 >
                   <X className="size-4" aria-hidden="true" />
                 </button>

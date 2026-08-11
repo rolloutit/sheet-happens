@@ -148,6 +148,7 @@ export { FormMessage } from "./FormMessage";
 export type { FormMessageProps, FormMessageTone } from "./FormMessage";
 export { FormSection } from "./FormSection";
 export type { FormSectionProps } from "./FormSection";
+export { focusChromeClassName, focusChromeWithinClassName } from "./focusRing";
 export { IconButton, iconButtonVariants } from "./IconButton";
 export type { IconButtonProps } from "./IconButton";
 export { Input } from "./Input";

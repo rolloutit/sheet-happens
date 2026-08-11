@@ -52,6 +52,7 @@ import {
   DropdownTrigger,
 } from "@/src/components/ui/Dropdown";
 import { Field } from "@/src/components/ui/Field";
+import { focusChromeWithinClassName } from "@/src/components/ui/focusRing";
 import { IconButton } from "@/src/components/ui/IconButton";
 import { Input } from "@/src/components/ui/Input";
 import { Pager } from "@/src/components/ui/Pager";
@@ -1151,7 +1152,12 @@ function BulkSelectionPanel({
     <section className="grid min-h-80 gap-3 rounded-[var(--radius-lg)] border border-border bg-card p-3">
       <div className="grid gap-2">
         <h3 className="font-ui text-sm font-semibold text-foreground">{title}</h3>
-        <label className="flex h-9 items-center gap-2 rounded-[var(--radius-md)] border border-border bg-background px-3">
+        <label
+          className={cn(
+            "flex h-9 items-center gap-2 rounded-[var(--radius-md)] border border-border bg-background px-3",
+            focusChromeWithinClassName,
+          )}
+        >
           <Search className="size-4 text-muted-foreground" aria-hidden="true" />
           <span className="sr-only">{searchLabel}</span>
           <input
@@ -1193,7 +1199,7 @@ function BulkSelectionRow({
       type="button"
       onClick={onToggle}
       className={cn(
-        "grid gap-2 rounded-[var(--radius-md)] border px-3 py-3 text-left transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+        "grid gap-2 rounded-[var(--radius-md)] border px-3 py-3 text-left transition",
         checked
           ? "border-primary bg-accent-soft"
           : "border-border bg-background hover:bg-secondary/45",

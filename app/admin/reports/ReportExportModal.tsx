@@ -363,7 +363,7 @@ function ModeCard({
       aria-pressed={selected}
       onClick={onSelect}
       className={cn(
-        "grid gap-1.5 rounded-[var(--radius-md)] border-[1.5px] border-border bg-card p-3.5 text-left transition duration-200 ease-[var(--ease-standard)] hover:border-border/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+        "grid gap-1.5 rounded-[var(--radius-md)] border-[1.5px] border-border bg-card p-3.5 text-left transition duration-200 ease-[var(--ease-standard)] hover:border-border/80",
         selected && tone === "accent" && "border-accent bg-accent-soft",
         selected && tone === "warning" && "border-warning bg-warning-soft",
       )}

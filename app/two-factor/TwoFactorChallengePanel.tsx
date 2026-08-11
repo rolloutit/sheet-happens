@@ -135,7 +135,7 @@ export function TwoFactorChallengePanel({ callbackURL }: TwoFactorChallengePanel
 
         <Link
           href={loginHref as Route}
-          className="inline-flex items-center justify-center gap-2 rounded-[var(--radius-md)] px-3 py-2 text-sm font-semibold text-muted-foreground transition hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          className="inline-flex items-center justify-center gap-2 rounded-[var(--radius-md)] px-3 py-2 text-sm font-semibold text-muted-foreground transition hover:text-foreground"
         >
           <LifeBuoy className="size-4" aria-hidden="true" />
           {t("actions.useAnotherSignIn")}

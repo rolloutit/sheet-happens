@@ -30,7 +30,7 @@ export const TabsTrigger = React.forwardRef<
   <TabsPrimitive.Trigger
     ref={ref}
     className={cn(
-      "inline-flex h-full min-h-8 items-center justify-center whitespace-nowrap rounded-[var(--radius-pill)] px-3 py-1 font-ui text-sm font-semibold leading-none text-muted-foreground transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm",
+      "inline-flex h-full min-h-8 items-center justify-center whitespace-nowrap rounded-[var(--radius-pill)] px-3 py-1 font-ui text-sm font-semibold leading-none text-muted-foreground transition disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm",
       className,
     )}
     {...props}
@@ -42,13 +42,6 @@ export const TabsContent = React.forwardRef<
   React.ElementRef<typeof TabsPrimitive.Content>,
   TabsContentProps
 >(({ className, ...props }, ref) => (
-  <TabsPrimitive.Content
-    ref={ref}
-    className={cn(
-      "mt-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-      className,
-    )}
-    {...props}
-  />
+  <TabsPrimitive.Content ref={ref} className={cn("mt-4", className)} {...props} />
 ));
 TabsContent.displayName = TabsPrimitive.Content.displayName;

@@ -116,7 +116,7 @@ export function CommandPalette({
                         role="option"
                         aria-selected={false}
                         disabled={item.disabled}
-                        className="grid grid-cols-[auto_1fr_auto] items-center gap-3 rounded-[var(--radius-md)] px-3 py-2 text-left transition hover:bg-secondary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-45"
+                        className="grid grid-cols-[auto_1fr_auto] items-center gap-3 rounded-[var(--radius-md)] px-3 py-2 text-left transition hover:bg-secondary disabled:pointer-events-none disabled:opacity-45"
                         onClick={() => selectItem(item)}
                       >
                         <span className="grid size-8 place-items-center rounded-[var(--radius-md)] bg-secondary text-accent">

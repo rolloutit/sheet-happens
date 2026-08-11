@@ -44,7 +44,10 @@ export function ProjectColorField({
               className="peer sr-only"
               aria-label={option.label}
             />
-            <span className="inline-flex min-h-10 items-center gap-2 rounded-full border border-border bg-background px-3 py-1.5 text-sm font-semibold text-foreground transition peer-checked:border-primary peer-checked:bg-accent-soft peer-focus-visible:ring-2 peer-focus-visible:ring-ring">
+            {/* The radio is `sr-only`, so the global focus outline would land on a clipped 1px box.
+                This span is its visible proxy and carries the same outline instead — as an outline
+                rather than a border brighten, so it cannot collide with `peer-checked:border-*`. */}
+            <span className="inline-flex min-h-10 items-center gap-2 rounded-full border border-border bg-background px-3 py-1.5 text-sm font-semibold text-foreground transition peer-checked:border-primary peer-checked:bg-accent-soft peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-ring">
               <ProjectColorSwatch colorToken={option.value} />
               {option.label}
             </span>
