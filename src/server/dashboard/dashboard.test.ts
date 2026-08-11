@@ -6,7 +6,7 @@ import {
   deriveFlaggedUsers,
   deriveMissingTimesheetCount,
   deriveMissingTimesheetRows,
-  getContractorMonthEndSteps,
+  getContractorDashboardNextAction,
   parseAdminDashboardDrilldown,
 } from "./dashboard";
 
@@ -360,22 +360,96 @@ describe("dashboard helpers", () => {
     ).toBe(400);
   });
 
-  it("marks contractor month-end steps from timesheet status", () => {
-    expect(getContractorMonthEndSteps("not_created")).toEqual([
-      { id: "assemble", state: "active" },
-      { id: "submit", state: "disabled" },
-      { id: "invoice", state: "disabled" },
-    ]);
-    expect(getContractorMonthEndSteps("approved")).toEqual([
-      { id: "assemble", state: "done" },
-      { id: "submit", state: "done" },
-      { id: "invoice", state: "active" },
-    ]);
-    expect(getContractorMonthEndSteps("paid")).toEqual([
-      { id: "assemble", state: "done" },
-      { id: "submit", state: "done" },
-      { id: "invoice", state: "done" },
-    ]);
+  it("derives the contractor's next action from the month-end workflow", () => {
+    const base = {
+      selectedMonth: "2026-07",
+      totalMinutes: 480,
+      missingRateLineCount: 0,
+      mixedCurrency: false,
+      invoices: [],
+    } as const;
+
+    expect(getContractorDashboardNextAction({ ...base, status: "not_created" })).toEqual({
+      id: "review_and_submit",
+      href: "/timesheets?month=2026-07",
+    });
+    expect(
+      getContractorDashboardNextAction({ ...base, status: "not_created", totalMinutes: 0 }),
+    ).toEqual({ id: "record_time", href: "/time" });
+    expect(
+      getContractorDashboardNextAction({ ...base, status: "not_created", mixedCurrency: true }),
+    ).toEqual({ id: "resolve_rates", href: "/timesheets?month=2026-07" });
+    expect(getContractorDashboardNextAction({ ...base, status: "rejected" })).toEqual({
+      id: "correct_timesheet",
+      href: "/timesheets?month=2026-07",
+    });
+    expect(getContractorDashboardNextAction({ ...base, status: "submitted" })).toEqual({
+      id: "awaiting_approval",
+      href: "/timesheets?month=2026-07",
+    });
+    expect(getContractorDashboardNextAction({ ...base, status: "approved" })).toEqual({
+      id: "upload_invoice",
+      href: "/timesheets?month=2026-07",
+    });
+    expect(getContractorDashboardNextAction({ ...base, status: "invoiced" })).toEqual({
+      id: "awaiting_invoice_review",
+      href: "/timesheets?month=2026-07",
+    });
+    expect(getContractorDashboardNextAction({ ...base, status: "accepted" })).toEqual({
+      id: "awaiting_payment",
+      href: "/timesheets?month=2026-07",
+    });
+    expect(getContractorDashboardNextAction({ ...base, status: "paid" })).toEqual({
+      id: "complete",
+      href: "/timesheets?month=2026-07",
+    });
+  });
+
+  it("requires a cancellation invoice before a corrected replacement invoice", () => {
+    const base = {
+      status: "invoice_rejected" as const,
+      selectedMonth: "2026-07",
+      totalMinutes: 480,
+      missingRateLineCount: 0,
+      mixedCurrency: false,
+    };
+
+    expect(getContractorDashboardNextAction({ ...base, invoices: [] })).toEqual({
+      id: "review_invoice_rejection",
+      href: "/timesheets?month=2026-07",
+    });
+    expect(
+      getContractorDashboardNextAction({
+        ...base,
+        invoices: [
+          {
+            id: "original",
+            role: "original",
+            status: "rejected",
+            referencesInvoiceId: null,
+          },
+        ],
+      }),
+    ).toEqual({ id: "upload_cancellation_invoice", href: "/timesheets?month=2026-07" });
+    expect(
+      getContractorDashboardNextAction({
+        ...base,
+        invoices: [
+          {
+            id: "original",
+            role: "original",
+            status: "rejected",
+            referencesInvoiceId: null,
+          },
+          {
+            id: "cancellation",
+            role: "cancellation",
+            status: "uploaded",
+            referencesInvoiceId: "original",
+          },
+        ],
+      }),
+    ).toEqual({ id: "upload_replacement_invoice", href: "/timesheets?month=2026-07" });
   });
 
   it("parses admin dashboard drilldown values defensively", () => {

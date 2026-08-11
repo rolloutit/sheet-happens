@@ -8,6 +8,7 @@ import {
   Check,
   CheckCircle2,
   Coins,
+  Clock3,
   Eye,
   FileCheck2,
   FileText,
@@ -41,8 +42,8 @@ import {
   type AdminDashboardData,
   type AdminPriorityMetric,
   type AdminStatusSegment,
+  type ContractorDashboardActionId,
   type ContractorDashboardData,
-  type ContractorMonthEndStep,
   type DashboardFlaggedUser,
   type DashboardPeriod,
   type DashboardWeeklyProject,
@@ -168,7 +169,7 @@ function ContractorDashboard({
       <MemberStats dashboard={dashboard} locale={locale} t={t} />
       <div className="grid gap-4 lg:grid-cols-[1.5fr_1fr]">
         <ContractorStepper dashboard={dashboard} t={t} />
-        <MonthEndChecklist steps={dashboard.monthEndSteps} t={t} />
+        <ContractorNextActionPanel action={dashboard.nextAction} t={t} />
       </div>
       <WeeklyChecklist projects={dashboard.weeklyProjects} t={t} />
     </>
@@ -690,56 +691,84 @@ function ContractorStepper({
           </div>
         ))}
       </div>
-      <Button asChild variant="cta" className="mt-7 w-full">
-        <Link href={`/timesheets?month=${dashboard.timesheet.selectedMonth}` as Route}>
-          {getContractorCta(dashboard.timesheet.status, t)}
-        </Link>
-      </Button>
     </DashboardPanel>
   );
 }
 
-function MonthEndChecklist({
-  steps,
+const contractorActionIcons: Record<ContractorDashboardActionId, LucideIcon> = {
+  record_time: Timer,
+  resolve_rates: AlertTriangle,
+  review_and_submit: FileText,
+  correct_timesheet: FileText,
+  awaiting_approval: Clock3,
+  upload_invoice: FileCheck2,
+  upload_cancellation_invoice: AlertTriangle,
+  upload_replacement_invoice: FileCheck2,
+  review_invoice_rejection: AlertTriangle,
+  awaiting_invoice_review: Clock3,
+  awaiting_payment: Wallet,
+  complete: CheckCircle2,
+};
+
+const contractorActionTone: Record<ContractorDashboardActionId, "accent" | "warning" | "success"> =
+  {
+    record_time: "accent",
+    resolve_rates: "warning",
+    review_and_submit: "accent",
+    correct_timesheet: "warning",
+    awaiting_approval: "accent",
+    upload_invoice: "accent",
+    upload_cancellation_invoice: "warning",
+    upload_replacement_invoice: "warning",
+    review_invoice_rejection: "warning",
+    awaiting_invoice_review: "accent",
+    awaiting_payment: "accent",
+    complete: "success",
+  };
+
+function ContractorNextActionPanel({
+  action,
   t,
 }: {
-  steps: ContractorMonthEndStep[];
+  action: ContractorDashboardData["nextAction"];
   t: DashboardTranslator;
 }) {
+  const Icon = contractorActionIcons[action.id];
+  const tone = contractorActionTone[action.id];
+  const isComplete = action.id === "complete";
+
   return (
     <DashboardPanel className="p-6">
-      <p className="mb-4 font-ui text-[11px] font-bold uppercase tracking-[0.16em] text-accent">
-        {t("contractor.monthEnd")}
+      <p className="font-ui text-[11px] font-bold uppercase tracking-[0.16em] text-accent">
+        {t("contractor.nextAction.eyebrow")}
       </p>
-      <div className="grid">
-        {steps.map((step, index) => (
-          <div
-            key={step.id}
-            className={cn("flex items-center gap-3 py-3", index > 0 && "border-t border-border")}
-          >
-            <span
-              className={cn(
-                "flex size-7 shrink-0 items-center justify-center rounded-full font-ui text-xs font-bold",
-                step.state === "done" && "bg-accent text-primary-foreground",
-                step.state === "active" && "border border-accent bg-accent-soft text-accent",
-                step.state === "disabled" && "bg-secondary text-muted-foreground",
-              )}
-            >
-              {step.state === "done" ? <Check className="size-4" aria-hidden="true" /> : index + 1}
-            </span>
-            <span
-              className={cn(
-                "min-w-0 flex-1 text-sm font-medium",
-                step.state === "active" ? "text-foreground" : "text-muted-foreground",
-                step.state === "done" && "line-through decoration-muted-foreground/60",
-              )}
-            >
-              {t(`contractor.steps.${step.id}`)}
-            </span>
-            {step.state === "active" ? <Badge tone="info">{t("contractor.next")}</Badge> : null}
-          </div>
-        ))}
+      <div className="mt-4 flex items-start gap-3">
+        <span
+          className={cn(
+            "flex size-10 shrink-0 items-center justify-center rounded-[var(--radius-md)]",
+            tone === "accent" && "bg-accent-soft text-accent",
+            tone === "warning" && "bg-warning-soft text-warning",
+            tone === "success" && "bg-success-soft text-success",
+          )}
+        >
+          <Icon className="size-5" aria-hidden="true" />
+        </span>
+        <div className="min-w-0">
+          <h2 className="font-display text-lg font-medium text-foreground">
+            {t(`contractor.nextAction.${action.id}.title`)}
+          </h2>
+          <p className="mt-1 text-sm leading-6 text-muted-foreground">
+            {t(`contractor.nextAction.${action.id}.description`)}
+          </p>
+        </div>
       </div>
+      <Button asChild variant={tone === "warning" ? "soft" : "cta"} className="mt-6 w-full">
+        <Link href={action.href as Route}>
+          {isComplete
+            ? t("contractor.nextAction.complete.cta")
+            : t(`contractor.nextAction.${action.id}.cta`)}
+        </Link>
+      </Button>
     </DashboardPanel>
   );
 }
@@ -1394,15 +1423,6 @@ function getStepperStates(status: TimesheetPreviewStatus) {
     invoice: "disabled",
     paid: "disabled",
   } as const;
-}
-
-function getContractorCta(status: TimesheetPreviewStatus, t: DashboardTranslator) {
-  if (status === "approved" || status === "invoice_rejected")
-    return t("contractor.cta.uploadInvoice");
-  if (status === "not_created" || status === "missing" || status === "rejected") {
-    return t("contractor.cta.openTimesheet");
-  }
-  return t("contractor.cta.viewTimesheet");
 }
 
 function formatTrend(current: number, previous: number) {
