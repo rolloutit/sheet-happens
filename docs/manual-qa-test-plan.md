@@ -25,6 +25,7 @@ Replace placeholder values before sharing a concrete test run:
 - `{INVITED_TIMEZONE}`: timezone selected for a new invited member.
 - `{INVITED_LOCALE}`: locale selected for a new invited member.
 - `{UNKNOWN_EMAIL}`: email address that is not a Sheet Happens member or pending invite.
+- `{LOCKOUT_TEST_EMAIL}`: active test account with a known password, reserved for sign-in lockout testing.
 - `{COMPANY_GOOGLE_DOMAIN}`: allowed Google Workspace domain configured for company Google login.
 - `{COMPANY_GOOGLE_EMAIL}`: activated member email in `{COMPANY_GOOGLE_DOMAIN}`.
 - `{PRIVATE_GOOGLE_EMAIL}`: Google email outside `{COMPANY_GOOGLE_DOMAIN}`.
@@ -255,6 +256,42 @@ Expected result:
 - Otherwise, the user lands on `https://{DOMAIN_NAME}/dashboard`.
 - Public sign-up is not available from the login screen.
 
+### Password Sign-In Lockout And Recovery
+
+1. Start signed out in a clean browser profile.
+2. Open `https://{DOMAIN_NAME}/login`.
+3. Enter `{LOCKOUT_TEST_EMAIL}` and a deliberately incorrect password.
+4. Submit the password form five times within 15 minutes.
+5. Confirm the fifth response says that there have been too many password sign-in attempts.
+6. Enter the correct password before the 15-minute lock expires and submit it.
+7. Wait until 15 minutes have elapsed from the fifth failed attempt.
+8. Enter the correct password again and complete any required second factor.
+9. Open `{AUDIT_LOG_VIEW}` and search for the tested member.
+
+Expected result:
+
+- The first four failed attempts show the same neutral invalid-credentials message.
+- The fifth failed attempt and every password attempt during the temporary lock show a rate-limit message.
+- A correct password does not bypass the active temporary lock.
+- The lock expires automatically after 15 minutes; no administrator action is required.
+- The account can sign in normally after expiry.
+- The audit log contains `security.password_lockout` and, after the successful recovery sign-in,
+  `security.password_lockout_recovered`.
+
+### Authentication Endpoint Rate Limits
+
+1. Start signed out in a clean browser profile.
+2. Open `https://{DOMAIN_NAME}/login`.
+3. Enter `{UNKNOWN_EMAIL}` and click `Email sign-in link` six times within 15 minutes.
+4. Confirm the sixth request is refused with a rate-limit message.
+5. Wait 15 minutes, then repeat the request once.
+
+Expected result:
+
+- The first five requests retain the neutral response and do not reveal whether the email exists.
+- The sixth request shows a localized rate-limit message.
+- The request is accepted again after the 15-minute rate-limit window.
+
 ### Password Reset For Unknown Email Is Neutral
 
 1. Start signed out.
@@ -300,6 +337,22 @@ Expected result:
 - Google sign-in is rejected or returns to the login screen.
 - No Sheet Happens auth account is created.
 - No domain member is activated or linked to the private Google account.
+
+### Inactive Member Cannot Create A New Session
+
+1. Sign in as `{ADMIN_EMAIL}` and deactivate an active, non-admin test member from the People page.
+2. Confirm that the member's existing browser session no longer opens protected pages.
+3. In a clean browser profile, attempt password sign-in for the inactive member using a correct password.
+4. Request a magic-link sign-in for the inactive member and confirm no email arrives.
+5. If the inactive member has a passkey, attempt passkey sign-in.
+6. If company Google sign-in is configured for the member, complete the Google provider flow.
+
+Expected result:
+
+- Deactivation revokes existing sessions.
+- Password, passkey, and Google authentication do not create an application session for an inactive member.
+- Magic-link requests stay neutral and do not deliver a usable sign-in link.
+- The inactive member cannot open `/dashboard`, `/time`, `/timesheets`, `/settings`, or any admin route.
 
 ## Protected Routes
 
