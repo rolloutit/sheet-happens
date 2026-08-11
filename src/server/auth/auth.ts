@@ -5,6 +5,7 @@ import { nextCookies } from "better-auth/next-js";
 import { magicLink, twoFactor } from "better-auth/plugins";
 
 import { canCreateAuthUser, canSendAuthLink } from "@/src/server/auth/invite-policy";
+import { canCreateMemberSession } from "@/src/server/auth/member-session-policy";
 import { sendMagicLinkEmail, sendPasswordResetEmail } from "@/src/server/auth/auth-emails";
 import {
   decodeJwtPayload,
@@ -65,6 +66,8 @@ type AuthHookContext = {
   path?: string;
 } | null;
 
+const authRateLimitWindowSeconds = 15 * 60;
+
 export const auth = betterAuth({
   appName,
   baseURL: authBaseURLConfig,
@@ -73,6 +76,21 @@ export const auth = betterAuth({
   database: prismaAdapter(prisma, {
     provider: "postgresql",
   }),
+  rateLimit: {
+    enabled: true,
+    storage: "database",
+    window: 60,
+    max: 100,
+    customRules: {
+      "/sign-in/email": { window: authRateLimitWindowSeconds, max: 20 },
+      "/sign-in/magic-link": { window: authRateLimitWindowSeconds, max: 5 },
+      "/request-password-reset": { window: authRateLimitWindowSeconds, max: 5 },
+      "/sign-in/social": { window: authRateLimitWindowSeconds, max: 10 },
+      "/passkey/generate-authenticate-options": { window: authRateLimitWindowSeconds, max: 10 },
+      "/passkey/verify-authentication": { window: authRateLimitWindowSeconds, max: 10 },
+      "/two-factor/*": { window: authRateLimitWindowSeconds, max: 10 },
+    },
+  },
   databaseHooks: {
     user: {
       create: {
@@ -94,6 +112,23 @@ export const auth = betterAuth({
     },
     session: {
       create: {
+        before: async (session: AuthSessionRecord) => {
+          if (typeof session.userId !== "string") {
+            return false;
+          }
+
+          const member = await prisma.member.findUnique({
+            where: {
+              authUserId: session.userId,
+            },
+            select: {
+              deletedAt: true,
+              status: true,
+            },
+          });
+
+          return canCreateMemberSession(member);
+        },
         after: async (session: AuthSessionRecord, context: AuthHookContext) => {
           await markPasskeySessionAsSecondFactor(session, context);
         },

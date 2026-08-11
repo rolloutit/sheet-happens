@@ -157,6 +157,8 @@
       "passkeyIncomplete": "Passkey sign-in was not completed.",
       "passwordRequired": "Password is required.",
       "emailPasswordIncorrect": "Email or password is incorrect.",
+      "passwordSignInRateLimited": "Too many password sign-in attempts. Please try again later.",
+      "rateLimited": "Too many requests. Please try again later.",
       "passwordResetSendFailed": "Could not send the password reset email.",
       "googleStartFailed": "Google sign-in could not be started.",
       "emailRequired": "Email is required.",

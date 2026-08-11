@@ -33,6 +33,12 @@ type PasswordSignInData = {
   url?: string;
 };
 
+type AuthClientError = {
+  code?: string;
+  message?: string;
+  status?: number;
+};
+
 export function LoginPanel({
   callbackURL,
   initialEmail = "",
@@ -81,7 +87,7 @@ export function LoginPanel({
     if (result.error) {
       setStatus({
         tone: "error",
-        message: result.error.message ?? t("errors.magicLinkSendFailed"),
+        message: resolveAuthClientError(result.error, t, "errors.magicLinkSendFailed"),
       });
       return;
     }
@@ -103,7 +109,7 @@ export function LoginPanel({
     if (result.error) {
       setStatus({
         tone: "error",
-        message: result.error.message ?? t("errors.passkeyIncomplete"),
+        message: resolveAuthClientError(result.error, t, "errors.passkeyIncomplete"),
       });
       return;
     }
@@ -139,7 +145,7 @@ export function LoginPanel({
     if (result.error) {
       setStatus({
         tone: "error",
-        message: result.error.message ?? t("errors.emailPasswordIncorrect"),
+        message: resolvePasswordSignInError(result.error, t),
       });
       return;
     }
@@ -174,7 +180,7 @@ export function LoginPanel({
     if (result.error) {
       setStatus({
         tone: "error",
-        message: result.error.message ?? t("errors.passwordResetSendFailed"),
+        message: resolveAuthClientError(result.error, t, "errors.passwordResetSendFailed"),
       });
       return;
     }
@@ -201,7 +207,9 @@ export function LoginPanel({
     if (result.error || !result.data?.url) {
       setStatus({
         tone: "error",
-        message: result.error?.message ?? t("errors.googleStartFailed"),
+        message: result.error
+          ? resolveAuthClientError(result.error, t, "errors.googleStartFailed")
+          : t("errors.googleStartFailed"),
       });
       return;
     }
@@ -352,6 +360,30 @@ export function LoginPanel({
 
 function getNormalizedEmail(value: string) {
   return value.trim().toLowerCase();
+}
+
+function resolvePasswordSignInError(error: AuthClientError, t: ReturnType<typeof useTranslations>) {
+  if (error.status === 429 || error.code === "PASSWORD_SIGN_IN_LOCKED") {
+    return t("errors.passwordSignInRateLimited");
+  }
+
+  return error.message ?? t("errors.emailPasswordIncorrect");
+}
+
+function resolveAuthClientError(
+  error: AuthClientError,
+  t: ReturnType<typeof useTranslations>,
+  fallback:
+    | "errors.magicLinkSendFailed"
+    | "errors.passkeyIncomplete"
+    | "errors.passwordResetSendFailed"
+    | "errors.googleStartFailed",
+) {
+  if (error.status === 429) {
+    return t("errors.rateLimited");
+  }
+
+  return error.message ?? t(fallback);
 }
 
 function LoginStatusMessage({ status }: { status: LoginStatus }) {
