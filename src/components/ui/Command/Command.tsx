@@ -52,6 +52,9 @@ export const CommandInput = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <div className="flex h-9 shrink-0 items-center gap-2 rounded-[var(--radius-md)] border border-input bg-surface-inset px-3">
     <Search className="size-4 shrink-0 text-muted-foreground" aria-hidden="true" />
+    {/* No focus treatment on purpose: `Combobox` focuses this field whenever the panel opens, so a
+        border brighten or a ring would be on for the panel's whole life and mark nothing. The caret
+        is the indicator. `outline-none` cancels the global outline from `@layer base`. */}
     <CommandPrimitive.Input
       ref={ref}
       className={cn(

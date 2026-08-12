@@ -21,7 +21,7 @@ export const CommandPill = React.forwardRef<HTMLButtonElement, CommandPillProps>
       ref={ref}
       type={type}
       className={cn(
-        "inline-flex h-9 min-w-72 items-center gap-2 rounded-[var(--radius-pill)] border border-border bg-card px-3 text-left text-sm text-muted-foreground shadow-soft transition hover:border-accent/45 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-45",
+        "inline-flex h-9 min-w-72 items-center gap-2 rounded-[var(--radius-pill)] border border-border bg-card px-3 text-left text-sm text-muted-foreground shadow-soft transition hover:border-accent/45 hover:text-foreground disabled:pointer-events-none disabled:opacity-45",
         className,
       )}
       {...props}

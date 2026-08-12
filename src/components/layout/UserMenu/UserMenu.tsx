@@ -35,7 +35,7 @@ export function UserMenu({
           type="button"
           aria-label={label}
           className={cn(
-            "inline-flex items-center gap-3 rounded-[var(--radius-pill)] p-1 pr-2 transition hover:bg-secondary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+            "inline-flex items-center gap-3 rounded-[var(--radius-pill)] p-1 pr-2 transition hover:bg-secondary",
             className,
           )}
         >

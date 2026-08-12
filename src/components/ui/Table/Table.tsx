@@ -1,6 +1,7 @@
 import { ArrowDown, ArrowUp, ArrowUpDown } from "lucide-react";
 
 import { cn } from "@/src/lib/utils";
+import { focusChromeClassName } from "../focusRing";
 import type { DataTableProps, TableColumn, TableSortDirection } from "./Table.types";
 
 function getCellValue<T extends Record<string, unknown>>(row: T, column: TableColumn<T>) {
@@ -108,7 +109,7 @@ export function DataTable<T extends Record<string, unknown>>({
                         <button
                           type="button"
                           className={cn(
-                            "inline-flex items-center gap-1.5 rounded-[var(--radius-sm)] transition hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                            "inline-flex items-center gap-1.5 rounded-[var(--radius-sm)] transition hover:text-foreground",
                             column.align === "right" && "justify-end",
                             column.align === "center" && "justify-center",
                           )}
@@ -163,6 +164,9 @@ export function DataTable<T extends Record<string, unknown>>({
                         role={interactive ? "button" : undefined}
                         aria-label={interactive ? rowActionLabel?.(row, index) : undefined}
                         aria-selected={selected || undefined}
+                        // The one control that does not take the global focus outline: a row sits
+                        // flush inside a card that clips overflow, so an outward outline would be
+                        // cut off on the first and last rows. An inset ring draws inside instead.
                         className={cn(
                           "border-t border-border transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring",
                           selected && "bg-accent-soft",
@@ -255,7 +259,8 @@ export function DataTable<T extends Record<string, unknown>>({
                   </>
                 );
                 const cardClasses = cn(
-                  "grid w-full gap-3 rounded-[var(--radius-md)] border border-border bg-background/40 p-3 text-left transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                  "grid w-full gap-3 rounded-[var(--radius-md)] border border-border bg-background/40 p-3 text-left transition",
+                  focusChromeClassName,
                   selected && "border-primary/55 bg-accent-soft",
                   interactive && "hover:bg-secondary/70",
                 );

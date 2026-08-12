@@ -109,7 +109,7 @@ function getCellClasses(state: TimeGridCellState) {
     state === "future" && "border-dashed bg-muted/45 text-muted-foreground",
     state === "warning" && "border-warning/45 bg-warning-soft text-warning",
     state === "locked" && "border-border bg-secondary text-muted-foreground",
-    state === "editing" && "border-accent bg-background ring-2 ring-ring/35",
+    state === "editing" && "border-ring bg-background",
   );
 }
 

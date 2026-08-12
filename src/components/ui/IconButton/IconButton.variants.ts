@@ -1,7 +1,7 @@
 import { cva } from "class-variance-authority";
 
 export const iconButtonVariants = cva(
-  "relative inline-flex items-center justify-center rounded-[var(--radius-pill)] border font-ui transition duration-200 ease-[var(--ease-standard)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50",
+  "relative inline-flex items-center justify-center rounded-[var(--radius-pill)] border font-ui transition duration-200 ease-[var(--ease-standard)] disabled:pointer-events-none disabled:opacity-50",
   {
     variants: {
       variant: {

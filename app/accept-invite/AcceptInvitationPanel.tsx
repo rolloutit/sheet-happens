@@ -189,7 +189,7 @@ function InvitationResult({
       <p className="mx-auto mt-3 max-w-xs text-[15px] leading-6 text-muted-foreground">{message}</p>
       <Link
         href={"/dashboard" as Route}
-        className="mt-6 inline-flex w-full items-center justify-center rounded-[var(--radius-md)] bg-[linear-gradient(135deg,var(--primary),var(--accent))] px-[18px] py-[13px] text-[14.5px] font-semibold text-accent-foreground shadow-[0_10px_26px_-10px_var(--ring)] transition hover:shadow-[0_14px_32px_-10px_var(--ring)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        className="mt-6 inline-flex w-full items-center justify-center rounded-[var(--radius-md)] bg-[linear-gradient(135deg,var(--primary),var(--accent))] px-[18px] py-[13px] text-[14.5px] font-semibold text-accent-foreground shadow-[0_10px_26px_-10px_var(--ring)] transition hover:shadow-[0_14px_32px_-10px_var(--ring)]"
       >
         {t("actions.continue")}
       </Link>

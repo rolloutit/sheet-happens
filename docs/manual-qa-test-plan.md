@@ -2349,6 +2349,50 @@ Expected result:
 - At 390px the calendar and the option lists stay inside the viewport — no horizontal scrolling of
   the page itself.
 
+### Focus Indication
+
+Focus used to paint twice — a global mint outline that no component could cancel, plus each
+component's own ring — so dropdowns flashed highlight boxes that came and went for reasons a user
+could not see. There are now two treatments and they must never both appear on one control. The
+tell-tale of a regression is **two mint rings at different offsets**, or a highlight box that
+appears on a mouse click.
+
+1. Open `/admin/timesheets`. Using the mouse only, click the **Status** filter (eight options, a
+   plain menu) and read the closed trigger before the panel covers it: no ring, no glow, no outline.
+2. With the panel open, move the pointer down the rows. Each row under the pointer gets a soft grey
+   fill and nothing else — no ring around the row.
+3. Still in that panel, press ↓ three times. This is the case that used to light up: the rows must
+   still show only the grey fill.
+4. Escape out, then press Tab until the Status trigger has focus. Its border turns mint. Nothing
+   else changes — the control must not grow, glow, or gain a second ring outside the border.
+5. Click the **Contractor** filter (more than eight options, so it has a search field). The search
+   field shows a text caret and **no** box of any kind around it.
+6. Type two letters, then hover a result row and arrow through the rows. Only the grey fill moves.
+7. Tab through the page chrome — a button, a checkbox, a tab, a table row. Each shows exactly one
+   mint indicator. Count the rings: two concentric mint lines is the old bug.
+8. Click those same controls with the mouse. Nothing paints — a click leaves no focus box behind.
+9. Switch to the light theme and repeat steps 1, 4, 5 and 7. `--ring` is a darker teal there, so a
+   too-faint border on the focused trigger is a light-theme-only failure.
+10. Open `/time` and click a cell in the week grid. The cell gets a mint stroke drawn **inside** its
+    own edges, not spilling over the neighbouring cells.
+11. Open a table with clickable rows (`/admin/people`) and Tab to the first and last row. The
+    indicator is drawn inside the row and is not clipped by the card edge.
+12. Keyboard only, no mouse: Tab from the top of `/admin/timesheets` to the bottom and confirm you
+    can always tell where you are. A step where nothing is visibly focused is a blocker, not a nit.
+
+Expected result:
+
+- A control with its own border (inputs, textareas, dropdown and date-picker triggers) indicates
+  focus by turning that border mint, and by nothing else.
+- A borderless control (button, icon button, chip, tab, calendar day) shows one 2px mint outline
+  with a 2px gap. On a filled primary button the gap is what keeps the outline visible — an outline
+  flush against the mint fill is a regression.
+- Option and menu rows never show an outline or ring in any state, keyboard or pointer.
+- Nothing paints on a mouse click anywhere. Hover is the only pointer feedback.
+- Table rows and time-grid cells are the only two places using an inset stroke, and both are drawn
+  inside their own bounds.
+- No focusable element anywhere is left with no visible indicator under keyboard navigation.
+
 ## Regression Checklist For Every Release
 
 - Invitation activation works for a new invited user.
@@ -2384,3 +2428,6 @@ Expected result:
   triggers along with the text fields.
 - Pickers opened inside a drawer or dialog keep focus, and every control returns focus to its
   trigger on close.
+- Focus paints once and only under keyboard navigation: bordered controls brighten their border,
+  borderless controls take a single 2px mint outline, option rows show only the pointer tint, and a
+  mouse click leaves no highlight box behind.

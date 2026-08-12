@@ -108,6 +108,37 @@ The trade-off is that such an entry is **not** emitted as a custom property. Two
 - **Layout:** `--sidebar-w` 256px, `--sidebar-w-collapsed` 76px, `--header-h` 64px.
 - **Motion:** `--ease-standard`.
 
+## Focus
+
+Two treatments, and a control picks by whether it draws its own edge. Both key off
+`:focus-visible`, so a pointer user never sees either — hover is the pointer affordance.
+
+- **Borderless** (pills, icon buttons, tabs, calendar cells, menu rows): declare **nothing**. The
+  only focus rule in `app/globals.css` gives every focusable element `outline: 2px solid var(--ring)`
+  at `outline-offset: 2px`. The offset is load-bearing: flush against a filled `--primary` button,
+  `--ring` sits at ~1.6:1 and disappears, so the outline needs the neutral background to read
+  against.
+- **Chrome** (a visible border plus an inset fill — inputs, textareas, the `Select`/`Combobox` and
+  date-picker triggers): `focusChromeClassName` from `src/components/ui/focusRing.ts`, which cancels
+  that outline and brightens the existing border from `--input` to `--ring` instead. Nothing is
+  added, so the control does not gain a second ring around an edge it already has, and no geometry
+  moves. `focusChromeWithinClassName` is the `:has()` variant for the several places where the
+  border sits on a wrapper and the focusable element is a bare `<input>` inside it.
+
+Three rules make this work, and all three are easy to break:
+
+- The global rule lives in **`@layer base`**. Unlayered — which is how the rest of that file is
+  written, deliberately — it would outrank the `focus-visible:outline-none` in `@layer utilities`
+  that every chrome control depends on, and the two treatments would composite instead of one
+  replacing the other. That is the bug this shape exists to prevent.
+- **Menu and option rows carry no focus styling at all.** Radix moves real DOM focus to a
+  `Select`/`Dropdown` item on pointer-move, so `focus:bg-secondary` is already the
+  where-is-my-mouse tint; cmdk uses active descendant and tints on `data-[selected=true]`. An
+  outline on top of either reads as a selection box the user cannot dismiss.
+- Two controls take an **inset ring** instead, because an outward outline would be clipped by an
+  `overflow-hidden` ancestor or spill onto neighbouring cells: `DataTable` rows and the time-grid
+  cell inputs. Both are commented at the call site. Nothing else should join them without one.
+
 ## Conventions
 
 - Component code uses Tailwind token classes: `bg-background`, `text-foreground`, `border-border`,

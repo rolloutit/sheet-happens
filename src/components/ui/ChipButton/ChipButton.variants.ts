@@ -1,7 +1,7 @@
 import { cva } from "class-variance-authority";
 
 export const chipButtonVariants = cva(
-  "inline-flex h-8 items-center justify-center gap-2 rounded-[var(--radius-pill)] border px-3 font-ui text-xs font-semibold transition duration-200 ease-[var(--ease-standard)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50",
+  "inline-flex h-8 items-center justify-center gap-2 rounded-[var(--radius-pill)] border px-3 font-ui text-xs font-semibold transition duration-200 ease-[var(--ease-standard)] disabled:pointer-events-none disabled:opacity-50",
   {
     variants: {
       variant: {
