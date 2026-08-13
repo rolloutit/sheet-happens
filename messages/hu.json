@@ -50,6 +50,7 @@
       "dashboard": "Irányítópult",
       "time": "Időkövetés",
       "timesheets": "Timesheet",
+      "payslips": "Bérjegyzékek",
       "review": "Jóváhagyás",
       "reports": "Riportok",
       "projects": "Projektek",
@@ -2234,6 +2235,107 @@
       "totpDisableAuditFailed": "Az authenticator alkalmazás kikapcsolt, de a naplóeseményt nem sikerült rögzíteni.",
       "backupCodesAuditFailed": "A tartalék kódok újragenerálva, de a naplóeseményt nem sikerült rögzíteni.",
       "noAuthAccount": "Ehhez a taghoz nincs kapcsolt auth fiók."
+    }
+  },
+  "Payslips": {
+    "actions": {
+      "preview": "Előnézet",
+      "download": "Letöltés",
+      "close": "Bezárás",
+      "upload": "Bérjegyzék feltöltése",
+      "replace": "Csere",
+      "delete": "Törlés",
+      "cancel": "Mégse",
+      "confirmUpload": "Feltöltés",
+      "confirmReplace": "Csere és feltöltés",
+      "confirmDelete": "Bérjegyzék törlése",
+      "clear": "Szűrők törlése"
+    },
+    "employee": {
+      "eyebrow": "Alkalmazotti dokumentumok",
+      "title": "Bérjegyzékeim",
+      "subtitle": "A havi bérjegyzékeid, a legfrissebbtől visszafelé.",
+      "latest": "Legfrissebb",
+      "history": "Korábbi hónapok",
+      "available": "Elérhető",
+      "privateNote": "Csak a saját bérjegyzékeidet tekintheted meg. A dokumentumok rövid élettartamú, privát linken nyílnak meg.",
+      "empty": {
+        "title": "Még nincs bérjegyzéked",
+        "description": "Az adminod minden havi bérjegyzéket itt tesz közzé, amikor elérhetővé válik."
+      }
+    },
+    "viewer": {
+      "signedLink": "Privát fájl · rövid élettartamú link",
+      "title": "{filename} előnézete"
+    },
+    "admin": {
+      "eyebrow": "Admin",
+      "title": "Bérjegyzékek",
+      "subtitle": "Havi bérjegyzékek feltöltése és kezelése alkalmazottanként. A Sheet Happens nem számol bért.",
+      "filters": {
+        "title": "Szűrők",
+        "employee": "Alkalmazott",
+        "allEmployees": "Minden alkalmazott",
+        "month": "Hónap",
+        "allMonths": "Minden hónap",
+        "search": "Keresés név vagy email alapján",
+        "apply": "Szűrők alkalmazása"
+      },
+      "overview": {
+        "title": "Havi áttekintés",
+        "posted": "{posted} / {expected} feltöltve",
+        "complete": "Minden aktív alkalmazotthoz elérhető a havi bérjegyzék.",
+        "missing": "Hiányzik",
+        "uploadFor": "Bérjegyzék feltöltése: {name}"
+      },
+      "list": {
+        "title": "Bérjegyzék előzmények",
+        "description": "A kiválasztott szűrőknek megfelelő aktuális bérjegyzék-dokumentumok.",
+        "empty": "Nincs a kiválasztott szűrőknek megfelelő bérjegyzék.",
+        "showing": "{start}-{end} / {total}",
+        "employee": "Alkalmazott",
+        "month": "Hónap",
+        "file": "Fájl",
+        "published": "Feltöltve",
+        "actions": "Műveletek",
+        "inactive": "Inaktív",
+        "uploadedBy": "Feltöltötte: {name}"
+      },
+      "upload": {
+        "title": "Bérjegyzék feltöltése",
+        "description": "Válassz alkalmazottat és hónapot, majd töltsd fel a PDF-et. Foglalt hónap esetén a feltöltés lecseréli az aktuális dokumentumot.",
+        "employee": "Alkalmazott",
+        "employeePlaceholder": "Válassz alkalmazottat",
+        "month": "Hónap",
+        "file": "PDF-fájl",
+        "dropzone": "Húzd ide a bérjegyzék PDF-et",
+        "dropzoneDescription": "Csak PDF, legfeljebb 10 MB.",
+        "existing": "Ehhez az alkalmazotthoz és hónaphoz már van bérjegyzék. A feltöltött PDF lecseréli azt.",
+        "success": "Bérjegyzék feltöltve.",
+        "replaced": "Bérjegyzék lecserélve."
+      },
+      "delete": {
+        "title": "Törlöd ezt a bérjegyzéket?",
+        "description": "{name} · {month}. A dokumentum törlődik. Ehhez a hónaphoz később új bérjegyzék tölthető fel.",
+        "success": "Bérjegyzék törölve."
+      }
+    },
+    "errors": {
+      "notAllowed": "Nincs jogosultságod a bérjegyzékek kezeléséhez.",
+      "employeeRequired": "Válassz alkalmazotti profilt.",
+      "monthRequired": "Válassz érvényes hónapot.",
+      "fileRequired": "Válassz bérjegyzék PDF-et.",
+      "fileTooLarge": "A bérjegyzék PDF legfeljebb 10 MB lehet.",
+      "pdfRequired": "Csak PDF-fájl tölthető fel.",
+      "storageMissing": "A bérjegyzék-tárolás nincs konfigurálva.",
+      "uploadFailed": "Nem sikerült feltölteni a bérjegyzéket.",
+      "deleteFailed": "Nem sikerült törölni a bérjegyzéket."
+    },
+    "pager": {
+      "navigation": "Bérjegyzék oldalak",
+      "summary": "{page}. oldal / {totalPages}, {totalItems} bérjegyzék",
+      "previous": "Előző",
+      "next": "Következő"
     }
   },
   "TwoFactorActions": {
