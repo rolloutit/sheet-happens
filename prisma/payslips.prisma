@@ -1,19 +1,22 @@
 model Payslip {
-  id               String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  employeeMemberId String        @map("employee_member_id") @db.Uuid
-  periodStart      DateTime      @map("period_start") @db.Date
-  periodEnd        DateTime      @map("period_end") @db.Date
-  status           PayslipStatus @default(AVAILABLE)
-  documentId       String        @unique @map("document_id") @db.Uuid
-  publishedAt      DateTime?     @map("published_at") @db.Timestamptz(6)
-  createdAt        DateTime      @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt        DateTime      @updatedAt @map("updated_at") @db.Timestamptz(6)
+  id                  String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  employeeMemberId    String        @map("employee_member_id") @db.Uuid
+  periodStart         DateTime      @map("period_start") @db.Date
+  periodEnd           DateTime      @map("period_end") @db.Date
+  status              PayslipStatus @default(AVAILABLE)
+  documentId          String        @unique @map("document_id") @db.Uuid
+  publishedAt         DateTime?     @map("published_at") @db.Timestamptz(6)
+  publishedByMemberId String?       @map("published_by_member_id") @db.Uuid
+  createdAt           DateTime      @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt           DateTime      @updatedAt @map("updated_at") @db.Timestamptz(6)
 
-  document Document @relation(fields: [documentId], references: [id], onDelete: Restrict)
-  employee Member   @relation("PayslipEmployee", fields: [employeeMemberId], references: [id], onDelete: Restrict)
+  document    Document @relation(fields: [documentId], references: [id], onDelete: Restrict)
+  employee    Member   @relation("PayslipEmployee", fields: [employeeMemberId], references: [id], onDelete: Restrict)
+  publishedBy Member?  @relation("PayslipPublishedBy", fields: [publishedByMemberId], references: [id], onDelete: SetNull)
 
   @@unique([employeeMemberId, periodStart])
   @@index([periodStart])
   @@index([status])
+  @@index([publishedByMemberId])
   @@map("payslips")
 }

@@ -50,6 +50,7 @@
       "dashboard": "Dashboard",
       "time": "Time tracking",
       "timesheets": "Timesheets",
+      "payslips": "Payslips",
       "review": "Approvals",
       "reports": "Reports",
       "projects": "Projects",
@@ -2234,6 +2235,107 @@
       "totpDisableAuditFailed": "Authenticator app was disabled, but the audit event could not be recorded.",
       "backupCodesAuditFailed": "Backup codes were regenerated, but the audit event could not be recorded.",
       "noAuthAccount": "No auth account is linked to this member."
+    }
+  },
+  "Payslips": {
+    "actions": {
+      "preview": "Preview",
+      "download": "Download",
+      "close": "Close",
+      "upload": "Upload payslip",
+      "replace": "Replace",
+      "delete": "Delete",
+      "cancel": "Cancel",
+      "confirmUpload": "Upload",
+      "confirmReplace": "Replace and upload",
+      "confirmDelete": "Delete payslip",
+      "clear": "Clear filters"
+    },
+    "employee": {
+      "eyebrow": "Employee documents",
+      "title": "My payslips",
+      "subtitle": "Your monthly payslips, newest first.",
+      "latest": "Latest",
+      "history": "Earlier months",
+      "available": "Available",
+      "privateNote": "Only you can view your payslips. Documents are opened through a short-lived private link.",
+      "empty": {
+        "title": "No payslips yet",
+        "description": "Your administrator will publish each monthly payslip here when it is available."
+      }
+    },
+    "viewer": {
+      "signedLink": "Private file · short-lived link",
+      "title": "Preview of {filename}"
+    },
+    "admin": {
+      "eyebrow": "Admin",
+      "title": "Payslips",
+      "subtitle": "Upload and manage monthly payslips by employee. Payroll is not calculated in Sheet Happens.",
+      "filters": {
+        "title": "Filters",
+        "employee": "Employee",
+        "allEmployees": "All employees",
+        "month": "Month",
+        "allMonths": "All months",
+        "search": "Search name or email",
+        "apply": "Apply filters"
+      },
+      "overview": {
+        "title": "Month overview",
+        "posted": "{posted} of {expected} posted",
+        "complete": "Every active employee has a payslip for this month.",
+        "missing": "Missing",
+        "uploadFor": "Upload payslip for {name}"
+      },
+      "list": {
+        "title": "Payslip history",
+        "description": "Current payslip documents matching the selected filters.",
+        "empty": "No payslips match the selected filters.",
+        "showing": "Showing {start}-{end} of {total}",
+        "employee": "Employee",
+        "month": "Month",
+        "file": "File",
+        "published": "Published",
+        "actions": "Actions",
+        "inactive": "Inactive",
+        "uploadedBy": "Published by {name}"
+      },
+      "upload": {
+        "title": "Upload payslip",
+        "description": "Choose an employee and month, then upload a PDF. Uploading to an occupied month replaces the current document.",
+        "employee": "Employee",
+        "employeePlaceholder": "Choose an employee",
+        "month": "Month",
+        "file": "PDF file",
+        "dropzone": "Drop the payslip PDF here",
+        "dropzoneDescription": "PDF only, up to 10 MB.",
+        "existing": "A payslip already exists for this employee and month. The uploaded PDF will replace it.",
+        "success": "Payslip uploaded.",
+        "replaced": "Payslip replaced."
+      },
+      "delete": {
+        "title": "Delete payslip?",
+        "description": "{name} · {month}. The document will be removed. A new payslip can be uploaded for this month later.",
+        "success": "Payslip deleted."
+      }
+    },
+    "errors": {
+      "notAllowed": "You are not allowed to manage payslips.",
+      "employeeRequired": "Choose an employee profile.",
+      "monthRequired": "Choose a valid month.",
+      "fileRequired": "Choose a payslip PDF.",
+      "fileTooLarge": "The payslip PDF must be 10 MB or smaller.",
+      "pdfRequired": "Only PDF files can be uploaded.",
+      "storageMissing": "Payslip storage is not configured.",
+      "uploadFailed": "The payslip could not be uploaded.",
+      "deleteFailed": "The payslip could not be deleted."
+    },
+    "pager": {
+      "navigation": "Payslip pages",
+      "summary": "Page {page} of {totalPages}, {totalItems} payslips",
+      "previous": "Previous",
+      "next": "Next"
     }
   },
   "TwoFactorActions": {

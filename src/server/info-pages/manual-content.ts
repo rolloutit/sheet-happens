@@ -2,7 +2,7 @@ export type HelpLocale = "en" | "hu";
 export type HelpRole = "ADMIN" | "MEMBER";
 export type HelpProfile = "EMPLOYEE" | "CONTRACTOR";
 
-export type ManualTopicAudience = "all" | "contractor" | "admin";
+export type ManualTopicAudience = "all" | "employee" | "contractor" | "admin";
 
 export type ManualTopic = {
   id: string;
@@ -222,6 +222,36 @@ const manualTopics: Record<HelpLocale, ManualTopic[]> = {
       `,
     },
     {
+      id: "employee-payslips",
+      audience: "employee",
+      title: "Employee payslips",
+      summary: "Private monthly payslip access for employee profiles.",
+      bodyMarkdown: markdown`
+        ## Employee payslips
+
+        Payslips are private monthly PDF documents for employee profiles. They are separate from contractor timesheets and invoices.
+
+        ### View and download
+
+        - Open **Payslips** from the sidebar.
+        - The latest available document is shown first; earlier months remain available below it.
+        - Use Preview to inspect the PDF in the app, or Download to save it.
+        - Every view and download uses a short-lived private link. Do not share the resulting browser URL.
+
+        ### Access rules
+
+        - You can view only your own payslips.
+        - The page is read-only. You cannot upload, replace, or delete a payslip.
+        - Contractor profiles do not have this feature because contractor billing uses the Timesheets workflow instead.
+
+        ### Troubleshooting
+
+        - No payslip for a month: ask payroll or an admin to upload it.
+        - Preview or download fails: refresh once, then ask an admin to check object storage and the audit log.
+        - The document looks incorrect: do not edit it locally; ask an admin to replace the published PDF.
+      `,
+    },
+    {
       id: "settings",
       audience: "all",
       title: "Security settings",
@@ -317,6 +347,39 @@ const manualTopics: Record<HelpLocale, ManualTopic[]> = {
         - User logs in but sees no linked profile: confirm the auth email matches the member email and the invitation was activated.
         - User cannot access admin pages: confirm role is Admin and TOTP is set up.
         - Profile transition seems missing: check scheduled transition date and audit rows.
+      `,
+    },
+    {
+      id: "admin-payslips",
+      audience: "admin",
+      title: "Admin payslip management",
+      summary: "Monthly employee PDF upload, replacement, deletion, and access auditing.",
+      bodyMarkdown: markdown`
+        ## Admin payslip management
+
+        Payslips are private employee documents. They are not calculated from time entries and are independent from contractor timesheets and invoices.
+
+        ### Upload a monthly payslip
+
+        - Open **Payslips** in the Admin navigation.
+        - Select an employee profile and the payroll month.
+        - Upload a PDF no larger than 10 MB.
+        - The month overview lists active employees still missing a document; click a name to prefill an upload.
+        - One current payslip exists for each employee and month.
+
+        ### Replace or delete
+
+        - Use Replace on an existing row when payroll provides a corrected PDF.
+        - The replacement becomes the current document for that employee/month; the old document is removed from private storage.
+        - Use Delete only when the current document must be withdrawn. The month can then be uploaded again.
+        - Upload, replacement, deletion, preview, and download are recorded in the audit log.
+
+        ### Find records and investigate issues
+
+        - Search by employee name or email and filter by employee or month.
+        - Use pagination for older records; filters run on the server.
+        - An inactive employee can remain in historical records, but the monthly missing overview is based on active employees.
+        - If upload fails, check the System page for object-storage health and configuration.
       `,
     },
     {
@@ -738,6 +801,36 @@ const manualTopics: Record<HelpLocale, ManualTopic[]> = {
       `,
     },
     {
+      id: "employee-payslips",
+      audience: "employee",
+      title: "Alkalmazotti bérjegyzékek",
+      summary: "Privát havi bérjegyzék-elérés alkalmazotti profilhoz.",
+      bodyMarkdown: markdown`
+        ## Alkalmazotti bérjegyzékek
+
+        A bérjegyzék alkalmazotti profilhoz tartozó privát havi PDF dokumentum. Nem része a kontraktori timesheet- és számlafolyamatnak.
+
+        ### Megtekintés és letöltés
+
+        - Nyisd meg a **Bérjegyzékek** oldalt az oldalsávból.
+        - A legfrissebb elérhető dokumentum látszik először, alatta a korábbi hónapok.
+        - Az Előnézettel az appban nézheted meg a PDF-et, a Letöltéssel mentheted le.
+        - Minden megtekintés és letöltés rövid élettartamú privát linket használ. A megnyíló böngésző URL-t ne oszd meg.
+
+        ### Hozzáférési szabályok
+
+        - Csak a saját bérjegyzékeidet tekintheted meg.
+        - Az oldal csak olvasható. Nem tölthetsz fel, cserélhetsz vagy törölhetsz bérjegyzéket.
+        - Kontraktori profilnál ez a funkció nem érhető el, mert a kontraktori elszámolás a Timesheet folyamatban történik.
+
+        ### Hibaelhárítás
+
+        - Hiányzik egy havi bérjegyzék: kérd a payroll vagy az admin segítségét a feltöltéshez.
+        - Nem működik az előnézet vagy letöltés: egyszer frissíts, majd kérd az admint az objektumtár és audit napló ellenőrzésére.
+        - Hibásnak tűnik a dokumentum: ne szerkeszd helyben; kérd az admint a közzétett PDF cseréjére.
+      `,
+    },
+    {
       id: "settings",
       audience: "all",
       title: "Biztonsági beállítások",
@@ -833,6 +926,39 @@ const manualTopics: Record<HelpLocale, ManualTopic[]> = {
         - Belép, de nincs kapcsolt profil: ellenőrizd, hogy az auth email egyezik-e a tag emailjével, és aktiválták-e a meghívót.
         - Nem fér hozzá admin oldalakhoz: ellenőrizd, hogy Admin szerepköre van-e és be van-e állítva a TOTP.
         - Profilváltás nem látszik: ellenőrizd az ütemezett dátumot és az audit sorokat.
+      `,
+    },
+    {
+      id: "admin-payslips",
+      audience: "admin",
+      title: "Admin bérjegyzék kezelés",
+      summary: "Havi alkalmazotti PDF feltöltés, csere, törlés és hozzáférés-naplózás.",
+      bodyMarkdown: markdown`
+        ## Admin bérjegyzék kezelés
+
+        A bérjegyzék privát alkalmazotti dokumentum. Nem időbejegyzésekből számolódik, és független a kontraktori timesheetektől és számláktól.
+
+        ### Havi bérjegyzék feltöltése
+
+        - Nyisd meg az Admin navigáció **Bérjegyzékek** oldalát.
+        - Válassz alkalmazotti profilt és payroll hónapot.
+        - Legfeljebb 10 MB méretű PDF-et tölts fel.
+        - A havi áttekintés azokat az aktív alkalmazottakat mutatja, akiknek még hiányzik a dokumentum; a névre kattintva előre kitöltődik a feltöltés.
+        - Egy alkalmazotthoz és hónaphoz egy aktuális bérjegyzék tartozik.
+
+        ### Csere és törlés
+
+        - Javított PDF-hez használd a meglévő sor Csere műveletét.
+        - A csere az adott alkalmazott/hónap aktuális dokumentuma lesz; a korábbi PDF a privát tárból törlődik.
+        - Törlést csak akkor használj, ha az aktuális dokumentumot vissza kell vonni. A hónap később újra feltölthető.
+        - Feltöltés, csere, törlés, előnézet és letöltés audit naplóbejegyzést hoz létre.
+
+        ### Keresés és hibakezelés
+
+        - Keress név vagy email alapján, és szűrj alkalmazottra vagy hónapra.
+        - Régebbi rekordoknál lapozz; a szűrés a szerveren fut.
+        - Az inaktív alkalmazott a történeti listában maradhat, de a havi hiánylista csak aktív alkalmazottakból készül.
+        - Feltöltési hiba esetén a Rendszer oldalon ellenőrizd az objektumtár állapotát és konfigurációját.
       `,
     },
     {
@@ -1113,6 +1239,7 @@ export function resolveHelpLocale(locale: string): HelpLocale {
 function canAccessManualTopic(topic: ManualTopic, input: ManualAccessInput) {
   if (input.role === "ADMIN") return true;
   if (topic.audience === "all") return true;
+  if (topic.audience === "employee") return input.profile === "EMPLOYEE";
   if (topic.audience === "contractor") return input.profile === "CONTRACTOR";
   return false;
 }

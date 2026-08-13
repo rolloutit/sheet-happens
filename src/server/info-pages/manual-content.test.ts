@@ -13,6 +13,7 @@ describe("manual content access", () => {
     expect(topics.map((topic) => topic.id)).toContain("contractor-timesheets");
     expect(topics.find((topic) => topic.id === "time-tracking")?.accessible).toBe(true);
     expect(topics.find((topic) => topic.id === "contractor-timesheets")?.accessible).toBe(false);
+    expect(topics.find((topic) => topic.id === "employee-payslips")?.accessible).toBe(true);
     expect(topics.find((topic) => topic.id === "people")?.accessible).toBe(false);
   });
 
@@ -24,6 +25,7 @@ describe("manual content access", () => {
     });
 
     expect(topics.find((topic) => topic.id === "contractor-timesheets")?.accessible).toBe(true);
+    expect(topics.find((topic) => topic.id === "employee-payslips")?.accessible).toBe(false);
     expect(topics.find((topic) => topic.id === "projects")?.accessible).toBe(false);
   });
 
