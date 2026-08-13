@@ -74,6 +74,10 @@ Replace placeholder values before sharing a concrete test run:
 - `{INTERNAL_REPORT_EXPORT_TITLE}`: title used for an internal report PDF export.
 - `{HELP_WELCOME_TITLE}`: title used when testing admin-edited Help welcome content.
 - `{HELP_WELCOME_MARKDOWN}`: markdown body used when testing admin-edited Help welcome content.
+- `{PAYSLIP_MONTH}`: employee payslip month formatted as `YYYY-MM`.
+- `{PAYSLIP_PDF_FILE}`: valid PDF file, no larger than 10 MB, used for payslip upload.
+- `{PAYSLIP_REPLACEMENT_PDF_FILE}`: different valid PDF file used to replace a payslip.
+- `{NON_PDF_FILE}`: non-PDF file used to test payslip file validation.
 
 ## General Rules
 
@@ -854,6 +858,72 @@ Expected result:
 
 - The employee is shown an account-status message that contractor profile is required.
 - The Timesheets navigation item is not visible for the employee.
+
+## Payslips
+
+Run admin scenarios as `{ADMIN_EMAIL}`. Run employee scenarios as `{EMPLOYEE_EMAIL}`. The employee
+must have an active employee profile; contractor profiles must not be used for these tests.
+
+### Admin Can Upload A Payslip
+
+1. Sign in as `{ADMIN_EMAIL}` and open `https://{DOMAIN_NAME}/admin/payslips`.
+2. In the month overview, click `{EMPLOYEE_EMAIL}` or choose `Upload payslip`.
+3. Select `{EMPLOYEE_EMAIL}` and `{PAYSLIP_MONTH}`.
+4. Upload `{PAYSLIP_PDF_FILE}` and submit.
+5. Confirm the row appears in the history list with the employee, month, filename, upload date, and publisher.
+6. Open Preview and confirm the embedded PDF renders.
+7. Download the PDF and confirm the downloaded file is the uploaded document.
+
+Expected result:
+
+- Only employee profiles can be selected for upload.
+- The PDF is private: preview and download work only through authenticated application access.
+- The month overview increments its posted count and removes the employee from the missing list when applicable.
+- Audit log entries exist for `payslip.uploaded`, `payslip.previewed`, and `payslip.downloaded`.
+
+### Payslip File Validation And Replacement
+
+1. On `https://{DOMAIN_NAME}/admin/payslips`, start an upload and select `{NON_PDF_FILE}`.
+2. Confirm the form rejects the file before upload.
+3. Upload `{PAYSLIP_PDF_FILE}` for `{EMPLOYEE_EMAIL}` and `{PAYSLIP_MONTH}` if no payslip exists yet.
+4. Use Replace on that row.
+5. Upload `{PAYSLIP_REPLACEMENT_PDF_FILE}` and confirm the replacement action.
+6. Preview and download the row again.
+
+Expected result:
+
+- Non-PDF files, missing files, and files over 10 MB are blocked with a clear error.
+- Replacement leaves exactly one current payslip for the selected employee/month.
+- Preview and download use the replacement PDF, not the old PDF.
+- Audit rows exist for `payslip.replaced` and the subsequent preview/download actions.
+
+### Admin Can Delete And Reupload A Payslip
+
+1. Find the `{EMPLOYEE_EMAIL}` / `{PAYSLIP_MONTH}` row in the admin payslip history.
+2. Click Delete and confirm the destructive action.
+3. Confirm the row is no longer in the current history list and the employee is shown as missing for the selected month when active.
+4. Upload `{PAYSLIP_PDF_FILE}` for the same employee and month again.
+
+Expected result:
+
+- Deletion removes the current document and permits a later reupload for the same employee/month.
+- An audit row exists for `payslip.deleted`.
+
+### Employee Can Access Only Their Own Payslips
+
+1. Sign in as `{EMPLOYEE_EMAIL}` and open `https://{DOMAIN_NAME}/payslips`.
+2. Confirm the newest payslip is shown first and older months remain available below it.
+3. Preview and download `{PAYSLIP_MONTH}`.
+4. When the test employee has at least 14 historical payslips, use the history pager and confirm the older documents load on the next page while the newest payslip remains featured.
+5. Copy the preview URL path from the browser network tools, sign in as a different employee or contractor, and open that same application URL.
+6. As a contractor, confirm the Payslips navigation item is absent and open `https://{DOMAIN_NAME}/payslips` directly.
+
+Expected result:
+
+- The employee sees only their own documents and cannot upload, replace, or delete them.
+- The employee history is retrieved in pages of 12 rather than loading every historical document.
+- Another member cannot preview or download the employee's payslip through the application endpoint.
+- Contractor profiles cannot access the payslip page and do not see it in navigation.
 
 ## Admin Projects
 
