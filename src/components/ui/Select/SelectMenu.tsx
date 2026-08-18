@@ -62,7 +62,11 @@ export function SelectMenu({
         aria-invalid={invalid || undefined}
         className={cn(controlTriggerClassName, className, triggerClassName)}
       >
-        <SelectPrimitive.Value placeholder={placeholder} />
+        <SelectPrimitive.Value
+          className="min-w-0 flex-1 truncate text-left"
+          placeholder={placeholder}
+          title={options.find((option) => option.value === currentValue)?.label}
+        />
         <SelectPrimitive.Icon asChild>
           <ChevronDown className="size-4 shrink-0 text-muted-foreground" aria-hidden="true" />
         </SelectPrimitive.Icon>
@@ -92,11 +96,11 @@ export function SelectMenu({
                 <SelectPrimitive.ItemText>
                   {option.meta ? (
                     <span className="grid gap-0.5">
-                      <span>{option.label}</span>
+                      <span title={option.label}>{option.label}</span>
                       <span className="text-xs text-muted-foreground">{option.meta}</span>
                     </span>
                   ) : (
-                    option.label
+                    <span title={option.label}>{option.label}</span>
                   )}
                 </SelectPrimitive.ItemText>
               </SelectPrimitive.Item>

@@ -21,7 +21,7 @@ import { focusChromeClassName } from "./focusRing";
  * button, where ARIA does not allow `aria-invalid`, so they set `data-invalid` and
  * communicate the error through the `Field` message via `aria-describedby`.
  */
-export const controlTriggerClassName = `inline-flex h-10 w-full items-center justify-between gap-2 rounded-[var(--radius-md)] border border-input bg-surface-inset px-3 font-ui text-sm text-foreground shadow-inner outline-none transition disabled:cursor-not-allowed disabled:opacity-55 data-[placeholder]:text-muted-foreground aria-[invalid=true]:border-destructive data-[invalid=true]:border-destructive ${focusChromeClassName}`;
+export const controlTriggerClassName = `inline-flex h-10 min-w-0 w-full items-center justify-between gap-2 rounded-[var(--radius-md)] border border-input bg-surface-inset px-3 font-ui text-sm text-foreground shadow-inner outline-none transition disabled:cursor-not-allowed disabled:opacity-55 data-[placeholder]:text-muted-foreground aria-[invalid=true]:border-destructive data-[invalid=true]:border-destructive ${focusChromeClassName}`;
 
 /**
  * Keeps a popover panel the width of the control that opened it, with a floor so a narrow
