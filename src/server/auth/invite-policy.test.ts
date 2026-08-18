@@ -1,6 +1,10 @@
 import { describe, expect, it, vi } from "vitest";
 
-import { canCreateAuthUser, canSendAuthLink } from "./invite-policy";
+import {
+  canCreateAuthUser,
+  canCreateInvitationSession,
+  canSendAuthLink,
+} from "./invite-policy";
 
 type TestMember = {
   authUserId: string | null;
@@ -19,6 +23,21 @@ function createInvitePolicyDb(input: { member?: TestMember; invitation?: TestInv
     },
     invitation: {
       findFirst: vi.fn().mockResolvedValue(input.invitation ?? null),
+    },
+  };
+}
+
+function createInvitationSessionPolicyDb(
+  input: {
+    authUser?: { email: string } | null;
+    member?: TestMember;
+    invitation?: TestInvitation;
+  } = {},
+) {
+  return {
+    ...createInvitePolicyDb(input),
+    user: {
+      findUnique: vi.fn().mockResolvedValue(input.authUser ?? null),
     },
   };
 }
@@ -110,6 +129,55 @@ describe("invite auth policy", () => {
       await expect(
         canCreateAuthUser("blocked@example.com", createInvitePolicyDb(testCase)),
       ).resolves.toBe(false);
+    }
+  });
+
+  it("allows a newly created auth user to bootstrap invitation acceptance", async () => {
+    const db = createInvitationSessionPolicyDb({
+      authUser: { email: "INVITED@example.com" },
+      member: {
+        authUserId: null,
+        deletedAt: null,
+        status: "INVITED",
+      },
+      invitation: {
+        id: "invitation-1",
+      },
+    });
+
+    await expect(canCreateInvitationSession("auth-user-1", db)).resolves.toBe(true);
+    expect(db.member.findUnique).toHaveBeenCalledWith(
+      expect.objectContaining({ where: { email: "invited@example.com" } }),
+    );
+  });
+
+  it("blocks invitation session bootstrap without an eligible pending invitation", async () => {
+    const cases = [
+      createInvitationSessionPolicyDb(),
+      createInvitationSessionPolicyDb({
+        authUser: { email: "unknown@example.com" },
+      }),
+      createInvitationSessionPolicyDb({
+        authUser: { email: "inactive@example.com" },
+        member: {
+          authUserId: null,
+          deletedAt: null,
+          status: "INACTIVE",
+        },
+        invitation: { id: "invitation-1" },
+      }),
+      createInvitationSessionPolicyDb({
+        authUser: { email: "expired@example.com" },
+        member: {
+          authUserId: null,
+          deletedAt: null,
+          status: "INVITED",
+        },
+      }),
+    ];
+
+    for (const db of cases) {
+      await expect(canCreateInvitationSession("auth-user-1", db)).resolves.toBe(false);
     }
   });
 });
