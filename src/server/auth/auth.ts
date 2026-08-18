@@ -4,7 +4,11 @@ import { APIError, betterAuth } from "better-auth";
 import { nextCookies } from "better-auth/next-js";
 import { magicLink, twoFactor } from "better-auth/plugins";
 
-import { canCreateAuthUser, canSendAuthLink } from "@/src/server/auth/invite-policy";
+import {
+  canCreateAuthUser,
+  canCreateInvitationSession,
+  canSendAuthLink,
+} from "@/src/server/auth/invite-policy";
 import { canCreateMemberSession } from "@/src/server/auth/member-session-policy";
 import { sendMagicLinkEmail, sendPasswordResetEmail } from "@/src/server/auth/auth-emails";
 import {
@@ -127,7 +131,11 @@ export const auth = betterAuth({
             },
           });
 
-          return canCreateMemberSession(member);
+          if (canCreateMemberSession(member)) {
+            return true;
+          }
+
+          return canCreateInvitationSession(session.userId);
         },
         after: async (session: AuthSessionRecord, context: AuthHookContext) => {
           await markPasskeySessionAsSecondFactor(session, context);

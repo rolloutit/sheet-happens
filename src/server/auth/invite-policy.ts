@@ -29,6 +29,15 @@ type AuthInvitePolicyDb = {
   };
 };
 
+type AuthInvitationSessionPolicyDb = AuthInvitePolicyDb & {
+  user: {
+    findUnique(args: {
+      where: { id: string };
+      select: { email: true };
+    }): Promise<{ email: string } | null>;
+  };
+};
+
 export function normalizeEmail(email: string) {
   return email.trim().toLowerCase();
 }
@@ -75,6 +84,22 @@ export async function canCreateAuthUser(email: string, db: AuthInvitePolicyDb = 
   return Boolean(
     member && !member.authUserId && !member.deletedAt && member.status === "INVITED" && invitation,
   );
+}
+
+export async function canCreateInvitationSession(
+  authUserId: string,
+  db: AuthInvitationSessionPolicyDb = prisma,
+) {
+  const authUser = await db.user.findUnique({
+    where: { id: authUserId },
+    select: { email: true },
+  });
+
+  if (!authUser) {
+    return false;
+  }
+
+  return canCreateAuthUser(authUser.email, db);
 }
 
 function findPendingInvitation(db: AuthInvitePolicyDb, email: string) {
