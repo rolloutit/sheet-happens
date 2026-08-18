@@ -43,7 +43,8 @@ export function AdminAuditLogClient({ result }: AdminAuditLogClientProps) {
   const [selectedRow, setSelectedRow] = useState<AuditLogRow | null>(null);
   const [isRefreshing, startRefreshTransition] = useTransition();
   const rows = result.rows as AuditTableRow[];
-  const auditColumns = getAuditColumns(t);
+  const labels = getAuditLabels(t);
+  const auditColumns = getAuditColumns(t, labels);
 
   useEffect(() => {
     if (!watching) return undefined;
@@ -129,7 +130,7 @@ export function AdminAuditLogClient({ result }: AdminAuditLogClientProps) {
         className="grid gap-3 rounded-[var(--radius-lg)] border border-border bg-card p-4"
         onSubmit={submitFilters}
       >
-        <div className="grid gap-3 lg:grid-cols-[minmax(15rem,1fr)_repeat(3,minmax(10rem,12rem))]">
+        <div className="grid gap-3 lg:grid-cols-[minmax(15rem,1fr)_minmax(13rem,17rem)_repeat(2,minmax(10rem,12rem))]">
           <Field label={t("client.search")} htmlFor="audit-search">
             <Input
               id="audit-search"
@@ -150,7 +151,14 @@ export function AdminAuditLogClient({ result }: AdminAuditLogClientProps) {
                 placeholder={t("client.allEvents")}
                 defaultValue={result.filters.action}
                 labels={pickerLabels.combobox}
-                options={[{ value: "", label: t("client.allEvents") }, ...result.actionOptions]}
+                contentClassName="w-[28rem] max-w-[calc(100vw-2rem)]"
+                options={[
+                  { value: "", label: t("client.allEvents") },
+                  ...result.actionOptions.map((option) => ({
+                    ...option,
+                    label: `${labels.target(actionTargetType(option.value))} · ${labels.action(option.value)}`,
+                  })),
+                ]}
               />
             )}
           </Field>
@@ -165,7 +173,10 @@ export function AdminAuditLogClient({ result }: AdminAuditLogClientProps) {
                 labels={pickerLabels.combobox}
                 options={[
                   { value: "", label: t("client.allTargets") },
-                  ...result.targetTypeOptions,
+                  ...result.targetTypeOptions.map((option) => ({
+                    ...option,
+                    label: labels.target(option.value),
+                  })),
                 ]}
               />
             )}
@@ -185,7 +196,7 @@ export function AdminAuditLogClient({ result }: AdminAuditLogClientProps) {
                   // trigger shows just the name.
                   ...result.actorOptions.map((option) => ({
                     value: option.value,
-                    label: option.label,
+                    label: option.value === "system" ? t("client.system") : option.label,
                     meta: option.email ?? undefined,
                   })),
                 ]}
@@ -255,13 +266,19 @@ export function AdminAuditLogClient({ result }: AdminAuditLogClientProps) {
 
       <AuditLogDetailsDialog
         row={selectedRow}
+        labels={labels}
         onOpenChange={(open) => !open && setSelectedRow(null)}
       />
     </div>
   );
 }
 
-function getAuditColumns(t: ReturnType<typeof useTranslations>): TableColumn<AuditTableRow>[] {
+type AuditLabels = ReturnType<typeof getAuditLabels>;
+
+function getAuditColumns(
+  t: ReturnType<typeof useTranslations>,
+  labels: AuditLabels,
+): TableColumn<AuditTableRow>[] {
   return [
     {
       id: "createdAt",
@@ -277,7 +294,7 @@ function getAuditColumns(t: ReturnType<typeof useTranslations>): TableColumn<Aud
       cell: (row) => (
         <span className="grid gap-1">
           <Badge tone={getActionTone(row.action)} dot>
-            {row.action}
+            <span title={row.action}>{labels.action(row.action)}</span>
           </Badge>
           <span className="font-mono text-xs text-muted-foreground">{row.id.slice(0, 8)}</span>
         </span>
@@ -289,7 +306,9 @@ function getAuditColumns(t: ReturnType<typeof useTranslations>): TableColumn<Aud
       header: t("client.actor"),
       cell: (row) => (
         <span className="grid gap-0.5">
-          <span className="font-medium text-foreground">{row.actorName}</span>
+          <span className="font-medium text-foreground">
+            {row.actorMemberId ? row.actorName : t("client.system")}
+          </span>
           {row.actorEmail ? <span className="text-xs">{row.actorEmail}</span> : null}
         </span>
       ),
@@ -300,7 +319,7 @@ function getAuditColumns(t: ReturnType<typeof useTranslations>): TableColumn<Aud
       header: t("client.target"),
       cell: (row) => (
         <span className="grid gap-0.5">
-          <span className="font-medium text-foreground">{row.targetType}</span>
+          <span className="font-medium text-foreground">{labels.target(row.targetType)}</span>
           <span className="break-all font-mono text-xs">{row.targetId}</span>
         </span>
       ),
@@ -321,9 +340,11 @@ function getAuditColumns(t: ReturnType<typeof useTranslations>): TableColumn<Aud
 
 function AuditLogDetailsDialog({
   row,
+  labels,
   onOpenChange,
 }: {
   row: AuditLogRow | null;
+  labels: AuditLabels;
   onOpenChange: (open: boolean) => void;
 }) {
   const t = useTranslations("AdminAudit");
@@ -332,7 +353,7 @@ function AuditLogDetailsDialog({
     <Dialog open={Boolean(row)} onOpenChange={onOpenChange}>
       <DialogContent className="max-h-[calc(100vh-2rem)] max-w-4xl overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>{row ? row.action : t("client.auditEvent")}</DialogTitle>
+          <DialogTitle>{row ? labels.action(row.action) : t("client.auditEvent")}</DialogTitle>
           <DialogDescription>{t("client.dialogDescription")}</DialogDescription>
         </DialogHeader>
         {row ? (
@@ -341,9 +362,19 @@ function AuditLogDetailsDialog({
               <AuditMeta label={t("client.time")} value={row.createdAtLabel} />
               <AuditMeta
                 label={t("client.actor")}
-                value={row.actorEmail ? `${row.actorName} (${row.actorEmail})` : row.actorName}
+                value={
+                  row.actorMemberId
+                    ? row.actorEmail
+                      ? `${row.actorName} (${row.actorEmail})`
+                      : row.actorName
+                    : t("client.system")
+                }
               />
-              <AuditMeta label={t("client.target")} value={`${row.targetType} / ${row.targetId}`} />
+              <AuditMeta label={t("client.eventCode")} value={row.action} />
+              <AuditMeta
+                label={t("client.target")}
+                value={`${labels.target(row.targetType)} / ${row.targetId}`}
+              />
               <AuditMeta
                 label={t("client.request")}
                 value={row.requestId ?? t("client.noRequestId")}
@@ -393,6 +424,38 @@ function JsonBlock({ title, value }: { title: string; value: unknown }) {
       </pre>
     </section>
   );
+}
+
+function getAuditLabels(t: ReturnType<typeof useTranslations>) {
+  const actionLabels = t.raw("events.actions") as Record<string, string>;
+  const targetLabels = t.raw("events.targets") as Record<string, string>;
+
+  return {
+    action(action: string) {
+      return actionLabels[toAuditLabelKey(action)] ?? action;
+    },
+    target(targetType: string) {
+      return targetLabels[toAuditLabelKey(targetType)] ?? targetType;
+    },
+  };
+}
+
+function toAuditLabelKey(value: string) {
+  return value.replaceAll(".", "__");
+}
+
+function actionTargetType(action: string) {
+  if (action.startsWith("security.passkey_")) return "passkey";
+  if (action.startsWith("security.") || action.startsWith("member.")) return "member";
+  if (action.startsWith("rate.member_default.")) return "member_default_rate_period";
+  if (action.startsWith("rate.assignment_override.")) return "assignment_rate_period";
+  if (action.startsWith("info_pages.")) return "info_page";
+  if (action.startsWith("invoice.")) return "contractor_invoice";
+  if (action.startsWith("report.")) return "report_export";
+  if (action.startsWith("project_group.project_")) return "project_group_project";
+  if (action.startsWith("time_entries.")) return "time_entries";
+
+  return action.split(".", 1)[0] ?? action;
 }
 
 function setParam(params: URLSearchParams, key: string, value: FormDataEntryValue | null) {
