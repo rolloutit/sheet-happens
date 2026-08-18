@@ -68,7 +68,7 @@ export function Combobox({
   }
 
   return (
-    <div className={cn("relative", className)} {...props}>
+    <div className={cn("relative min-w-0", className)} {...props}>
       <Popover
         open={open}
         modal={modal}
@@ -97,7 +97,13 @@ export function Combobox({
             disabled={disabled}
             className={cn(controlTriggerClassName, triggerClassName)}
           >
-            <span className={cn("truncate", !selected && "text-muted-foreground")}>
+            <span
+              title={selected?.label}
+              className={cn(
+                "min-w-0 flex-1 truncate text-left",
+                !selected && "text-muted-foreground",
+              )}
+            >
               {selected?.label ?? placeholder ?? label}
             </span>
             <ChevronsUpDown className="size-4 shrink-0 text-muted-foreground" aria-hidden="true" />
@@ -141,7 +147,9 @@ export function Combobox({
                   onSelect={() => selectOption(option.value)}
                 >
                   <span className="grid min-w-0 flex-1 gap-0.5">
-                    <span className="truncate font-medium">{option.label}</span>
+                    <span className="truncate font-medium" title={option.label}>
+                      {option.label}
+                    </span>
                     {option.meta ? (
                       <span className="truncate text-xs text-muted-foreground">{option.meta}</span>
                     ) : null}
