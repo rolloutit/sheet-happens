@@ -1623,6 +1623,7 @@
         "invoice__rejected": "Elutasítva",
         "invoice__uploaded": "Feltöltve",
         "member__activated": "Aktiválva",
+        "member__bootstrap_invited": "Kezdeti admin meghívva",
         "member__deactivated": "Deaktiválva",
         "member__deleted": "Archiválva",
         "member__invitation_resent": "Meghívó újraküldve",

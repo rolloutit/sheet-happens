@@ -1623,6 +1623,7 @@
         "invoice__rejected": "Rejected",
         "invoice__uploaded": "Uploaded",
         "member__activated": "Activated",
+        "member__bootstrap_invited": "Initial admin invited",
         "member__deactivated": "Deactivated",
         "member__deleted": "Archived",
         "member__invitation_resent": "Invitation resent",
