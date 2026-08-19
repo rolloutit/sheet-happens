@@ -565,7 +565,7 @@ export function getContractorDashboardNextAction(input: {
   totalMinutes: number;
   missingRateLineCount: number;
   mixedCurrency: boolean;
-  invoices: Array<{
+  invoices: ReadonlyArray<{
     id: string;
     role: "original" | "replacement" | "cancellation" | "corrected";
     status: "uploaded" | "accepted" | "rejected" | "replaced" | "cancelled" | "deleted";

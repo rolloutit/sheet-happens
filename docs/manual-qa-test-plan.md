@@ -579,6 +579,65 @@ Expected result:
 - Projects show total hours, rate state, currency, and amount.
 - Missing rates or mixed currencies are shown as warnings instead of hidden.
 
+### Contractor Workflow Stepper Follows The Monthly Status
+
+Use a month that can be taken through the complete workflow. Check both
+`https://{DOMAIN_NAME}/dashboard` and
+`https://{DOMAIN_NAME}/timesheets?month={TIMESHEET_MONTH}` after every status change.
+
+1. Before submitting the month, open both pages as `{CONTRACTOR_EMAIL}`.
+2. Confirm the status is `Not created` and the first workflow node is current.
+3. Hover over each locked node and then reach each locked node using only the keyboard.
+4. Submit the month and reopen both pages.
+5. As `{ADMIN_EMAIL}`, reject the submitted timesheet using `{TIMESHEET_REJECTION_REASON}`.
+6. Reopen both contractor pages as `{CONTRACTOR_EMAIL}`.
+7. Correct the time entries, resubmit the month, and approve it as `{ADMIN_EMAIL}`.
+8. Reopen both contractor pages and upload `{INVOICE_PDF_FILE}` with `{INVOICE_NUMBER}` and
+   `{INVOICE_AMOUNT}`.
+9. As `{ADMIN_EMAIL}`, reject the invoice using `{INVOICE_REJECTION_REASON}`.
+10. Reopen both contractor pages.
+11. Upload `{CANCELLATION_INVOICE_PDF_FILE}` and then `{CORRECTED_INVOICE_PDF_FILE}` through the
+    correction flow.
+12. As `{ADMIN_EMAIL}`, accept the corrected invoice.
+13. Reopen both contractor pages and then mark the invoice as paid as `{ADMIN_EMAIL}`.
+14. Reopen both contractor pages one final time.
+
+Expected result:
+
+- `Not created` shows the first node as current and all later nodes as locked.
+- Submitted shows the submitted node as current and the next-action panel says admin approval is
+  pending.
+- Timesheet rejection marks the submitted node red with an X, shows the rejection reason, and
+  offers the correction path.
+- Approved shows the approved node as current and enables the invoice upload form.
+- Invoice upload shows the invoice node as current and the next-action panel says invoice review
+  is pending.
+- Invoice rejection marks the invoice node red with an X and offers the cancellation/corrected
+  invoice flow.
+- Invoice acceptance shows payment as the current step and identifies payment as the remaining
+  admin action.
+- Paid shows all five nodes as completed and no workflow action can be repeated.
+- Every locked-node explanation is readable with both pointer hover and keyboard focus.
+- The dashboard next-action CTA always opens the page where the stated action can be completed.
+
+### Workflow Stepper Localization And Narrow Screens
+
+1. Open `https://{DOMAIN_NAME}/timesheets?month={TIMESHEET_MONTH}` in English.
+2. Record the status, five workflow labels, locked explanations, invoice section, and next-action
+   wording.
+3. Change the language to Hungarian without changing the selected month.
+4. Confirm the same workflow state remains selected and all recorded text is Hungarian.
+5. Test the page at a narrow mobile viewport.
+6. Move through the workflow nodes horizontally and focus each locked node.
+
+Expected result:
+
+- Changing language does not change the selected month or workflow state.
+- Statuses, workflow labels, tooltips, locked-state explanations, and CTAs are bilingual.
+- The five nodes remain readable on a narrow screen through horizontal scrolling.
+- The stepper does not widen the whole page or overlap adjacent content.
+- Keyboard focus remains visible and locked explanations are not hover-only.
+
 ### Contractor Can Submit Monthly Timesheet
 
 1. Sign in as `{CONTRACTOR_EMAIL}`.
@@ -665,7 +724,8 @@ Expected result:
 
 1. Sign in as `{CONTRACTOR_EMAIL}`.
 2. Open `https://{DOMAIN_NAME}/timesheets?month={TIMESHEET_MONTH}` for a month that is not yet approved.
-3. Confirm there is no invoice upload form.
+3. Confirm the invoice section is visible in a locked state, explains that admin approval is
+   required, and does not show an upload form.
 4. Submit and approve the month through the normal contractor and admin flow.
 5. Return to `https://{DOMAIN_NAME}/timesheets?month={TIMESHEET_MONTH}`.
 6. Try uploading without an invoice file.
@@ -677,6 +737,7 @@ Expected result:
 Expected result:
 
 - The contractor cannot upload an invoice before approval.
+- The unavailable invoice step remains visible and explains how it becomes available.
 - Invalid file, amount, and invoice number attempts show clear error messages.
 - Invalid attempts do not change the timesheet status.
 - Invalid attempts do not create invoice or document records.

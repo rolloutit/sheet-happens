@@ -14,7 +14,6 @@ import {
   FileText,
   FolderKanban,
   Inbox,
-  Lock,
   Plus,
   Timer,
   Wallet,
@@ -25,6 +24,7 @@ import type { HTMLAttributes } from "react";
 
 import { AppShell } from "@/src/components/layout/AppShell";
 import { StatusPill } from "@/src/components/sheet/StatusPill";
+import { TimesheetStepper } from "@/src/components/sheet/TimesheetStepper";
 import { Badge } from "@/src/components/ui/Badge";
 import { Button } from "@/src/components/ui/Button";
 import { formatHoursWithUnit, formatMoney } from "@/src/lib/formatting";
@@ -636,8 +636,6 @@ function ContractorStepper({
   dashboard: ContractorDashboardData;
   t: DashboardTranslator;
 }) {
-  const nodes = getStepperNodes(dashboard.timesheet.status, t);
-
   return (
     <DashboardPanel className="p-6">
       <div className="mb-7 flex items-center justify-between gap-4">
@@ -649,48 +647,23 @@ function ContractorStepper({
           label={t(`timesheetStatus.${dashboard.timesheet.status}`)}
         />
       </div>
-      <div className="flex items-start">
-        {nodes.map((node, index) => (
-          <div key={node.id} className="contents">
-            {index > 0 ? (
-              <span
-                className={cn(
-                  "mt-[17px] h-0.5 min-w-4 flex-1 rounded-full",
-                  node.state === "done" ? "bg-accent" : "bg-border",
-                )}
-                aria-hidden="true"
-              />
-            ) : null}
-            <div className="flex w-16 shrink-0 flex-col items-center gap-2">
-              <span
-                className={cn(
-                  "flex size-9 items-center justify-center rounded-full border-2 font-ui text-sm font-bold",
-                  node.state === "done" && "border-accent bg-accent text-primary-foreground",
-                  node.state === "active" &&
-                    "border-accent bg-card text-accent shadow-[0_0_0_4px_var(--accent-soft)]",
-                  node.state === "disabled" && "border-border bg-secondary text-muted-foreground",
-                )}
-              >
-                {node.state === "done" ? (
-                  <Check className="size-4" aria-hidden="true" />
-                ) : node.state === "disabled" ? (
-                  <Lock className="size-3.5" aria-hidden="true" />
-                ) : (
-                  index + 1
-                )}
-              </span>
-              <span
-                className={cn(
-                  "text-center font-ui text-[11px] font-semibold leading-tight",
-                  node.state === "active" ? "text-accent" : "text-muted-foreground",
-                )}
-              >
-                {node.label}
-              </span>
-            </div>
-          </div>
-        ))}
-      </div>
+      <TimesheetStepper
+        status={dashboard.timesheet.status}
+        aria-label={t("contractor.stepperAriaLabel")}
+        labels={{
+          created: t("contractor.stepper.create"),
+          submitted: t("contractor.stepper.submit"),
+          approved: t("contractor.stepper.approve"),
+          invoiced: t("contractor.stepper.invoice"),
+          paid: t("contractor.stepper.paid"),
+        }}
+        lockedDescriptions={{
+          submitted: t("contractor.stepperLocked.submit"),
+          approved: t("contractor.stepperLocked.approve"),
+          invoiced: t("contractor.stepperLocked.invoice"),
+          paid: t("contractor.stepperLocked.paid"),
+        }}
+      />
     </DashboardPanel>
   );
 }
@@ -1351,78 +1324,6 @@ function formatEmployeeCostTotals(
   return formatMoney(total.amount, total.currencyCode, locale, {
     display: "code",
   });
-}
-
-function getStepperNodes(status: TimesheetPreviewStatus, t: DashboardTranslator) {
-  const states = getStepperStates(status);
-
-  return [
-    { id: "create", label: t("contractor.stepper.create"), state: states.create },
-    { id: "submit", label: t("contractor.stepper.submit"), state: states.submit },
-    { id: "approve", label: t("contractor.stepper.approve"), state: states.approve },
-    { id: "invoice", label: t("contractor.stepper.invoice"), state: states.invoice },
-    { id: "paid", label: t("contractor.stepper.paid"), state: states.paid },
-  ] as const;
-}
-
-function getStepperStates(status: TimesheetPreviewStatus) {
-  if (status === "paid") {
-    return {
-      create: "done",
-      submit: "done",
-      approve: "done",
-      invoice: "done",
-      paid: "done",
-    } as const;
-  }
-
-  if (status === "accepted") {
-    return {
-      create: "done",
-      submit: "done",
-      approve: "done",
-      invoice: "done",
-      paid: "active",
-    } as const;
-  }
-
-  if (status === "invoiced" || status === "invoice_rejected") {
-    return {
-      create: "done",
-      submit: "done",
-      approve: "done",
-      invoice: "active",
-      paid: "disabled",
-    } as const;
-  }
-
-  if (status === "approved") {
-    return {
-      create: "done",
-      submit: "done",
-      approve: "done",
-      invoice: "active",
-      paid: "disabled",
-    } as const;
-  }
-
-  if (status === "submitted") {
-    return {
-      create: "done",
-      submit: "done",
-      approve: "active",
-      invoice: "disabled",
-      paid: "disabled",
-    } as const;
-  }
-
-  return {
-    create: "active",
-    submit: "disabled",
-    approve: "disabled",
-    invoice: "disabled",
-    paid: "disabled",
-  } as const;
 }
 
 function formatTrend(current: number, previous: number) {

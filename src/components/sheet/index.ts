@@ -188,6 +188,7 @@ export type {
   TimesheetStepState,
   TimesheetStepperProps,
   TimesheetStepperStep,
+  TimesheetWorkflowStepId,
 } from "./TimesheetStepper";
 export { TimesheetSummaryCard } from "./TimesheetSummaryCard";
 export type { TimesheetSummaryAction, TimesheetSummaryCardProps } from "./TimesheetSummaryCard";
