@@ -33,6 +33,29 @@ export const Rejected: Story = {
   },
 };
 
+export const InvoiceRejected: Story = {
+  args: {
+    status: "invoice_rejected",
+  },
+};
+
+export const AwaitingPayment: Story = {
+  args: {
+    status: "accepted",
+  },
+};
+
+export const LockedExplanations: Story = {
+  args: {
+    status: "submitted",
+    lockedDescriptions: {
+      approved: "Available after an admin approves the submitted timesheet.",
+      invoiced: "Invoice upload is available after approval.",
+      paid: "An admin closes this step after payment.",
+    },
+  },
+};
+
 export const CustomSteps: Story = {
   args: {
     steps: [
