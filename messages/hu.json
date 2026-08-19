@@ -421,12 +421,19 @@
     "contractor": {
       "subtitle": "{status} · {month}",
       "stepperTitle": "Havi timesheet",
+      "stepperAriaLabel": "Havi timesheet folyamat",
       "stepper": {
         "create": "Összeállítás",
         "submit": "Beküldés",
         "approve": "Jóváhagyás",
         "invoice": "Számla",
         "paid": "Kifizetés"
+      },
+      "stepperLocked": {
+        "submit": "Beküldés előtt ellenőrizd az összeállított hónapot.",
+        "approve": "Ez a lépés beküldés után válik elérhetővé, és egy admin végzi el.",
+        "invoice": "A számlafeltöltés admin jóváhagyás után válik elérhetővé.",
+        "paid": "Ezt a lépést egy admin zárja le a számla elfogadása és kifizetése után."
       },
       "nextAction": {
         "eyebrow": "Következő teendő",
@@ -596,7 +603,7 @@
       }
     },
     "timesheetStatus": {
-      "not_created": "Nincs beküldve",
+      "not_created": "Nincs létrehozva",
       "submitted": "Beküldve",
       "rejected": "Elutasítva",
       "approved": "Jóváhagyva",
@@ -617,8 +624,26 @@
       "amount": "Összeg",
       "entries": "Bejegyzés"
     },
+    "workflow": {
+      "title": "Havi folyamat",
+      "description": "A hónap aktuális állapota és a hátralévő lépések.",
+      "ariaLabel": "Havi timesheet- és számlafolyamat",
+      "steps": {
+        "created": "Összeállítva",
+        "submitted": "Beküldve",
+        "approved": "Jóváhagyva",
+        "invoiced": "Számla",
+        "paid": "Kifizetve"
+      },
+      "locked": {
+        "submitted": "Beküldés előtt ellenőrizd az összeállított hónapot.",
+        "approved": "Ez a lépés beküldés után válik elérhetővé, és egy admin végzi el.",
+        "invoiced": "A számlafeltöltés admin jóváhagyás után válik elérhetővé.",
+        "paid": "Ezt a lépést egy admin zárja le a számla elfogadása és kifizetése után."
+      }
+    },
     "status": {
-      "not_created": "Nincs beküldve",
+      "not_created": "Nincs létrehozva",
       "submitted": "Beküldve",
       "rejected": "Elutasítva",
       "approved": "Jóváhagyva",
@@ -709,6 +734,9 @@
     "invoice": {
       "title": "Kontraktori számla",
       "description": "A számla PDF-et admin jóváhagyás után lehet feltölteni.",
+      "lockedTitle": "A számlafeltöltés még nem elérhető",
+      "lockedDescription": "A számlafeltöltés a beküldött timesheet jóváhagyása után válik elérhetővé.",
+      "lockedReason": "A számla feltöltése előtt egy adminnak jóvá kell hagynia a timesheetet.",
       "uploadedDescription": "A jóváhagyott timesheet revízióhoz feltöltött számla.",
       "cancellationDescription": "Először töltsd fel az elutasított számla sztornó számláját.",
       "replacementDescription": "A sztornó számla feltöltve. Töltsd fel a javított számlát.",

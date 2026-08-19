@@ -14,6 +14,7 @@ import { getLocale, getTranslations } from "next-intl/server";
 
 import { AppShell } from "@/src/components/layout/AppShell";
 import { StatusPill } from "@/src/components/sheet/StatusPill";
+import { TimesheetStepper } from "@/src/components/sheet/TimesheetStepper";
 import { Badge } from "@/src/components/ui/Badge";
 import { Button } from "@/src/components/ui/Button";
 import {
@@ -25,6 +26,7 @@ import {
 } from "@/src/components/ui/Card";
 import { Field } from "@/src/components/ui/Field";
 import { Input } from "@/src/components/ui/Input";
+import { LockedState } from "@/src/components/ui/LockedState";
 import { SectionHead } from "@/src/components/ui/SectionHead";
 import {
   formatCount,
@@ -168,6 +170,32 @@ export default async function TimesheetsPage({ searchParams }: TimesheetsPagePro
               />
             </div>
           </div>
+        </Card>
+
+        <Card density="lg">
+          <CardHeader className="block">
+            <CardTitle>{t("workflow.title")}</CardTitle>
+            <CardDescription>{t("workflow.description")}</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <TimesheetStepper
+              status={preview.status}
+              aria-label={t("workflow.ariaLabel")}
+              labels={{
+                created: t("workflow.steps.created"),
+                submitted: t("workflow.steps.submitted"),
+                approved: t("workflow.steps.approved"),
+                invoiced: t("workflow.steps.invoiced"),
+                paid: t("workflow.steps.paid"),
+              }}
+              lockedDescriptions={{
+                submitted: t("workflow.locked.submitted"),
+                approved: t("workflow.locked.approved"),
+                invoiced: t("workflow.locked.invoiced"),
+                paid: t("workflow.locked.paid"),
+              }}
+            />
+          </CardContent>
         </Card>
 
         <PreviewWarnings preview={preview} t={t} />
@@ -337,10 +365,6 @@ function InvoicePanel({
 }) {
   const workflow = getInvoiceWorkflow(preview);
 
-  if (workflow.kind === "hidden") {
-    return null;
-  }
-
   return (
     <Card variant="elevated" density="lg">
       <CardHeader className="block">
@@ -355,7 +379,9 @@ function InvoicePanel({
         </div>
       </CardHeader>
       <CardContent>
-        {workflow.kind === "summary" ? (
+        {workflow.kind === "locked" ? (
+          <LockedState title={t("invoice.lockedTitle")} reason={t("invoice.lockedReason")} />
+        ) : workflow.kind === "summary" ? (
           <InvoiceSummary invoice={workflow.invoice} locale={locale} t={t} />
         ) : (
           <div className="grid gap-4">
@@ -391,7 +417,7 @@ type TimesheetInvoicePreview = ContractorTimesheetMonthlyPreview["invoices"][num
 
 type InvoiceWorkflow =
   | {
-      kind: "hidden";
+      kind: "locked";
     }
   | {
       kind: "summary";
@@ -546,7 +572,7 @@ function getInvoiceWorkflow(preview: ContractorTimesheetMonthlyPreview): Invoice
     if (!rejectedInvoice) {
       return latestMainInvoice
         ? { kind: "summary", invoice: latestMainInvoice }
-        : { kind: "hidden" };
+        : { kind: "locked" };
     }
 
     const cancellationInvoice = preview.invoices.find(
@@ -584,11 +610,12 @@ function getInvoiceWorkflow(preview: ContractorTimesheetMonthlyPreview): Invoice
   }
 
   return {
-    kind: "hidden",
+    kind: "locked",
   };
 }
 
 function getInvoiceWorkflowDescription(workflow: InvoiceWorkflow, t: TimesheetsTranslator) {
+  if (workflow.kind === "locked") return t("invoice.lockedDescription");
   if (workflow.kind === "summary") return t("invoice.uploadedDescription");
   if (workflow.kind === "cancellation") return t("invoice.cancellationDescription");
   if (workflow.kind === "replacement") return t("invoice.replacementDescription");

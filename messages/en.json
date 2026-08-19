@@ -421,12 +421,19 @@
     "contractor": {
       "subtitle": "{status} · {month}",
       "stepperTitle": "Monthly timesheet",
+      "stepperAriaLabel": "Monthly timesheet workflow",
       "stepper": {
         "create": "Assemble",
         "submit": "Submit",
         "approve": "Approve",
         "invoice": "Invoice",
         "paid": "Paid"
+      },
+      "stepperLocked": {
+        "submit": "Review the assembled month before submitting it.",
+        "approve": "This step becomes available after submission and is completed by an admin.",
+        "invoice": "Invoice upload becomes available after admin approval.",
+        "paid": "An admin closes this step after invoice acceptance and payment."
       },
       "nextAction": {
         "eyebrow": "Next action",
@@ -596,7 +603,7 @@
       }
     },
     "timesheetStatus": {
-      "not_created": "Not submitted",
+      "not_created": "Not created",
       "submitted": "Submitted",
       "rejected": "Rejected",
       "approved": "Approved",
@@ -617,8 +624,26 @@
       "amount": "Amount",
       "entries": "Entries"
     },
+    "workflow": {
+      "title": "Monthly workflow",
+      "description": "The current state and the remaining steps for this month.",
+      "ariaLabel": "Monthly timesheet and invoice workflow",
+      "steps": {
+        "created": "Assembled",
+        "submitted": "Submitted",
+        "approved": "Approved",
+        "invoiced": "Invoice",
+        "paid": "Paid"
+      },
+      "locked": {
+        "submitted": "Review the assembled month before submitting it.",
+        "approved": "This step becomes available after submission and is completed by an admin.",
+        "invoiced": "Invoice upload becomes available after admin approval.",
+        "paid": "An admin closes this step after invoice acceptance and payment."
+      }
+    },
     "status": {
-      "not_created": "Not submitted",
+      "not_created": "Not created",
       "submitted": "Submitted",
       "rejected": "Rejected",
       "approved": "Approved",
@@ -709,6 +734,9 @@
     "invoice": {
       "title": "Contractor invoice",
       "description": "Upload the invoice PDF after admin approval.",
+      "lockedTitle": "Invoice upload is not available yet",
+      "lockedDescription": "Invoice upload unlocks after the submitted timesheet is approved.",
+      "lockedReason": "An admin must approve this timesheet before an invoice can be uploaded.",
       "uploadedDescription": "Uploaded invoice for the approved timesheet revision.",
       "cancellationDescription": "Upload the cancellation invoice for the rejected invoice first.",
       "replacementDescription": "The cancellation invoice is uploaded. Upload the corrected invoice.",
