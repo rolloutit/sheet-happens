@@ -8,14 +8,25 @@ vi.mock("next/navigation", () => ({
 }));
 
 import en from "@/messages/en.json";
+import hu from "@/messages/hu.json";
 import { ThemeProvider } from "../ThemeProvider";
 import { AppShell } from ".";
 
-function renderShell() {
+function renderShell({
+  current = "dashboard",
+  locale = "en",
+  profile,
+}: {
+  current?: string;
+  locale?: "en" | "hu";
+  profile?: "employee" | "contractor";
+} = {}) {
+  const messages = locale === "hu" ? hu : en;
+
   return render(
-    <NextIntlClientProvider locale="en" messages={en}>
+    <NextIntlClientProvider locale={locale} messages={messages}>
       <ThemeProvider>
-        <AppShell current="dashboard" role="admin">
+        <AppShell current={current} role="admin" profile={profile}>
           <p>content</p>
         </AppShell>
       </ThemeProvider>
@@ -43,5 +54,25 @@ describe("AppShell theme control placement", () => {
     const drawer = await screen.findByRole("dialog");
     expect(within(drawer).getByRole("radiogroup", { name: "Language" })).toBeInTheDocument();
     expect(within(drawer).getByRole("button", { name: "Theme" })).toBeInTheDocument();
+  });
+});
+
+describe("AppShell page scope", () => {
+  it.each([
+    { current: "review", expected: "Admin" },
+    { current: "reports", expected: "Admin" },
+    { current: "dashboard", expected: "Everyone" },
+    { current: "time", expected: "Everyone" },
+    { current: "timesheets", profile: "contractor" as const, expected: "Contractor" },
+    { current: "payslips", profile: "employee" as const, expected: "Employee" },
+  ])("shows $expected for the $current page", ({ current, profile, expected }) => {
+    renderShell({ current, profile });
+
+    expect(screen.getByTestId("app-shell-page-scope")).toHaveTextContent(expected);
+  });
+
+  it("uses the localized page scope", () => {
+    renderShell({ current: "dashboard", locale: "hu" });
+    expect(screen.getByTestId("app-shell-page-scope")).toHaveTextContent("Mindenki");
   });
 });

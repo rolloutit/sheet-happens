@@ -412,8 +412,11 @@ export function AppShell({
                 </DrawerContent>
               </Drawer>
               <div>
-                <p className="font-ui text-[11px] font-semibold uppercase tracking-[0.14em] text-accent">
-                  {role === "admin" ? t("scope.all") : t(`roles.${role}`)}
+                <p
+                  className="font-ui text-[11px] font-semibold uppercase tracking-[0.14em] text-accent"
+                  data-testid="app-shell-page-scope"
+                >
+                  {pageScope(current, role, t)}
                 </p>
                 <p className="text-lg font-semibold leading-tight">{pageTitle(current, t)}</p>
               </div>
@@ -641,6 +644,22 @@ function pageTitle(current: string, t: AppShellTranslator) {
 
   const item = navItems.find((navItem) => navItem.id === current);
   return item ? t(item.labelKey) : t("nav.dashboard");
+}
+
+function pageScope(current: string, role: AppShellRole, t: AppShellTranslator) {
+  const item = navItems.find((navItem) => navItem.id === current);
+
+  if (item?.group === "admin") return t("roles.admin");
+
+  if (item && "profiles" in item && item.profiles.length === 1) {
+    return t(`roles.${item.profiles[0]}`);
+  }
+
+  if (item?.group === "main" || current === "help" || current === "settings") {
+    return t("scope.all");
+  }
+
+  return t(`roles.${role}`);
 }
 
 function bottomNavItems(role: AppShellProps["role"], profile: AppShellProfile) {
