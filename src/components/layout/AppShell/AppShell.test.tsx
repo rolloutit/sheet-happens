@@ -64,7 +64,8 @@ describe("AppShell account menu", () => {
 
     await user.click(screen.getByRole("button", { name: "User menu" }));
 
-    expect(await screen.findByText("Profile and settings")).toBeInTheDocument();
+    expect(await screen.findByText("My rates")).toBeInTheDocument();
+    expect(screen.getByText("Profile and settings")).toBeInTheDocument();
     expect(screen.getByText("Sign out")).toBeInTheDocument();
   });
 });

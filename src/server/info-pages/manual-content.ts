@@ -90,6 +90,37 @@ const manualTopics: Record<HelpLocale, ManualTopic[]> = {
       `,
     },
     {
+      id: "my-rates",
+      audience: "all",
+      title: "My rates",
+      summary: "Read-only access to your own central and project-specific rates.",
+      bodyMarkdown: markdown`
+        ## My rates
+
+        Open **My rates** from the account menu in the top-right corner. This page is read-only and never exposes another member's rate.
+
+        ### Central rate
+
+        - Employees and contractors both see their complete central-rate timeline.
+        - The current period is marked explicitly.
+        - Future and previous periods remain visible with their date boundaries and currencies.
+        - If no central rate is configured, ask an administrator to set it.
+
+        ### Contractor project rates
+
+        - Contractors also see their currently assigned projects.
+        - **Project override** means that project's current override replaces the central rate.
+        - **Follows the central rate** means there is no current override for that project.
+        - Employees do not have project-specific rate overrides.
+
+        ### Troubleshooting
+
+        - Wrong amount or currency: ask an administrator to inspect the relevant rate period.
+        - Missing project: ask an administrator to check the project assignment and its validity dates.
+        - Missing current rate: an administrator must add a central rate or a current project override.
+      `,
+    },
+    {
       id: "time-tracking",
       audience: "all",
       title: "Time tracking",
@@ -666,6 +697,37 @@ const manualTopics: Record<HelpLocale, ManualTopic[]> = {
 
         - Hiányzó szerepkör, profil vagy tagállapot: admin.
         - Saját nyelv, időzóna vagy biztonsági beállítás: általában a felhasználó a Beállításokban.
+      `,
+    },
+    {
+      id: "my-rates",
+      audience: "all",
+      title: "Saját óradíjaim",
+      summary: "Csak olvasható hozzáférés a saját központi és projektspecifikus óradíjakhoz.",
+      bodyMarkdown: markdown`
+        ## Saját óradíjaim
+
+        A jobb felső sarokban lévő fiókmenüből nyisd meg a **Saját óradíjaim** oldalt. Az oldal csak olvasható, és soha nem mutatja más tag óradíját.
+
+        ### Központi óradíj
+
+        - Az alkalmazottak és a kontraktorok is látják a központi óradíjuk teljes idővonalát.
+        - A jelenlegi időszak külön jelölést kap.
+        - A jövőbeli és korábbi időszakok a dátumhatárokkal és pénznemmel együtt láthatók maradnak.
+        - Ha nincs központi óradíj, kérd meg az admint a beállítására.
+
+        ### Kontraktori projektóradíjak
+
+        - A kontraktorok az aktuálisan hozzájuk rendelt projekteket is látják.
+        - A **Projektfelülírás** azt jelenti, hogy az adott projekt jelenlegi felülírása helyettesíti a központi óradíjat.
+        - **A központi óradíjat követi** azt jelenti, hogy a projekthez nincs jelenlegi felülírás.
+        - Az alkalmazottaknak nincs projektspecifikus óradíj-felülírásuk.
+
+        ### Hibaelhárítás
+
+        - Hibás összeg vagy pénznem: kérd meg az admint a vonatkozó óradíjidőszak ellenőrzésére.
+        - Hiányzó projekt: kérd meg az admint a projekthozzárendelés és az érvényességi dátumok ellenőrzésére.
+        - Hiányzó jelenlegi óradíj: az adminnak központi óradíjat vagy jelenlegi projektfelülírást kell beállítania.
       `,
     },
     {

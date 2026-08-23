@@ -1231,6 +1231,49 @@ Expected result:
 - Bulk assignment is limited to the configured maximum number of selected pairs.
 - Audit rows are recorded for created assignments.
 
+## Member Own Rates
+
+### Employee Central Rate Timeline
+
+1. Sign in as `{EMPLOYEE_EMAIL}`.
+2. Open the avatar menu and select **My rates** / **Saját óradíjaim**.
+3. Review the central-rate timeline.
+
+Expected result:
+
+- The header identifies the Employee profile.
+- Only the employee's own central-rate periods are visible, newest first.
+- The effective period is marked as current.
+- Project-specific rate rows are not shown.
+- Profile and settings remains a separate account-menu action.
+
+### Contractor Effective Project Rates
+
+1. Sign in as `{CONTRACTOR_EMAIL}`.
+2. Open the avatar menu and select **My rates** / **Saját óradíjaim**.
+3. Review the central timeline and project rows.
+4. Use one assigned project with a current override and one assigned project without an override.
+
+Expected result:
+
+- The header identifies the Contractor profile.
+- The contractor's complete central-rate timeline is visible.
+- The overridden project shows the current override amount and **Project override**.
+- The other project shows the current central amount and **Follows the central rate**.
+- No other member's name, email, rate, or project assignment is visible.
+
+### Missing Own Rate
+
+1. Use a member with no current central rate.
+2. For a contractor, ensure at least one current assignment also has no current override.
+3. Open **My rates** / **Saját óradíjaim**.
+
+Expected result:
+
+- The page explains that no central rate is configured and tells the member to ask an admin.
+- A contractor project without either rate shows **Not set**, not a manufactured zero value.
+- The page remains read-only.
+
 ## Admin Rates
 
 Run these tests as `{ADMIN_EMAIL}` with TOTP enabled and verified.

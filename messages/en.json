@@ -35,7 +35,8 @@
       "label": "Jump anywhere..."
     },
     "scope": {
-      "all": "Everyone"
+      "all": "Everyone",
+      "profile": "Profile"
     },
     "roles": {
       "employee": "Employee",
@@ -80,6 +81,7 @@
     },
     "userMenu": {
       "label": "User menu",
+      "myRates": "My rates",
       "profileAndSettings": "Profile and settings",
       "signOut": "Sign out"
     },
@@ -2084,6 +2086,39 @@
         "copiedWithSkipped": "Copied {created, plural, one {# entry} other {# entries}} from the previous week; {skipped} skipped."
       }
     }
+  },
+  "MyRates": {
+    "eyebrow": "Profile",
+    "title": "My rates",
+    "subtitle": {
+      "employee": "Your internal hourly rate, by period. You only see your own rate.",
+      "contractor": "Your central rate and per-project rates, by period. You only see your own rates."
+    },
+    "profiles": {
+      "employee": "Employee",
+      "contractor": "Contractor"
+    },
+    "central": {
+      "title": "Central rate",
+      "employeeDescription": "Your internal hourly rate. If none is set, calculations have no resolved rate.",
+      "contractorDescription": "Your default rate across every project. Project overrides can replace it.",
+      "emptyTitle": "No central rate is set",
+      "emptyDescription": "Ask an administrator to configure your rate."
+    },
+    "period": {
+      "to": "to",
+      "open": "open",
+      "current": "Current"
+    },
+    "projects": {
+      "title": "By project",
+      "override": "Project override",
+      "followsCentral": "Follows the central rate",
+      "missing": "No project override or central rate",
+      "notSet": "Not set",
+      "current": "Current rate"
+    },
+    "privacy": "This page shows only your rates. Other people’s rates are not visible."
   },
   "Settings": {
     "page": {
