@@ -35,7 +35,8 @@
       "label": "Ugrás bárhová..."
     },
     "scope": {
-      "all": "Mindenki"
+      "all": "Mindenki",
+      "profile": "Profil"
     },
     "roles": {
       "employee": "Alkalmazott",
@@ -80,6 +81,7 @@
     },
     "userMenu": {
       "label": "Felhasználói menü",
+      "myRates": "Saját óradíjaim",
       "profileAndSettings": "Profil és beállítások",
       "signOut": "Kijelentkezés"
     },
@@ -2084,6 +2086,39 @@
         "copiedWithSkipped": "{created} bejegyzés másolva az előző hétről; {skipped} kihagyva."
       }
     }
+  },
+  "MyRates": {
+    "eyebrow": "Profil",
+    "title": "Saját óradíjaim",
+    "subtitle": {
+      "employee": "A saját belső óradíjad időszakonként. Csak a saját óradíjadat látod.",
+      "contractor": "A központi és projektenkénti óradíjaid időszakonként. Csak a saját óradíjaidat látod."
+    },
+    "profiles": {
+      "employee": "Alkalmazott",
+      "contractor": "Kontraktor"
+    },
+    "central": {
+      "title": "Központi óradíj",
+      "employeeDescription": "A saját belső óradíjad. Ha nincs beállítva, a számításokhoz nem tartozik feloldott óradíj.",
+      "contractorDescription": "Az alapértelmezett óradíjad minden projekten. A projektfelülírások ezt helyettesíthetik.",
+      "emptyTitle": "Nincs beállított központi óradíj",
+      "emptyDescription": "Kérd meg az admint az óradíjad beállítására."
+    },
+    "period": {
+      "to": "–",
+      "open": "nyitott",
+      "current": "Jelenlegi"
+    },
+    "projects": {
+      "title": "Projektenként",
+      "override": "Projektfelülírás",
+      "followsCentral": "A központi óradíjat követi",
+      "missing": "Nincs projektfelülírás vagy központi óradíj",
+      "notSet": "Nincs beállítva",
+      "current": "Jelenlegi óradíj"
+    },
+    "privacy": "Ez az oldal csak a saját óradíjaidat mutatja. Mások óradíjai nem láthatók."
   },
   "Settings": {
     "page": {
