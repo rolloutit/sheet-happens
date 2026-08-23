@@ -3,6 +3,7 @@
 import {
   Activity,
   BarChart3,
+  BadgeDollarSign,
   BookOpen,
   CalendarDays,
   Clock3,
@@ -174,6 +175,7 @@ export function AppShell({
   const translatedUserActions =
     userActions ??
     ([
+      { id: "my-rates", label: t("userMenu.myRates"), icon: BadgeDollarSign },
       { id: "settings", label: t("userMenu.profileAndSettings"), icon: Settings },
       { id: "sign-out", label: t("userMenu.signOut"), icon: LogOut, tone: "danger" as const },
     ] satisfies NonNullable<AppShellProps["userActions"]>);
@@ -217,6 +219,11 @@ export function AppShell({
 
     if (actionId === "settings") {
       window.location.href = "/settings";
+      return;
+    }
+
+    if (actionId === "my-rates") {
+      window.location.href = "/rates";
     }
   }
 
@@ -644,12 +651,15 @@ function NavGroup({
 function pageTitle(current: string, t: AppShellTranslator) {
   if (current === "help") return t("help");
   if (current === "settings") return t("nav.settings");
+  if (current === "my-rates") return t("userMenu.myRates");
 
   const item = navItems.find((navItem) => navItem.id === current);
   return item ? t(item.labelKey) : t("nav.dashboard");
 }
 
 function pageScope(current: string, role: AppShellRole, t: AppShellTranslator) {
+  if (current === "my-rates") return t("scope.profile");
+
   const item = navItems.find((navItem) => navItem.id === current);
 
   if (item?.group === "admin") return t("roles.admin");
