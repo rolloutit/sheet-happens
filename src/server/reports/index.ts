@@ -18,6 +18,7 @@ export {
 } from "./report-filter-params";
 export { generateReportPdfExport, ReportPdfExportError } from "./report-pdf";
 export { buildReportPdfPayload, normalizeReportPdfTitle } from "./report-pdf-payload";
+export { ReportLinePersistenceError, saveAdminReportLineEdits } from "./report-line-persistence";
 export type {
   BuildReportSnapshotInput,
   NormalizedReportFilters,
@@ -33,6 +34,7 @@ export type {
   ReportInternalGroup,
   ReportInternalLine,
   ReportInternalSnapshot,
+  ReportLineBase,
   ReportLineMember,
   ReportLineProject,
   ReportLineRate,
@@ -62,6 +64,10 @@ export type {
   ReportPdfPayload,
   ReportPdfTranslator,
 } from "./report-pdf-payload";
+export type {
+  ReportLinePersistenceRequestMetadata,
+  SaveAdminReportLineEditsInput,
+} from "./report-line-persistence";
 export type {
   ParsedReportSearchParams,
   ReportExportFields,
