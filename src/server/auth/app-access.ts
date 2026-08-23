@@ -55,6 +55,11 @@ export type AppMember = {
   status: "INVITED" | "ACTIVE" | "INACTIVE" | "DELETED";
   currentProfile: "CONTRACTOR" | "EMPLOYEE";
   timezone: string;
+  avatarStorageBucket: string | null;
+  avatarStorageKey: string | null;
+  avatarContentType: string | null;
+  avatarByteSize: bigint | null;
+  avatarUpdatedAt: Date | null;
   deletedAt: Date | null;
 };
 
@@ -94,6 +99,11 @@ export async function getAppAccessState(): Promise<AppAccessState> {
         status: true,
         currentProfile: true,
         timezone: true,
+        avatarStorageBucket: true,
+        avatarStorageKey: true,
+        avatarContentType: true,
+        avatarByteSize: true,
+        avatarUpdatedAt: true,
         deletedAt: true,
       },
     }),
@@ -358,7 +368,16 @@ export function mapMemberToShellProfile(member: Pick<AppMember, "currentProfile"
 }
 
 export function mapMemberToShellUser(
-  member: Pick<AppMember, "displayName" | "firstName" | "lastName" | "email" | "role">,
+  member: Pick<
+    AppMember,
+    | "displayName"
+    | "firstName"
+    | "lastName"
+    | "email"
+    | "role"
+    | "avatarStorageKey"
+    | "avatarUpdatedAt"
+  >,
 ) {
   const name =
     member.displayName.trim() ||
@@ -370,6 +389,9 @@ export function mapMemberToShellUser(
     email: member.email,
     role: member.role === "ADMIN" ? "Admin" : "Member",
     initials: getInitials(name),
+    avatarSrc: member.avatarStorageKey
+      ? `/api/profile/avatar?v=${member.avatarUpdatedAt?.getTime() ?? 0}`
+      : undefined,
   };
 }
 
