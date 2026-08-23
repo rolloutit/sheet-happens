@@ -856,6 +856,16 @@
       "entries": "{count} bejegyzés",
       "projects": "{count} projekt"
     },
+    "bulk": {
+      "selected": "{count} kijelölve",
+      "eligibilityHint": "Csak beküldött timesheetek hagyhatók jóvá tömegesen.",
+      "approve": "Jóváhagyás ({count})",
+      "approving": "Jóváhagyás...",
+      "clear": "Törlés",
+      "selectAll": "Az oldalon lévő összes beküldött timesheet kijelölése",
+      "selectRow": "{name} timesheetjének kijelölése",
+      "notSelectable": "{name} timesheetje a jelenlegi állapotában nem jelölhető ki"
+    },
     "table": {
       "contractor": "Kontraktor",
       "month": "Hónap",
@@ -978,6 +988,8 @@
     },
     "actionResults": {
       "approved": "A timesheet jóváhagyva.",
+      "bulkApproved": "{count} timesheet jóváhagyva.",
+      "bulkChanged": "A kijelölés a jóváhagyás előtt megváltozott. Egy timesheet sem lett jóváhagyva; frissítsd az oldalt, és ellenőrizd újra a beküldött sorokat.",
       "rejected": "A timesheet elutasítva és feloldva.",
       "invoiceAccepted": "A számla elfogadva.",
       "invoiceRejected": "A számla elutasítva.",

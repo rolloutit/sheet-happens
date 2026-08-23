@@ -33,8 +33,16 @@ export function toTimesheetPreviewStatus(status: string) {
   return status.toLowerCase() as TimesheetPreviewStatus;
 }
 
-export function getActionResultMessage(result: string | undefined, t: AdminTimesheetsTranslator) {
+export function getActionResultMessage(
+  result: string | undefined,
+  t: AdminTimesheetsTranslator,
+  values: { count?: number } = {},
+) {
   if (!result) return null;
+
+  if (result === "bulkApproved") {
+    return t("actionResults.bulkApproved", { count: values.count ?? 0 });
+  }
 
   const knownResults = new Set([
     "approved",
@@ -56,6 +64,7 @@ export function getActionResultMessage(result: string | undefined, t: AdminTimes
     "notAllowed",
     "databaseUnavailable",
     "failed",
+    "bulkChanged",
   ]);
 
   return knownResults.has(result) ? t(`actionResults.${result}`) : null;

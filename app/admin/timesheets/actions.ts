@@ -12,6 +12,7 @@ import { Prisma } from "@/src/server/db/generated/client";
 import {
   acceptInvoiceForAdmin,
   approveTimesheetForAdmin,
+  approveTimesheetsForAdmin,
   markTimesheetPaidForAdmin,
   rejectInvoiceForAdmin,
   rejectTimesheetForAdmin,
@@ -20,6 +21,10 @@ import {
 } from "@/src/server/timesheets";
 
 const timesheetIdSchema = z.string().uuid();
+const bulkApproveTimesheetsSchema = z.object({
+  timesheetIds: z.array(timesheetIdSchema).min(1).max(100),
+  returnTo: z.string().max(2000).optional(),
+});
 
 const rejectTimesheetSchema = z.object({
   timesheetId: timesheetIdSchema,
@@ -60,6 +65,39 @@ export async function approveTimesheetReviewAction(formData: FormData) {
   }
 
   redirect(`/admin/timesheets/${timesheetId}?result=${result}` as Route);
+}
+
+export async function bulkApproveTimesheetsReviewAction(formData: FormData) {
+  const parsed = bulkApproveTimesheetsSchema.safeParse({
+    timesheetIds: formData.getAll("timesheetIds"),
+    returnTo: formData.get("returnTo") ?? undefined,
+  });
+  const returnTo = getSafeTimesheetListPath(
+    parsed.success ? parsed.data.returnTo : formData.get("returnTo"),
+  );
+
+  if (!parsed.success) {
+    redirect(withListResult(returnTo, "invalid") as Route);
+  }
+
+  let result = "bulkApproved";
+  let approvedCount = 0;
+
+  try {
+    const { member: admin } = await requireAdminAppMemberForAction();
+    const approval = await approveTimesheetsForAdmin({
+      timesheetIds: parsed.data.timesheetIds,
+      actorMemberId: admin.id,
+      requestMetadata: await getTimesheetReviewRequestMetadata(),
+    });
+
+    approvedCount = approval.approvedCount;
+    revalidateTimesheetReviewPaths(approval.timesheetIds);
+  } catch (error) {
+    result = mapBulkTimesheetReviewActionError(error);
+  }
+
+  redirect(withListResult(returnTo, result, approvedCount) as Route);
 }
 
 export async function rejectTimesheetReviewAction(formData: FormData) {
@@ -207,11 +245,53 @@ async function getTimesheetReviewRequestMetadata(): Promise<TimesheetReviewReque
   };
 }
 
-function revalidateTimesheetReviewPaths(timesheetId: string) {
+function revalidateTimesheetReviewPaths(timesheetId: string | string[]) {
   revalidatePath("/admin/timesheets");
-  revalidatePath(`/admin/timesheets/${timesheetId}`);
+  for (const id of Array.isArray(timesheetId) ? timesheetId : [timesheetId]) {
+    revalidatePath(`/admin/timesheets/${id}`);
+  }
   revalidatePath("/timesheets");
   revalidatePath("/time");
+}
+
+function mapBulkTimesheetReviewActionError(error: unknown) {
+  if (
+    error instanceof TimesheetReviewError &&
+    (error.message.includes("submitted timesheets") || error.message.includes("not found"))
+  ) {
+    console.error("[admin-timesheets] bulk approval rejected due to stale selection", error);
+    return "bulkChanged";
+  }
+
+  return mapTimesheetReviewActionError(error);
+}
+
+function getSafeTimesheetListPath(value: FormDataEntryValue | null | undefined) {
+  if (typeof value !== "string") return "/admin/timesheets";
+
+  try {
+    const url = new URL(value, "https://sheet-happens.invalid");
+    if (url.origin !== "https://sheet-happens.invalid" || url.pathname !== "/admin/timesheets") {
+      return "/admin/timesheets";
+    }
+
+    return `${url.pathname}${url.search}`;
+  } catch {
+    return "/admin/timesheets";
+  }
+}
+
+function withListResult(path: string, result: string, approvedCount?: number) {
+  const url = new URL(path, "https://sheet-happens.invalid");
+  url.searchParams.set("result", result);
+
+  if (approvedCount) {
+    url.searchParams.set("count", String(approvedCount));
+  } else {
+    url.searchParams.delete("count");
+  }
+
+  return `${url.pathname}?${url.searchParams.toString()}`;
 }
 
 function mapTimesheetReviewActionError(error: unknown) {
