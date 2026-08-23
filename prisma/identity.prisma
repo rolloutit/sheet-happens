@@ -11,6 +11,11 @@ model Member {
   defaultCurrencyCode String            @default("EUR") @map("default_currency_code") @db.Char(3)
   timezone            String
   locale              String
+  avatarStorageBucket String?           @map("avatar_storage_bucket")
+  avatarStorageKey    String?           @unique @map("avatar_storage_key")
+  avatarContentType   String?           @map("avatar_content_type")
+  avatarByteSize      BigInt?           @map("avatar_byte_size")
+  avatarUpdatedAt     DateTime?         @map("avatar_updated_at") @db.Timestamptz(6)
   activatedAt         DateTime?         @map("activated_at") @db.Timestamptz(6)
   inactivatedAt       DateTime?         @map("inactivated_at") @db.Timestamptz(6)
   deletedAt           DateTime?         @map("deleted_at") @db.Timestamptz(6)

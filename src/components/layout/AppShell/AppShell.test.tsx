@@ -57,6 +57,18 @@ describe("AppShell theme control placement", () => {
   });
 });
 
+describe("AppShell account menu", () => {
+  it("keeps account actions available from the mobile header", async () => {
+    const user = userEvent.setup();
+    renderShell();
+
+    await user.click(screen.getByRole("button", { name: "User menu" }));
+
+    expect(await screen.findByText("Profile and settings")).toBeInTheDocument();
+    expect(screen.getByText("Sign out")).toBeInTheDocument();
+  });
+});
+
 describe("AppShell page scope", () => {
   it.each([
     { current: "review", expected: "Admin" },

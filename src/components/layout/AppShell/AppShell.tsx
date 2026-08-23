@@ -17,7 +17,6 @@ import {
   ScrollText,
   Settings,
   Square,
-  User,
   Users,
   WalletCards,
 } from "lucide-react";
@@ -175,8 +174,7 @@ export function AppShell({
   const translatedUserActions =
     userActions ??
     ([
-      { id: "profile", label: t("userMenu.profile"), icon: User },
-      { id: "settings", label: t("userMenu.settings"), icon: Settings },
+      { id: "settings", label: t("userMenu.profileAndSettings"), icon: Settings },
       { id: "sign-out", label: t("userMenu.signOut"), icon: LogOut, tone: "danger" as const },
     ] satisfies NonNullable<AppShellProps["userActions"]>);
 
@@ -217,7 +215,7 @@ export function AppShell({
       return;
     }
 
-    if (actionId === "settings" || actionId === "profile") {
+    if (actionId === "settings") {
       window.location.href = "/settings";
     }
   }
@@ -334,8 +332,8 @@ export function AppShell({
       </aside>
       <div className="relative z-[2] min-w-0 lg:h-screen lg:overflow-y-auto">
         <header className="sticky top-0 z-20 border-b border-border bg-header backdrop-blur-[14px]">
-          <div className="flex h-16 items-center justify-between px-4 sm:px-6 lg:px-8">
-            <div className="flex items-center gap-3">
+          <div className="flex h-16 items-center justify-between gap-2 px-4 sm:px-6 lg:px-8">
+            <div className="flex min-w-0 items-center gap-3">
               <Drawer open={mobileOpen} onOpenChange={setMobileOpen}>
                 <DrawerTrigger asChild>
                   <button
@@ -411,59 +409,64 @@ export function AppShell({
                   </DrawerFooter>
                 </DrawerContent>
               </Drawer>
-              <div>
+              <div className="min-w-0">
                 <p
-                  className="font-ui text-[11px] font-semibold uppercase tracking-[0.14em] text-accent"
+                  className="truncate font-ui text-[11px] font-semibold uppercase tracking-[0.14em] text-accent"
                   data-testid="app-shell-page-scope"
                 >
                   {pageScope(current, role, t)}
                 </p>
-                <p className="text-lg font-semibold leading-tight">{pageTitle(current, t)}</p>
+                <p className="truncate text-lg font-semibold leading-tight">
+                  {pageTitle(current, t)}
+                </p>
               </div>
             </div>
-            <div className="hidden items-center gap-3 md:flex">
-              {timer ? (
-                <HeaderTimerPill
-                  timer={timer}
-                  disabled={!onStopTimer || isStoppingTimer}
-                  error={timerNotice}
-                  stopLabel={t("timer.stop")}
-                  onOpen={() => {
-                    window.location.href = timer.href ?? "/time";
-                  }}
-                  onStop={handleStopTimer}
+            <div className="flex items-center gap-3">
+              <div className="hidden items-center gap-3 md:flex">
+                {timer ? (
+                  <HeaderTimerPill
+                    timer={timer}
+                    disabled={!onStopTimer || isStoppingTimer}
+                    error={timerNotice}
+                    stopLabel={t("timer.stop")}
+                    onOpen={() => {
+                      window.location.href = timer.href ?? "/time";
+                    }}
+                    onStop={handleStopTimer}
+                  />
+                ) : null}
+                <CommandPill
+                  label={t("command.label")}
+                  shortcut="Cmd+K"
+                  status={onCommand ? undefined : t("soon")}
+                  disabled={!onCommand}
+                  onClick={onCommand}
                 />
-              ) : null}
-              <CommandPill
-                label={t("command.label")}
-                shortcut="Cmd+K"
-                status={onCommand ? undefined : t("soon")}
-                disabled={!onCommand}
-                onClick={onCommand}
-              />
-              <LanguageToggle
-                value={selectedLanguage}
-                label={t("language")}
-                onValueChange={handleLanguageChange}
-              />
-              <ThemeToggle />
-              <NotificationButton
-                notifications={resolvedNotifications}
-                labels={{
-                  trigger: t("notifications.trigger"),
-                  menu: t("notifications.menu"),
-                  markAllRead: t("notifications.markAllRead"),
-                  empty: t("notifications.empty"),
-                  viewAll: t("notifications.viewAll"),
-                }}
-                onNotificationSelect={onNotificationSelect}
-                onMarkAllRead={onMarkAllRead}
-                onViewAll={onViewNotifications}
-              />
+                <LanguageToggle
+                  value={selectedLanguage}
+                  label={t("language")}
+                  onValueChange={handleLanguageChange}
+                />
+                <ThemeToggle />
+                <NotificationButton
+                  notifications={resolvedNotifications}
+                  labels={{
+                    trigger: t("notifications.trigger"),
+                    menu: t("notifications.menu"),
+                    markAllRead: t("notifications.markAllRead"),
+                    empty: t("notifications.empty"),
+                    viewAll: t("notifications.viewAll"),
+                  }}
+                  onNotificationSelect={onNotificationSelect}
+                  onMarkAllRead={onMarkAllRead}
+                  onViewAll={onViewNotifications}
+                />
+              </div>
               <UserMenu
                 user={translatedUser}
                 actions={translatedUserActions}
                 label={t("userMenu.label")}
+                className="shrink-0"
                 onAction={handleUserAction}
               />
             </div>

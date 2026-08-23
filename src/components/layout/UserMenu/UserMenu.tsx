@@ -1,6 +1,6 @@
 "use client";
 
-import { ChevronDown, LogOut, Settings, User } from "lucide-react";
+import { ChevronDown, LogOut, Settings } from "lucide-react";
 
 import { Avatar } from "@/src/components/ui/Avatar";
 import {
@@ -15,8 +15,7 @@ import { cn } from "@/src/lib/utils";
 import type { UserMenuAction, UserMenuProps } from "./UserMenu.types";
 
 const defaultActions: UserMenuAction[] = [
-  { id: "profile", label: "Profile", icon: User },
-  { id: "settings", label: "Settings", icon: Settings },
+  { id: "settings", label: "Profile and settings", icon: Settings },
   { id: "sign-out", label: "Sign out", icon: LogOut, tone: "danger" },
 ];
 
