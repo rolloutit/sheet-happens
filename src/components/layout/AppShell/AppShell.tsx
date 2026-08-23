@@ -17,7 +17,6 @@ import {
   ScrollText,
   Settings,
   Square,
-  User,
   Users,
   WalletCards,
 } from "lucide-react";
@@ -175,8 +174,7 @@ export function AppShell({
   const translatedUserActions =
     userActions ??
     ([
-      { id: "profile", label: t("userMenu.profile"), icon: User },
-      { id: "settings", label: t("userMenu.settings"), icon: Settings },
+      { id: "settings", label: t("userMenu.profileAndSettings"), icon: Settings },
       { id: "sign-out", label: t("userMenu.signOut"), icon: LogOut, tone: "danger" as const },
     ] satisfies NonNullable<AppShellProps["userActions"]>);
 
@@ -217,7 +215,7 @@ export function AppShell({
       return;
     }
 
-    if (actionId === "settings" || actionId === "profile") {
+    if (actionId === "settings") {
       window.location.href = "/settings";
     }
   }
