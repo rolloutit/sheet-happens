@@ -4,6 +4,7 @@ import { AppShell } from "@/src/components/layout/AppShell";
 import { Button } from "@/src/components/ui/Button";
 import { Field } from "@/src/components/ui/Field";
 import { SectionHead } from "@/src/components/ui/SectionHead";
+import { getPayslipMonthOptions } from "@/src/lib/payslip-month-options";
 import {
   mapMemberToShellProfile,
   mapMemberToShellUser,
@@ -14,7 +15,7 @@ import {
   listPayslipsForAdmin,
   type PayslipListFilters,
 } from "@/src/server/payslips";
-import { AdminPayslipClient, type AdminPayslipMonthOption } from "./AdminPayslipClient";
+import { AdminPayslipClient } from "./AdminPayslipClient";
 
 export const dynamic = "force-dynamic";
 
@@ -29,7 +30,7 @@ export default async function AdminPayslipsPage({ searchParams }: AdminPayslipsP
     getLocale(),
     searchParams ?? Promise.resolve({}),
   ]);
-  const months = getMonthOptions(locale);
+  const months = getPayslipMonthOptions(locale);
   const result = await listPayslipsForAdmin(filters);
   const overviewMonth = result.filters.month ?? months[0].value;
   const overview = await getPayslipMonthOverview(new Date(`${overviewMonth}-01T00:00:00.000Z`));
@@ -110,6 +111,7 @@ export default async function AdminPayslipsPage({ searchParams }: AdminPayslipsP
             employeeEmail: payslip.employeeEmail,
             employeeStatus: payslip.employeeStatus,
             month: monthFormatter.format(payslip.periodStart),
+            monthValue: payslip.periodStart.toISOString().slice(0, 7),
             filename: payslip.originalFilename,
             fileSize: formatBytes(payslip.byteSize, byteFormatter),
             publishedAt: payslip.publishedAt
@@ -130,25 +132,6 @@ export default async function AdminPayslipsPage({ searchParams }: AdminPayslipsP
       </section>
     </AppShell>
   );
-}
-
-function getMonthOptions(locale: string): AdminPayslipMonthOption[] {
-  const formatter = new Intl.DateTimeFormat(locale, { month: "long", year: "numeric" });
-  const shortFormatter = new Intl.DateTimeFormat(locale, { month: "short" });
-  const current = new Date();
-  const currentMonth = new Date(Date.UTC(current.getUTCFullYear(), current.getUTCMonth(), 1));
-
-  return Array.from({ length: 24 }, (_, index) => {
-    const month = new Date(currentMonth);
-    month.setUTCMonth(month.getUTCMonth() - index);
-    const value = `${month.getUTCFullYear()}-${String(month.getUTCMonth() + 1).padStart(2, "0")}`;
-
-    return {
-      value,
-      label: formatter.format(month),
-      shortLabel: shortFormatter.format(month),
-    };
-  });
 }
 
 function formatBytes(byteSize: bigint, formatter: Intl.NumberFormat) {
