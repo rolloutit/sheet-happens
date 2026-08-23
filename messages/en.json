@@ -80,8 +80,7 @@
     },
     "userMenu": {
       "label": "User menu",
-      "profile": "Profile",
-      "settings": "Settings",
+      "profileAndSettings": "Profile and settings",
       "signOut": "Sign out"
     },
     "timer": {
@@ -1663,6 +1662,8 @@
         "invoice__rejected": "Rejected",
         "invoice__uploaded": "Uploaded",
         "member__activated": "Activated",
+        "member__avatar_deleted": "Profile image deleted",
+        "member__avatar_updated": "Profile image updated",
         "member__bootstrap_invited": "Initial admin invited",
         "member__deactivated": "Deactivated",
         "member__deleted": "Archived",
@@ -1676,6 +1677,7 @@
         "member__restored": "Restored",
         "member__role_changed": "Role changed",
         "member__session_revoked": "Session revoked",
+        "member__timezone_updated": "Time zone updated",
         "member__updated": "Updated",
         "payslip__deleted": "Deleted",
         "payslip__downloaded": "Downloaded",
@@ -2085,9 +2087,55 @@
   },
   "Settings": {
     "page": {
-      "eyebrow": "Account",
-      "title": "Security settings",
-      "subtitle": "Manage sign-in methods, passkeys, and authenticator-app verification for your Sheet Happens account."
+      "eyebrow": "Profile",
+      "title": "Profile and settings",
+      "subtitle": "Manage your account, sign-in security, appearance, and time zone."
+    },
+    "sections": {
+      "label": "Profile settings sections",
+      "profile": "Profile",
+      "security": "Security and sign-in",
+      "preferences": "Preferences"
+    },
+    "profile": {
+      "title": "Profile",
+      "description": "Your core member details are managed by an administrator and are read-only here.",
+      "readOnly": "Read only",
+      "name": "Name",
+      "email": "Email",
+      "profile": "Profile",
+      "profiles": {
+        "employee": "Employee",
+        "contractor": "Contractor"
+      },
+      "adminManaged": "Need a change? Ask an administrator to update your name, email address, or profile."
+    },
+    "securitySection": {
+      "title": "Security and sign-in",
+      "description": "Manage sign-in methods, passkeys, and authenticator-app verification."
+    },
+    "preferences": {
+      "title": "Preferences",
+      "description": "Manage your profile image and time zone.",
+      "avatar": {
+        "label": "Profile image",
+        "description": "Upload a square PNG or JPEG up to 2 MB, or keep your initials.",
+        "upload": "Upload",
+        "change": "Change",
+        "save": "Save image",
+        "view": "View",
+        "delete": "Delete",
+        "close": "Close",
+        "previewTitle": "Profile image"
+      },
+      "timezone": {
+        "label": "Time zone",
+        "description": "Controls local day boundaries and how dates appear in time tracking and reports.",
+        "search": "Search time zones",
+        "searchPlaceholder": "Search by city or region...",
+        "empty": "No time zone found",
+        "save": "Save time zone"
+      }
     },
     "setupBanner": {
       "securityReady": "Security ready",
@@ -2400,12 +2448,23 @@
   },
   "SettingsActions": {
     "success": {
+      "avatarUpdated": "Profile image updated.",
+      "avatarDeleted": "Profile image deleted.",
+      "timezoneUpdated": "Time zone updated.",
       "passkeyRenamed": "Passkey renamed.",
       "passkeyRemoved": "Passkey removed.",
       "totpDisabledAudited": "Authenticator app disablement audited.",
       "backupCodesRegeneratedAudited": "Backup-code regeneration audited."
     },
     "errors": {
+      "avatarRequired": "Choose a profile image.",
+      "avatarTooLarge": "The profile image must be no larger than 2 MB.",
+      "avatarInvalidType": "The profile image must be a valid PNG or JPEG.",
+      "avatarUploadFailed": "The profile image could not be uploaded.",
+      "avatarDeleteFailed": "The profile image could not be deleted.",
+      "timezoneInvalid": "Choose a supported time zone.",
+      "timezoneUpdateFailed": "The time zone could not be updated.",
+      "memberNotFound": "The member profile could not be found.",
       "passkeyIdMissing": "Passkey id is missing.",
       "passkeyNameRequired": "Passkey name is required.",
       "passkeyNotFound": "Passkey not found.",

@@ -80,8 +80,7 @@
     },
     "userMenu": {
       "label": "Felhasználói menü",
-      "profile": "Profil",
-      "settings": "Beállítások",
+      "profileAndSettings": "Profil és beállítások",
       "signOut": "Kijelentkezés"
     },
     "timer": {
@@ -1663,6 +1662,8 @@
         "invoice__rejected": "Elutasítva",
         "invoice__uploaded": "Feltöltve",
         "member__activated": "Aktiválva",
+        "member__avatar_deleted": "Profilkép törölve",
+        "member__avatar_updated": "Profilkép frissítve",
         "member__bootstrap_invited": "Kezdeti admin meghívva",
         "member__deactivated": "Deaktiválva",
         "member__deleted": "Archiválva",
@@ -1676,6 +1677,7 @@
         "member__restored": "Visszaállítva",
         "member__role_changed": "Szerepkör módosítva",
         "member__session_revoked": "Munkamenet visszavonva",
+        "member__timezone_updated": "Időzóna frissítve",
         "member__updated": "Módosítva",
         "payslip__deleted": "Törölve",
         "payslip__downloaded": "Letöltve",
@@ -2085,9 +2087,55 @@
   },
   "Settings": {
     "page": {
-      "eyebrow": "Fiók",
-      "title": "Biztonsági beállítások",
-      "subtitle": "Kezeld a bejelentkezési módokat, passkey-ket és authenticator alkalmazásos ellenőrzést a Sheet Happens fiókodhoz."
+      "eyebrow": "Profil",
+      "title": "Profil és beállítások",
+      "subtitle": "Kezeld a fiókodat, a bejelentkezés biztonságát, a megjelenést és az időzónát."
+    },
+    "sections": {
+      "label": "Profilbeállítások szakaszai",
+      "profile": "Profil",
+      "security": "Biztonság és belépés",
+      "preferences": "Beállítások"
+    },
+    "profile": {
+      "title": "Profil",
+      "description": "Az alapadataidat az admin kezeli, ezért itt csak olvashatók.",
+      "readOnly": "Csak olvasható",
+      "name": "Név",
+      "email": "E-mail",
+      "profile": "Profil",
+      "profiles": {
+        "employee": "Alkalmazott",
+        "contractor": "Kontraktor"
+      },
+      "adminManaged": "Módosítás kell? Kérd meg az admint a neved, e-mail-címed vagy profilod frissítésére."
+    },
+    "securitySection": {
+      "title": "Biztonság és belépés",
+      "description": "Kezeld a bejelentkezési módokat, passkey-ket és az authenticator alkalmazást."
+    },
+    "preferences": {
+      "title": "Beállítások",
+      "description": "Kezeld a profilképedet és az időzónádat.",
+      "avatar": {
+        "label": "Profilkép",
+        "description": "Tölts fel legfeljebb 2 MB-os, négyzetes PNG- vagy JPEG-képet, vagy használd a monogramodat.",
+        "upload": "Feltöltés",
+        "change": "Csere",
+        "save": "Kép mentése",
+        "view": "Megtekintés",
+        "delete": "Törlés",
+        "close": "Bezárás",
+        "previewTitle": "Profilkép"
+      },
+      "timezone": {
+        "label": "Időzóna",
+        "description": "Ez szabályozza a helyi naphatárokat és a dátumok megjelenését az időkövetésben és a riportokban.",
+        "search": "Időzóna keresése",
+        "searchPlaceholder": "Keresés város vagy régió szerint...",
+        "empty": "Nincs találat",
+        "save": "Időzóna mentése"
+      }
     },
     "setupBanner": {
       "securityReady": "Biztonság kész",
@@ -2400,12 +2448,23 @@
   },
   "SettingsActions": {
     "success": {
+      "avatarUpdated": "Profilkép frissítve.",
+      "avatarDeleted": "Profilkép törölve.",
+      "timezoneUpdated": "Időzóna frissítve.",
       "passkeyRenamed": "Passkey átnevezve.",
       "passkeyRemoved": "Passkey eltávolítva.",
       "totpDisabledAudited": "Authenticator kikapcsolás naplózva.",
       "backupCodesRegeneratedAudited": "Tartalék kód generálás naplózva."
     },
     "errors": {
+      "avatarRequired": "Válassz profilképet.",
+      "avatarTooLarge": "A profilkép legfeljebb 2 MB lehet.",
+      "avatarInvalidType": "A profilkép érvényes PNG vagy JPEG legyen.",
+      "avatarUploadFailed": "Nem sikerült feltölteni a profilképet.",
+      "avatarDeleteFailed": "Nem sikerült törölni a profilképet.",
+      "timezoneInvalid": "Válassz támogatott időzónát.",
+      "timezoneUpdateFailed": "Nem sikerült frissíteni az időzónát.",
+      "memberNotFound": "A tagprofil nem található.",
       "passkeyIdMissing": "Hiányzik a passkey azonosítója.",
       "passkeyNameRequired": "A passkey neve kötelező.",
       "passkeyNotFound": "A passkey nem található.",
