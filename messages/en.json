@@ -856,6 +856,16 @@
       "entries": "{count} entries",
       "projects": "{count} projects"
     },
+    "bulk": {
+      "selected": "{count, plural, one {# selected} other {# selected}}",
+      "eligibilityHint": "Only submitted timesheets can be bulk-approved.",
+      "approve": "Approve ({count})",
+      "approving": "Approving...",
+      "clear": "Clear",
+      "selectAll": "Select all submitted timesheets on this page",
+      "selectRow": "Select {name}'s timesheet",
+      "notSelectable": "{name}'s timesheet cannot be selected in its current status"
+    },
     "table": {
       "contractor": "Contractor",
       "month": "Month",
@@ -978,6 +988,8 @@
     },
     "actionResults": {
       "approved": "Timesheet approved.",
+      "bulkApproved": "{count, plural, one {# timesheet approved.} other {# timesheets approved.}}",
+      "bulkChanged": "The selection changed before approval. No timesheets were approved; refresh and review the submitted rows.",
       "rejected": "Timesheet rejected and unlocked.",
       "invoiceAccepted": "Invoice accepted.",
       "invoiceRejected": "Invoice rejected.",

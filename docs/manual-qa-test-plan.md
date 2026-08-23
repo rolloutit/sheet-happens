@@ -692,6 +692,41 @@ Expected result:
 - Source time entries remain locked after approval.
 - The audit log contains a `timesheet.approved` row.
 
+### Admin Can Bulk Approve Submitted Timesheets
+
+1. Prepare at least two submitted contractor timesheets and one timesheet in another status.
+2. Sign in as `{ADMIN_EMAIL}`.
+3. Open `https://{DOMAIN_NAME}/admin/timesheets`.
+4. Filter the list so the prepared timesheets appear on the same page.
+5. Confirm that only submitted rows have enabled selection checkboxes.
+6. Select one submitted row and confirm the bulk action bar appears with the correct count.
+7. Clear the selection and confirm the action bar disappears.
+8. Use the header checkbox to select every submitted row on the current page.
+9. Click the bulk approval action.
+10. Reopen the approved rows and inspect the audit log.
+
+Expected result:
+
+- Non-submitted rows cannot be selected for bulk approval.
+- Select all affects only submitted rows on the current page, not other pages or filtered-out rows.
+- The action bar shows the selected count and keeps the current filters after approval.
+- Every selected timesheet changes to approved, while non-selected rows remain unchanged.
+- Each approved timesheet has its own approved workflow event and `timesheet.approved` audit row.
+- Source time entries remain locked after bulk approval.
+
+### Bulk Approval Rejects A Stale Selection
+
+1. Open the same submitted timesheet list as `{ADMIN_EMAIL}` in two browser windows.
+2. Select the same submitted timesheet in both windows.
+3. Approve it from the first window.
+4. In the second window, include that stale selection in a bulk approval attempt.
+
+Expected result:
+
+- The second bulk action reports that the selection changed and asks the admin to refresh.
+- The entire second batch is rejected; it does not partially approve the other selected rows.
+- No duplicate approval event or audit row is created for the already approved timesheet.
+
 ### Contractor Can Upload Invoice For Approved Timesheet
 
 1. Sign in as `{CONTRACTOR_EMAIL}`.

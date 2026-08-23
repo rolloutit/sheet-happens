@@ -1,11 +1,8 @@
-import { CalendarDays, Eye } from "lucide-react";
 import type { Route } from "next";
 import Link from "next/link";
 import { getLocale, getTranslations } from "next-intl/server";
 
 import { AppShell } from "@/src/components/layout/AppShell";
-import { StatusPill } from "@/src/components/sheet/StatusPill";
-import { Badge } from "@/src/components/ui/Badge";
 import { Button } from "@/src/components/ui/Button";
 import {
   Card,
@@ -23,21 +20,11 @@ import {
 import {
   listTimesheetsForAdmin,
   type AdminTimesheetListResult,
-  type AdminTimesheetRow,
   type AdminTimesheetSearchParams,
 } from "@/src/server/timesheets";
+import { AdminTimesheetTable } from "./AdminTimesheetTable";
 import { TimesheetFilterBar } from "./TimesheetFilterBar";
-import {
-  formatCount,
-  formatHours,
-  formatMoney,
-  formatMonthLabel,
-  formatPeriodRange,
-  formatTimestamp,
-  getActionResultMessage,
-  getStatusLabel,
-  toTimesheetPreviewStatus,
-} from "./formatting";
+import { formatCount, getActionResultMessage } from "./formatting";
 
 export const dynamic = "force-dynamic";
 
@@ -56,7 +43,10 @@ export default async function AdminTimesheetsPage({ searchParams }: AdminTimeshe
     getLocale(),
   ]);
   const actionResult = getSingleParam(resolvedSearchParams.result);
-  const actionResultMessage = getActionResultMessage(actionResult, t);
+  const actionResultMessage = getActionResultMessage(actionResult, t, {
+    count: getPositiveIntegerParam(resolvedSearchParams.count),
+  });
+  const currentListHref = buildPageHref(result, result.filters.page);
 
   return (
     <AppShell
@@ -122,112 +112,16 @@ export default async function AdminTimesheetsPage({ searchParams }: AdminTimeshe
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <TimesheetTable rows={result.rows} locale={locale} t={t} />
+            <AdminTimesheetTable
+              key={`${currentListHref}:${actionResult}`}
+              rows={result.rows}
+              returnTo={currentListHref}
+            />
             <Pagination result={result} t={t} />
           </CardContent>
         </Card>
       </section>
     </AppShell>
-  );
-}
-
-function TimesheetTable({
-  rows,
-  locale,
-  t,
-}: {
-  rows: AdminTimesheetRow[];
-  locale: string;
-  t: AdminTimesheetsTranslator;
-}) {
-  if (rows.length === 0) {
-    return (
-      <div className="rounded-[var(--radius-lg)] border border-dashed border-border bg-secondary/45 px-5 py-8 text-center text-sm text-muted-foreground">
-        {t("list.empty")}
-      </div>
-    );
-  }
-
-  return (
-    <div className="overflow-hidden rounded-[var(--radius-lg)] border border-border">
-      <div className="overflow-x-auto">
-        <table className="w-full min-w-[64rem] border-collapse">
-          <caption className="sr-only">{t("list.caption")}</caption>
-          <thead>
-            <tr className="border-b border-border bg-background/45">
-              <HeadCell>{t("table.contractor")}</HeadCell>
-              <HeadCell>{t("table.month")}</HeadCell>
-              <HeadCell>{t("table.status")}</HeadCell>
-              <HeadCell>{t("table.hours")}</HeadCell>
-              <HeadCell>{t("table.amount")}</HeadCell>
-              <HeadCell>{t("table.submitted")}</HeadCell>
-              <HeadCell>{t("table.snapshot")}</HeadCell>
-              <HeadCell>{t("table.action")}</HeadCell>
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map((row) => (
-              <tr key={row.id} className="border-b border-border last:border-b-0">
-                <td className="px-4 py-4">
-                  <div className="flex items-center gap-3">
-                    <AvatarLabel name={row.contractorName} />
-                    <div>
-                      <p className="font-ui text-sm font-semibold text-foreground">
-                        {row.contractorName}
-                      </p>
-                      <p className="text-xs text-muted-foreground">{row.contractorEmail}</p>
-                    </div>
-                  </div>
-                </td>
-                <td className="px-4 py-4">
-                  <div className="flex items-start gap-2">
-                    <CalendarDays className="mt-0.5 size-4 text-muted-foreground" aria-hidden />
-                    <div>
-                      <p className="font-ui text-sm font-semibold text-foreground">
-                        {formatMonthLabel(row.periodStart, locale)}
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        {formatPeriodRange(row.periodStart, row.periodEnd, locale)}
-                      </p>
-                    </div>
-                  </div>
-                </td>
-                <td className="px-4 py-4">
-                  <StatusPill
-                    status={toTimesheetPreviewStatus(row.status)}
-                    label={getStatusLabel(row.status, t)}
-                  />
-                </td>
-                <td className="px-4 py-4 font-ui text-sm font-semibold text-foreground">
-                  {formatHours(row.totalMinutes, locale)}
-                </td>
-                <td className="px-4 py-4 font-ui text-sm font-semibold text-foreground">
-                  {formatMoney(row.totalAmount, row.currencyCode, locale)}
-                </td>
-                <td className="px-4 py-4 text-sm text-muted-foreground">
-                  {formatTimestamp(row.submittedAt, locale)}
-                </td>
-                <td className="px-4 py-4">
-                  <div className="flex flex-wrap gap-1.5">
-                    <Badge tone="info">{t("revision", { number: row.revisionNumber })}</Badge>
-                    <Badge tone="neutral">{t("list.entries", { count: row.entryCount })}</Badge>
-                    <Badge tone="neutral">{t("list.projects", { count: row.projectCount })}</Badge>
-                  </div>
-                </td>
-                <td className="px-4 py-4 text-right">
-                  <Button asChild variant="soft" size="sm">
-                    <Link href={`/admin/timesheets/${row.id}` as Route}>
-                      <Eye className="size-4" aria-hidden />
-                      {t("list.review")}
-                    </Link>
-                  </Button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-    </div>
   );
 }
 
@@ -290,30 +184,6 @@ function SummaryCard({ label, value, caption }: { label: string; value: string; 
   );
 }
 
-function AvatarLabel({ name }: { name: string }) {
-  const initials = name
-    .split(" ")
-    .map((part) => part.at(0))
-    .filter(Boolean)
-    .join("")
-    .slice(0, 2)
-    .toUpperCase();
-
-  return (
-    <span className="grid size-9 shrink-0 place-items-center rounded-full bg-accent-soft font-ui text-xs font-bold text-accent">
-      {initials || "TS"}
-    </span>
-  );
-}
-
-function HeadCell({ children }: { children: string }) {
-  return (
-    <th className="px-4 py-3 text-left font-ui text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
-      {children}
-    </th>
-  );
-}
-
 function buildPageHref(result: AdminTimesheetListResult, page: number) {
   const params = new URLSearchParams();
   const safePage = Math.min(Math.max(page, 1), result.totalPages);
@@ -333,4 +203,9 @@ function buildPageHref(result: AdminTimesheetListResult, page: number) {
 function getSingleParam(value: string | string[] | undefined) {
   if (Array.isArray(value)) return value.at(0) ?? "";
   return value ?? "";
+}
+
+function getPositiveIntegerParam(value: string | string[] | undefined) {
+  const parsed = Number.parseInt(getSingleParam(value), 10);
+  return Number.isInteger(parsed) && parsed > 0 ? parsed : undefined;
 }

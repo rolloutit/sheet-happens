@@ -161,6 +161,12 @@ export type TimesheetReviewActionInput = {
   requestMetadata?: TimesheetReviewRequestMetadata;
 };
 
+export type BulkTimesheetReviewActionInput = {
+  timesheetIds: string[];
+  actorMemberId: string;
+  requestMetadata?: TimesheetReviewRequestMetadata;
+};
+
 export type RejectTimesheetReviewInput = TimesheetReviewActionInput & {
   reason: string;
 };
@@ -472,108 +478,153 @@ export async function getTimesheetReviewForAdmin(
 
 export async function approveTimesheetForAdmin(
   input: TimesheetReviewActionInput,
-  deps: { now?: Date } = {},
+  deps: { now?: Date; db?: Pick<typeof prisma, "$transaction"> } = {},
 ) {
   const now = deps.now ?? new Date();
 
-  return prisma.$transaction(async (tx) => {
-    const timesheet = await tx.timesheet.findUnique({
-      where: {
-        id: input.timesheetId,
-      },
-      select: {
-        id: true,
-        status: true,
-        periodStart: true,
-        periodEnd: true,
-        currentRevisionId: true,
-        currentRevision: {
-          select: {
-            id: true,
-            revisionNumber: true,
-            totalMinutes: true,
-            totalAmount: true,
-            currencyCode: true,
-            snapshotLines: {
-              select: {
-                id: true,
-                projectId: true,
-              },
+  return (deps.db ?? prisma).$transaction((tx) => approveTimesheetInTransaction(tx, input, now));
+}
+
+export async function approveTimesheetsForAdmin(
+  input: BulkTimesheetReviewActionInput,
+  deps: { now?: Date; db?: Pick<typeof prisma, "$transaction"> } = {},
+) {
+  const timesheetIds = [...new Set(input.timesheetIds)];
+
+  if (timesheetIds.length === 0) {
+    throw new TimesheetReviewError("Select at least one timesheet to approve.");
+  }
+
+  if (timesheetIds.length > MAX_PAGE_SIZE) {
+    throw new TimesheetReviewError("Too many timesheets selected for bulk approval.");
+  }
+
+  const now = deps.now ?? new Date();
+
+  return (deps.db ?? prisma).$transaction(async (tx) => {
+    for (const timesheetId of timesheetIds) {
+      await approveTimesheetInTransaction(
+        tx,
+        {
+          timesheetId,
+          actorMemberId: input.actorMemberId,
+          requestMetadata: input.requestMetadata,
+        },
+        now,
+      );
+    }
+
+    return {
+      approvedCount: timesheetIds.length,
+      timesheetIds,
+    };
+  });
+}
+
+async function approveTimesheetInTransaction(
+  tx: Prisma.TransactionClient,
+  input: TimesheetReviewActionInput,
+  now: Date,
+) {
+  const timesheet = await tx.timesheet.findUnique({
+    where: {
+      id: input.timesheetId,
+    },
+    select: {
+      id: true,
+      status: true,
+      periodStart: true,
+      periodEnd: true,
+      currentRevisionId: true,
+      currentRevision: {
+        select: {
+          id: true,
+          revisionNumber: true,
+          totalMinutes: true,
+          totalAmount: true,
+          currencyCode: true,
+          snapshotLines: {
+            select: {
+              id: true,
+              projectId: true,
             },
           },
         },
       },
-    });
-
-    if (!timesheet || !timesheet.currentRevisionId || !timesheet.currentRevision) {
-      throw new TimesheetReviewError("Timesheet not found.");
-    }
-
-    if (timesheet.status !== "SUBMITTED") {
-      throw new TimesheetReviewError("Only submitted timesheets can be approved.");
-    }
-
-    await tx.timesheet.update({
-      where: {
-        id: timesheet.id,
-      },
-      data: {
-        status: "APPROVED",
-        approvedAt: now,
-        updatedByMemberId: input.actorMemberId,
-      },
-      select: {
-        id: true,
-      },
-    });
-
-    await tx.timesheetRevision.update({
-      where: {
-        id: timesheet.currentRevisionId,
-      },
-      data: {
-        status: "APPROVED",
-        approvedAt: now,
-        rejectedAt: null,
-        rejectionReason: null,
-      },
-      select: {
-        id: true,
-      },
-    });
-
-    const metadata = buildReviewMetadata({
-      periodStart: timesheet.periodStart,
-      periodEnd: timesheet.periodEnd,
-      revision: timesheet.currentRevision,
-    });
-
-    await createTimesheetEvent(tx, {
-      timesheetId: timesheet.id,
-      timesheetRevisionId: timesheet.currentRevisionId,
-      eventType: "APPROVED",
-      actorMemberId: input.actorMemberId,
-      reason: null,
-      metadata,
-      createdAt: now,
-    });
-
-    await createReviewAuditLog(tx, {
-      actorMemberId: input.actorMemberId,
-      action: "timesheet.approved",
-      targetId: timesheet.id,
-      after: {
-        ...metadata,
-        status: "APPROVED",
-      },
-      requestMetadata: input.requestMetadata,
-    });
-
-    return {
-      timesheetId: timesheet.id,
-      status: "APPROVED" as const,
-    };
+    },
   });
+
+  if (!timesheet || !timesheet.currentRevisionId || !timesheet.currentRevision) {
+    throw new TimesheetReviewError("Timesheet not found.");
+  }
+
+  if (timesheet.status !== "SUBMITTED") {
+    throw new TimesheetReviewError("Only submitted timesheets can be approved.");
+  }
+
+  const updatedTimesheet = await tx.timesheet.updateMany({
+    where: {
+      id: timesheet.id,
+      status: "SUBMITTED",
+      currentRevisionId: timesheet.currentRevisionId,
+    },
+    data: {
+      status: "APPROVED",
+      approvedAt: now,
+      updatedByMemberId: input.actorMemberId,
+    },
+  });
+
+  if (updatedTimesheet.count !== 1) {
+    throw new TimesheetReviewError("Only submitted timesheets can be approved.");
+  }
+
+  await tx.timesheetRevision.update({
+    where: {
+      id: timesheet.currentRevisionId,
+    },
+    data: {
+      status: "APPROVED",
+      approvedAt: now,
+      rejectedAt: null,
+      rejectionReason: null,
+    },
+    select: {
+      id: true,
+    },
+  });
+
+  const metadata = buildReviewMetadata({
+    periodStart: timesheet.periodStart,
+    periodEnd: timesheet.periodEnd,
+    revision: timesheet.currentRevision,
+  });
+
+  await createTimesheetEvent(tx, {
+    timesheetId: timesheet.id,
+    timesheetRevisionId: timesheet.currentRevisionId,
+    eventType: "APPROVED",
+    actorMemberId: input.actorMemberId,
+    reason: null,
+    metadata,
+    createdAt: now,
+  });
+
+  await createReviewAuditLog(tx, {
+    actorMemberId: input.actorMemberId,
+    action: "timesheet.approved",
+    targetId: timesheet.id,
+    after: {
+      ...metadata,
+      status: "APPROVED",
+    },
+    requestMetadata: input.requestMetadata,
+  });
+
+  return {
+    timesheetId: timesheet.id,
+    status: "APPROVED" as const,
+  };
 }
 
 export async function rejectTimesheetForAdmin(
