@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   buildPayslipObjectKey,
+  normalizeEmployeePayslipFilters,
   normalizeEmployeePayslipPage,
   normalizePayslipListFilters,
   PAYSLIP_MAX_BYTES,
@@ -115,5 +116,27 @@ describe("payslip helpers", () => {
     expect(normalizeEmployeePayslipPage("4")).toBe(4);
     expect(normalizeEmployeePayslipPage("0")).toBe(1);
     expect(normalizeEmployeePayslipPage(["2"])).toBe(1);
+  });
+
+  it("normalizes employee history filters", () => {
+    expect(
+      normalizeEmployeePayslipFilters({
+        page: "3",
+        year: "2024",
+        sort: "oldest",
+        pageSize: "24",
+      }),
+    ).toEqual({ page: 3, year: 2024, sort: "oldest", pageSize: 24 });
+  });
+
+  it("falls back from malformed employee history filters", () => {
+    expect(
+      normalizeEmployeePayslipFilters({
+        page: "0",
+        year: "twenty-twenty",
+        sort: "sideways",
+        pageSize: "500",
+      }),
+    ).toEqual({ page: 1, year: null, sort: "newest", pageSize: 12 });
   });
 });

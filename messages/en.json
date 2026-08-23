@@ -2438,6 +2438,16 @@
       "history": "Earlier months",
       "available": "Available",
       "privateNote": "Only you can view your payslips. Documents are opened through a short-lived private link.",
+      "filters": {
+        "year": "Year",
+        "allYears": "All years",
+        "order": "Order",
+        "newest": "Newest first",
+        "oldest": "Oldest first",
+        "pageSize": "Per page",
+        "clear": "Clear",
+        "empty": "No earlier payslips match these filters."
+      },
       "empty": {
         "title": "No payslips yet",
         "description": "Your administrator will publish each monthly payslip here when it is available."

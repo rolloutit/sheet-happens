@@ -9,15 +9,17 @@ import {
   mapMemberToShellUser,
   requireActiveAppMember,
 } from "@/src/server/auth/app-access";
-import { listEmployeePayslips, type PayslipListRow } from "@/src/server/payslips";
+import {
+  type EmployeePayslipFilters,
+  listEmployeePayslips,
+  type PayslipListRow,
+} from "@/src/server/payslips";
 import { EmployeePayslipList } from "./EmployeePayslipList";
 
 export const dynamic = "force-dynamic";
 
 type PayslipsPageProps = {
-  searchParams?: Promise<{
-    page?: string | string[];
-  }>;
+  searchParams?: Promise<EmployeePayslipFilters>;
 };
 
 export default async function PayslipsPage({ searchParams }: PayslipsPageProps) {
@@ -28,9 +30,8 @@ export default async function PayslipsPage({ searchParams }: PayslipsPageProps) 
   }
 
   const resolvedSearchParams = (await searchParams) ?? {};
-  const page = typeof resolvedSearchParams.page === "string" ? resolvedSearchParams.page : null;
   const [payslips, t, locale] = await Promise.all([
-    listEmployeePayslips(member.id, page),
+    listEmployeePayslips(member.id, resolvedSearchParams),
     getTranslations("Payslips"),
     getLocale(),
   ]);
@@ -69,6 +70,8 @@ export default async function PayslipsPage({ searchParams }: PayslipsPageProps) 
             totalPages: payslips.totalHistoryPages,
             totalItems: payslips.totalHistoryItems,
           }}
+          availableYears={payslips.availableYears}
+          filters={payslips.filters}
         />
       </section>
     </AppShell>

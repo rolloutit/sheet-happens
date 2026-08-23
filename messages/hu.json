@@ -2438,6 +2438,16 @@
       "history": "Korábbi hónapok",
       "available": "Elérhető",
       "privateNote": "Csak a saját bérjegyzékeidet tekintheted meg. A dokumentumok rövid élettartamú, privát linken nyílnak meg.",
+      "filters": {
+        "year": "Év",
+        "allYears": "Minden év",
+        "order": "Sorrend",
+        "newest": "Legújabb elöl",
+        "oldest": "Legrégebbi elöl",
+        "pageSize": "Oldalanként",
+        "clear": "Törlés",
+        "empty": "Nincs a szűrőknek megfelelő korábbi bérjegyzék."
+      },
       "empty": {
         "title": "Még nincs bérjegyzéked",
         "description": "Az adminod minden havi bérjegyzéket itt tesz közzé, amikor elérhetővé válik."
