@@ -1711,6 +1711,7 @@
         "time_entry__created": "Created",
         "time_entry__deleted": "Deleted",
         "time_entry__updated": "Updated",
+        "time_entry__admin_updated": "Admin corrected",
         "timesheet__approved": "Approved",
         "timesheet__paid": "Marked paid",
         "timesheet__rejected": "Rejected",
@@ -1935,6 +1936,13 @@
       "editTitle": "Edit time entry",
       "prefillHint": "Add a short description and save.",
       "requiredHint": "Project and description are required. Future dates and long days save with warnings."
+    },
+    "adminModification": {
+      "weekTitle": "{count, plural, one {An administrator changed # entry in this week.} other {An administrator changed # entries in this week.}}",
+      "weekDescription": "Open an affected entry to see the correction details.",
+      "adminFallback": "Administrator",
+      "changedBy": "Changed by {name} on {date}.",
+      "reason": "Reason: {reason}"
     },
     "fields": {
       "description": "Description",
@@ -2306,7 +2314,41 @@
     "detail": {
       "title": "Itemized breakdown",
       "description": "Cost-free report data from time entries. Rates and costs are reserved for internal export mode.",
-      "internalProject": "Internal"
+      "internalProject": "Internal",
+      "profileContractor": "Contractor",
+      "profileEmployee": "Employee",
+      "edit": "Edit",
+      "editingDone": "Editing done",
+      "editHint": "Changes stay in this report and its export until you explicitly save them to recorded time.",
+      "descriptionInput": "Description for {name}",
+      "hoursInput": "Hours for {name}"
+    },
+    "persistence": {
+      "unsavedTitle": "{count, plural, one {# unsaved report change} other {# unsaved report changes}}",
+      "unsavedDescription": "These values affect the report and export only until you explicitly save them to recorded time.",
+      "save": "Save to recorded time",
+      "discard": "Discard changes",
+      "cancel": "Cancel",
+      "dialogTitle": "Save report changes to recorded time?",
+      "dialogDescription": "This permanently updates {count, plural, one {# time entry} other {# time entries}}. Locked timesheet periods cannot be changed.",
+      "reasonLabel": "Correction reason",
+      "reasonPlaceholder": "Explain why the recorded time needs to change",
+      "memberVisibility": "Affected members will see who changed each entry, when it changed, and this reason.",
+      "confirm": "Save permanent changes",
+      "exportOption": "Save edits to recorded time",
+      "exportOptionHint": "Permanently update {count, plural, one {# edited entry} other {# edited entries}} before downloading.",
+      "exportOptionEmpty": "Edit at least one report row to enable permanent saving.",
+      "success": "{count, plural, one {# time entry was updated permanently.} other {# time entries were updated permanently.}}",
+      "errors": {
+        "invalid": "Check the edited values and provide a correction reason.",
+        "EMPTY_REASON": "Provide a correction reason before saving.",
+        "ENTRY_NOT_FOUND": "One or more edited time entries no longer exist. Refresh the report and try again.",
+        "ENTRY_LOCKED": "One or more edited entries belong to a locked timesheet period and cannot be changed.",
+        "INVALID_DESCRIPTION": "Every saved time entry needs a description of at most 1,000 characters.",
+        "INVALID_DURATION": "Saved durations must be between 1 minute and 24 hours.",
+        "DAILY_LIMIT_EXCEEDED": "The changes would make at least one day exceed the 24-hour hard limit.",
+        "generic": "The report changes could not be saved."
+      }
     },
     "table": {
       "date": "Date",

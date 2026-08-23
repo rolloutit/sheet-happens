@@ -19,6 +19,7 @@ import {
   PlayCircle,
   Plus,
   RotateCcw,
+  ShieldCheck,
   Square,
   Trash2,
   X,
@@ -155,6 +156,7 @@ export function TimeGridClient({ week }: TimeGridClientProps) {
   const entriesByCell = useMemo(() => groupEntriesByCell(week.entries), [week.entries]);
   const entriesByDay = useMemo(() => groupEntriesByDay(week.entries), [week.entries]);
   const weekHasLockedPeriod = week.lockedMonthStarts.length > 0;
+  const adminModifiedEntryCount = week.entries.filter((entry) => entry.adminModification).length;
 
   const projectRows = week.projects;
   const projectsById = useMemo(
@@ -529,6 +531,18 @@ export function TimeGridClient({ week }: TimeGridClientProps) {
             <AlertTriangle className="size-4" aria-hidden="true" />
           )}
           {notice.message}
+        </div>
+      ) : null}
+
+      {adminModifiedEntryCount > 0 ? (
+        <div className="flex items-start gap-3 rounded-[var(--radius-md)] border border-accent-line bg-accent-soft px-4 py-3 text-sm text-foreground">
+          <ShieldCheck className="mt-0.5 size-4 shrink-0 text-accent" aria-hidden="true" />
+          <div>
+            <span className="font-semibold">
+              {t("adminModification.weekTitle", { count: adminModifiedEntryCount })}
+            </span>{" "}
+            <span className="text-muted-foreground">{t("adminModification.weekDescription")}</span>
+          </div>
         </div>
       ) : null}
 
@@ -1356,6 +1370,9 @@ function DayView({
                       {formatMinutesAsHours(entry.durationMinutes)}h
                     </span>
                   </div>
+                  {entry.adminModification ? (
+                    <AdminModificationNotice modification={entry.adminModification} compact t={t} />
+                  ) : null}
                   {warnings.length ? (
                     <div className="mt-2 flex flex-wrap gap-2">
                       {warnings.map((warning) => (
@@ -1828,6 +1845,10 @@ function EntryModal({ state, week, projects, onClose, onDone, t }: EntryModalPro
             </div>
           ) : null}
 
+          {state.mode === "edit" && state.entry.adminModification ? (
+            <AdminModificationNotice modification={state.entry.adminModification} t={t} />
+          ) : null}
+
           <Field label={t("fields.description")} required error={fieldErrors?.description}>
             <textarea
               rows={3}
@@ -2146,6 +2167,13 @@ function BreakdownDialog({
                     <p className="text-sm font-medium">
                       {entry.description || t("labels.noDescription")}
                     </p>
+                    {entry.adminModification ? (
+                      <AdminModificationNotice
+                        modification={entry.adminModification}
+                        compact
+                        t={t}
+                      />
+                    ) : null}
                     {warnings.length ? (
                       <div className="mt-2 flex flex-wrap gap-2">
                         {warnings.map((warning) => (
@@ -2203,6 +2231,45 @@ function BreakdownDialog({
           </button>
         </div>
       </div>
+    </div>
+  );
+}
+
+function AdminModificationNotice({
+  modification,
+  compact = false,
+  t,
+}: {
+  modification: NonNullable<TimeGridEntry["adminModification"]>;
+  compact?: boolean;
+  t: TimeTrackingTranslator;
+}) {
+  const locale = useLocale();
+  const modifiedAt = new Intl.DateTimeFormat(locale, {
+    dateStyle: "medium",
+    timeStyle: "short",
+    timeZone: modification.timezone,
+  }).format(new Date(modification.modifiedAt));
+
+  return (
+    <div
+      className={cn(
+        "mt-2 flex items-start gap-2 rounded-[var(--radius-sm)] border border-accent-line bg-accent-soft text-xs leading-relaxed",
+        compact ? "px-2.5 py-2" : "px-3 py-2.5",
+      )}
+    >
+      <ShieldCheck className="mt-0.5 size-3.5 shrink-0 text-accent" aria-hidden="true" />
+      <span>
+        <span className="font-semibold text-foreground">
+          {t("adminModification.changedBy", {
+            name: modification.modifiedByName ?? t("adminModification.adminFallback"),
+            date: modifiedAt,
+          })}
+        </span>{" "}
+        <span className="text-muted-foreground">
+          {t("adminModification.reason", { reason: modification.reason })}
+        </span>
+      </span>
     </div>
   );
 }

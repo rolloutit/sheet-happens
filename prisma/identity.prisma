@@ -42,6 +42,7 @@ model Member {
   reportExports           ReportExport[]
   runningTimer            RunningTimer?
   timeEntries             TimeEntry[]
+  adminTimeEntryEdits     TimeEntry[]               @relation("TimeEntryAdminModifiedBy")
   timeEntryDrafts         TimeEntryDraft[]
   timesheets              Timesheet[]               @relation("TimesheetContractor")
   periodLocks             PeriodLock[]

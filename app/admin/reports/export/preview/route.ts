@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getTranslations } from "next-intl/server";
 
+import { applyReportLineEdits, parseReportLineEdits } from "@/src/lib/report-line-edits";
 import { requireAdminAppMemberForAction } from "@/src/server/auth/app-access";
 import { AuthenticationError, AuthorizationError } from "@/src/server/auth/session";
 import { renderTypstDocumentPages } from "@/src/server/pdf";
@@ -10,6 +11,7 @@ import {
   parseReportExportLocale,
   parseReportMode,
   parseReportSearchParams,
+  reportSearchParamsFromFormData,
   resolveReportExportTitle,
 } from "@/src/server/reports";
 
@@ -29,7 +31,7 @@ const PREVIEW_HEADERS = {
   "X-Content-Type-Options": "nosniff",
 };
 
-export async function GET(request: Request) {
+export async function POST(request: Request) {
   let admin;
 
   try {
@@ -45,14 +47,11 @@ export async function GET(request: Request) {
     return errorResponse(503);
   }
 
-  const searchParams = new URL(request.url).searchParams;
-  const locale = parseReportExportLocale(searchParams.get("locale"));
-  const mode = parseReportMode(searchParams.get("mode"));
-  const filters = parseReportSearchParams(
-    Object.fromEntries(searchParams.entries()),
-    admin.timezone,
-  );
-  const snapshot = await getTimeEntryReportSnapshot({
+  const formData = await request.formData();
+  const locale = parseReportExportLocale(formData.get("locale"));
+  const mode = parseReportMode(formData.get("mode"));
+  const filters = parseReportSearchParams(reportSearchParamsFromFormData(formData), admin.timezone);
+  const sourceSnapshot = await getTimeEntryReportSnapshot({
     periodStart: filters.periodStart,
     periodEnd: filters.periodEnd,
     view: filters.view,
@@ -61,6 +60,10 @@ export async function GET(request: Request) {
     projectGroupId: filters.projectGroupId,
     memberId: filters.memberId,
   });
+  const snapshot = applyReportLineEdits(
+    sourceSnapshot,
+    parseReportLineEdits(formData.get("lineEdits")),
+  );
 
   if (snapshot.lines.length === 0) {
     return NextResponse.json({ status: "empty" }, { headers: PREVIEW_HEADERS });
@@ -71,7 +74,7 @@ export async function GET(request: Request) {
     // explicitly and a preview always speaks the language the download will.
     const t = await getTranslations({ locale, namespace: "AdminReports" });
     const payload = buildReportPdfPayload({
-      title: resolveReportExportTitle(searchParams.get("title"), snapshot.period),
+      title: resolveReportExportTitle(formData.get("title"), snapshot.period),
       snapshot,
       locale,
       generatedAt: new Date(),

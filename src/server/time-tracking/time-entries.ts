@@ -54,6 +54,12 @@ export type TimeGridEntry = {
   endTime: string | null;
   locked: boolean;
   updatedAt: string;
+  adminModification: {
+    modifiedAt: string;
+    modifiedByName: string | null;
+    reason: string;
+    timezone: string;
+  } | null;
 };
 
 export type RunningTimerView = {
@@ -246,6 +252,11 @@ type EntryRecord = {
   timezone: string;
   lockedByTimesheetRevisionId: string | null;
   updatedAt: Date;
+  adminModifiedAt: Date | null;
+  adminModificationReason: string | null;
+  adminModifiedBy: {
+    displayName: string;
+  } | null;
 };
 
 type EntryForCopy = {
@@ -378,6 +389,13 @@ export async function getMemberWeeklyTimeGrid(input: {
           timezone: true,
           lockedByTimesheetRevisionId: true,
           updatedAt: true,
+          adminModifiedAt: true,
+          adminModificationReason: true,
+          adminModifiedBy: {
+            select: {
+              displayName: true,
+            },
+          },
         },
       }),
       prisma.timeEntry.findMany({
@@ -1710,6 +1728,15 @@ function mapTimeEntry(entry: EntryRecord): TimeGridEntry {
     endTime: entry.endedAt ? formatTimeInTimezone(entry.endedAt, entry.timezone) : null,
     locked: Boolean(entry.lockedByTimesheetRevisionId),
     updatedAt: entry.updatedAt.toISOString(),
+    adminModification:
+      entry.adminModifiedAt && entry.adminModificationReason
+        ? {
+            modifiedAt: entry.adminModifiedAt.toISOString(),
+            modifiedByName: entry.adminModifiedBy?.displayName ?? null,
+            reason: entry.adminModificationReason,
+            timezone: entry.timezone,
+          }
+        : null,
   };
 }
 

@@ -1846,6 +1846,50 @@ Expected result:
 - The selected filters are reflected in the URL and survive browser refresh.
 - Clearing filters returns to the default monthly report.
 
+### Edit Report Rows And Save Optional Corrections
+
+1. Sign in as `{ADMIN_EMAIL}` with TOTP enabled and verified.
+2. Open `https://{DOMAIN_NAME}/admin/reports` and choose filters that include multiple time entries.
+3. Note the total hours, one group total, and one row's description and hours.
+4. Click `Edit` above the itemized breakdown.
+5. Change the noted row's description and hours.
+6. Confirm the report totals, group total, charts, and itemized row update immediately.
+7. Click `Editing done`.
+8. Confirm the edited row carries a visual edit indicator.
+9. Confirm a prominent unsaved-change bar remains visible after leaving edit mode.
+10. Click `PDF export` and inspect the preview.
+11. Leave `Save edits to recorded time` off, download the PDF, then close the dialog.
+12. Confirm the unsaved-change bar is still present after the export dialog closes.
+13. Refresh the report and confirm the original values return.
+14. Repeat the edit, click `Save to recorded time` on the report page, enter a correction reason,
+    and confirm.
+15. Open the affected member's week on `/time`.
+16. Repeat with another edit by selecting `Save edits to recorded time` inside the PDF export
+    dialog, enter a reason, and download the PDF.
+
+Expected result:
+
+- Edit mode replaces row descriptions and hours with in-place inputs without changing the row's
+  member, project, or date.
+- The information banner states that changes remain report-only until explicitly saved.
+- Totals, grouped summaries, charts, PDF preview, and the downloaded PDF all use the working-copy
+  values consistently.
+- Completing edit mode keeps the working-copy changes on the current page but does not persist them
+  to the underlying time entries.
+- Exporting without the save option leaves the working-copy edits visible after the dialog closes;
+  refreshing restores the values from recorded time.
+- Saving from either the report page or export dialog requires a reason and permanently updates the
+  source entry. A duration correction removes the old start/end interval so it cannot contradict
+  the corrected total.
+- The affected member's week shows an admin-correction banner. The entry shows the admin name,
+  correction time, and reason in the day view, entry editor, and multi-entry breakdown.
+- The audit log contains `time_entry.admin_updated` with before/after values and the correction
+  reason. It must not store only a generic `time_entry.updated` event for this operation.
+- Saving is rejected if an affected entry belongs to a submitted/locked timesheet period or if the
+  correction would make a day exceed 24 hours; the unsaved working copy remains available.
+- Hungarian and English modes translate the edit action, completion action, information banner,
+  persistence controls, member correction notice, and accessible input labels.
+
 ### Configure Export Dialog
 
 1. Sign in as `{ADMIN_EMAIL}` with TOTP enabled and verified.

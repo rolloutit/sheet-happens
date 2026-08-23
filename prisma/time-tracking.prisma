@@ -16,7 +16,11 @@ model TimeEntry {
   deletedAt                   DateTime?   @map("deleted_at") @db.Timestamptz(6)
   createdByMemberId           String?     @map("created_by_member_id") @db.Uuid
   updatedByMemberId           String?     @map("updated_by_member_id") @db.Uuid
+  adminModifiedAt             DateTime?   @map("admin_modified_at") @db.Timestamptz(6)
+  adminModifiedByMemberId     String?     @map("admin_modified_by_member_id") @db.Uuid
+  adminModificationReason     String?     @map("admin_modification_reason")
 
+  adminModifiedBy   Member?                 @relation("TimeEntryAdminModifiedBy", fields: [adminModifiedByMemberId], references: [id], onDelete: SetNull)
   lockedByRevision  TimesheetRevision?      @relation(fields: [lockedByTimesheetRevisionId], references: [id], onDelete: SetNull)
   member            Member                  @relation(fields: [memberId], references: [id], onDelete: Restrict)
   project           Project                 @relation(fields: [projectId], references: [id], onDelete: Restrict)
@@ -27,6 +31,7 @@ model TimeEntry {
   @@index([projectId, localDate])
   @@index([projectAssignmentId, localDate])
   @@index([lockedByTimesheetRevisionId])
+  @@index([adminModifiedByMemberId, adminModifiedAt])
   @@map("time_entries")
 }
 

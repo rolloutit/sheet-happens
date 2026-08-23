@@ -1711,6 +1711,7 @@
         "time_entry__created": "Létrehozva",
         "time_entry__deleted": "Törölve",
         "time_entry__updated": "Módosítva",
+        "time_entry__admin_updated": "Admin által javítva",
         "timesheet__approved": "Jóváhagyva",
         "timesheet__paid": "Kifizetettnek jelölve",
         "timesheet__rejected": "Elutasítva",
@@ -1935,6 +1936,13 @@
       "editTitle": "Időbejegyzés szerkesztése",
       "prefillHint": "Adj meg egy rövid leírást, majd mentsd.",
       "requiredHint": "A projekt és a leírás kötelező. A jövőbeli dátumok és hosszú napok figyelmeztetéssel menthetők."
+    },
+    "adminModification": {
+      "weekTitle": "Egy adminisztrátor {count} bejegyzést módosított ezen a héten.",
+      "weekDescription": "Nyisd meg az érintett bejegyzést a javítás részleteiért.",
+      "adminFallback": "Adminisztrátor",
+      "changedBy": "Módosította: {name}, {date}.",
+      "reason": "Indok: {reason}"
     },
     "fields": {
       "description": "Leírás",
@@ -2306,7 +2314,41 @@
     "detail": {
       "title": "Tételes bontás",
       "description": "Költségmentes riportadat az időbejegyzésekből. Az óradíjak és költségek a belső export módba kerülnek.",
-      "internalProject": "Belső"
+      "internalProject": "Belső",
+      "profileContractor": "Kontraktor",
+      "profileEmployee": "Alkalmazott",
+      "edit": "Szerkesztés",
+      "editingDone": "Szerkesztés kész",
+      "editHint": "A módosítások ebben a riportban és az exportban maradnak, amíg külön nem mented őket a rögzített időbe.",
+      "descriptionInput": "{name} bejegyzésének leírása",
+      "hoursInput": "{name} bejegyzésének óraszáma"
+    },
+    "persistence": {
+      "unsavedTitle": "{count} mentetlen riportmódosítás",
+      "unsavedDescription": "Ezek az értékek csak a riportot és az exportot módosítják, amíg külön nem mented őket a rögzített időbe.",
+      "save": "Mentés a rögzített időbe",
+      "discard": "Módosítások eldobása",
+      "cancel": "Mégse",
+      "dialogTitle": "Mented a riport módosításait a rögzített időbe?",
+      "dialogDescription": "Ez véglegesen módosít {count} időbejegyzést. A zárolt timesheet-időszakok nem módosíthatók.",
+      "reasonLabel": "Javítás indoka",
+      "reasonPlaceholder": "Írd le, miért kell módosítani a rögzített időt",
+      "memberVisibility": "Az érintett munkatársak látni fogják, ki és mikor módosította a bejegyzést, valamint ezt az indokot is.",
+      "confirm": "Végleges módosítások mentése",
+      "exportOption": "Módosítások mentése a rögzített időbe",
+      "exportOptionHint": "A PDF letöltése előtt {count} szerkesztett bejegyzés végleges módosítása.",
+      "exportOptionEmpty": "A végleges mentéshez előbb szerkessz legalább egy riportsort.",
+      "success": "{count} időbejegyzés véglegesen módosítva.",
+      "errors": {
+        "invalid": "Ellenőrizd a módosított értékeket, és add meg a javítás indokát.",
+        "EMPTY_REASON": "Mentés előtt add meg a javítás indokát.",
+        "ENTRY_NOT_FOUND": "Egy vagy több módosított időbejegyzés már nem létezik. Frissítsd a riportot, majd próbáld újra.",
+        "ENTRY_LOCKED": "Egy vagy több módosított bejegyzés zárolt timesheet-időszakhoz tartozik, ezért nem módosítható.",
+        "INVALID_DESCRIPTION": "Minden mentett időbejegyzéshez legfeljebb 1000 karakteres leírás szükséges.",
+        "INVALID_DURATION": "A mentett időtartamnak 1 perc és 24 óra között kell lennie.",
+        "DAILY_LIMIT_EXCEEDED": "A módosítások miatt legalább egy nap meghaladná a 24 órás korlátot.",
+        "generic": "A riport módosításait nem sikerült menteni."
+      }
     },
     "table": {
       "date": "Dátum",
