@@ -12,10 +12,11 @@ import {
   Loader2,
   Lock,
 } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { useTranslations } from "next-intl";
 
 import { Button } from "@/src/components/ui/Button";
+import { Checkbox } from "@/src/components/ui/Checkbox";
 import {
   Dialog,
   DialogClose,
@@ -27,9 +28,13 @@ import {
 import { Input } from "@/src/components/ui/Input";
 import { SegmentedControl } from "@/src/components/ui/SegmentedControl";
 import { Skeleton } from "@/src/components/ui/Skeleton";
+import { Textarea } from "@/src/components/ui/Textarea";
 import { resolveLocale, type AppLocale } from "@/src/i18n/locales";
+import { serializeReportLineEdits, type ReportLineEdit } from "@/src/lib/report-line-edits";
 import { cn } from "@/src/lib/utils";
 import type { ReportExportFields, ReportMode } from "@/src/server/reports";
+
+import { saveReportLineEditsAction } from "./actions";
 
 export type ReportExportModalProps = {
   /** Serialized applied filters, posted with the download and sent with every preview request. */
@@ -40,6 +45,8 @@ export type ReportExportModalProps = {
   initialLocale: AppLocale;
   timezone: string;
   disabled: boolean;
+  lineEdits: ReportLineEdit[];
+  onLineEditsSaved: (message: string) => void;
 };
 
 type PreviewState =
@@ -69,6 +76,8 @@ export function ReportExportModal({
   initialLocale,
   timezone,
   disabled,
+  lineEdits,
+  onLineEditsSaved,
 }: ReportExportModalProps) {
   const t = useTranslations("AdminReports");
   const [open, setOpen] = useState(false);
@@ -78,9 +87,14 @@ export function ReportExportModal({
   const [preview, setPreview] = useState<PreviewState>({ status: "loading" });
   // Bumped to re-run the effect when the user retries a failed render without changing anything.
   const [reloadToken, setReloadToken] = useState(0);
+  const [saveRecordedTime, setSaveRecordedTime] = useState(false);
+  const [saveReason, setSaveReason] = useState("");
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const [savingRecordedTime, setSavingRecordedTime] = useState(false);
   const internal = mode === "INTERNAL";
   // Serialized so the effect depends on a value rather than on the prop object's identity.
   const filterQuery = useMemo(() => new URLSearchParams(exportFields).toString(), [exportFields]);
+  const serializedEdits = useMemo(() => serializeReportLineEdits(lineEdits), [lineEdits]);
   const generatedTitles = useMemo(() => new Set(Object.values(defaultTitles)), [defaultTitles]);
 
   function changeLocale(value: string) {
@@ -89,6 +103,34 @@ export function ReportExportModal({
     setExportLocale(nextLocale);
     // A generated title belongs to the document's language; a hand-written one belongs to the user.
     setTitle((current) => (generatedTitles.has(current) ? defaultTitles[nextLocale] : current));
+  }
+
+  async function handleExportSubmit(event: FormEvent<HTMLFormElement>) {
+    if (!saveRecordedTime || lineEdits.length === 0) return;
+
+    event.preventDefault();
+    if (!saveReason.trim()) {
+      setSaveError(t("persistence.errors.EMPTY_REASON"));
+      return;
+    }
+
+    const form = event.currentTarget;
+    setSavingRecordedTime(true);
+    setSaveError(null);
+    const result = await saveReportLineEditsAction({ edits: lineEdits, reason: saveReason });
+    setSavingRecordedTime(false);
+
+    if (result.status === "error") {
+      setSaveError(result.message);
+      return;
+    }
+
+    // Submit the already-rendered form immediately. The source records now contain the same
+    // values, while the hidden edits keep this download deterministic during revalidation.
+    form.submit();
+    setSaveRecordedTime(false);
+    setSaveReason("");
+    onLineEditsSaved(result.message);
   }
 
   useEffect(() => {
@@ -102,14 +144,17 @@ export function ReportExportModal({
       );
 
       try {
-        const response = await fetch(
-          `${PREVIEW_ENDPOINT}?${filterQuery}&${new URLSearchParams({
-            mode,
-            title,
-            locale: exportLocale,
-          })}`,
-          { signal: controller.signal },
-        );
+        const body = new URLSearchParams(filterQuery);
+        body.set("mode", mode);
+        body.set("title", title);
+        body.set("locale", exportLocale);
+        if (serializedEdits) body.set("lineEdits", serializedEdits);
+
+        const response = await fetch(PREVIEW_ENDPOINT, {
+          method: "POST",
+          body,
+          signal: controller.signal,
+        });
 
         if (!response.ok) {
           setPreview({ status: "error" });
@@ -147,7 +192,7 @@ export function ReportExportModal({
       window.clearTimeout(timer);
       controller.abort();
     };
-  }, [exportLocale, filterQuery, mode, open, reloadToken, title]);
+  }, [exportLocale, filterQuery, mode, open, reloadToken, serializedEdits, title]);
 
   return (
     <Dialog
@@ -189,12 +234,16 @@ export function ReportExportModal({
           method="post"
           target="_blank"
           className="flex min-h-0 flex-1 flex-col"
+          onSubmit={handleExportSubmit}
         >
           {Object.entries(exportFields).map(([name, value]) => (
             <input key={name} type="hidden" name={name} value={value} />
           ))}
           <input type="hidden" name="mode" value={mode} />
           <input type="hidden" name="locale" value={exportLocale} />
+          {serializedEdits ? (
+            <input type="hidden" name="lineEdits" value={serializedEdits} />
+          ) : null}
 
           <div className="grid min-h-0 flex-1 md:grid-cols-[21.25rem_minmax(0,1fr)]">
             <div className="grid content-start gap-5 overflow-y-auto border-b border-border p-5 md:border-b-0 md:border-r">
@@ -279,6 +328,54 @@ export function ReportExportModal({
                   <Check className="ml-auto size-4 text-accent" aria-hidden="true" />
                 </div>
               </div>
+
+              <div className="grid gap-3 rounded-[var(--radius-md)] border border-border bg-secondary/55 p-3.5">
+                <label className="flex cursor-pointer items-start gap-3">
+                  <Checkbox
+                    checked={saveRecordedTime}
+                    disabled={lineEdits.length === 0}
+                    onCheckedChange={(checked) => {
+                      setSaveRecordedTime(checked === true);
+                      setSaveError(null);
+                    }}
+                    aria-describedby="report-save-recorded-time-hint"
+                  />
+                  <span className="grid gap-1">
+                    <span className="font-ui text-sm font-semibold text-foreground">
+                      {t("persistence.exportOption")}
+                    </span>
+                    <span
+                      id="report-save-recorded-time-hint"
+                      className="text-xs leading-relaxed text-muted-foreground"
+                    >
+                      {lineEdits.length > 0
+                        ? t("persistence.exportOptionHint", { count: lineEdits.length })
+                        : t("persistence.exportOptionEmpty")}
+                    </span>
+                  </span>
+                </label>
+
+                {saveRecordedTime && lineEdits.length > 0 ? (
+                  <label className="grid gap-2">
+                    <span className={MICRO_LABEL}>{t("persistence.reasonLabel")}</span>
+                    <Textarea
+                      value={saveReason}
+                      maxLength={500}
+                      placeholder={t("persistence.reasonPlaceholder")}
+                      invalid={Boolean(saveError)}
+                      onChange={(event) => {
+                        setSaveReason(event.target.value);
+                        setSaveError(null);
+                      }}
+                    />
+                    {saveError ? (
+                      <span role="alert" className="text-xs font-medium text-destructive">
+                        {saveError}
+                      </span>
+                    ) : null}
+                  </label>
+                ) : null}
+              </div>
             </div>
 
             <div className="flex min-h-0 flex-col bg-secondary/40">
@@ -330,7 +427,12 @@ export function ReportExportModal({
                 type="submit"
                 variant="cta"
                 icon={Download}
-                disabled={preview.status === "empty"}
+                loading={savingRecordedTime}
+                disabled={
+                  preview.status === "empty" ||
+                  savingRecordedTime ||
+                  (saveRecordedTime && !saveReason.trim())
+                }
               >
                 {t("export.download")}
               </Button>

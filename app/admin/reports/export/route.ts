@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getTranslations } from "next-intl/server";
 
+import { applyReportLineEdits, parseReportLineEdits } from "@/src/lib/report-line-edits";
 import { requireAdminAppMember } from "@/src/server/auth/app-access";
 import {
   generateReportPdfExport,
@@ -26,7 +27,7 @@ export async function POST(request: Request) {
   // The export locale is chosen in the dialog, not taken from the request cookie, so it is passed
   // explicitly and the interface language never decides what the document says.
   const t = await getTranslations({ locale, namespace: "AdminReports" });
-  const snapshot = await getTimeEntryReportSnapshot({
+  const sourceSnapshot = await getTimeEntryReportSnapshot({
     periodStart: filters.periodStart,
     periodEnd: filters.periodEnd,
     view: filters.view,
@@ -35,6 +36,10 @@ export async function POST(request: Request) {
     projectGroupId: filters.projectGroupId,
     memberId: filters.memberId,
   });
+  const snapshot = applyReportLineEdits(
+    sourceSnapshot,
+    parseReportLineEdits(formData.get("lineEdits")),
+  );
   const title = resolveReportExportTitle(formData.get("title"), snapshot.period);
 
   if (snapshot.lines.length === 0) {
