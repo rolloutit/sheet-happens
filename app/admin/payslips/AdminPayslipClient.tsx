@@ -1,11 +1,21 @@
 "use client";
 
-import { Download, Eye, FileText, FileUp, ReceiptText, Trash2, UploadCloud } from "lucide-react";
+import {
+  ChevronLeft,
+  ChevronRight,
+  Download,
+  Eye,
+  FileText,
+  FileUp,
+  ReceiptText,
+  Trash2,
+  UploadCloud,
+} from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { useActionState, useEffect, useId, useMemo, useState, useTransition } from "react";
 import type { Route } from "next";
 import { useRouter } from "next/navigation";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 
 import { Button } from "@/src/components/ui/Button";
 import { Combobox } from "@/src/components/ui/Combobox";
@@ -18,8 +28,14 @@ import {
   DialogTitle,
 } from "@/src/components/ui/Dialog";
 import { Field } from "@/src/components/ui/Field";
+import { IconButton } from "@/src/components/ui/IconButton";
 import { Pager } from "@/src/components/ui/Pager";
 import { cn } from "@/src/lib/utils";
+import {
+  getPayslipMonthPage,
+  getPayslipMonthWindow,
+  type AdminPayslipMonthOption,
+} from "@/src/lib/payslip-month-options";
 import { deletePayslipAction, uploadPayslipAction } from "./actions";
 import { initialAdminPayslipActionState } from "./action-state";
 
@@ -30,6 +46,7 @@ export type AdminPayslipItem = {
   employeeEmail: string;
   employeeStatus: string;
   month: string;
+  monthValue: string;
   filename: string;
   fileSize: string;
   publishedAt: string | null;
@@ -41,12 +58,6 @@ export type AdminPayslipEmployeeOption = {
   name: string;
   email: string;
   status: string;
-};
-
-export type AdminPayslipMonthOption = {
-  value: string;
-  label: string;
-  shortLabel: string;
 };
 
 export function AdminPayslipClient({
@@ -251,7 +262,7 @@ export function AdminPayslipClient({
                           onClick={() =>
                             setUploadContext({
                               employeeMemberId: row.employeeMemberId,
-                              month: monthValueForLabel(months, row.month),
+                              month: row.monthValue,
                               replacing: true,
                             })
                           }
@@ -346,9 +357,14 @@ function PayslipUploadDialog({
   onOpenChange: (open: boolean) => void;
 }) {
   const t = useTranslations("Payslips");
+  const locale = useLocale();
   const router = useRouter();
+  const newestMonth = months[0]?.value ?? context.month ?? "";
   const [selectedEmployee, setSelectedEmployee] = useState(context.employeeMemberId ?? "");
   const [selectedMonth, setSelectedMonth] = useState(context.month ?? "");
+  const [monthPage, setMonthPage] = useState(() =>
+    context.month && newestMonth ? getPayslipMonthPage(newestMonth, context.month) : 0,
+  );
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [clientError, setClientError] = useState<string | null>(null);
   const inputId = useId();
@@ -365,6 +381,11 @@ function PayslipUploadDialog({
       })),
     [employees],
   );
+  const visibleMonths = useMemo(
+    () => getPayslipMonthWindow(locale, newestMonth, monthPage),
+    [locale, monthPage, newestMonth],
+  );
+  const monthRange = `${visibleMonths.at(-1)?.label ?? ""} – ${visibleMonths[0]?.label ?? ""}`;
 
   useEffect(() => {
     if (state.status !== "success") return;
@@ -386,6 +407,11 @@ function PayslipUploadDialog({
     }
     setClientError(null);
     setSelectedFile(file);
+  }
+
+  function changeMonthPage(nextPage: number) {
+    setMonthPage(Math.max(0, nextPage));
+    setSelectedMonth("");
   }
 
   return (
@@ -418,8 +444,32 @@ function PayslipUploadDialog({
               name="periodStart"
               value={selectedMonth ? `${selectedMonth}-01` : ""}
             />
-            <div className="grid grid-cols-3 gap-2 sm:grid-cols-6">
-              {months.slice(0, 18).map((month) => (
+            <div
+              className="mb-2 flex items-center justify-between gap-3"
+              role="group"
+              aria-label={t("admin.upload.monthNavigation")}
+            >
+              <IconButton
+                icon={ChevronLeft}
+                label={t("admin.upload.olderMonths")}
+                size="sm"
+                variant="ghost"
+                onClick={() => changeMonthPage(monthPage + 1)}
+              />
+              <span className="text-center font-ui text-xs font-semibold text-muted-foreground">
+                {monthRange}
+              </span>
+              <IconButton
+                icon={ChevronRight}
+                label={t("admin.upload.newerMonths")}
+                size="sm"
+                variant="ghost"
+                disabled={monthPage === 0}
+                onClick={() => changeMonthPage(monthPage - 1)}
+              />
+            </div>
+            <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
+              {visibleMonths.map((month) => (
                 <button
                   key={month.value}
                   type="button"
@@ -432,8 +482,8 @@ function PayslipUploadDialog({
                   )}
                   onClick={() => setSelectedMonth(month.value)}
                 >
-                  <span>{month.shortLabel}</span>
-                  <span className="text-[10px] font-medium">{month.label.slice(-4)}</span>
+                  <span className="uppercase">{month.shortLabel}</span>
+                  <span className="text-[10px] font-medium">{month.yearLabel}</span>
                 </button>
               ))}
             </div>
@@ -577,8 +627,4 @@ function initials(name: string) {
     .map((part) => part[0])
     .join("")
     .toUpperCase();
-}
-
-function monthValueForLabel(months: AdminPayslipMonthOption[], label: string) {
-  return months.find((month) => month.label === label)?.value ?? "";
 }

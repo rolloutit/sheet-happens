@@ -5,6 +5,7 @@ import type { Route } from "next";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useState } from "react";
+import type { ReactNode } from "react";
 
 import { Button } from "@/src/components/ui/Button";
 import {
@@ -28,10 +29,14 @@ export function EmployeePayslipList({
   latest,
   history,
   pagination,
+  availableYears,
+  filters,
 }: {
   latest: EmployeePayslipItem | null;
   history: EmployeePayslipItem[];
   pagination: { page: number; totalPages: number; totalItems: number };
+  availableYears: number[];
+  filters: { year: number | null; sort: "newest" | "oldest"; pageSize: number };
 }) {
   const t = useTranslations("Payslips");
   const router = useRouter();
@@ -60,6 +65,31 @@ export function EmployeePayslipList({
     router.push(`/payslips?${params.toString()}` as Route);
   }
 
+  function changeFilter(name: "year" | "sort" | "pageSize", value: string) {
+    const params = new URLSearchParams(window.location.search);
+    const defaults = { year: "", sort: "newest", pageSize: "12" };
+
+    if (value === defaults[name]) {
+      params.delete(name);
+    } else {
+      params.set(name, value);
+    }
+    params.delete("page");
+    router.push(`/payslips${params.size > 0 ? `?${params.toString()}` : ""}` as Route);
+  }
+
+  function clearFilters() {
+    const params = new URLSearchParams(window.location.search);
+    params.delete("year");
+    params.delete("sort");
+    params.delete("pageSize");
+    params.delete("page");
+    router.push(`/payslips${params.size > 0 ? `?${params.toString()}` : ""}` as Route);
+  }
+
+  const filtersActive = filters.year !== null || filters.sort !== "newest" || filters.pageSize !== 12;
+  const showHistory = history.length > 0 || pagination.totalItems > 0 || filtersActive;
+
   return (
     <div className="grid gap-6">
       <article className="grid gap-5 rounded-[var(--radius-lg)] border border-accent/30 bg-card p-5 shadow-panel sm:grid-cols-[auto_minmax(0,1fr)_auto] sm:items-center sm:p-6">
@@ -84,29 +114,77 @@ export function EmployeePayslipList({
         <PayslipActions item={latest} onPreview={() => setSelectedId(latest.id)} primary />
       </article>
 
-      {history.length > 0 ? (
+      {showHistory ? (
         <section className="grid gap-3">
-          <h2 className="font-ui text-xs font-bold uppercase tracking-[0.12em] text-muted-foreground">
-            {t("employee.history")}
-          </h2>
-          <div className="overflow-hidden rounded-[var(--radius-lg)] border border-border bg-card">
-            {history.map((item) => (
-              <div
-                key={item.id}
-                className="grid gap-3 border-b border-border px-4 py-4 last:border-b-0 sm:grid-cols-[auto_minmax(0,1fr)_auto] sm:items-center"
+          <div className="flex flex-wrap items-end justify-between gap-3">
+            <h2 className="pb-1 font-ui text-xs font-bold uppercase tracking-[0.12em] text-muted-foreground">
+              {t("employee.history")}
+            </h2>
+            <div className="flex flex-wrap items-end gap-2">
+              <HistorySelect
+                label={t("employee.filters.year")}
+                value={filters.year?.toString() ?? ""}
+                onChange={(value) => changeFilter("year", value)}
               >
-                <MonthMarker label={item.month} compact />
-                <div className="min-w-0">
-                  <p className="font-semibold text-foreground">{item.month}</p>
-                  <p className="mt-1 truncate text-xs text-muted-foreground">
-                    {item.filename} · {item.fileSize}
-                  </p>
-                </div>
-                <PayslipActions item={item} onPreview={() => setSelectedId(item.id)} />
-              </div>
-            ))}
+                <option value="">{t("employee.filters.allYears")}</option>
+                {availableYears.map((year) => (
+                  <option key={year} value={year}>
+                    {year}
+                  </option>
+                ))}
+              </HistorySelect>
+              <HistorySelect
+                label={t("employee.filters.order")}
+                value={filters.sort}
+                onChange={(value) => changeFilter("sort", value)}
+              >
+                <option value="newest">{t("employee.filters.newest")}</option>
+                <option value="oldest">{t("employee.filters.oldest")}</option>
+              </HistorySelect>
+              <HistorySelect
+                label={t("employee.filters.pageSize")}
+                value={String(filters.pageSize)}
+                onChange={(value) => changeFilter("pageSize", value)}
+              >
+                {[12, 24, 48].map((pageSize) => (
+                  <option key={pageSize} value={pageSize}>
+                    {pageSize}
+                  </option>
+                ))}
+              </HistorySelect>
+              {filtersActive ? (
+                <Button type="button" variant="ghost" size="sm" onClick={clearFilters}>
+                  {t("employee.filters.clear")}
+                </Button>
+              ) : null}
+            </div>
           </div>
-          {pagination.totalPages > 1 ? (
+
+          {history.length > 0 ? (
+            <div className="overflow-hidden rounded-[var(--radius-lg)] border border-border bg-card">
+              {history.map((item) => (
+                <div
+                  key={item.id}
+                  className="grid gap-3 border-b border-border px-4 py-4 last:border-b-0 sm:grid-cols-[auto_minmax(0,1fr)_auto] sm:items-center"
+                >
+                  <MonthMarker label={item.month} compact />
+                  <div className="min-w-0">
+                    <p className="font-semibold text-foreground">{item.month}</p>
+                    <p className="mt-1 truncate text-xs text-muted-foreground">
+                      {item.filename} · {item.fileSize}
+                    </p>
+                  </div>
+                  <PayslipActions item={item} onPreview={() => setSelectedId(item.id)} />
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="rounded-[var(--radius-md)] border border-dashed border-border px-4 py-8 text-center text-sm text-muted-foreground">
+              {t("employee.filters.empty")}
+            </p>
+          )}
+
+          {pagination.totalItems > 0 ? (
             <Pager
               className="px-1 pt-2"
               page={pagination.page}
@@ -132,6 +210,31 @@ export function EmployeePayslipList({
 
       <PayslipPreviewDialog item={selected} onOpenChange={(open) => !open && setSelectedId(null)} />
     </div>
+  );
+}
+
+function HistorySelect({
+  label,
+  value,
+  onChange,
+  children,
+}: {
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  children: ReactNode;
+}) {
+  return (
+    <label className="grid gap-1">
+      <span className="font-ui text-[10px] font-bold uppercase text-muted-foreground">{label}</span>
+      <select
+        value={value}
+        className="h-9 min-w-28 rounded-[var(--radius-sm)] border border-input bg-background px-2.5 text-sm text-foreground outline-none transition focus:border-accent focus:ring-2 focus:ring-accent/20"
+        onChange={(event) => onChange(event.currentTarget.value)}
+      >
+        {children}
+      </select>
+    </label>
   );
 }
 

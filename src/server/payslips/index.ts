@@ -5,6 +5,7 @@ export {
   getPayslipMonthOverview,
   listEmployeePayslips,
   listPayslipsForAdmin,
+  normalizeEmployeePayslipFilters,
   normalizeEmployeePayslipPage,
   normalizePayslipListFilters,
   PAYSLIP_MAX_BYTES,
@@ -13,6 +14,7 @@ export {
   validatePayslipFile,
 } from "./payslips";
 export type {
+  EmployeePayslipFilters,
   EmployeePayslipListResult,
   PayslipFileInput,
   PayslipListFilters,

@@ -1,6 +1,7 @@
 import { createHash, randomUUID } from "node:crypto";
 
 import { prisma } from "@/src/server/db/client";
+import type { Prisma } from "@/src/server/db/generated/client";
 import { getObjectStorage, type ObjectStorage } from "@/src/server/storage";
 import { formatDateOnly, getMonthStart, normalizeDateOnly } from "@/src/server/time-tracking";
 
@@ -74,10 +75,23 @@ export type PayslipListResult = {
 export type EmployeePayslipListResult = {
   latest: PayslipListRow | null;
   history: PayslipListRow[];
+  availableYears: number[];
   totalHistoryItems: number;
   totalHistoryPages: number;
   historyPage: number;
   historyPageSize: number;
+  filters: {
+    year: number | null;
+    sort: "newest" | "oldest";
+    pageSize: number;
+  };
+};
+
+export type EmployeePayslipFilters = {
+  page?: unknown;
+  year?: unknown;
+  sort?: unknown;
+  pageSize?: unknown;
 };
 
 export type PayslipMonthOverview = {
@@ -400,55 +414,81 @@ export async function createPayslipReadUrl(
 
 export async function listEmployeePayslips(
   employeeMemberId: string,
-  rawPage?: string | number | null,
+  rawFilters: EmployeePayslipFilters = {},
 ): Promise<EmployeePayslipListResult> {
-  const historyPageSize = 12;
-  const requestedPage = normalizeEmployeePayslipPage(rawPage);
-  const where = {
+  const filters = normalizeEmployeePayslipFilters(rawFilters);
+  const where: Prisma.PayslipWhereInput = {
     employeeMemberId,
     document: {
       status: "AVAILABLE" as const,
       deletedAt: null,
     },
   };
-  const [latest, totalItems] = await Promise.all([
+  const [latest, periods] = await Promise.all([
     prisma.payslip.findFirst({
       where,
       orderBy: [{ periodStart: "desc" }, { id: "desc" }],
       select: payslipListSelect,
     }),
-    prisma.payslip.count({ where }),
+    prisma.payslip.findMany({
+      where,
+      distinct: ["periodStart"],
+      orderBy: { periodStart: "desc" },
+      select: { periodStart: true },
+    }),
   ]);
+  const availableYears = Array.from(
+    new Set(periods.map(({ periodStart }) => periodStart.getUTCFullYear())),
+  );
 
   if (!latest) {
     return {
       latest: null,
       history: [],
+      availableYears: [],
       totalHistoryItems: 0,
       totalHistoryPages: 1,
       historyPage: 1,
-      historyPageSize,
+      historyPageSize: filters.pageSize,
+      filters,
     };
   }
 
-  const totalHistoryItems = Math.max(0, totalItems - 1);
-  const totalHistoryPages = Math.max(1, Math.ceil(totalHistoryItems / historyPageSize));
-  const historyPage = Math.min(requestedPage, totalHistoryPages);
+  const historyWhere: Prisma.PayslipWhereInput = {
+    ...where,
+    id: { not: latest.id },
+    ...(filters.year
+      ? {
+          periodStart: {
+            gte: new Date(Date.UTC(filters.year, 0, 1)),
+            lt: new Date(Date.UTC(filters.year + 1, 0, 1)),
+          },
+        }
+      : {}),
+  };
+  const totalHistoryItems = await prisma.payslip.count({ where: historyWhere });
+  const totalHistoryPages = Math.max(1, Math.ceil(totalHistoryItems / filters.pageSize));
+  const historyPage = Math.min(filters.page, totalHistoryPages);
   const history = await prisma.payslip.findMany({
-    where,
-    orderBy: [{ periodStart: "desc" }, { id: "desc" }],
-    skip: 1 + (historyPage - 1) * historyPageSize,
-    take: historyPageSize,
+    where: historyWhere,
+    orderBy: [
+      { periodStart: filters.sort === "oldest" ? "asc" : "desc" },
+      { id: filters.sort === "oldest" ? "asc" : "desc" },
+    ],
+    skip: (historyPage - 1) * filters.pageSize,
+    take: filters.pageSize,
     select: payslipListSelect,
   });
 
   return {
     latest: mapPayslipListRow(latest),
     history: history.map(mapPayslipListRow),
+    availableYears,
     totalHistoryItems,
     totalHistoryPages,
     historyPage,
-    historyPageSize,
+    historyPageSize: filters.pageSize,
+    filters,
   };
 }
 
@@ -620,6 +660,28 @@ export function normalizePayslipListFilters(filters: PayslipListFilters) {
 export function normalizeEmployeePayslipPage(page: unknown) {
   if (typeof page !== "string" && typeof page !== "number") return 1;
   return toPositiveInteger(page, 1);
+}
+
+export function normalizeEmployeePayslipFilters(
+  filters: EmployeePayslipFilters,
+): EmployeePayslipListResult["filters"] & { page: number } {
+  const yearValue = typeof filters.year === "string" ? Number(filters.year) : filters.year;
+  const year =
+    typeof yearValue === "number" &&
+    Number.isInteger(yearValue) &&
+    yearValue >= 1900 &&
+    yearValue <= 9999
+      ? yearValue
+      : null;
+  const requestedPageSize = toPositiveInteger(filters.pageSize, 12);
+  const pageSize = [12, 24, 48].includes(requestedPageSize) ? requestedPageSize : 12;
+
+  return {
+    year,
+    sort: filters.sort === "oldest" ? "oldest" : "newest",
+    pageSize,
+    page: normalizeEmployeePayslipPage(filters.page),
+  };
 }
 
 const payslipListSelect = {
