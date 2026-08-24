@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getTranslations } from "next-intl/server";
 
 import { applyReportLineEdits, parseReportLineEdits } from "@/src/lib/report-line-edits";
+import { isDurationDisplayFormat } from "@/src/lib/formatting";
 import { requireAdminAppMemberForAction } from "@/src/server/auth/app-access";
 import { AuthenticationError, AuthorizationError } from "@/src/server/auth/session";
 import { renderTypstDocumentPages } from "@/src/server/pdf";
@@ -50,6 +51,10 @@ export async function POST(request: Request) {
   const formData = await request.formData();
   const locale = parseReportExportLocale(formData.get("locale"));
   const mode = parseReportMode(formData.get("mode"));
+  const requestedDurationDisplayFormat = formData.get("durationDisplayFormat");
+  const durationDisplayFormat = isDurationDisplayFormat(requestedDurationDisplayFormat)
+    ? requestedDurationDisplayFormat
+    : admin.durationDisplayFormat;
   const filters = parseReportSearchParams(reportSearchParamsFromFormData(formData), admin.timezone);
   const sourceSnapshot = await getTimeEntryReportSnapshot({
     periodStart: filters.periodStart,
@@ -78,6 +83,7 @@ export async function POST(request: Request) {
       snapshot,
       locale,
       generatedAt: new Date(),
+      durationDisplayFormat,
       t,
     });
     const pages = await renderTypstDocumentPages(

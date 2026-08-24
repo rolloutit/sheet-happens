@@ -27,9 +27,11 @@ import {
 } from "@/src/components/ui/Dialog";
 import { Input } from "@/src/components/ui/Input";
 import { SegmentedControl } from "@/src/components/ui/SegmentedControl";
+import { Select } from "@/src/components/ui/Select";
 import { Skeleton } from "@/src/components/ui/Skeleton";
 import { Textarea } from "@/src/components/ui/Textarea";
 import { resolveLocale, type AppLocale } from "@/src/i18n/locales";
+import type { DurationDisplayFormat } from "@/src/lib/formatting";
 import { serializeReportLineEdits, type ReportLineEdit } from "@/src/lib/report-line-edits";
 import { cn } from "@/src/lib/utils";
 import type { ReportExportFields, ReportMode } from "@/src/server/reports";
@@ -44,6 +46,7 @@ export type ReportExportModalProps = {
   /** The interface language, which is the default export language but no longer the only one. */
   initialLocale: AppLocale;
   timezone: string;
+  initialDurationDisplayFormat: DurationDisplayFormat;
   disabled: boolean;
   lineEdits: ReportLineEdit[];
   onLineEditsSaved: (message: string) => void;
@@ -75,6 +78,7 @@ export function ReportExportModal({
   defaultTitles,
   initialLocale,
   timezone,
+  initialDurationDisplayFormat,
   disabled,
   lineEdits,
   onLineEditsSaved,
@@ -84,6 +88,9 @@ export function ReportExportModal({
   const [title, setTitle] = useState(defaultTitles[initialLocale]);
   const [exportLocale, setExportLocale] = useState<AppLocale>(initialLocale);
   const [mode, setMode] = useState<ReportMode>("COST_FREE");
+  const [durationDisplayFormat, setDurationDisplayFormat] = useState<DurationDisplayFormat>(
+    initialDurationDisplayFormat,
+  );
   const [preview, setPreview] = useState<PreviewState>({ status: "loading" });
   // Bumped to re-run the effect when the user retries a failed render without changing anything.
   const [reloadToken, setReloadToken] = useState(0);
@@ -148,6 +155,7 @@ export function ReportExportModal({
         body.set("mode", mode);
         body.set("title", title);
         body.set("locale", exportLocale);
+        body.set("durationDisplayFormat", durationDisplayFormat);
         if (serializedEdits) body.set("lineEdits", serializedEdits);
 
         const response = await fetch(PREVIEW_ENDPOINT, {
@@ -192,7 +200,16 @@ export function ReportExportModal({
       window.clearTimeout(timer);
       controller.abort();
     };
-  }, [exportLocale, filterQuery, mode, open, reloadToken, serializedEdits, title]);
+  }, [
+    durationDisplayFormat,
+    exportLocale,
+    filterQuery,
+    mode,
+    open,
+    reloadToken,
+    serializedEdits,
+    title,
+  ]);
 
   return (
     <Dialog
@@ -204,6 +221,7 @@ export function ReportExportModal({
           setTitle(defaultTitles[initialLocale]);
           setExportLocale(initialLocale);
           setMode("COST_FREE");
+          setDurationDisplayFormat(initialDurationDisplayFormat);
           setPreview({ status: "loading" });
         }
       }}
@@ -233,7 +251,7 @@ export function ReportExportModal({
           action="/admin/reports/export"
           method="post"
           target="_blank"
-          className="flex min-h-0 flex-1 flex-col"
+          className="flex min-h-0 min-w-0 flex-1 flex-col"
           onSubmit={handleExportSubmit}
         >
           {Object.entries(exportFields).map(([name, value]) => (
@@ -241,12 +259,13 @@ export function ReportExportModal({
           ))}
           <input type="hidden" name="mode" value={mode} />
           <input type="hidden" name="locale" value={exportLocale} />
+          <input type="hidden" name="durationDisplayFormat" value={durationDisplayFormat} />
           {serializedEdits ? (
             <input type="hidden" name="lineEdits" value={serializedEdits} />
           ) : null}
 
-          <div className="grid min-h-0 flex-1 md:grid-cols-[21.25rem_minmax(0,1fr)]">
-            <div className="grid content-start gap-5 overflow-y-auto border-b border-border p-5 md:border-b-0 md:border-r">
+          <div className="grid min-h-0 min-w-0 flex-1 overflow-x-hidden md:grid-cols-[21.25rem_minmax(0,1fr)]">
+            <div className="grid min-w-0 content-start gap-5 overflow-x-hidden overflow-y-auto border-b border-border p-5 md:border-b-0 md:border-r">
               <label className="grid gap-2">
                 <span className={MICRO_LABEL}>{t("export.titleLabel")}</span>
                 <Input
@@ -271,6 +290,30 @@ export function ReportExportModal({
                   label={t("export.languageLabel")}
                   aria-labelledby="report-export-language-label"
                   width="full"
+                />
+              </div>
+
+              <div className="grid gap-2">
+                <span id="report-export-duration-label" className={MICRO_LABEL}>
+                  {t("export.durationFormatLabel")}
+                </span>
+                <Select
+                  options={[
+                    {
+                      value: "DECIMAL_HOURS",
+                      label: t("export.durationFormatDecimal"),
+                    },
+                    {
+                      value: "HOURS_MINUTES",
+                      label: t("export.durationFormatHoursMinutes"),
+                    },
+                  ]}
+                  value={durationDisplayFormat}
+                  onValueChange={(value) =>
+                    setDurationDisplayFormat(value as DurationDisplayFormat)
+                  }
+                  aria-label={t("export.durationFormatLabel")}
+                  searchable={false}
                 />
               </div>
 
@@ -378,7 +421,7 @@ export function ReportExportModal({
               </div>
             </div>
 
-            <div className="flex min-h-0 flex-col bg-secondary/40">
+            <div className="flex min-h-0 min-w-0 flex-col bg-secondary/40">
               {/* Outside the scroll area, so a refresh is still announced once the pages are
                   scrolled past — and reported here rather than in the pane, so nothing moves. */}
               <span

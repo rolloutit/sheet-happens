@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getTranslations } from "next-intl/server";
 
 import { applyReportLineEdits, parseReportLineEdits } from "@/src/lib/report-line-edits";
+import { isDurationDisplayFormat } from "@/src/lib/formatting";
 import { requireAdminAppMember } from "@/src/server/auth/app-access";
 import {
   generateReportPdfExport,
@@ -23,6 +24,10 @@ export async function POST(request: Request) {
   const formData = await request.formData();
   const locale = parseReportExportLocale(formData.get("locale"));
   const mode = parseReportMode(formData.get("mode"));
+  const requestedDurationDisplayFormat = formData.get("durationDisplayFormat");
+  const durationDisplayFormat = isDurationDisplayFormat(requestedDurationDisplayFormat)
+    ? requestedDurationDisplayFormat
+    : admin.durationDisplayFormat;
   const filters = parseReportSearchParams(reportSearchParamsFromFormData(formData), admin.timezone);
   // The export locale is chosen in the dialog, not taken from the request cookie, so it is passed
   // explicitly and the interface language never decides what the document says.
@@ -58,7 +63,8 @@ export async function POST(request: Request) {
       locale,
       timezone: admin.timezone,
       generatedByMemberId: admin.id,
-      filters: buildExportFilters(filters),
+      durationDisplayFormat,
+      filters: buildExportFilters(filters, durationDisplayFormat),
       t,
       requestMetadata: {
         ipAddress: request.headers.get("x-forwarded-for"),
@@ -89,6 +95,7 @@ export async function POST(request: Request) {
 
 function buildExportFilters(
   filters: ReturnType<typeof parseReportSearchParams>,
+  durationDisplayFormat: ReportPdfExportFilters["durationDisplayFormat"],
 ): ReportPdfExportFilters {
   return {
     period: filters.period,
@@ -98,6 +105,7 @@ function buildExportFilters(
     projectId: filters.projectId,
     projectGroupId: filters.projectGroupId,
     memberId: filters.memberId,
+    durationDisplayFormat,
   };
 }
 

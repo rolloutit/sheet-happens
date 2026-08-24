@@ -11,6 +11,7 @@ import {
   type ReportPdfTranslator,
 } from "./report-pdf-payload";
 import type { ReportSnapshot } from "./reports";
+import type { DurationDisplayFormat } from "@/src/lib/formatting";
 
 export type ReportPdfExportFilters = {
   period: string;
@@ -20,6 +21,7 @@ export type ReportPdfExportFilters = {
   projectId: string | null;
   projectGroupId: string | null;
   memberId: string | null;
+  durationDisplayFormat: DurationDisplayFormat;
 };
 
 export type GenerateReportPdfExportInput = {
@@ -28,6 +30,7 @@ export type GenerateReportPdfExportInput = {
   locale: string;
   timezone: string;
   generatedByMemberId: string;
+  durationDisplayFormat: DurationDisplayFormat;
   filters: ReportPdfExportFilters;
   /** Translator scoped to the `AdminReports` namespace. */
   t: ReportPdfTranslator;
@@ -69,6 +72,7 @@ export async function generateReportPdfExport(
     snapshot: input.snapshot,
     locale: input.locale,
     generatedAt: now,
+    durationDisplayFormat: input.durationDisplayFormat,
     t: input.t,
   });
   const renderer = deps.renderer ?? ((renderInput) => renderTypstDocument(renderInput));

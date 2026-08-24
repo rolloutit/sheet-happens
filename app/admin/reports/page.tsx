@@ -58,6 +58,7 @@ export default async function AdminReportsPage({ searchParams }: AdminReportsPag
         defaultTitles={exportTitles}
         initialLocale={resolveLocale(locale) ?? defaultLocale}
         timezone={admin.timezone}
+        durationDisplayFormat={admin.durationDisplayFormat}
         filters={
           <ReportFiltersBar
             period={filters.period}
