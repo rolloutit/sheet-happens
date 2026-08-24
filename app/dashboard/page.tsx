@@ -27,7 +27,7 @@ import { StatusPill } from "@/src/components/sheet/StatusPill";
 import { TimesheetStepper } from "@/src/components/sheet/TimesheetStepper";
 import { Badge } from "@/src/components/ui/Badge";
 import { Button } from "@/src/components/ui/Button";
-import { formatHoursWithUnit, formatMoney } from "@/src/lib/formatting";
+import { formatHoursWithUnit, formatMoney, type DurationDisplayFormat } from "@/src/lib/formatting";
 import { cn } from "@/src/lib/utils";
 import {
   mapMemberToShellProfile,
@@ -106,11 +106,26 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
     <AppShell current="dashboard" role={shellRole} profile={shellProfile} user={shellUser}>
       <section className="mx-auto grid w-full max-w-[73.75rem] gap-4 px-4 py-8 sm:px-6 lg:px-8">
         {dashboard.kind === "admin" ? (
-          <AdminDashboard dashboard={dashboard} locale={locale} t={t} />
+          <AdminDashboard
+            dashboard={dashboard}
+            locale={locale}
+            durationDisplayFormat={member.durationDisplayFormat}
+            t={t}
+          />
         ) : dashboard.kind === "contractor" ? (
-          <ContractorDashboard dashboard={dashboard} locale={locale} t={t} />
+          <ContractorDashboard
+            dashboard={dashboard}
+            locale={locale}
+            durationDisplayFormat={member.durationDisplayFormat}
+            t={t}
+          />
         ) : (
-          <EmployeeDashboard dashboard={dashboard} locale={locale} t={t} />
+          <EmployeeDashboard
+            dashboard={dashboard}
+            locale={locale}
+            durationDisplayFormat={member.durationDisplayFormat}
+            t={t}
+          />
         )}
       </section>
     </AppShell>
@@ -120,10 +135,12 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
 function EmployeeDashboard({
   dashboard,
   locale,
+  durationDisplayFormat,
   t,
 }: {
   dashboard: EmployeeDashboardData;
   locale: string;
+  durationDisplayFormat: DurationDisplayFormat;
   t: DashboardTranslator;
 }) {
   return (
@@ -137,10 +154,25 @@ function EmployeeDashboard({
         })}
         t={t}
       />
-      <MemberStats dashboard={dashboard} locale={locale} t={t} />
+      <MemberStats
+        dashboard={dashboard}
+        locale={locale}
+        durationDisplayFormat={durationDisplayFormat}
+        t={t}
+      />
       <div className="grid gap-4 lg:grid-cols-[1.35fr_0.9fr]">
-        <EmployeeProjectBreakdown dashboard={dashboard} locale={locale} t={t} />
-        <EmployeeMonthStatusPanel dashboard={dashboard} locale={locale} t={t} />
+        <EmployeeProjectBreakdown
+          dashboard={dashboard}
+          locale={locale}
+          durationDisplayFormat={durationDisplayFormat}
+          t={t}
+        />
+        <EmployeeMonthStatusPanel
+          dashboard={dashboard}
+          locale={locale}
+          durationDisplayFormat={durationDisplayFormat}
+          t={t}
+        />
       </div>
       <WeeklyChecklist projects={dashboard.weeklyProjects} t={t} />
     </>
@@ -150,10 +182,12 @@ function EmployeeDashboard({
 function ContractorDashboard({
   dashboard,
   locale,
+  durationDisplayFormat,
   t,
 }: {
   dashboard: ContractorDashboardData;
   locale: string;
+  durationDisplayFormat: DurationDisplayFormat;
   t: DashboardTranslator;
 }) {
   return (
@@ -166,7 +200,12 @@ function ContractorDashboard({
         })}
         t={t}
       />
-      <MemberStats dashboard={dashboard} locale={locale} t={t} />
+      <MemberStats
+        dashboard={dashboard}
+        locale={locale}
+        durationDisplayFormat={durationDisplayFormat}
+        t={t}
+      />
       <div className="grid gap-4 lg:grid-cols-[1.5fr_1fr]">
         <ContractorStepper dashboard={dashboard} t={t} />
         <ContractorNextActionPanel action={dashboard.nextAction} t={t} />
@@ -179,10 +218,12 @@ function ContractorDashboard({
 function AdminDashboard({
   dashboard,
   locale,
+  durationDisplayFormat,
   t,
 }: {
   dashboard: AdminDashboardData;
   locale: string;
+  durationDisplayFormat: DurationDisplayFormat;
   t: DashboardTranslator;
 }) {
   const submitted =
@@ -214,6 +255,7 @@ function AdminDashboard({
           drilldown={dashboard.drilldown}
           period={dashboard.period}
           locale={locale}
+          durationDisplayFormat={durationDisplayFormat}
           t={t}
         />
       ) : null}
@@ -255,10 +297,12 @@ function DashboardGreeting({
 function MemberStats({
   dashboard,
   locale,
+  durationDisplayFormat,
   t,
 }: {
   dashboard: EmployeeDashboardData | ContractorDashboardData;
   locale: string;
+  durationDisplayFormat: DurationDisplayFormat;
   t: DashboardTranslator;
 }) {
   const stats = [
@@ -272,7 +316,7 @@ function MemberStats({
     {
       id: "hours",
       label: t("stats.hours"),
-      value: formatHoursWithUnit(dashboard.monthMinutes, locale),
+      value: formatHoursWithUnit(dashboard.monthMinutes, locale, durationDisplayFormat),
       icon: Timer,
       accent: "#239B9B",
       trend: formatTrend(dashboard.monthMinutes, dashboard.previousMonthMinutes),
@@ -342,10 +386,12 @@ function MetricPanel({
 function EmployeeProjectBreakdown({
   dashboard,
   locale,
+  durationDisplayFormat,
   t,
 }: {
   dashboard: EmployeeDashboardData;
   locale: string;
+  durationDisplayFormat: DurationDisplayFormat;
   t: DashboardTranslator;
 }) {
   return (
@@ -401,7 +447,7 @@ function EmployeeProjectBreakdown({
                     </span>
                   </td>
                   <td className="px-5 py-4 text-sm font-semibold text-foreground">
-                    {formatHoursWithUnit(project.totalMinutes, locale)}
+                    {formatHoursWithUnit(project.totalMinutes, locale, durationDisplayFormat)}
                   </td>
                   <td className="px-5 py-4">
                     <EmployeeRateLabel
@@ -438,10 +484,12 @@ function EmployeeProjectBreakdown({
 function EmployeeMonthStatusPanel({
   dashboard,
   locale,
+  durationDisplayFormat,
   t,
 }: {
   dashboard: EmployeeDashboardData;
   locale: string;
+  durationDisplayFormat: DurationDisplayFormat;
   t: DashboardTranslator;
 }) {
   const statusTone =
@@ -474,7 +522,7 @@ function EmployeeMonthStatusPanel({
         />
         <StatusMetric
           label={t("stats.averageWeek")}
-          value={formatHoursWithUnit(dashboard.averageWeekMinutes, locale)}
+          value={formatHoursWithUnit(dashboard.averageWeekMinutes, locale, durationDisplayFormat)}
         />
         <StatusMetric
           label={t("member.statusPanel.missingRates")}
@@ -792,11 +840,13 @@ function AdminDrilldownPanel({
   drilldown,
   period,
   locale,
+  durationDisplayFormat,
   t,
 }: {
   drilldown: AdminDashboardDrilldown;
   period: DashboardPeriod;
   locale: string;
+  durationDisplayFormat: DurationDisplayFormat;
   t: DashboardTranslator;
 }) {
   return (
@@ -837,12 +887,18 @@ function AdminDrilldownPanel({
       </div>
 
       {drilldown.kind === "timesheets" ? (
-        <TimesheetDrilldownTable drilldown={drilldown} locale={locale} t={t} />
+        <TimesheetDrilldownTable
+          drilldown={drilldown}
+          locale={locale}
+          durationDisplayFormat={durationDisplayFormat}
+          t={t}
+        />
       ) : drilldown.kind === "missing" ? (
         <MissingTimesheetDrilldownTable
           rows={drilldown.rows}
           period={period}
           locale={locale}
+          durationDisplayFormat={durationDisplayFormat}
           t={t}
         />
       ) : (
@@ -855,10 +911,12 @@ function AdminDrilldownPanel({
 function TimesheetDrilldownTable({
   drilldown,
   locale,
+  durationDisplayFormat,
   t,
 }: {
   drilldown: Extract<AdminDashboardDrilldown, { kind: "timesheets" }>;
   locale: string;
+  durationDisplayFormat: DurationDisplayFormat;
   t: DashboardTranslator;
 }) {
   if (drilldown.rows.length === 0) {
@@ -909,7 +967,7 @@ function TimesheetDrilldownTable({
                 />
               </td>
               <td className="px-5 py-4 text-sm font-semibold text-foreground">
-                {formatHoursWithUnit(row.totalMinutes, locale)}
+                {formatHoursWithUnit(row.totalMinutes, locale, durationDisplayFormat)}
               </td>
               <td className="px-5 py-4 text-sm font-semibold text-foreground">
                 {formatMoney(row.totalAmount, row.currencyCode, locale, {
@@ -951,11 +1009,13 @@ function MissingTimesheetDrilldownTable({
   rows,
   period,
   locale,
+  durationDisplayFormat,
   t,
 }: {
   rows: AdminDashboardMissingTimesheetRow[];
   period: DashboardPeriod;
   locale: string;
+  durationDisplayFormat: DurationDisplayFormat;
   t: DashboardTranslator;
 }) {
   if (rows.length === 0) {
@@ -990,7 +1050,7 @@ function MissingTimesheetDrilldownTable({
                 })}
               </td>
               <td className="px-5 py-4 text-sm font-semibold text-foreground">
-                {formatHoursWithUnit(row.monthMinutes, locale)}
+                {formatHoursWithUnit(row.monthMinutes, locale, durationDisplayFormat)}
               </td>
               <td className="px-5 py-4 text-sm text-muted-foreground">
                 {row.lastLoggedDate

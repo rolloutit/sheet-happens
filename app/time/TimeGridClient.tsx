@@ -27,6 +27,9 @@ import {
 import type { Route } from "next";
 import { useRouter } from "next/navigation";
 import {
+  createContext,
+  useCallback,
+  useContext,
   useEffect,
   useId,
   useRef,
@@ -51,7 +54,12 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/src/components/ui/Dialog";
-import { parseDurationToMinutes } from "@/src/lib/duration";
+import { formatDurationForInput, parseDurationToMinutes } from "@/src/lib/duration";
+import {
+  formatHours as formatDurationHours,
+  formatHoursWithUnit as formatDurationHoursWithUnit,
+  type DurationDisplayFormat,
+} from "@/src/lib/formatting";
 import { DAILY_HARD_LIMIT_MINUTES, DAILY_SOFT_WARNING_MINUTES } from "@/src/lib/time-entry-limits";
 import { usePickerLabels } from "@/src/i18n/picker-labels";
 import { cn } from "@/src/lib/utils";
@@ -130,13 +138,25 @@ type PendingQuickAction =
 
 type TimeGridClientProps = {
   week: TimeGridWeek;
+  durationDisplayFormat: DurationDisplayFormat;
 };
 
 type TimeTrackingTranslator = ReturnType<typeof useTranslations>;
 
-export function TimeGridClient({ week }: TimeGridClientProps) {
+const DurationDisplayContext = createContext<DurationDisplayFormat>("DECIMAL_HOURS");
+
+export function TimeGridClient({ week, durationDisplayFormat }: TimeGridClientProps) {
+  return (
+    <DurationDisplayContext.Provider value={durationDisplayFormat}>
+      <TimeGridContent week={week} />
+    </DurationDisplayContext.Provider>
+  );
+}
+
+function TimeGridContent({ week }: { week: TimeGridWeek }) {
   const router = useRouter();
   const t = useTranslations("TimeTracking");
+  const { formatMinutesAsHours, formatMinutesWithUnit } = useDurationFormatting();
   const [isPending, startTransition] = useTransition();
   const [view, setView] = useState<"grid" | "day">("grid");
   const [selectedDayIso, setSelectedDayIso] = useState(() =>
@@ -425,8 +445,7 @@ export function TimeGridClient({ week }: TimeGridClientProps) {
             {t("labels.weekTotal")}
           </span>
           <span className="text-[26px] font-semibold text-foreground">
-            {formatMinutesAsHours(weekTotal)}
-            <span className="ml-1 text-[15px] text-muted-foreground">h</span>
+            {formatMinutesWithUnit(weekTotal)}
           </span>
         </div>
       </div>
@@ -952,6 +971,7 @@ function TimeGridCell({
   onOpenBreakdown,
   t,
 }: TimeGridCellProps) {
+  const { formatMinutesAsHours, formatMinutesForInput } = useDurationFormatting();
   const simpleEntry =
     cell.entries.length === 1 && isSimpleDurationEntry(cell.entries[0]) ? cell.entries[0] : null;
   const canInlineEdit = !disabled && !cell.locked && (cell.entries.length === 0 || simpleEntry);
@@ -1027,7 +1047,7 @@ function TimeGridCell({
         type="button"
         disabled={disabled}
         className={cn(
-          "relative flex min-h-14 items-center justify-center gap-1 border-b border-r border-border text-base font-semibold transition hover:bg-secondary disabled:cursor-not-allowed disabled:opacity-60",
+          "relative flex min-h-14 items-center justify-center gap-1 border-b border-r border-border text-[13px] font-semibold transition hover:bg-secondary disabled:cursor-not-allowed disabled:opacity-60",
           day.state === "today" && "bg-accent-soft",
           warningTexts.length > 0 && "text-warning",
         )}
@@ -1056,8 +1076,8 @@ function TimeGridCell({
     >
       <input
         key={`${cell.totalMinutes}:${cell.entries.map((entry) => entry.updatedAt).join(":")}`}
-        inputMode="decimal"
-        defaultValue={formatMinutesAsHours(cell.totalMinutes)}
+        inputMode="text"
+        defaultValue={formatMinutesForInput(cell.totalMinutes)}
         placeholder="0"
         disabled={disabled}
         aria-label={`${project.name}, ${day.label}`}
@@ -1065,7 +1085,7 @@ function TimeGridCell({
         // only the shared bottom/right hairline of the grid, so there is no full border to brighten,
         // and an outward outline would spill over the neighbouring cells.
         className={cn(
-          "h-full min-h-14 w-full border-0 bg-transparent px-2 text-center text-base font-medium text-foreground outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring disabled:cursor-not-allowed disabled:text-muted-foreground",
+          "h-full min-h-14 w-full border-0 bg-transparent px-1 text-center text-[13px] font-medium text-foreground outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring disabled:cursor-not-allowed disabled:text-muted-foreground",
           warningTexts.length > 0 && "text-warning",
         )}
         onChange={(event) => scheduleIdleEditorOpen(event.currentTarget)}
@@ -1253,6 +1273,7 @@ function DayView({
   onStopTimer,
   t,
 }: DayViewProps) {
+  const { formatMinutesWithUnit } = useDurationFormatting();
   const sortedEntries = [...entries].sort((a, b) => {
     const aTime = a.startTime ?? "99:99";
     const bTime = b.startTime ?? "99:99";
@@ -1302,8 +1323,7 @@ function DayView({
               dailyTotalMinutes > DAILY_SOFT_WARNING_MINUTES ? "text-warning" : "text-foreground",
             )}
           >
-            {formatMinutesAsHours(dailyTotalMinutes) || "0"}
-            <span className="ml-1 text-[15px] text-muted-foreground">h</span>
+            {formatMinutesWithUnit(dailyTotalMinutes)}
           </span>
         </div>
       </div>
@@ -1367,7 +1387,7 @@ function DayView({
                     </span>
                     <span>·</span>
                     <span className="font-semibold text-foreground">
-                      {formatMinutesAsHours(entry.durationMinutes)}h
+                      {formatMinutesWithUnit(entry.durationMinutes)}
                     </span>
                   </div>
                   {entry.adminModification ? (
@@ -1574,6 +1594,8 @@ type EntryModalProps = {
 
 function EntryModal({ state, week, projects, onClose, onDone, t }: EntryModalProps) {
   const locale = useLocale();
+  const { formatMinutesAsHours, formatMinutesForInput, formatMinutesWithUnit } =
+    useDurationFormatting();
   const pickerLabels = usePickerLabels();
   const [isPending, startTransition] = useTransition();
   const initialProjectId = state.mode === "edit" ? state.entry.projectId : state.projectId;
@@ -1589,7 +1611,7 @@ function EntryModal({ state, week, projects, onClose, onDone, t }: EntryModalPro
   const initialDurationText =
     state.mode === "create" && state.durationText
       ? state.durationText
-      : formatMinutesAsHours(initialDuration) || "1";
+      : formatMinutesForInput(initialDuration) || "1";
   const [projectId, setProjectId] = useState(initialProjectId);
   const [localDate, setLocalDate] = useState(initialLocalDate);
   const [timingMode, setTimingMode] = useState<TimeEntryTimingMode>(initialTimingMode);
@@ -1824,7 +1846,7 @@ function EntryModal({ state, week, projects, onClose, onDone, t }: EntryModalPro
                   <span className="text-muted-foreground">·</span>
                   <span className="text-muted-foreground">{localDate}</span>
                   <span className="rounded-[var(--radius-pill)] border border-accent-line bg-card px-2 py-0.5 font-ui text-[11px] font-bold text-accent">
-                    {formatMinutesAsHours(state.durationMinutes)}h
+                    {formatMinutesWithUnit(state.durationMinutes)}
                   </span>
                 </div>
                 <div className="mt-1 flex items-center gap-1.5 text-xs text-muted-foreground">
@@ -1997,7 +2019,7 @@ function EntryModal({ state, week, projects, onClose, onDone, t }: EntryModalPro
                 )}
               </Field>
               <div className="pb-2 text-xl font-semibold text-accent">
-                {formatMinutesAsHours(intervalMinutes)}h
+                {formatMinutesWithUnit(intervalMinutes)}
               </div>
             </div>
           )}
@@ -2102,6 +2124,7 @@ function BreakdownDialog({
   onEdit,
   t,
 }: BreakdownDialogProps) {
+  const { formatMinutesWithUnit } = useDurationFormatting();
   const total = entries.reduce((sum, entry) => sum + entry.durationMinutes, 0);
   const dialogRef = useModalFocusTrap<HTMLDivElement>(onClose);
 
@@ -2130,7 +2153,7 @@ function BreakdownDialog({
               {project.name} · {day.shortLabel} {day.dayNumber}
             </div>
             <h2 id="time-entry-breakdown-title" className="mt-1 text-lg font-semibold">
-              {t("breakdown.entries")} · {formatMinutesAsHours(total)}h
+              {t("breakdown.entries")} · {formatMinutesWithUnit(total)}
             </h2>
           </div>
           <button
@@ -2157,7 +2180,7 @@ function BreakdownDialog({
                 >
                   <div className="w-20 shrink-0 text-center">
                     <div className="text-lg font-semibold">
-                      {formatMinutesAsHours(entry.durationMinutes)}h
+                      {formatMinutesWithUnit(entry.durationMinutes)}
                     </div>
                     <div className="font-ui text-[10px] font-semibold uppercase tracking-[0.05em] text-muted-foreground">
                       {entry.startedAt ? t("source.timed") : t("source.hours")}
@@ -2634,7 +2657,22 @@ function formatDraftTimestamp(value: string) {
   return value.replace("T", " ").slice(0, 16);
 }
 
-function formatMinutesAsHours(minutes: number) {
-  if (!minutes) return "";
-  return Number((minutes / 60).toFixed(2)).toString();
+function useDurationFormatting() {
+  const locale = useLocale();
+  const durationDisplayFormat = useContext(DurationDisplayContext);
+  const formatMinutesAsHours = useCallback(
+    (minutes: number) =>
+      minutes ? formatDurationHours(minutes, locale, durationDisplayFormat) : "",
+    [durationDisplayFormat, locale],
+  );
+  const formatMinutesWithUnit = useCallback(
+    (minutes: number) => formatDurationHoursWithUnit(minutes, locale, durationDisplayFormat),
+    [durationDisplayFormat, locale],
+  );
+  const formatMinutesForInput = useCallback(
+    (minutes: number) => formatDurationForInput(minutes, durationDisplayFormat),
+    [durationDisplayFormat],
+  );
+
+  return { formatMinutesAsHours, formatMinutesForInput, formatMinutesWithUnit };
 }

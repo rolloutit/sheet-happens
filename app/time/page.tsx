@@ -52,7 +52,7 @@ export default async function TimePage({ searchParams }: TimePageProps) {
       onStopTimer={stopRunningTimerAction}
     >
       <section className="mx-auto w-full max-w-[73.75rem] px-4 py-8 sm:px-6 lg:px-8">
-        <TimeGridClient week={week} />
+        <TimeGridClient week={week} durationDisplayFormat={member.durationDisplayFormat} />
       </section>
     </AppShell>
   );
