@@ -1658,6 +1658,22 @@ Expected result:
 - Company Google is shown when Google auth is configured.
 - Passkey and authenticator-app sections are visible.
 
+### Duration Display Preference
+
+1. Sign in as any active user and open `https://{DOMAIN_NAME}/settings`.
+2. Open `Preferences` and select `Decimal hours` under time display.
+3. Save, then open the dashboard, time tracking, and any available timesheet screen.
+4. Confirm a 3-hour 23-minute duration appears as `3.3833 h` where an hour unit is shown.
+5. Return to Preferences, select `Hours and minutes`, and save.
+6. Reopen the same screens and refresh the browser.
+
+Expected result:
+
+- The preference survives refresh and a new sign-in.
+- The same 203 stored minutes appear as `3 h 23 m` in English and `3 ó 23 p` in Hungarian.
+- Changing the display does not alter time entries, totals, rates, or calculated amounts.
+- The audit log records `member.duration_display_format_updated`.
+
 ## Passkeys
 
 ### Add Device Passkey
@@ -1977,8 +1993,9 @@ Expected result:
 4. Click `PDF export` and wait for the preview.
 5. Type a new export title one character at a time and watch the preview.
 6. Switch the content selection to internal, then back to cost-free.
-7. Resize the window down to a narrow width.
-8. Close the dialog with the `X`, with `Escape`, with `Cancel`, and by clicking outside it. Reopen it
+7. Switch time display between decimal hours and hours/minutes and compare the preview.
+8. Resize the window down to a narrow width.
+9. Close the dialog with the `X`, with `Escape`, with `Cancel`, and by clicking outside it. Reopen it
    after each.
 
 Expected result:
@@ -1995,11 +2012,14 @@ Expected result:
   in place. Switching content back and forth quickly does not make the pane strobe.
 - Selecting internal reveals the amber `Cost data is visible` warning and the preview gains rate and
   cost columns plus a cost metric. Selecting cost-free removes all three again.
+- The time-display selector defaults to the admin's saved preference. Decimal mode renders 203
+  minutes as `3.3833 h`; hours/minutes mode renders it as `3 h 23 m` or `3 ó 23 p`. The downloaded
+  PDF matches the selected preview format without changing the saved preference.
 - The footer states the time zone the report was cut on, matching the admin's own time zone.
 - Below roughly 48rem the two panes stack instead of scrolling sideways, and the page never scrolls
   horizontally.
 - Every close route dismisses the dialog and returns focus to the `PDF export` button. Reopening
-  resets the title and the content selection to their defaults.
+  resets the title, content selection, and time display to their defaults.
 - The dialog title, both content labels and hints, the warning, the format row, the preview label,
   the time zone label, `Cancel` and `Download PDF` are all translated in Hungarian and English.
 - Both themes are legible: the config rail and footer follow the theme, while the preview page stays
