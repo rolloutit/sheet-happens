@@ -1666,6 +1666,7 @@
         "member__activated": "Aktiválva",
         "member__avatar_deleted": "Profilkép törölve",
         "member__avatar_updated": "Profilkép frissítve",
+        "member__duration_display_format_updated": "Időtartam-megjelenítés frissítve",
         "member__bootstrap_invited": "Kezdeti admin meghívva",
         "member__deactivated": "Deaktiválva",
         "member__deleted": "Archiválva",
@@ -2151,7 +2152,7 @@
     },
     "preferences": {
       "title": "Beállítások",
-      "description": "Kezeld a profilképedet és az időzónádat.",
+      "description": "Kezeld a profilképedet, az időzónádat és az időtartamok megjelenítését.",
       "avatar": {
         "label": "Profilkép",
         "description": "Tölts fel legfeljebb 2 MB-os, négyzetes PNG- vagy JPEG-képet, vagy használd a monogramodat.",
@@ -2170,6 +2171,15 @@
         "searchPlaceholder": "Keresés város vagy régió szerint...",
         "empty": "Nincs találat",
         "save": "Időzóna mentése"
+      },
+      "durationDisplay": {
+        "label": "Időtartamok megjelenítése",
+        "description": "Válaszd ki, hogyan jelenjenek meg a munkaidők az alkalmazásban.",
+        "decimal": "Tizedes óra",
+        "hoursMinutes": "Óra és perc",
+        "decimalExample": "Példa: 3 óra 23 perc így jelenik meg: 3,3833 h.",
+        "hoursMinutesExample": "Példa: 3 óra 23 perc így jelenik meg: 3 ó 23 p.",
+        "save": "Megjelenítés mentése"
       }
     },
     "setupBanner": {
@@ -2340,6 +2350,9 @@
       "titleLabel": "Export címe",
       "titlePlaceholder": "pl. Diapro — júniusi óra-összesítő",
       "languageLabel": "PDF nyelve",
+      "durationFormatLabel": "Időtartamok megjelenítése",
+      "durationFormatDecimal": "Tizedes óra",
+      "durationFormatHoursMinutes": "Óra és perc",
       "modeLabel": "Tartalom",
       "modeCostFree": "Költségmentes",
       "modeCostFreeHint": "Csak órák és leírások — kifelé biztonságosan megosztható.",
@@ -2486,6 +2499,7 @@
       "avatarUpdated": "Profilkép frissítve.",
       "avatarDeleted": "Profilkép törölve.",
       "timezoneUpdated": "Időzóna frissítve.",
+      "durationDisplayUpdated": "Időtartam-megjelenítés frissítve.",
       "passkeyRenamed": "Passkey átnevezve.",
       "passkeyRemoved": "Passkey eltávolítva.",
       "totpDisabledAudited": "Authenticator kikapcsolás naplózva.",
@@ -2499,6 +2513,8 @@
       "avatarDeleteFailed": "Nem sikerült törölni a profilképet.",
       "timezoneInvalid": "Válassz támogatott időzónát.",
       "timezoneUpdateFailed": "Nem sikerült frissíteni az időzónát.",
+      "durationDisplayInvalid": "Válassz támogatott időtartam-megjelenítést.",
+      "durationDisplayUpdateFailed": "Nem sikerült frissíteni az időtartamok megjelenítését.",
       "memberNotFound": "A tagprofil nem található.",
       "passkeyIdMissing": "Hiányzik a passkey azonosítója.",
       "passkeyNameRequired": "A passkey neve kötelező.",

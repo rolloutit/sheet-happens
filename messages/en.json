@@ -1666,6 +1666,7 @@
         "member__activated": "Activated",
         "member__avatar_deleted": "Profile image deleted",
         "member__avatar_updated": "Profile image updated",
+        "member__duration_display_format_updated": "Time display updated",
         "member__bootstrap_invited": "Initial admin invited",
         "member__deactivated": "Deactivated",
         "member__deleted": "Archived",
@@ -2151,7 +2152,7 @@
     },
     "preferences": {
       "title": "Preferences",
-      "description": "Manage your profile image and time zone.",
+      "description": "Manage your profile image, time zone, and time display.",
       "avatar": {
         "label": "Profile image",
         "description": "Upload a square PNG or JPEG up to 2 MB, or keep your initials.",
@@ -2170,6 +2171,15 @@
         "searchPlaceholder": "Search by city or region...",
         "empty": "No time zone found",
         "save": "Save time zone"
+      },
+      "durationDisplay": {
+        "label": "Time display",
+        "description": "Choose how worked durations appear throughout the application.",
+        "decimal": "Decimal hours",
+        "hoursMinutes": "Hours and minutes",
+        "decimalExample": "Example: 3 hours 23 minutes appears as 3.3833 h.",
+        "hoursMinutesExample": "Example: 3 hours 23 minutes appears as 3 h 23 m.",
+        "save": "Save display"
       }
     },
     "setupBanner": {
@@ -2340,6 +2350,9 @@
       "titleLabel": "Export title",
       "titlePlaceholder": "e.g. Diapro — June hours summary",
       "languageLabel": "PDF language",
+      "durationFormatLabel": "Time display",
+      "durationFormatDecimal": "Decimal hours",
+      "durationFormatHoursMinutes": "Hours and minutes",
       "modeLabel": "Content",
       "modeCostFree": "Cost-free",
       "modeCostFreeHint": "Hours and descriptions only — safe to share externally.",
@@ -2486,6 +2499,7 @@
       "avatarUpdated": "Profile image updated.",
       "avatarDeleted": "Profile image deleted.",
       "timezoneUpdated": "Time zone updated.",
+      "durationDisplayUpdated": "Time display updated.",
       "passkeyRenamed": "Passkey renamed.",
       "passkeyRemoved": "Passkey removed.",
       "totpDisabledAudited": "Authenticator app disablement audited.",
@@ -2499,6 +2513,8 @@
       "avatarDeleteFailed": "The profile image could not be deleted.",
       "timezoneInvalid": "Choose a supported time zone.",
       "timezoneUpdateFailed": "The time zone could not be updated.",
+      "durationDisplayInvalid": "Choose a supported time display.",
+      "durationDisplayUpdateFailed": "The time display could not be updated.",
       "memberNotFound": "The member profile could not be found.",
       "passkeyIdMissing": "Passkey id is missing.",
       "passkeyNameRequired": "Passkey name is required.",
