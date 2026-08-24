@@ -14,7 +14,13 @@ export type {
   FormatTimeOptions,
   FormatWeekdayLabelOptions,
 } from "./dates";
-export { formatHours, formatHoursWithUnit } from "./hours";
+export {
+  durationDisplayFormats,
+  formatHours,
+  formatHoursWithUnit,
+  isDurationDisplayFormat,
+} from "./hours";
+export type { DurationDisplayFormat } from "./hours";
 export { formatMoney, formatRate } from "./money";
 export type { FormatMoneyOptions, MoneyDisplay } from "./money";
 export { formatCount } from "./numbers";
