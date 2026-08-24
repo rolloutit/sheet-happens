@@ -24,6 +24,7 @@ export function formatMoney(
     style: "currency",
     currency: currencyCode,
     currencyDisplay: options.display ?? "symbol",
+    minimumFractionDigits: currencyCode === "HUF" ? 0 : 2,
     maximumFractionDigits: 2,
   }).format(Number(amount));
 }

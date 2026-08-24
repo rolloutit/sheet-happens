@@ -21,6 +21,13 @@ enum MemberProfileType {
   @@map("member_profile_type")
 }
 
+enum DurationDisplayFormat {
+  DECIMAL_HOURS @map("decimal_hours")
+  HOURS_MINUTES @map("hours_minutes")
+
+  @@map("duration_display_format")
+}
+
 enum InvitationStatus {
   PENDING  @map("pending")
   ACCEPTED @map("accepted")

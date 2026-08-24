@@ -3,6 +3,7 @@ export {
   deleteMemberAvatar,
   MEMBER_AVATAR_MAX_BYTES,
   MemberPreferenceError,
+  updateMemberDurationDisplayFormat,
   updateMemberTimezone,
   uploadMemberAvatar,
   validateMemberAvatar,

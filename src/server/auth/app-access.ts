@@ -55,6 +55,7 @@ export type AppMember = {
   status: "INVITED" | "ACTIVE" | "INACTIVE" | "DELETED";
   currentProfile: "CONTRACTOR" | "EMPLOYEE";
   timezone: string;
+  durationDisplayFormat: "DECIMAL_HOURS" | "HOURS_MINUTES";
   avatarStorageBucket: string | null;
   avatarStorageKey: string | null;
   avatarContentType: string | null;
@@ -99,6 +100,7 @@ export async function getAppAccessState(): Promise<AppAccessState> {
         status: true,
         currentProfile: true,
         timezone: true,
+        durationDisplayFormat: true,
         avatarStorageBucket: true,
         avatarStorageKey: true,
         avatarContentType: true,

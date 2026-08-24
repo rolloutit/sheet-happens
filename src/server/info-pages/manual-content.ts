@@ -320,6 +320,7 @@ const manualTopics: Record<HelpLocale, ManualTopic[]> = {
 
         - Locale controls the app language where translated text exists.
         - Timezone controls local work dates and day boundaries.
+        - Time display controls whether durations appear as decimal hours or exact hours and minutes. This changes presentation only; stored minutes and calculated amounts do not change.
         - Currency is used as the member default for billing and reporting setup.
 
         ### Troubleshooting
@@ -930,6 +931,7 @@ const manualTopics: Record<HelpLocale, ManualTopic[]> = {
 
         - A nyelv az app lefordított szövegeit szabályozza.
         - Az időzóna határozza meg a helyi munkadátumot és napváltást.
+        - Az időtartam-megjelenítésnél tizedes órát vagy pontos óra-perc formátumot választhatsz. Ez csak a megjelenítést módosítja; a tárolt percek és a számított összegek nem változnak.
         - A pénznem a tag alapértelmezett billing és riport beállításaiban használt érték.
 
         ### Hibaelhárítás

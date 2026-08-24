@@ -94,6 +94,7 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
             email: member.email,
             profile: member.currentProfile === "EMPLOYEE" ? "employee" : "contractor",
             timezone: member.timezone,
+            durationDisplayFormat: member.durationDisplayFormat,
             avatarSrc: shellUser.avatarSrc,
           }}
           timezoneOptions={preferenceOptions.timezones}

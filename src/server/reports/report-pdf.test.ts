@@ -6,6 +6,7 @@ import { createTranslator } from "next-intl";
 import { describe, expect, it } from "vitest";
 
 import { buildReportPdfPayload, type ReportPdfTranslator } from "./report-pdf-payload";
+import type { DurationDisplayFormat } from "@/src/lib/formatting";
 import {
   createCostFreeReportSnapshot,
   createInternalReportSnapshot,
@@ -26,12 +27,14 @@ function buildPayload(
   snapshot: Parameters<typeof buildReportPdfPayload>[0]["snapshot"],
   locale: "en" | "hu" = "en",
   title = "Client July report",
+  durationDisplayFormat: DurationDisplayFormat = "DECIMAL_HOURS",
 ) {
   return buildReportPdfPayload({
     title,
     snapshot,
     locale,
     generatedAt,
+    durationDisplayFormat,
     t: translator(locale),
   });
 }
@@ -93,6 +96,19 @@ describe("report PDF payload", () => {
     const payload = buildPayload(createCostFreeReportSnapshot());
 
     expect(payload.totals).toEqual({ hours: "3 h", entries: "1" });
+  });
+
+  it("uses the independently selected hour-minute format throughout the PDF", () => {
+    const snapshot = createCostFreeReportSnapshot();
+    snapshot.lines[0].durationMinutes = 203;
+    snapshot.groups[0].totalMinutes = 203;
+    snapshot.summary.totalMinutes = 203;
+    const payload = buildPayload(snapshot, "en", "Client July report", "HOURS_MINUTES");
+
+    expect(payload.summary.heroes[0].value).toBe("3 h 23 m");
+    expect(payload.groups[0].hours).toBe("3 h 23 m");
+    expect(payload.lines[0].hours).toBe("3 h 23 m");
+    expect(payload.totals.hours).toBe("3 h 23 m");
   });
 
   it("describes the export scope through header facets instead of the mode", () => {

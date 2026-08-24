@@ -36,6 +36,7 @@ import {
   formatPeriodRange as formatPeriodRangeBase,
   formatRate as formatRateBase,
   formatTimestamp as formatTimestampBase,
+  type DurationDisplayFormat,
 } from "@/src/lib/formatting";
 import {
   accountStatusRoute,
@@ -139,7 +140,7 @@ export default async function TimesheetsPage({ searchParams }: TimesheetsPagePro
                 <SummaryMetric
                   icon={Clock3}
                   label={t("summary.hours")}
-                  value={formatHours(preview.totalMinutes, locale)}
+                  value={formatHours(preview.totalMinutes, locale, member.durationDisplayFormat)}
                 />
                 <SummaryMetric
                   icon={WalletCards}
@@ -218,7 +219,12 @@ export default async function TimesheetsPage({ searchParams }: TimesheetsPagePro
           </CardHeader>
           <CardContent>
             {preview.projects.length > 0 ? (
-              <ProjectBreakdownTable projects={preview.projects} locale={locale} t={t} />
+              <ProjectBreakdownTable
+                projects={preview.projects}
+                locale={locale}
+                durationDisplayFormat={member.durationDisplayFormat}
+                t={t}
+              />
             ) : (
               <div className="rounded-[var(--radius-lg)] border border-dashed border-border bg-secondary/45 px-5 py-8 text-center text-sm text-muted-foreground">
                 {t("breakdown.empty")}
@@ -298,10 +304,12 @@ function PreviewWarnings({
 function ProjectBreakdownTable({
   projects,
   locale,
+  durationDisplayFormat,
   t,
 }: {
   projects: TimesheetProjectPreview[];
   locale: string;
+  durationDisplayFormat: DurationDisplayFormat;
   t: TimesheetsTranslator;
 }) {
   return (
@@ -334,7 +342,7 @@ function ProjectBreakdownTable({
                   </div>
                 </td>
                 <td className="px-4 py-4 font-ui text-sm font-semibold text-foreground">
-                  {formatHours(project.totalMinutes, locale)}
+                  {formatHours(project.totalMinutes, locale, durationDisplayFormat)}
                 </td>
                 <td className="px-4 py-4 text-sm text-muted-foreground">
                   <RateCell project={project} locale={locale} t={t} />

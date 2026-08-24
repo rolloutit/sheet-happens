@@ -1,5 +1,24 @@
+import type { DurationDisplayFormat } from "./formatting";
+
 const unitTokenPattern =
   /([+-]?(?:\d+(?:[.,]\d+)?|[.,]\d+))\s*(hours|hour|hrs|hr|h|minutes|minute|mins|min|m)/gi;
+
+export function formatDurationForInput(
+  minutes: number,
+  format: DurationDisplayFormat = "DECIMAL_HOURS",
+) {
+  const normalizedMinutes = Math.max(0, Math.round(minutes));
+
+  if (format === "HOURS_MINUTES") {
+    const hours = Math.floor(normalizedMinutes / 60);
+    const remainingMinutes = normalizedMinutes % 60;
+    if (hours === 0) return `${remainingMinutes}m`;
+    if (remainingMinutes === 0) return `${hours}h`;
+    return `${hours}h ${remainingMinutes}m`;
+  }
+
+  return Number((normalizedMinutes / 60).toFixed(4)).toString();
+}
 
 export function parseDurationToMinutes(value: string) {
   const normalized = value.trim().toLowerCase().replace(/\s+/g, " ");

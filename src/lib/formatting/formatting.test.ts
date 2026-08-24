@@ -26,7 +26,7 @@ import {
 const NBSP = " ";
 
 describe("formatHours", () => {
-  it("renders bare hours with up to two decimals", () => {
+  it("renders bare decimal hours with up to four decimals", () => {
     expect(formatHours(180, "en")).toBe("3");
     expect(formatHours(150, "en")).toBe("2.5");
     expect(formatHours(150, "hu")).toBe("2,5");
@@ -40,8 +40,17 @@ describe("formatHours", () => {
     expect(formatHoursWithUnit(0, "en")).toBe("0 h");
   });
 
-  it("rounds to two decimals rather than exposing float noise", () => {
-    expect(formatHoursWithUnit(100, "en")).toBe("1.67 h");
+  it("keeps enough decimal precision to avoid materially changing minutes", () => {
+    expect(formatHoursWithUnit(100, "en")).toBe("1.6667 h");
+    expect(formatHoursWithUnit(203, "en")).toBe("3.3833 h");
+  });
+
+  it("renders exact hour-minute durations in both locales", () => {
+    expect(formatHoursWithUnit(203, "en", "HOURS_MINUTES")).toBe("3 h 23 m");
+    expect(formatHoursWithUnit(203, "hu", "HOURS_MINUTES")).toBe("3 ó 23 p");
+    expect(formatHours(45, "en", "HOURS_MINUTES")).toBe("45 m");
+    expect(formatHours(180, "hu", "HOURS_MINUTES")).toBe("3 ó");
+    expect(formatHours(0, "en", "HOURS_MINUTES")).toBe("0 h");
   });
 });
 

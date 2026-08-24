@@ -25,6 +25,7 @@ import {
   formatHours,
   formatHoursWithUnit,
   formatPeriodRange,
+  type DurationDisplayFormat,
 } from "@/src/lib/formatting";
 import { applyReportLineEdits, type ReportLineEdit } from "@/src/lib/report-line-edits";
 import type {
@@ -45,6 +46,7 @@ type ReportWorkspaceProps = {
   defaultTitles: Record<AppLocale, string>;
   initialLocale: AppLocale;
   timezone: string;
+  durationDisplayFormat: DurationDisplayFormat;
 };
 
 export function ReportWorkspace({
@@ -55,6 +57,7 @@ export function ReportWorkspace({
   defaultTitles,
   initialLocale,
   timezone,
+  durationDisplayFormat,
 }: ReportWorkspaceProps) {
   const t = useTranslations("AdminReports");
   const [editMode, setEditMode] = useState(false);
@@ -153,6 +156,7 @@ export function ReportWorkspace({
           defaultTitles={defaultTitles}
           initialLocale={initialLocale}
           timezone={timezone}
+          initialDurationDisplayFormat={durationDisplayFormat}
           disabled={workingSnapshot.lines.length === 0}
           lineEdits={lineEdits}
           onLineEditsSaved={(message) => clearEdits(message)}
@@ -204,7 +208,11 @@ export function ReportWorkspace({
       <div className="grid gap-3 md:grid-cols-4">
         <SummaryCard
           label={t("stats.totalHours")}
-          value={formatHoursWithUnit(workingSnapshot.summary.totalMinutes, locale)}
+          value={formatHoursWithUnit(
+            workingSnapshot.summary.totalMinutes,
+            locale,
+            durationDisplayFormat,
+          )}
         />
         <SummaryCard
           label={t("stats.period")}
@@ -234,14 +242,22 @@ export function ReportWorkspace({
               <div className="mb-4 font-display text-[15px] font-semibold text-foreground">
                 {t("charts.time")}
               </div>
-              <WeekBars lines={workingSnapshot.lines} locale={locale} />
+              <WeekBars
+                lines={workingSnapshot.lines}
+                locale={locale}
+                durationDisplayFormat={durationDisplayFormat}
+              />
             </div>
 
             <div className="rounded-[var(--radius-lg)] border border-border bg-card px-5 py-5 shadow-soft">
               <div className="mb-4 font-display text-[15px] font-semibold text-foreground">
                 {workingSnapshot.view === "USER" ? t("charts.users") : t("charts.projects")}
               </div>
-              <DonutBreakdown snapshot={workingSnapshot} locale={locale} />
+              <DonutBreakdown
+                snapshot={workingSnapshot}
+                locale={locale}
+                durationDisplayFormat={durationDisplayFormat}
+              />
             </div>
           </div>
 
@@ -249,7 +265,11 @@ export function ReportWorkspace({
             <div className="mb-4 font-display text-lg font-semibold text-foreground">
               {workingSnapshot.view === "USER" ? t("charts.projects") : t("charts.users")}
             </div>
-            <HorizontalBreakdown snapshot={workingSnapshot} locale={locale} />
+            <HorizontalBreakdown
+              snapshot={workingSnapshot}
+              locale={locale}
+              durationDisplayFormat={durationDisplayFormat}
+            />
           </div>
 
           <div>
@@ -282,6 +302,7 @@ export function ReportWorkspace({
             <ReportDetail
               snapshot={workingSnapshot}
               locale={locale}
+              durationDisplayFormat={durationDisplayFormat}
               editMode={editMode}
               editedIds={new Set(Object.keys(edits))}
               onDescriptionChange={updateDescription}
@@ -357,7 +378,15 @@ function SummaryCard({ label, value }: { label: string; value: string }) {
   );
 }
 
-function WeekBars({ lines, locale }: { lines: ReportCostFreeLine[]; locale: string }) {
+function WeekBars({
+  lines,
+  locale,
+  durationDisplayFormat,
+}: {
+  lines: ReportCostFreeLine[];
+  locale: string;
+  durationDisplayFormat: DurationDisplayFormat;
+}) {
   const buckets = buildWeekBuckets(lines);
   const maxMinutes = Math.max(1, ...buckets.map((bucket) => bucket.totalMinutes));
 
@@ -372,7 +401,9 @@ function WeekBars({ lines, locale }: { lines: ReportCostFreeLine[]; locale: stri
             className="flex min-h-48 min-w-16 flex-1 flex-col items-center justify-end gap-2"
           >
             <span className="text-sm font-semibold text-foreground">
-              {bucket.totalMinutes ? formatHoursWithUnit(bucket.totalMinutes, locale) : ""}
+              {bucket.totalMinutes
+                ? formatHoursWithUnit(bucket.totalMinutes, locale, durationDisplayFormat)
+                : ""}
             </span>
             <span
               className="w-12 rounded-t-[var(--radius-md)] bg-accent shadow-[0_12px_28px_rgba(31,128,127,0.18)]"
@@ -389,7 +420,15 @@ function WeekBars({ lines, locale }: { lines: ReportCostFreeLine[]; locale: stri
   );
 }
 
-function DonutBreakdown({ snapshot, locale }: { snapshot: ReportSnapshot; locale: string }) {
+function DonutBreakdown({
+  snapshot,
+  locale,
+  durationDisplayFormat,
+}: {
+  snapshot: ReportSnapshot;
+  locale: string;
+  durationDisplayFormat: DurationDisplayFormat;
+}) {
   const segments = snapshot.groups.map((group, index) => ({
     key: group.key,
     label: group.label,
@@ -406,7 +445,7 @@ function DonutBreakdown({ snapshot, locale }: { snapshot: ReportSnapshot; locale
       >
         <div className="grid size-24 place-items-center rounded-full bg-card text-center shadow-inner">
           <span className="font-display text-2xl font-semibold leading-none text-foreground">
-            {formatHours(snapshot.summary.totalMinutes, locale)}
+            {formatHours(snapshot.summary.totalMinutes, locale, durationDisplayFormat)}
           </span>
           <span className="font-ui text-[10px] font-semibold uppercase tracking-[0.1em] text-muted-foreground">
             h
@@ -420,7 +459,15 @@ function DonutBreakdown({ snapshot, locale }: { snapshot: ReportSnapshot; locale
   );
 }
 
-function HorizontalBreakdown({ snapshot, locale }: { snapshot: ReportSnapshot; locale: string }) {
+function HorizontalBreakdown({
+  snapshot,
+  locale,
+  durationDisplayFormat,
+}: {
+  snapshot: ReportSnapshot;
+  locale: string;
+  durationDisplayFormat: DurationDisplayFormat;
+}) {
   const dimension = snapshot.view === "USER" ? "PROJECT" : "USER";
   const rows = buildBreakdown(snapshot.lines, dimension, snapshot.summary.totalMinutes);
 
@@ -456,7 +503,7 @@ function HorizontalBreakdown({ snapshot, locale }: { snapshot: ReportSnapshot; l
           </span>
           <span className="text-right text-sm text-muted-foreground">
             <b className="font-display text-foreground">
-              {formatHoursWithUnit(row.totalMinutes, locale)}
+              {formatHoursWithUnit(row.totalMinutes, locale, durationDisplayFormat)}
             </b>{" "}
             · {Math.round(row.percentage)}%
           </span>
@@ -493,6 +540,7 @@ function LegendList({
 function ReportDetail({
   snapshot,
   locale,
+  durationDisplayFormat,
   editMode,
   editedIds,
   onDescriptionChange,
@@ -500,6 +548,7 @@ function ReportDetail({
 }: {
   snapshot: ReportSnapshot;
   locale: string;
+  durationDisplayFormat: DurationDisplayFormat;
   editMode: boolean;
   editedIds: Set<string>;
   onDescriptionChange(id: string, description: string): void;
@@ -546,7 +595,7 @@ function ReportDetail({
                 ) : null}
               </div>
               <div className="font-display text-lg font-semibold text-foreground">
-                {formatHoursWithUnit(group.totalMinutes, locale)}
+                {formatHoursWithUnit(group.totalMinutes, locale, durationDisplayFormat)}
               </div>
             </div>
             <div className="divide-y divide-border/70">
@@ -600,7 +649,7 @@ function ReportDetail({
                         }
                       />
                     ) : (
-                      formatHoursWithUnit(line.durationMinutes, locale)
+                      formatHoursWithUnit(line.durationMinutes, locale, durationDisplayFormat)
                     )}
                   </div>
                 </div>
