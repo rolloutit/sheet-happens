@@ -14,6 +14,7 @@ import {
   CardTitle,
 } from "@/src/components/ui/Card";
 import { cn } from "@/src/lib/utils";
+import type { DurationDisplayFormat } from "@/src/lib/formatting";
 import { ProfilePreferencesClient } from "./ProfilePreferencesClient";
 import { SecuritySettingsClient, type SecuritySettingsClientProps } from "./SecuritySettingsClient";
 
@@ -27,6 +28,7 @@ export type SettingsWorkspaceProps = {
     email: string;
     profile: "employee" | "contractor";
     timezone: string;
+    durationDisplayFormat: DurationDisplayFormat;
     avatarSrc?: string;
   };
   timezoneOptions: readonly { value: string; label: string }[];

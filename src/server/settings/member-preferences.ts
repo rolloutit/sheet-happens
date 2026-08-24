@@ -1,6 +1,7 @@
 import { createHash, randomUUID } from "node:crypto";
 
 import { isSupportedTimeZone, normalizeTimeZone } from "@/src/lib/member-preferences";
+import { isDurationDisplayFormat, type DurationDisplayFormat } from "@/src/lib/formatting";
 import { prisma } from "@/src/server/db/client";
 import { getObjectStorage, type ObjectStorage } from "@/src/server/storage";
 
@@ -187,6 +188,42 @@ export async function updateMemberTimezone(input: {
         targetId: input.memberId,
         before: { timezone: member.timezone },
         after: { timezone },
+        ...input.requestMetadata,
+      },
+    });
+  });
+}
+
+export async function updateMemberDurationDisplayFormat(input: {
+  memberId: string;
+  durationDisplayFormat: DurationDisplayFormat;
+  requestMetadata?: MemberPreferenceRequestMetadata;
+}) {
+  if (!isDurationDisplayFormat(input.durationDisplayFormat)) {
+    throw new MemberPreferenceError("Unsupported duration display format.");
+  }
+
+  const member = await prisma.member.findUnique({
+    where: { id: input.memberId },
+    select: { durationDisplayFormat: true },
+  });
+  if (!member) throw new MemberPreferenceError("Member not found.");
+  if (member.durationDisplayFormat === input.durationDisplayFormat) return;
+
+  await prisma.$transaction(async (tx) => {
+    await tx.member.update({
+      where: { id: input.memberId },
+      data: { durationDisplayFormat: input.durationDisplayFormat },
+      select: { id: true },
+    });
+    await tx.auditLog.create({
+      data: {
+        actorMemberId: input.memberId,
+        action: "member.duration_display_format_updated",
+        targetType: "member",
+        targetId: input.memberId,
+        before: { durationDisplayFormat: member.durationDisplayFormat },
+        after: { durationDisplayFormat: input.durationDisplayFormat },
         ...input.requestMetadata,
       },
     });

@@ -14,6 +14,7 @@ import { prisma } from "@/src/server/db/client";
 import {
   deleteMemberAvatar,
   MemberPreferenceError,
+  updateMemberDurationDisplayFormat,
   updateMemberTimezone,
   uploadMemberAvatar,
 } from "@/src/server/settings";
@@ -114,6 +115,35 @@ export async function updateMemberTimezoneAction(
         error instanceof MemberPreferenceError
           ? translateMemberPreferenceError(error.message, t)
           : t("errors.timezoneUpdateFailed"),
+    };
+  }
+}
+
+export async function updateMemberDurationDisplayFormatAction(
+  _state: MemberPreferenceActionState,
+  formData: FormData,
+): Promise<MemberPreferenceActionState> {
+  const t = await getTranslations("SettingsActions");
+
+  try {
+    const { member } = await requireActiveAppMemberForAction();
+    const requestHeaders = await headers();
+    await updateMemberDurationDisplayFormat({
+      memberId: member.id,
+      durationDisplayFormat: String(formData.get("durationDisplayFormat") ?? "") as
+        "DECIMAL_HOURS" | "HOURS_MINUTES",
+      requestMetadata: getRequestMetadata(requestHeaders),
+    });
+    revalidatePath("/", "layout");
+    revalidatePath("/settings");
+    return { status: "success", message: t("success.durationDisplayUpdated") };
+  } catch (error) {
+    return {
+      status: "error",
+      message:
+        error instanceof MemberPreferenceError
+          ? translateMemberPreferenceError(error.message, t)
+          : t("errors.durationDisplayUpdateFailed"),
     };
   }
 }
@@ -428,6 +458,7 @@ function translateMemberPreferenceError(message: string, t: SettingsActionsTrans
     "Avatar image is too large.": "errors.avatarTooLarge",
     "Avatar must be a PNG or JPEG image.": "errors.avatarInvalidType",
     "Unsupported timezone.": "errors.timezoneInvalid",
+    "Unsupported duration display format.": "errors.durationDisplayInvalid",
     "Member not found.": "errors.memberNotFound",
   };
   const key = keyByMessage[message];

@@ -1,12 +1,14 @@
 "use client";
 
-import { Eye, ImageUp, Trash2 } from "lucide-react";
+import { Clock3, Eye, ImageUp, Trash2 } from "lucide-react";
 import { useActionState, useRef, useState, useTransition } from "react";
 import { useTranslations } from "next-intl";
 
 import { Avatar } from "@/src/components/ui/Avatar";
 import { Button } from "@/src/components/ui/Button";
 import { Combobox } from "@/src/components/ui/Combobox";
+import { SegmentedControl } from "@/src/components/ui/SegmentedControl";
+import type { DurationDisplayFormat } from "@/src/lib/formatting";
 import {
   Dialog,
   DialogContent,
@@ -17,6 +19,7 @@ import {
 import { cn } from "@/src/lib/utils";
 import {
   deleteMemberAvatarAction,
+  updateMemberDurationDisplayFormatAction,
   updateMemberTimezoneAction,
   uploadMemberAvatarAction,
 } from "./actions";
@@ -30,6 +33,7 @@ export type ProfilePreferencesClientProps = {
     initials: string;
     avatarSrc?: string;
     timezone: string;
+    durationDisplayFormat: DurationDisplayFormat;
   };
   timezoneOptions: readonly { value: string; label: string }[];
 };
@@ -46,6 +50,13 @@ export function ProfilePreferencesClient({
   const [timezoneState, timezoneAction, timezonePending] = useActionState(
     updateMemberTimezoneAction,
     initialActionState,
+  );
+  const [durationState, durationAction, durationPending] = useActionState(
+    updateMemberDurationDisplayFormatAction,
+    initialActionState,
+  );
+  const [durationDisplayFormat, setDurationDisplayFormat] = useState<DurationDisplayFormat>(
+    member.durationDisplayFormat,
   );
   const [deletePending, startDeleteTransition] = useTransition();
   const [deleteState, setDeleteState] = useState<MemberPreferenceActionState>(initialActionState);
@@ -163,6 +174,40 @@ export function ProfilePreferencesClient({
             </Button>
           </div>
           <ActionNotice state={timezoneState} />
+        </form>
+      </div>
+
+      <div className="border-t border-border pt-6">
+        <form action={durationAction} className="grid max-w-xl gap-3">
+          <input type="hidden" name="durationDisplayFormat" value={durationDisplayFormat} />
+          <div>
+            <p className="flex items-center gap-2 text-xs font-semibold uppercase text-muted-foreground">
+              <Clock3 className="size-4" aria-hidden="true" />
+              {t("durationDisplay.label")}
+            </p>
+            <p className="mt-1 text-sm text-muted-foreground">{t("durationDisplay.description")}</p>
+          </div>
+          <div className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center">
+            <SegmentedControl
+              label={t("durationDisplay.label")}
+              width="full"
+              value={durationDisplayFormat}
+              onValueChange={(value) => setDurationDisplayFormat(value as DurationDisplayFormat)}
+              items={[
+                { value: "DECIMAL_HOURS", label: t("durationDisplay.decimal") },
+                { value: "HOURS_MINUTES", label: t("durationDisplay.hoursMinutes") },
+              ]}
+            />
+            <Button type="submit" loading={durationPending}>
+              {t("durationDisplay.save")}
+            </Button>
+          </div>
+          <p className="text-xs text-muted-foreground">
+            {durationDisplayFormat === "DECIMAL_HOURS"
+              ? t("durationDisplay.decimalExample")
+              : t("durationDisplay.hoursMinutesExample")}
+          </p>
+          <ActionNotice state={durationState} />
         </form>
       </div>
 
