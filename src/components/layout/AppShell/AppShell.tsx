@@ -151,23 +151,6 @@ export function AppShell({
   const [isStoppingTimer, startStoppingTimerTransition] = useTransition();
   const [, startLanguageTransition] = useTransition();
 
-  const resolvedNotifications = notifications ?? [
-    {
-      id: "missing-hours",
-      title: t("notifications.missingHours.title"),
-      body: t("notifications.missingHours.body"),
-      time: t("notifications.missingHours.time"),
-      tone: "warning" as const,
-    },
-    {
-      id: "invoice-review",
-      title: t("notifications.invoiceReview.title"),
-      body: t("notifications.invoiceReview.body"),
-      time: t("notifications.invoiceReview.time"),
-      tone: "info" as const,
-      read: true,
-    },
-  ];
   const translatedUser = {
     ...user,
     role: translateUserRole(t, user.role),
@@ -455,20 +438,20 @@ export function AppShell({
                   onValueChange={handleLanguageChange}
                 />
                 <ThemeToggle />
-                <NotificationButton
-                  notifications={resolvedNotifications}
-                  labels={{
-                    trigger: t("notifications.trigger"),
-                    menu: t("notifications.menu"),
-                    markAllRead: t("notifications.markAllRead"),
-                    empty: t("notifications.empty"),
-                    viewAll: t("notifications.viewAll"),
-                  }}
-                  onNotificationSelect={onNotificationSelect}
-                  onMarkAllRead={onMarkAllRead}
-                  onViewAll={onViewNotifications}
-                />
               </div>
+              <NotificationButton
+                notifications={notifications}
+                labels={{
+                  trigger: t("notifications.trigger"),
+                  menu: t("notifications.menu"),
+                  markAllRead: t("notifications.markAllRead"),
+                  empty: t("notifications.empty"),
+                  viewAll: t("notifications.viewAll"),
+                }}
+                onNotificationSelect={onNotificationSelect}
+                onMarkAllRead={onMarkAllRead}
+                onViewAll={onViewNotifications}
+              />
               <UserMenu
                 user={translatedUser}
                 actions={translatedUserActions}

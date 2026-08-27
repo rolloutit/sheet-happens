@@ -9,6 +9,8 @@ export type ShellNotification = {
   time?: string;
   tone?: NotificationTone;
   read?: boolean;
+  actionUrl?: string | null;
+  createdAt?: string;
 };
 
 export type NotificationButtonLabels = {

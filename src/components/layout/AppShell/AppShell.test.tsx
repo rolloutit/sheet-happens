@@ -58,6 +58,14 @@ describe("AppShell theme control placement", () => {
 });
 
 describe("AppShell account menu", () => {
+  it("keeps notifications available in the mobile header", () => {
+    renderShell();
+
+    const notificationTrigger = screen.getByRole("button", { name: "Notifications" });
+
+    expect(notificationTrigger.closest(".hidden")).toBeNull();
+  });
+
   it("keeps account actions available from the mobile header", async () => {
     const user = userEvent.setup();
     renderShell();
