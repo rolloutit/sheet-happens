@@ -1,6 +1,6 @@
 "use client";
 
-import { LockKeyhole, ShieldCheck, SlidersHorizontal, User } from "lucide-react";
+import { Bell, LockKeyhole, ShieldCheck, SlidersHorizontal, User } from "lucide-react";
 import { useState } from "react";
 import { useTranslations } from "next-intl";
 
@@ -15,10 +15,12 @@ import {
 } from "@/src/components/ui/Card";
 import { cn } from "@/src/lib/utils";
 import type { DurationDisplayFormat } from "@/src/lib/formatting";
+import type { NotificationConfigurationValue } from "@/src/server/notifications";
+import { NotificationSettingsClient } from "./NotificationSettingsClient";
 import { ProfilePreferencesClient } from "./ProfilePreferencesClient";
 import { SecuritySettingsClient, type SecuritySettingsClientProps } from "./SecuritySettingsClient";
 
-type SettingsSection = "profile" | "security" | "preferences";
+type SettingsSection = "profile" | "security" | "preferences" | "notifications";
 
 export type SettingsWorkspaceProps = {
   defaultSection?: SettingsSection;
@@ -33,6 +35,7 @@ export type SettingsWorkspaceProps = {
   };
   timezoneOptions: readonly { value: string; label: string }[];
   security: SecuritySettingsClientProps;
+  notificationConfiguration?: NotificationConfigurationValue;
 };
 
 export function SettingsWorkspace({
@@ -40,6 +43,7 @@ export function SettingsWorkspace({
   member,
   timezoneOptions,
   security,
+  notificationConfiguration,
 }: SettingsWorkspaceProps) {
   const t = useTranslations("Settings");
   const [activeSection, setActiveSection] = useState<SettingsSection>(defaultSection);
@@ -47,6 +51,9 @@ export function SettingsWorkspace({
     { id: "profile" as const, icon: User, label: t("sections.profile") },
     { id: "security" as const, icon: ShieldCheck, label: t("sections.security") },
     { id: "preferences" as const, icon: SlidersHorizontal, label: t("sections.preferences") },
+    ...(notificationConfiguration
+      ? [{ id: "notifications" as const, icon: Bell, label: t("sections.notifications") }]
+      : []),
   ];
 
   return (
@@ -81,6 +88,19 @@ export function SettingsWorkspace({
         >
           <ProfilePanel member={member} />
         </SettingsPanel>
+        {notificationConfiguration ? (
+          <SettingsPanel
+            id="notifications"
+            active={activeSection === "notifications"}
+            title={t("notifications.title")}
+            description={t("notifications.description")}
+          >
+            <NotificationSettingsClient
+              value={notificationConfiguration}
+              timezoneOptions={timezoneOptions}
+            />
+          </SettingsPanel>
+        ) : null}
         <SettingsPanel
           id="security"
           active={activeSection === "security"}

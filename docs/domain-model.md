@@ -347,6 +347,12 @@ Notification state to track:
 - Job runs for scheduled reminders.
 - Idempotency keys for repeated jobs.
 
+Runtime scheduling intentionally uses one in-service scheduler for v1. Every Next.js Node server
+starts the same sequential 15-second loop; a PostgreSQL advisory lock permits only one application
+instance to dispatch at a time. Persisted cursors and idempotency recover delayed work after a
+restart. This deliberately replaces the specification's external-scheduler recommendation while
+the application is deployed as a small internal service.
+
 Missing-hours flags are derived:
 
 - Active assignment exists for member/project/week.

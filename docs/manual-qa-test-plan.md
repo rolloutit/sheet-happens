@@ -2666,6 +2666,112 @@ Expected result:
   inside their own bounds.
 - No focusable element anywhere is left with no visible indicator under keyboard navigation.
 
+## Notification System
+
+### Admin Configuration And Channel Independence
+
+1. Sign in as `{ADMIN_EMAIL}` and open `/settings?section=notifications`.
+2. Confirm this section is visible only to admins.
+3. Set the company timezone, weekly weekday, and weekly local time, then save.
+4. Set the invoice first delay to `72` and repeat interval to `24`, then save.
+5. Reload and confirm every value persisted.
+6. For one workflow type, enable email and disable in-app delivery. For another type, disable email
+   and enable in-app delivery. Save and reload.
+7. Trigger both workflows and confirm each uses only its configured channel.
+8. Disable both channels for a test notification type and trigger it again.
+9. Confirm no email or in-app notification is created for the disabled type.
+10. Request a magic link or password reset and confirm authentication email still works even when
+    product notification channels are disabled.
+11. Open `/admin/audit` and confirm the settings update appears as a localized notification event.
+
+Expected result:
+
+- Schedule fields and every per-type email/in-app switch persist.
+- Product channel settings do not disable invitations, magic links, or password recovery.
+- Invalid timezone, weekday, time, delay, or repeat values are rejected on the server.
+
+### Notification Bell And Center
+
+1. Trigger a workflow notification for `{CONTRACTOR_EMAIL}` or `{EMPLOYEE_EMAIL}`.
+2. Sign in as that member and confirm the bell shows an unread count.
+3. Open the bell and confirm at most five recent notifications are shown.
+4. Open one notification and confirm it becomes read and navigates to the relevant page.
+5. Open `/notifications`, switch between All and Unread, and test pagination when enough records
+   exist.
+6. Select **Mark all as read** and confirm the unread count disappears.
+7. Create more than 15 read notifications, then trigger one more notification.
+8. Confirm all unread notifications remain and only the latest 15 read notifications are retained.
+9. Repeat the checks in Hungarian and English.
+
+Expected result:
+
+- Titles and bodies use the member's locale at display and email delivery time.
+- No notification belonging to another member is visible or markable through the API.
+- Read-state changes survive reloads.
+
+### Weekly Missing-Time Reminder
+
+1. Give `{EMPLOYEE_EMAIL}` or `{CONTRACTOR_EMAIL}` an active project assignment for the current
+   week, with no time entry and no inactive-week marker.
+2. Open the admin dashboard and confirm the member/project pair is flagged.
+3. Click **Send reminder** and confirm the member receives the configured email and/or in-app item.
+4. Open the notification and confirm it links to the relevant week on `/time`.
+5. Confirm `/admin/audit` contains the manual reminder event.
+6. Add time for that project, refresh the stale dashboard tab, and try its old reminder button.
+7. Repeat with an inactive-week marker instead of a time entry.
+8. Confirm both stale attempts are rejected and no notification is created.
+9. Remove the time/marker, temporarily configure the weekly schedule a few minutes ahead, and keep
+   the application running through the configured time.
+10. Confirm exactly one reminder is produced for the scheduled occurrence, even though the
+    in-service dispatcher checks every 15 seconds.
+
+Expected result:
+
+- Only active member/project assignments with no time and no inactive marker receive reminders.
+- Manual sending revalidates current data instead of trusting a stale dashboard row.
+- Repeated dispatcher runs are idempotent for the same weekly occurrence.
+
+### Invoice Reminder Uses Exact Elapsed Hours
+
+1. Approve a contractor timesheet without uploading an invoice.
+2. Set the invoice first delay to `1` hour for a practical QA run and repeat interval to `1` hour.
+3. Before one elapsed hour, wait for the notification dispatcher and confirm no invoice reminder
+   exists.
+4. After one exact elapsed hour, confirm the first reminder appears within 15 seconds.
+5. Confirm another run within the same occurrence does not duplicate the reminder.
+6. After the next elapsed hour, confirm one repeat reminder is created.
+7. Upload an invoice and confirm later dispatcher runs stop creating invoice reminders.
+8. Restore the intended defaults: first delay `72`, repeat interval `24`.
+
+Expected result:
+
+- Delays use elapsed UTC hours, not weekdays or company-local calendar boundaries.
+- The production default starts exactly 72 hours after approval and includes weekends.
+- Only approved timesheets still waiting for an invoice are eligible.
+
+### Workflow Notifications And Dispatcher Health
+
+1. Exercise timesheet submit, approve, reject, invoice upload, invoice accept/reject, and paid paths.
+2. Upload and replace an employee payslip.
+3. Permanently edit a member's time entry from the admin report.
+4. For each event, confirm the intended recipient, localized content, channel configuration, and
+   action link.
+5. Open `/admin/system` and confirm **Notification dispatcher** passes after a successful run.
+6. Set `NOTIFICATION_SCHEDULER_DISABLED=true` in a non-production test environment, restart the app,
+   wait more than one minute, and confirm the check warns instead of claiming success.
+7. Remove that variable, restart the app, and confirm the scheduler recovers without a separate
+   Railway service and the System check returns to passing within one minute.
+8. Temporarily break SMTP in a non-production test environment and trigger an email notification.
+9. Confirm the delivery records a failure and retries with increasing delays, up to five attempts.
+
+Expected result:
+
+- Admins receive review work; members receive decisions and personal document/change events.
+- Notification creation is idempotent when the dispatcher scans overlapping event windows.
+- The sequential loop does not overlap itself, and the database lock protects multiple replicas.
+- Scheduler failures are visible on the System page and email failures remain available for
+  operational diagnosis.
+
 ## Regression Checklist For Every Release
 
 - Invitation activation works for a new invited user.
@@ -2704,3 +2810,6 @@ Expected result:
 - Focus paints once and only under keyboard navigation: bordered controls brighten their border,
   borderless controls take a single 2px mint outline, option rows show only the pointer tint, and a
   mouse click leaves no highlight box behind.
+- Notification settings persist, the dispatcher is fresh, and the bell unread count updates.
+- Weekly reminders exclude projects with time or inactive-week markers.
+- Invoice reminders use exact elapsed hours and stop after invoice upload.

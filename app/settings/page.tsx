@@ -25,6 +25,7 @@ import {
 } from "@/src/server/auth/app-access";
 import { getGoogleAuthSettings } from "@/src/server/auth/sign-in-methods";
 import { prisma } from "@/src/server/db/client";
+import { getNotificationConfiguration } from "@/src/server/notifications";
 import { SettingsWorkspace } from "./SettingsWorkspace";
 
 export const dynamic = "force-dynamic";
@@ -49,6 +50,8 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
   const { member, authUser } = access;
   const securityState = await getSecurityState(authUser.id);
   const googleAuthSettings = getGoogleAuthSettings();
+  const notificationConfiguration =
+    member.role === "ADMIN" ? await getNotificationConfiguration() : undefined;
   const hasSecurityMethod = securityState.twoFactorEnabled || securityState.passkeys.length > 0;
   const adminTotpRequired = member.role === "ADMIN" && !securityState.twoFactorEnabled;
   const showSetupBanner =
@@ -61,7 +64,9 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
   const preferenceOptions = getMemberPreferenceOptions();
   const defaultSection = showSetupBanner
     ? "security"
-    : requestedSection === "security" || requestedSection === "preferences"
+    : requestedSection === "security" ||
+        requestedSection === "preferences" ||
+        (requestedSection === "notifications" && member.role === "ADMIN")
       ? requestedSection
       : "profile";
 
@@ -132,6 +137,7 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
                   ?.failedVerificationCount ?? 0,
             },
           }}
+          notificationConfiguration={notificationConfiguration}
         />
       </section>
     </AppShell>
