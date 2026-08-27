@@ -332,6 +332,77 @@ const manualTopics: Record<HelpLocale, ManualTopic[]> = {
       `,
     },
     {
+      id: "notifications",
+      audience: "all",
+      title: "Notifications",
+      summary: "In-app workflow updates, reminders, unread state, and notification actions.",
+      bodyMarkdown: markdown`
+        ## Notifications
+
+        The bell in the app header shows the latest notifications for your account. Open **All notifications** for the full paginated history.
+
+        ### Reading notifications
+
+        - An unread count appears on the bell when action is needed.
+        - Opening a notification marks it as read and takes you to the related screen when an action is available.
+        - Use **Mark all as read** in the notification center when no unread items need attention.
+        - The system keeps all unread notifications and the latest 15 notifications you have read.
+
+        ### What can arrive
+
+        - Missing weekly time reminders apply only when an active project has no time and no inactive-week mark.
+        - Contractors receive timesheet decisions, invoice decisions, payment updates, and invoice-upload reminders.
+        - Employees receive a notification when a new or replacement payslip is published.
+        - Members receive a notification when an admin permanently changes one of their time entries.
+        - Admins receive submitted-timesheet and uploaded-invoice review notifications.
+
+        ### Email and in-app delivery
+
+        An administrator controls email and in-app delivery separately for every product notification type. Sign-in, invitation, and password-reset emails are security mechanisms and are not disabled by these product settings.
+
+        ### Troubleshooting
+
+        - No weekly reminder: check that the project assignment is active and that the week has neither logged time nor an inactive marker.
+        - No email but an in-app item exists: ask an admin to check the channel setting, SMTP configuration, and notification dispatcher on the System page.
+        - A notification opens an outdated state: the underlying workflow may already have changed; refresh the target page.
+      `,
+    },
+    {
+      id: "admin-notifications",
+      audience: "admin",
+      title: "Notification administration",
+      summary: "Company schedule, delivery channels, manual reminders, and dispatcher monitoring.",
+      bodyMarkdown: markdown`
+        ## Notification administration
+
+        Open **Settings → Notifications** to configure system-wide product notifications.
+
+        ### Schedule
+
+        - The weekly missing-hours reminder uses the configured company timezone, weekday, and local time.
+        - Invoice reminders start after the configured number of elapsed hours from timesheet approval. The default is 72 hours.
+        - Repeats also use exact elapsed hours. Weekends are included.
+
+        ### Delivery rules
+
+        - Email and in-app channels can be enabled independently for every notification type.
+        - Turning both channels off disables that product notification type.
+        - Authentication emails remain independent of these settings.
+
+        ### Manual reminders
+
+        The admin dashboard lists active member/project assignments that have no time and no inactive-week mark. **Send reminder** rechecks the current state before delivery and refuses stale rows that are no longer flagged.
+
+        ### Operations
+
+        - The application runs the notification dispatcher sequentially every 15 seconds.
+        - A database lock prevents multiple application instances from dispatching concurrently.
+        - The System page shows the latest dispatcher status and warns when it has never run or is stale.
+        - Failed email deliveries retry with increasing delays, up to five attempts.
+        - Setting changes and manual reminders are written to the audit log.
+      `,
+    },
+    {
       id: "people",
       audience: "admin",
       title: "People and access",
@@ -940,6 +1011,78 @@ const manualTopics: Record<HelpLocale, ManualTopic[]> = {
         - Passkey belépés nem működik: lépj be másik módszerrel, majd ellenőrizd vagy töröld a passkey-t a Beállításokban.
         - Mágikus link után nincs kapcsolt tagprofil: azzal az email címmel lépj be, amellyel a meghívót aktiváltad.
         - Admin eszközök továbbra is blokkoltak: először állíts be authenticator-app ellenőrzést, utána a passkey belépés átugorhatja a kódkérést.
+      `,
+    },
+    {
+      id: "notifications",
+      audience: "all",
+      title: "Értesítések",
+      summary:
+        "Appon belüli folyamatfrissítések, emlékeztetők, olvasatlan állapot és kapcsolódó műveletek.",
+      bodyMarkdown: markdown`
+        ## Értesítések
+
+        Az app fejlécében lévő csengő a fiókod legújabb értesítéseit mutatja. A teljes, lapozható előzményhez nyisd meg az **Összes értesítés** oldalt.
+
+        ### Értesítések olvasása
+
+        - A csengőn olvasatlan számláló jelenik meg, ha teendőd van.
+        - Az értesítés megnyitása olvasottnak jelöli azt, és kapcsolódó művelet esetén a megfelelő képernyőre visz.
+        - Ha nincs több teendő, az értesítési központban az **Összes olvasottnak jelölése** használható.
+        - A rendszer minden olvasatlan és a legutóbbi 15 olvasott értesítést megtartja.
+
+        ### Milyen értesítés érkezhet
+
+        - A hiányzó heti idő emlékeztető csak aktív projektre, időbejegyzés és inaktív heti jelölés hiányában érkezik.
+        - A kontraktor timesheet- és számladöntésekről, kifizetésről és hiányzó számlafeltöltésről kap értesítést.
+        - Az alkalmazott új vagy lecserélt bérjegyzék közzétételekor kap értesítést.
+        - A tag értesítést kap, ha egy admin tartósan módosítja valamelyik időbejegyzését.
+        - Az admin beküldött timesheetről és ellenőrzésre váró feltöltött számláról kap értesítést.
+
+        ### Email és appon belüli kézbesítés
+
+        Az admin minden termékértesítésnél külön kapcsolhatja az email és az appon belüli csatornát. A belépési, meghívó- és jelszó-helyreállító emailek biztonsági mechanizmusok, ezért ezektől a beállításoktól függetlenek.
+
+        ### Hibaelhárítás
+
+        - Nincs heti emlékeztető: ellenőrizd az aktív projekt-hozzárendelést, valamint hogy nincs-e időbejegyzés vagy inaktív heti jelölés.
+        - Van appon belüli értesítés, de nincs email: kérd az admint a csatornabeállítás, SMTP és a Rendszer oldalon az értesítésküldő folyamat ellenőrzésére.
+        - Az értesítés már nem aktuális állapotot nyit meg: a folyamat időközben változhatott; frissítsd a céloldalt.
+      `,
+    },
+    {
+      id: "admin-notifications",
+      audience: "admin",
+      title: "Értesítések adminisztrációja",
+      summary: "Céges ütemezés, kézbesítési csatornák, kézi emlékeztetők és folyamatfigyelés.",
+      bodyMarkdown: markdown`
+        ## Értesítések adminisztrációja
+
+        A rendszerszintű termékértesítéseket a **Beállítások → Értesítések** oldalon konfigurálhatod.
+
+        ### Ütemezés
+
+        - A hiányzó heti idő emlékeztető a beállított céges időzónát, hétköznapot és helyi időpontot használja.
+        - A számlaemlékeztető a timesheet jóváhagyásától számított beállított eltelt óra után indul. Az alapérték 72 óra.
+        - Az ismétlési időköz is pontosan eltelt órát jelent, a hétvégék is beleszámítanak.
+
+        ### Kézbesítési szabályok
+
+        - Minden értesítéstípusnál külön kapcsolható az email és az appon belüli csatorna.
+        - Mindkét csatorna kikapcsolása letiltja az adott termékértesítést.
+        - A hitelesítési emailek ettől függetlenek maradnak.
+
+        ### Kézi emlékeztetők
+
+        Az admin dashboard azokat az aktív tag/projekt párokat jelzi, ahol nincs idő és inaktív heti jelölés. Az **Emlékeztető küldése** kézbesítés előtt újra ellenőrzi az aktuális állapotot, és elutasítja a már nem flagged sort.
+
+        ### Üzemeltetés
+
+        - Az alkalmazás 15 másodpercenként, egymás után futtatja az értesítésküldő folyamatot.
+        - Egy adatbáziszár megakadályozza, hogy több alkalmazáspéldány egyszerre küldjön értesítést.
+        - A Rendszer oldal mutatja a legutóbbi futás állapotát, és figyelmeztet, ha még nem futott vagy elavult.
+        - A sikertelen email kézbesítések növekvő késleltetéssel, legfeljebb ötször próbálkoznak újra.
+        - A beállításmódosítások és kézi emlékeztetők bekerülnek az audit naplóba.
       `,
     },
     {
