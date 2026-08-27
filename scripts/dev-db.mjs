@@ -179,12 +179,38 @@ async function seedDatabase() {
         await insertInvitation(client, invitation);
       }
 
+      await insertNotificationConfiguration(client);
+
       await client.query("commit");
     } catch (error) {
       await client.query("rollback");
       throw error;
     }
   });
+}
+
+async function insertNotificationConfiguration(client) {
+  await client.query(`
+    INSERT INTO notification_configuration (id, updated_at)
+    VALUES ('system', now())
+    ON CONFLICT (id) DO NOTHING
+  `);
+
+  await client.query(`
+    INSERT INTO notification_rules (type, email_enabled, in_app_enabled, updated_at) VALUES
+      ('weekly_hours_reminder', true, true, now()),
+      ('monthly_invoice_reminder', true, true, now()),
+      ('timesheet_submitted', true, true, now()),
+      ('timesheet_approved', true, true, now()),
+      ('timesheet_rejected', true, true, now()),
+      ('invoice_uploaded', true, true, now()),
+      ('invoice_rejected', true, true, now()),
+      ('invoice_accepted', true, true, now()),
+      ('timesheet_paid', true, true, now()),
+      ('payslip_available', true, true, now()),
+      ('time_entry_admin_modified', true, true, now())
+    ON CONFLICT (type) DO NOTHING
+  `);
 }
 
 async function insertMember(client, member) {
