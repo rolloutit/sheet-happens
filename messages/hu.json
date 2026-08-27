@@ -540,7 +540,16 @@
         "never": "Soha",
         "lastWeek": "A múlt héten",
         "twoWeeksAgo": "2 hete",
-        "viewDrilldown": "Részletek"
+        "viewDrilldown": "Részletek",
+        "remind": "Emlékeztető küldése",
+        "reminderSent": "Emlékeztető elküldve",
+        "reminderErrors": {
+          "member_unavailable": "A tag már nem aktív.",
+          "not_flagged": "A tagnak már nincs szüksége erre az emlékeztetőre.",
+          "delivery_disabled": "A heti emlékeztetők küldése ki van kapcsolva az értesítési beállításokban.",
+          "unauthorized": "Emlékeztetőt csak aktív admin küldhet.",
+          "failed": "Nem sikerült elküldeni az emlékeztetőt."
+        }
       },
       "drilldown": {
         "eyebrow": "Részletezés",
@@ -1682,6 +1691,8 @@
         "member__session_revoked": "Munkamenet visszavonva",
         "member__timezone_updated": "Időzóna frissítve",
         "member__updated": "Módosítva",
+        "notification__settings_updated": "Beállítások frissítve",
+        "notification__weekly_reminder_sent": "Heti emlékeztető elküldve",
         "payslip__deleted": "Törölve",
         "payslip__downloaded": "Letöltve",
         "payslip__previewed": "Megtekintve",
@@ -1742,6 +1753,7 @@
         "info_page": "Információs oldal",
         "member": "Munkatárs",
         "member_default_rate_period": "Központi óradíj",
+        "notification_configuration": "Értesítési beállítások",
         "passkey": "Passkey",
         "payslip": "Bérjegyzék",
         "project": "Projekt",
@@ -1831,6 +1843,9 @@
         },
         "typst": {
           "title": "Typst PDF renderelő"
+        },
+        "notificationDispatcher": {
+          "title": "Értesítésküldő folyamat"
         }
       }
     },
@@ -1846,7 +1861,10 @@
       "emailSmtpDefaultFrom": "Az SMTP be van állítva, de az AUTH_EMAIL_FROM még a lokális alapértelmezett feladót használja.",
       "googleDisabled": "A Google OAuth nincs beállítva. Ez csak akkor elfogadható, ha ebben a környezetben szándékosan ki van kapcsolva a Google belépés.",
       "googlePartialConfig": "A Google OAuth csak részben van beállítva. Client id, client secret és engedélyezett domainek mind szükségesek.",
-      "typstProbeFailed": "A Typst nem tudta lefordítani a PDF próbadokumentumot. A riport PDF export nem fog működni, amíg a renderelő nem elérhető."
+      "typstProbeFailed": "A Typst nem tudta lefordítani a PDF próbadokumentumot. A riport PDF export nem fog működni, amíg a renderelő nem elérhető.",
+      "notificationDispatcherNeverRun": "Az alkalmazás indulása óta még nem fejeződött be az alkalmazáson belüli értesítésküldő folyamat.",
+      "notificationDispatcherStale": "Az alkalmazáson belüli értesítésküldő folyamat az elmúlt egy percben nem fejeződött be.",
+      "notificationDispatcherFailed": "Az értesítésküldő folyamat legutóbbi futása sikertelen."
     },
     "details": {
       "checkedAt": "Ellenőrizve",
@@ -1855,7 +1873,10 @@
       "provider": "Provider",
       "allowedDomains": "Engedélyezett domainek",
       "probeObject": "Próba objektum",
-      "probePdf": "PDF próba"
+      "probePdf": "PDF próba",
+      "lastRun": "Utolsó futás",
+      "jobStatus": "Folyamat állapota",
+      "ageSeconds": "Eltelt másodperc"
     },
     "duration": "{durationMs} ms",
     "missingEnv": "Hiányzik: {names}"
@@ -2121,6 +2142,19 @@
     },
     "privacy": "Ez az oldal csak a saját óradíjaidat mutatja. Mások óradíjai nem láthatók."
   },
+  "NotificationsPage": {
+    "eyebrow": "Fiók",
+    "title": "Értesítések",
+    "subtitle": "A fiókodhoz kapcsolódó munkafolyamatok, emlékeztetők és teendők.",
+    "all": "Összes",
+    "unread": "Olvasatlan",
+    "empty": "Nincs ennek a nézetnek megfelelő értesítés.",
+    "markAllRead": "Összes olvasottnak jelölése",
+    "pagination": "Értesítési oldalak",
+    "previous": "Előző",
+    "next": "Következő",
+    "page": "{page}. oldal / {total}"
+  },
   "Settings": {
     "page": {
       "eyebrow": "Profil",
@@ -2131,7 +2165,8 @@
       "label": "Profilbeállítások szakaszai",
       "profile": "Profil",
       "security": "Biztonság és belépés",
-      "preferences": "Beállítások"
+      "preferences": "Beállítások",
+      "notifications": "Értesítések"
     },
     "profile": {
       "title": "Profil",
@@ -2180,6 +2215,67 @@
         "decimalExample": "Példa: 3 óra 23 perc így jelenik meg: 3,3833 h.",
         "hoursMinutesExample": "Példa: 3 óra 23 perc így jelenik meg: 3 ó 23 p.",
         "save": "Megjelenítés mentése"
+      }
+    },
+    "notifications": {
+      "title": "Értesítések",
+      "description": "A rendszerszintű emlékeztetők és munkafolyamatok kézbesítési módjai.",
+      "systemWide": "Ezek a beállítások minden tagra vonatkoznak, és általában 15 másodpercen belül életbe lépnek.",
+      "companyTimezone": "Céges időzóna",
+      "deliveryMethods": "Kézbesítési módok",
+      "email": "Email",
+      "inApp": "Alkalmazáson belül",
+      "save": "Értesítési beállítások mentése",
+      "hoursAsDays": "{days} nap ({hours} óra)",
+      "hoursUnit": "Eltelt órák",
+      "weekdays": {
+        "1": "Hétfő",
+        "2": "Kedd",
+        "3": "Szerda",
+        "4": "Csütörtök",
+        "5": "Péntek",
+        "6": "Szombat",
+        "7": "Vasárnap"
+      },
+      "weekly": {
+        "title": "Heti hiányzóóra-emlékeztető",
+        "description": "Az aktív hozzárendeléssel rendelkező tagokat értesíti, ha nincs rögzített idejük és inaktív hét jelölésük.",
+        "day": "Küldés napja",
+        "time": "Időpont"
+      },
+      "invoice": {
+        "title": "Számlafeltöltési emlékeztető",
+        "description": "A timesheet jóváhagyása után indul, és a számla feltöltésekor azonnal leáll.",
+        "initialDelay": "Első emlékeztető jóváhagyás után",
+        "repeat": "Ismétlési időköz",
+        "exactHours": "Az időköz pontosan eltelt órát jelent: három nap 72 óra a jóváhagyástól, hétvégén is."
+      },
+      "workflow": {
+        "title": "Munkafolyamat-értesítések",
+        "description": "Minden termékeseményhez külön választható kézbesítési mód. A hitelesítési emailek ettől függetlenek.",
+        "moreInfo": "További információ erről: {notification}"
+      },
+      "types": {
+        "TIMESHEET_SUBMITTED": "Timesheet beküldve",
+        "TIMESHEET_APPROVED": "Timesheet jóváhagyva",
+        "TIMESHEET_REJECTED": "Timesheet elutasítva",
+        "INVOICE_UPLOADED": "Számla feltöltve",
+        "INVOICE_REJECTED": "Számla elutasítva",
+        "INVOICE_ACCEPTED": "Számla elfogadva",
+        "TIMESHEET_PAID": "Kifizetés rögzítve",
+        "PAYSLIP_AVAILABLE": "Bérjegyzék elérhető",
+        "TIME_ENTRY_ADMIN_MODIFIED": "Admin módosította az időbejegyzést"
+      },
+      "typeDescriptions": {
+        "TIMESHEET_SUBMITTED": "Az aktív adminokat értesíti, amikor egy kontraktor beküld vagy újraküld egy timesheetet jóváhagyásra.",
+        "TIMESHEET_APPROVED": "A kontraktort értesíti, amikor egy admin jóváhagyja a timesheetet, és elérhetővé válik a számlázási lépés.",
+        "TIMESHEET_REJECTED": "A kontraktort értesíti, amikor egy admin elutasítja a timesheetet, és javítás szükséges.",
+        "INVOICE_UPLOADED": "Az aktív adminokat értesíti, amikor egy kontraktor eredeti, javított vagy sztornó számlát tölt fel.",
+        "INVOICE_REJECTED": "A kontraktort értesíti, amikor egy admin elutasít egy számlát, és további teendő szükséges.",
+        "INVOICE_ACCEPTED": "A kontraktort értesíti, amikor egy admin elfogadja a számlát, és az kifizetésre vár.",
+        "TIMESHEET_PAID": "A kontraktort értesíti, amikor egy admin kifizetettként rögzíti a folyamatot.",
+        "PAYSLIP_AVAILABLE": "Az alkalmazottat értesíti, amikor egy admin feltölti vagy lecseréli a bérjegyzékét.",
+        "TIME_ENTRY_ADMIN_MODIFIED": "Az érintett munkatársat értesíti, amikor egy admin véglegesen módosítja valamelyik rögzített időbejegyzését."
       }
     },
     "setupBanner": {
@@ -2503,7 +2599,8 @@
       "passkeyRenamed": "Passkey átnevezve.",
       "passkeyRemoved": "Passkey eltávolítva.",
       "totpDisabledAudited": "Authenticator kikapcsolás naplózva.",
-      "backupCodesRegeneratedAudited": "Tartalék kód generálás naplózva."
+      "backupCodesRegeneratedAudited": "Tartalék kód generálás naplózva.",
+      "notificationSettingsUpdated": "Értesítési beállítások frissítve."
     },
     "errors": {
       "avatarRequired": "Válassz profilképet.",
@@ -2523,7 +2620,9 @@
       "passkeyRemoveFailed": "Nem sikerült eltávolítani a passkey-t.",
       "totpDisableAuditFailed": "Az authenticator alkalmazás kikapcsolt, de a naplóeseményt nem sikerült rögzíteni.",
       "backupCodesAuditFailed": "A tartalék kódok újragenerálva, de a naplóeseményt nem sikerült rögzíteni.",
-      "noAuthAccount": "Ehhez a taghoz nincs kapcsolt auth fiók."
+      "noAuthAccount": "Ehhez a taghoz nincs kapcsolt auth fiók.",
+      "notificationSettingsUpdateFailed": "Nem sikerült frissíteni az értesítési beállításokat.",
+      "notificationSettingsInvalid": "Ellenőrizd az értesítési ütemezést és a kézbesítési beállításokat."
     }
   },
   "Payslips": {

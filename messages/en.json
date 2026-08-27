@@ -540,7 +540,16 @@
         "never": "Never",
         "lastWeek": "Last week",
         "twoWeeksAgo": "2 weeks ago",
-        "viewDrilldown": "View details"
+        "viewDrilldown": "View details",
+        "remind": "Send reminder",
+        "reminderSent": "Reminder sent",
+        "reminderErrors": {
+          "member_unavailable": "This member is no longer active.",
+          "not_flagged": "The member no longer needs this reminder.",
+          "delivery_disabled": "Weekly reminder delivery is disabled in notification settings.",
+          "unauthorized": "Only active admins can send reminders.",
+          "failed": "The reminder could not be sent."
+        }
       },
       "drilldown": {
         "eyebrow": "Drilldown",
@@ -1682,6 +1691,8 @@
         "member__session_revoked": "Session revoked",
         "member__timezone_updated": "Time zone updated",
         "member__updated": "Updated",
+        "notification__settings_updated": "Settings updated",
+        "notification__weekly_reminder_sent": "Weekly reminder sent",
         "payslip__deleted": "Deleted",
         "payslip__downloaded": "Downloaded",
         "payslip__previewed": "Viewed",
@@ -1742,6 +1753,7 @@
         "info_page": "Information page",
         "member": "Member",
         "member_default_rate_period": "Central rate",
+        "notification_configuration": "Notification settings",
         "passkey": "Passkey",
         "payslip": "Payslip",
         "project": "Project",
@@ -1831,6 +1843,9 @@
         },
         "typst": {
           "title": "Typst PDF renderer"
+        },
+        "notificationDispatcher": {
+          "title": "Notification dispatcher"
         }
       }
     },
@@ -1846,7 +1861,10 @@
       "emailSmtpDefaultFrom": "SMTP is configured, but AUTH_EMAIL_FROM still uses the local default sender.",
       "googleDisabled": "Google OAuth is not configured. This is acceptable only if Google sign-in is intentionally disabled for this environment.",
       "googlePartialConfig": "Google OAuth is partially configured. Client id, client secret, and allowed domains must all be present.",
-      "typstProbeFailed": "Typst could not compile the PDF probe. Report PDF exports will fail until the renderer is available."
+      "typstProbeFailed": "Typst could not compile the PDF probe. Report PDF exports will fail until the renderer is available.",
+      "notificationDispatcherNeverRun": "The in-service notification scheduler has not completed a run since the application started.",
+      "notificationDispatcherStale": "The in-service notification scheduler has not completed within the last minute.",
+      "notificationDispatcherFailed": "The latest notification dispatcher run failed."
     },
     "details": {
       "checkedAt": "Checked at",
@@ -1855,7 +1873,10 @@
       "provider": "Provider",
       "allowedDomains": "Allowed domains",
       "probeObject": "Probe object",
-      "probePdf": "PDF probe"
+      "probePdf": "PDF probe",
+      "lastRun": "Last run",
+      "jobStatus": "Job status",
+      "ageSeconds": "Age in seconds"
     },
     "duration": "{durationMs} ms",
     "missingEnv": "Missing: {names}"
@@ -2121,6 +2142,19 @@
     },
     "privacy": "This page shows only your rates. Other people’s rates are not visible."
   },
+  "NotificationsPage": {
+    "eyebrow": "Account",
+    "title": "Notifications",
+    "subtitle": "Workflow updates, reminders, and actions related to your account.",
+    "all": "All",
+    "unread": "Unread",
+    "empty": "No notifications match this view.",
+    "markAllRead": "Mark all as read",
+    "pagination": "Notification pages",
+    "previous": "Previous",
+    "next": "Next",
+    "page": "Page {page} of {total}"
+  },
   "Settings": {
     "page": {
       "eyebrow": "Profile",
@@ -2131,7 +2165,8 @@
       "label": "Profile settings sections",
       "profile": "Profile",
       "security": "Security and sign-in",
-      "preferences": "Preferences"
+      "preferences": "Preferences",
+      "notifications": "Notifications"
     },
     "profile": {
       "title": "Profile",
@@ -2180,6 +2215,67 @@
         "decimalExample": "Example: 3 hours 23 minutes appears as 3.3833 h.",
         "hoursMinutesExample": "Example: 3 hours 23 minutes appears as 3 h 23 m.",
         "save": "Save display"
+      }
+    },
+    "notifications": {
+      "title": "Notifications",
+      "description": "Configure system-wide reminders and workflow delivery methods.",
+      "systemWide": "These settings apply to every member and normally take effect within 15 seconds.",
+      "companyTimezone": "Company time zone",
+      "deliveryMethods": "Delivery methods",
+      "email": "Email",
+      "inApp": "In-app",
+      "save": "Save notification settings",
+      "hoursAsDays": "{days, plural, one {# day} other {# days}} ({hours} hours)",
+      "hoursUnit": "Elapsed hours",
+      "weekdays": {
+        "1": "Monday",
+        "2": "Tuesday",
+        "3": "Wednesday",
+        "4": "Thursday",
+        "5": "Friday",
+        "6": "Saturday",
+        "7": "Sunday"
+      },
+      "weekly": {
+        "title": "Weekly missing-hours reminder",
+        "description": "Notifies members who have an active assignment but no time and no inactive-week marker.",
+        "day": "Send on",
+        "time": "At"
+      },
+      "invoice": {
+        "title": "Invoice upload reminder",
+        "description": "Starts after timesheet approval and stops as soon as an invoice is uploaded.",
+        "initialDelay": "First reminder after approval",
+        "repeat": "Repeat interval",
+        "exactHours": "Intervals are exact elapsed hours: three days means 72 hours after approval, including weekends."
+      },
+      "workflow": {
+        "title": "Workflow notifications",
+        "description": "Choose the delivery method independently for every product event. Authentication emails are configured separately.",
+        "moreInfo": "More information about {notification}"
+      },
+      "types": {
+        "TIMESHEET_SUBMITTED": "Timesheet submitted",
+        "TIMESHEET_APPROVED": "Timesheet approved",
+        "TIMESHEET_REJECTED": "Timesheet rejected",
+        "INVOICE_UPLOADED": "Invoice uploaded",
+        "INVOICE_REJECTED": "Invoice rejected",
+        "INVOICE_ACCEPTED": "Invoice accepted",
+        "TIMESHEET_PAID": "Payment recorded",
+        "PAYSLIP_AVAILABLE": "Payslip available",
+        "TIME_ENTRY_ADMIN_MODIFIED": "Time entry changed by admin"
+      },
+      "typeDescriptions": {
+        "TIMESHEET_SUBMITTED": "Notifies active admins when a contractor submits or resubmits a timesheet for review.",
+        "TIMESHEET_APPROVED": "Notifies the contractor when an admin approves the timesheet and the invoice step becomes available.",
+        "TIMESHEET_REJECTED": "Notifies the contractor when an admin rejects the timesheet and corrections are required.",
+        "INVOICE_UPLOADED": "Notifies active admins when a contractor uploads an original, corrected, or cancellation invoice.",
+        "INVOICE_REJECTED": "Notifies the contractor when an admin rejects an invoice and further action is required.",
+        "INVOICE_ACCEPTED": "Notifies the contractor when an admin accepts the invoice and it is awaiting payment.",
+        "TIMESHEET_PAID": "Notifies the contractor when an admin records the workflow as paid.",
+        "PAYSLIP_AVAILABLE": "Notifies the employee when an admin uploads or replaces their payslip.",
+        "TIME_ENTRY_ADMIN_MODIFIED": "Notifies the affected member when an admin permanently changes one of their recorded time entries."
       }
     },
     "setupBanner": {
@@ -2503,7 +2599,8 @@
       "passkeyRenamed": "Passkey renamed.",
       "passkeyRemoved": "Passkey removed.",
       "totpDisabledAudited": "Authenticator app disablement audited.",
-      "backupCodesRegeneratedAudited": "Backup-code regeneration audited."
+      "backupCodesRegeneratedAudited": "Backup-code regeneration audited.",
+      "notificationSettingsUpdated": "Notification settings updated."
     },
     "errors": {
       "avatarRequired": "Choose a profile image.",
@@ -2523,7 +2620,9 @@
       "passkeyRemoveFailed": "Could not remove the passkey.",
       "totpDisableAuditFailed": "Authenticator app was disabled, but the audit event could not be recorded.",
       "backupCodesAuditFailed": "Backup codes were regenerated, but the audit event could not be recorded.",
-      "noAuthAccount": "No auth account is linked to this member."
+      "noAuthAccount": "No auth account is linked to this member.",
+      "notificationSettingsUpdateFailed": "Notification settings could not be updated.",
+      "notificationSettingsInvalid": "Check the notification schedule and delivery settings."
     }
   },
   "Payslips": {
