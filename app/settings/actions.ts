@@ -6,6 +6,7 @@ import { getTranslations } from "next-intl/server";
 
 import {
   requireActiveAppMemberForAction,
+  requireAdminAppMemberForAction,
   requireSecuritySettingsAppMember,
 } from "@/src/server/auth/app-access";
 import { clearSecondFactorCookie } from "@/src/server/auth/second-factor";
@@ -18,14 +19,60 @@ import {
   updateMemberTimezone,
   uploadMemberAvatar,
 } from "@/src/server/settings";
+import {
+  configurableNotificationTypes,
+  NotificationConfigurationError,
+  updateNotificationConfiguration,
+} from "@/src/server/notifications";
 import type {
   DeletePasskeyActionInput,
   MemberPreferenceActionState,
+  NotificationSettingsActionState,
   RenamePasskeyActionInput,
   SecuritySettingsActionState,
 } from "./actions.types";
 
 type SettingsActionsTranslator = Awaited<ReturnType<typeof getTranslations>>;
+
+export async function updateNotificationSettingsAction(
+  _state: NotificationSettingsActionState,
+  formData: FormData,
+): Promise<NotificationSettingsActionState> {
+  const t = await getTranslations("SettingsActions");
+
+  try {
+    const { member } = await requireAdminAppMemberForAction();
+    const requestHeaders = await headers();
+    await updateNotificationConfiguration({
+      actorMemberId: member.id,
+      value: {
+        companyTimezone: String(formData.get("companyTimezone") ?? ""),
+        weeklyWeekday: Number(formData.get("weeklyWeekday")),
+        weeklyTime: String(formData.get("weeklyTime") ?? ""),
+        invoiceInitialDelayHours: Number(formData.get("invoiceInitialDelayHours")),
+        invoiceRepeatIntervalHours: Number(formData.get("invoiceRepeatIntervalHours")),
+        rules: configurableNotificationTypes.map((type) => ({
+          type,
+          emailEnabled: formData.get(`email_${type}`) === "on",
+          inAppEnabled: formData.get(`inApp_${type}`) === "on",
+        })),
+      },
+      requestMetadata: getRequestMetadata(requestHeaders),
+    });
+    revalidatePath("/settings");
+    return { status: "success", message: t("success.notificationSettingsUpdated") };
+  } catch (error) {
+    return {
+      status: "error",
+      message:
+        error instanceof NotificationConfigurationError
+          ? t("errors.notificationSettingsInvalid")
+          : error instanceof AuthenticationError || error instanceof AuthorizationError
+            ? translateSettingsActionMessage(error.message, t)
+            : t("errors.notificationSettingsUpdateFailed"),
+    };
+  }
+}
 
 export async function uploadMemberAvatarAction(
   _state: MemberPreferenceActionState,

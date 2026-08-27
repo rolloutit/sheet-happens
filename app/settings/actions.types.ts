@@ -13,6 +13,8 @@ export type MemberPreferenceActionState =
       message: string;
     };
 
+export type NotificationSettingsActionState = MemberPreferenceActionState;
+
 export type RenamePasskeyActionInput = {
   passkeyId: string;
   name: string;
