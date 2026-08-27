@@ -50,6 +50,7 @@ import {
   type EmployeeDashboardData,
 } from "@/src/server/dashboard";
 import type { TimesheetPreviewStatus } from "@/src/server/timesheets";
+import { FlaggedReminderButton } from "./FlaggedReminderButton";
 
 export const dynamic = "force-dynamic";
 
@@ -1123,13 +1124,16 @@ function FlaggedUsersDrilldownTable({
                   ? formatRelativeLoggedDate(user.lastLoggedDate, period.weekStart, locale, t)
                   : t("admin.flagged.never")}
               </td>
-              <td className="px-5 py-4 text-right">
-                <Button asChild variant="soft" size="sm">
-                  <Link href={buildMemberProjectWeekReportHref(user, period) as Route}>
-                    <ArrowUpRight className="size-4" aria-hidden="true" />
-                    {t("admin.drilldown.openReport")}
-                  </Link>
-                </Button>
+              <td className="px-5 py-4">
+                <div className="flex justify-end gap-2">
+                  <FlaggedReminderButton memberId={user.memberId} weekStart={period.weekStart} />
+                  <Button asChild variant="soft" size="sm">
+                    <Link href={buildMemberProjectWeekReportHref(user, period) as Route}>
+                      <ArrowUpRight className="size-4" aria-hidden="true" />
+                      {t("admin.drilldown.openReport")}
+                    </Link>
+                  </Button>
+                </div>
               </td>
             </tr>
           ))}
@@ -1215,16 +1219,17 @@ function FlaggedUsersPanel({
         <div className="p-5 text-sm text-muted-foreground">{t("admin.flagged.empty")}</div>
       ) : (
         <div className="min-w-0 overflow-x-auto">
-          <div className="grid min-w-[38rem] grid-cols-[1.35fr_1.1fr_auto] gap-4 border-b border-border px-5 py-3 font-ui text-[10px] font-bold uppercase tracking-[0.12em] text-muted-foreground">
+          <div className="grid min-w-[48rem] grid-cols-[1.35fr_1.1fr_auto_auto] gap-4 border-b border-border px-5 py-3 font-ui text-[10px] font-bold uppercase tracking-[0.12em] text-muted-foreground">
             <span>{t("admin.flagged.name")}</span>
             <span>{t("admin.flagged.project")}</span>
             <span className="text-right">{t("admin.flagged.lastLogged")}</span>
+            <span className="text-right">{t("admin.drilldown.table.action")}</span>
           </div>
           {users.map((user, index) => (
             <div
               key={user.id}
               className={cn(
-                "grid min-w-[38rem] grid-cols-[1.35fr_1.1fr_auto] items-center gap-4 px-5 py-3",
+                "grid min-w-[48rem] grid-cols-[1.35fr_1.1fr_auto_auto] items-center gap-4 px-5 py-3",
                 index < users.length - 1 && "border-b border-border",
               )}
             >
@@ -1257,6 +1262,9 @@ function FlaggedUsersPanel({
                 {user.lastLoggedDate
                   ? formatRelativeLoggedDate(user.lastLoggedDate, period.weekStart, locale, t)
                   : t("admin.flagged.never")}
+              </span>
+              <span className="flex justify-end">
+                <FlaggedReminderButton memberId={user.memberId} weekStart={period.weekStart} />
               </span>
             </div>
           ))}
