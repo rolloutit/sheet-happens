@@ -12,12 +12,62 @@ model NotificationPreference {
   @@map("notification_preferences")
 }
 
+model NotificationConfiguration {
+  id                         String   @id @default("system") @db.VarChar(32)
+  companyTimezone            String   @default("Europe/Budapest") @map("company_timezone")
+  weeklyWeekday              Int      @default(5) @map("weekly_weekday")
+  weeklyTime                 String   @default("16:00") @map("weekly_time") @db.VarChar(5)
+  invoiceInitialDelayHours   Int      @default(72) @map("invoice_initial_delay_hours")
+  invoiceRepeatIntervalHours Int      @default(24) @map("invoice_repeat_interval_hours")
+  updatedByMemberId          String?  @map("updated_by_member_id") @db.Uuid
+  createdAt                  DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt                  DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  updatedBy Member? @relation("NotificationConfigurationUpdatedBy", fields: [updatedByMemberId], references: [id], onDelete: SetNull)
+
+  @@map("notification_configuration")
+}
+
+model NotificationRule {
+  type              NotificationType @id
+  emailEnabled      Boolean          @default(true) @map("email_enabled")
+  inAppEnabled      Boolean          @default(true) @map("in_app_enabled")
+  updatedByMemberId String?          @map("updated_by_member_id") @db.Uuid
+  createdAt         DateTime         @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt         DateTime         @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  updatedBy Member? @relation("NotificationRuleUpdatedBy", fields: [updatedByMemberId], references: [id], onDelete: SetNull)
+
+  @@map("notification_rules")
+}
+
+model Notification {
+  id             String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  memberId       String           @map("member_id") @db.Uuid
+  type           NotificationType
+  idempotencyKey String           @unique @map("idempotency_key")
+  actionUrl      String?          @map("action_url")
+  metadata       Json             @default("{}")
+  readAt         DateTime?        @map("read_at") @db.Timestamptz(6)
+  createdAt      DateTime         @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  member Member @relation(fields: [memberId], references: [id], onDelete: Cascade)
+
+  @@index([memberId, readAt, createdAt])
+  @@index([type, createdAt])
+  @@map("notifications")
+}
+
 model NotificationDelivery {
   id                String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   memberId          String?          @map("member_id") @db.Uuid
   email             String           @db.Citext
   type              NotificationType
   status            DeliveryStatus   @default(QUEUED)
+  idempotencyKey    String           @unique @map("idempotency_key")
+  attemptCount      Int              @default(0) @map("attempt_count")
+  nextAttemptAt     DateTime         @default(now()) @map("next_attempt_at") @db.Timestamptz(6)
+  lastAttemptAt     DateTime?        @map("last_attempt_at") @db.Timestamptz(6)
   provider          String?
   providerMessageId String?          @map("provider_message_id")
   error             String?
@@ -29,6 +79,7 @@ model NotificationDelivery {
 
   @@index([memberId, createdAt])
   @@index([status, createdAt])
+  @@index([status, nextAttemptAt])
   @@index([type, createdAt])
   @@map("notification_deliveries")
 }
