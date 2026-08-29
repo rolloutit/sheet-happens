@@ -9,11 +9,13 @@ export type NotificationScheduler = {
   stop: () => void;
 };
 
-export function createNotificationScheduler(input: {
-  run?: () => Promise<unknown>;
-  intervalMs?: number;
-  logger?: SchedulerLogger;
-} = {}): NotificationScheduler {
+export function createNotificationScheduler(
+  input: {
+    run?: () => Promise<unknown>;
+    intervalMs?: number;
+    logger?: SchedulerLogger;
+  } = {},
+): NotificationScheduler {
   const run = input.run ?? runNotificationDispatcher;
   const intervalMs = input.intervalMs ?? NOTIFICATION_SCHEDULER_INTERVAL_MS;
   const logger = input.logger ?? console;
