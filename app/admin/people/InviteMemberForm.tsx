@@ -93,7 +93,7 @@ export function InviteMemberForm({ preferenceOptions }: InviteMemberFormProps) {
         </Field>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-[minmax(10rem,1fr)_minmax(10rem,1fr)_minmax(7rem,0.75fr)_minmax(12rem,1.25fr)_minmax(6rem,0.6fr)]">
+      <div className="grid items-start gap-4 sm:grid-cols-2 xl:grid-cols-[minmax(10rem,1fr)_minmax(10rem,1fr)_minmax(7rem,0.75fr)_minmax(12rem,1.25fr)_minmax(6rem,0.6fr)]">
         <Field
           label={t("form.profile")}
           required
