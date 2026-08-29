@@ -1,6 +1,6 @@
 services:
   db:
-    image: postgres:17-alpine
+    image: postgres:18-alpine
     container_name: sheet-happens-dev-db
     environment:
       POSTGRES_DB: sheet_happens
@@ -14,7 +14,9 @@ services:
       timeout: 5s
       retries: 10
     volumes:
-      - sheet_happens_dev_db:/var/lib/postgresql/data
+      # Postgres 18+ images store data in a major-version subdirectory
+      # (PGDATA=/var/lib/postgresql/18/docker), so the mount goes one level up.
+      - sheet_happens_dev_db:/var/lib/postgresql
 
   minio:
     image: minio/minio:latest
