@@ -33,7 +33,8 @@ export type PeopleTableLabels = {
   edit?: (row: PersonTableRow) => string;
   delete?: (row: PersonTableRow) => string;
   open?: (row: PersonTableRow) => string;
-  empty?: string;
+  /** A node rather than a string so the empty directory can carry its own call to action. */
+  empty?: ReactNode;
   caption?: string;
   ariaLabel?: string;
   rowActionsLabel?: string;

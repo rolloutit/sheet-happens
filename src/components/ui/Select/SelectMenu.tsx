@@ -62,11 +62,15 @@ export function SelectMenu({
         aria-invalid={invalid || undefined}
         className={cn(controlTriggerClassName, className, triggerClassName)}
       >
-        <SelectPrimitive.Value
+        {/* Radix's `Select.Value` drops `className`, so the truncation has to live on a
+            wrapper — without it a label longer than the trigger wraps to a second line and
+            overflows the fixed `h-10` control. */}
+        <span
           className="min-w-0 flex-1 truncate text-left"
-          placeholder={placeholder}
           title={options.find((option) => option.value === currentValue)?.label}
-        />
+        >
+          <SelectPrimitive.Value placeholder={placeholder} />
+        </span>
         <SelectPrimitive.Icon asChild>
           <ChevronDown className="size-4 shrink-0 text-muted-foreground" aria-hidden="true" />
         </SelectPrimitive.Icon>

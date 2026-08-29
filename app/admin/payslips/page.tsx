@@ -1,8 +1,6 @@
 import { getLocale, getTranslations } from "next-intl/server";
 
 import { AppShell } from "@/src/components/layout/AppShell";
-import { Button } from "@/src/components/ui/Button";
-import { Field } from "@/src/components/ui/Field";
 import { SectionHead } from "@/src/components/ui/SectionHead";
 import { getPayslipMonthOptions } from "@/src/lib/payslip-month-options";
 import {
@@ -16,6 +14,7 @@ import {
   type PayslipListFilters,
 } from "@/src/server/payslips";
 import { AdminPayslipClient } from "./AdminPayslipClient";
+import { PayslipFilterBar } from "./PayslipFilterBar";
 
 export const dynamic = "force-dynamic";
 
@@ -56,52 +55,13 @@ export default async function AdminPayslipsPage({ searchParams }: AdminPayslipsP
           subtitle={t("admin.subtitle")}
         />
 
-        <form className="grid gap-3 rounded-[var(--radius-lg)] border border-border bg-card p-4 sm:grid-cols-2 lg:grid-cols-[minmax(16rem,1fr)_14rem_12rem_auto_auto] lg:items-end">
-          <Field label={t("admin.filters.search")}>
-            <input
-              name="query"
-              type="search"
-              defaultValue={result.filters.query}
-              placeholder={t("admin.filters.search")}
-              className="h-10 w-full rounded-[var(--radius-sm)] border border-input bg-background px-3 text-sm text-foreground outline-none transition focus:border-accent focus:ring-2 focus:ring-accent/20"
-            />
-          </Field>
-          <Field label={t("admin.filters.employee")}>
-            <select
-              name="employeeMemberId"
-              defaultValue={result.filters.employeeMemberId ?? ""}
-              className="h-10 w-full rounded-[var(--radius-sm)] border border-input bg-background px-3 text-sm text-foreground outline-none transition focus:border-accent focus:ring-2 focus:ring-accent/20"
-            >
-              <option value="">{t("admin.filters.allEmployees")}</option>
-              {result.employeeOptions.map((employee) => (
-                <option key={employee.id} value={employee.id}>
-                  {employee.name} ({employee.email})
-                </option>
-              ))}
-            </select>
-          </Field>
-          <Field label={t("admin.filters.month")}>
-            <select
-              name="month"
-              defaultValue={result.filters.month ?? ""}
-              className="h-10 w-full rounded-[var(--radius-sm)] border border-input bg-background px-3 text-sm text-foreground outline-none transition focus:border-accent focus:ring-2 focus:ring-accent/20"
-            >
-              <option value="">{t("admin.filters.allMonths")}</option>
-              {months.map((month) => (
-                <option key={month.value} value={month.value}>
-                  {month.label}
-                </option>
-              ))}
-            </select>
-          </Field>
-          <input type="hidden" name="page" value="1" />
-          <Button type="submit" className="h-10">
-            {t("admin.filters.apply")}
-          </Button>
-          <Button asChild type="button" variant="ghost" className="h-10">
-            <a href="/admin/payslips">{t("actions.clear")}</a>
-          </Button>
-        </form>
+        <PayslipFilterBar
+          query={result.filters.query ?? ""}
+          employeeMemberId={result.filters.employeeMemberId ?? ""}
+          month={result.filters.month ?? ""}
+          employeeOptions={result.employeeOptions}
+          monthOptions={months}
+        />
 
         <AdminPayslipClient
           rows={result.rows.map((payslip) => ({

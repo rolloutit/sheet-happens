@@ -34,6 +34,8 @@ export { DayDetailPanel } from "./DayDetailPanel";
 export type { DayDetailEntry, DayDetailPanelLabels, DayDetailPanelProps } from "./DayDetailPanel";
 export { EmptyState, emptyStateVariants } from "./EmptyState";
 export type { EmptyStateProps } from "./EmptyState";
+export { FilterChips } from "./FilterChips";
+export type { FilterChip, FilterChipsLabels, FilterChipsProps } from "./FilterChips";
 export { FlaggedUserList } from "./FlaggedUserList";
 export type {
   FlaggedUserItem,
@@ -41,6 +43,13 @@ export type {
   FlaggedUserListProps,
   FlaggedUserSeverity,
 } from "./FlaggedUserList";
+export { FormDrawer, FormDrawerBody, FormDrawerFooter, useFormDrawerClose } from "./FormDrawer";
+export type {
+  FormDrawerBodyProps,
+  FormDrawerDiscardLabels,
+  FormDrawerFooterProps,
+  FormDrawerProps,
+} from "./FormDrawer";
 export { InvoiceUploadPanel } from "./InvoiceUploadPanel";
 export type { InvoiceUploadPanelProps } from "./InvoiceUploadPanel";
 export { InfoPageEditor } from "./InfoPageEditor";

@@ -31,6 +31,7 @@ import { IconButton } from "@/src/components/ui/IconButton";
 import { Input } from "@/src/components/ui/Input";
 import { Textarea } from "@/src/components/ui/Textarea";
 import { usePickerLabels } from "@/src/i18n/picker-labels";
+import { useOverlayParam } from "@/src/lib/use-overlay-param";
 import { cn } from "@/src/lib/utils";
 import type { AdminProjectGroupRow, AdminProjectOptionRow } from "@/src/server/projects";
 import {
@@ -41,11 +42,13 @@ import {
   updateProjectGroupAction,
 } from "./actions";
 import type {
+  CreateProjectGroupActionInput,
   ProjectGroupActionState,
   ProjectGroupProjectActionState,
-  UpdateProjectGroupActionInput,
 } from "./actions.types";
 import { nativeCheckboxClassName } from "./formStyles";
+import { PROJECT_GROUP_OVERLAY_VALUE, PROJECT_OVERLAY_PARAM } from "./project-overlays";
+import { ProjectGroupCreateButton } from "./ProjectGroupCreateButton";
 import { ProjectColorSwatch } from "./ProjectColorField";
 
 export type AdminProjectGroupsPanelProps = {
@@ -74,7 +77,13 @@ export function AdminProjectGroupsPanel({ groups, projects }: AdminProjectGroups
   const [groupStateFilter, setGroupStateFilter] = useState<ProjectGroupStateFilter>("all");
   const [groupOccupancyFilter, setGroupOccupancyFilter] =
     useState<ProjectGroupOccupancyFilter>("all");
+  const [createOpen, setCreateOpen] = useOverlayParam(
+    PROJECT_OVERLAY_PARAM,
+    PROJECT_GROUP_OVERLAY_VALUE,
+  );
   const [createState, setCreateState] = useState<ProjectGroupActionState>(initialGroupState);
+  /** Results of the panel's own row actions — archiving a group has no form to report into. */
+  const [panelState, setPanelState] = useState<ProjectGroupActionState>(initialGroupState);
   const [linkState, setLinkState] =
     useState<ProjectGroupProjectActionState>(initialGroupProjectState);
   const [pendingKey, setPendingKey] = useState<string | null>(null);
@@ -142,104 +151,8 @@ export function AdminProjectGroupsPanel({ groups, projects }: AdminProjectGroups
 
   return (
     <div className="grid gap-5">
+      {panelState.message ? <ProjectGroupsMessage state={panelState} /> : null}
       {linkState.message ? <ProjectGroupsMessage state={linkState} /> : null}
-
-      <form
-        className="grid gap-4 rounded-[var(--radius-lg)] border border-border bg-background/45 p-4"
-        onSubmit={(event) => {
-          event.preventDefault();
-          const form = event.currentTarget;
-          const formData = new FormData(form);
-
-          runGroupAction(
-            "group:create",
-            () =>
-              createProjectGroupAction({
-                name: getGroupFormString(formData, "name"),
-                slug: getGroupFormString(formData, "slug"),
-                description: getGroupFormString(formData, "description"),
-                active: formData.get("active") === "true",
-              }),
-            {
-              onResult: setCreateState,
-              onSuccess: () => {
-                form.reset();
-                setCreateState(initialGroupState);
-              },
-            },
-          );
-        }}
-      >
-        <div className="grid gap-4 lg:grid-cols-[minmax(13rem,1fr)_minmax(11rem,0.7fr)]">
-          <Field
-            label={t("groupsPanel.groupName")}
-            required
-            reserveMessageSpace
-            error={createState.fieldErrors?.name}
-          >
-            {({ id, describedBy, invalid, required }) => (
-              <Input
-                id={id}
-                name="name"
-                autoComplete="off"
-                aria-describedby={describedBy}
-                invalid={invalid}
-                required={required}
-              />
-            )}
-          </Field>
-          <Field label={t("form.slug")} reserveMessageSpace error={createState.fieldErrors?.slug}>
-            {({ id, describedBy, invalid }) => (
-              <Input
-                id={id}
-                name="slug"
-                autoComplete="off"
-                aria-describedby={describedBy}
-                invalid={invalid}
-                placeholder={t("groupsPanel.generatedSlug")}
-              />
-            )}
-          </Field>
-        </div>
-
-        <div className="grid gap-4 lg:grid-cols-[1fr_auto] lg:items-end">
-          <Field
-            label={t("groupsPanel.description")}
-            reserveMessageSpace
-            error={createState.fieldErrors?.description}
-          >
-            {({ id, describedBy, invalid }) => (
-              <Input
-                id={id}
-                name="description"
-                aria-describedby={describedBy}
-                invalid={invalid}
-                placeholder={t("groupsPanel.descriptionPlaceholder")}
-              />
-            )}
-          </Field>
-          <label className="mb-6 inline-flex items-center gap-2 text-sm text-foreground">
-            <input
-              type="checkbox"
-              name="active"
-              value="true"
-              defaultChecked
-              className={nativeCheckboxClassName}
-            />
-            {t("states.active")}
-          </label>
-        </div>
-
-        {createState.status === "error" && createState.message ? (
-          <ProjectGroupsMessage state={createState} />
-        ) : null}
-
-        <div className="flex justify-end">
-          <Button type="submit" icon={FolderPlus} loading={pendingKey === "group:create"}>
-            {t("actions.createGroup")}
-          </Button>
-        </div>
-      </form>
 
       <div className="grid gap-3 rounded-[var(--radius-lg)] border border-border bg-background/45 p-4">
         <div className="grid gap-3 md:grid-cols-[minmax(14rem,1fr)_minmax(10rem,14rem)_minmax(10rem,14rem)]">
@@ -311,8 +224,9 @@ export function AdminProjectGroupsPanel({ groups, projects }: AdminProjectGroups
 
       <div className="grid gap-3">
         {groups.length === 0 ? (
-          <div className="rounded-[var(--radius-lg)] border border-border bg-card p-6 text-center text-sm text-muted-foreground">
-            {t("groupsPanel.empty")}
+          <div className="grid justify-items-center gap-4 rounded-[var(--radius-lg)] border border-border bg-card p-6 text-center text-sm text-muted-foreground">
+            <p>{t("groupsPanel.empty")}</p>
+            <ProjectGroupCreateButton />
           </div>
         ) : filteredGroups.length === 0 ? (
           <div className="rounded-[var(--radius-lg)] border border-border bg-card p-6 text-center text-sm text-muted-foreground">
@@ -353,24 +267,46 @@ export function AdminProjectGroupsPanel({ groups, projects }: AdminProjectGroups
         )}
       </div>
 
-      <ProjectGroupEditDialog
+      <ProjectGroupFormDialog
+        open={createOpen || Boolean(editingGroup)}
         group={editingGroup}
-        pending={editingGroup ? pendingKey === `${editingGroup.id}:edit` : false}
-        actionState={editState}
+        pending={
+          editingGroup ? pendingKey === `${editingGroup.id}:edit` : pendingKey === "group:create"
+        }
+        actionState={editingGroup ? editState : createState}
         onOpenChange={(open) => {
-          if (!open) {
+          if (open) return;
+
+          if (editingGroup) {
             setEditingGroup(null);
             setEditState(initialGroupState);
+            return;
           }
-        }}
-        onSubmit={(input) => {
-          if (!editingGroup) return;
 
-          runGroupAction(`${editingGroup.id}:edit`, () => updateProjectGroupAction(input), {
-            onResult: setEditState,
+          setCreateOpen(false);
+          setCreateState(initialGroupState);
+        }}
+        onSubmit={(values) => {
+          if (editingGroup) {
+            runGroupAction(
+              `${editingGroup.id}:edit`,
+              () => updateProjectGroupAction({ projectGroupId: editingGroup.id, ...values }),
+              {
+                onResult: setEditState,
+                onSuccess: () => {
+                  setEditingGroup(null);
+                  setEditState(initialGroupState);
+                },
+              },
+            );
+            return;
+          }
+
+          runGroupAction("group:create", () => createProjectGroupAction(values), {
+            onResult: setCreateState,
             onSuccess: () => {
-              setEditingGroup(null);
-              setEditState(initialGroupState);
+              setCreateOpen(false);
+              setCreateState(initialGroupState);
             },
           });
         }}
@@ -384,7 +320,7 @@ export function AdminProjectGroupsPanel({ groups, projects }: AdminProjectGroups
         }}
         onConfirm={(group) => {
           runGroupAction(`${group.id}:archive`, () => archiveProjectGroupAction(group.id), {
-            onResult: setCreateState,
+            onResult: setPanelState,
             onSuccess: () => setArchivingGroup(null),
           });
         }}
@@ -536,39 +472,48 @@ function ProjectGroupCard({
   );
 }
 
-function ProjectGroupEditDialog({
+function ProjectGroupFormDialog({
+  open,
   group,
   pending,
   actionState,
   onOpenChange,
   onSubmit,
 }: {
+  open: boolean;
+  /** `null` while open puts the dialog in create mode. */
   group: AdminProjectGroupRow | null;
   pending: boolean;
   actionState: ProjectGroupActionState;
   onOpenChange: (open: boolean) => void;
-  onSubmit: (input: UpdateProjectGroupActionInput) => void;
+  onSubmit: (values: CreateProjectGroupActionInput) => void;
 }) {
   const t = useTranslations("AdminProjects");
 
   return (
-    <Dialog open={Boolean(group)} onOpenChange={onOpenChange}>
-      {group ? (
-        <DialogContent className="max-w-2xl">
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      {open ? (
+        <DialogContent className="max-w-2xl" closeLabel={t("actions.close")}>
           <DialogHeader>
-            <DialogTitle>{t("groupsPanel.editTitle", { name: group.name })}</DialogTitle>
-            <DialogDescription>{t("groupsPanel.editDescription")}</DialogDescription>
+            <DialogTitle>
+              {group
+                ? t("groupsPanel.editTitle", { name: group.name })
+                : t("groupsPanel.createTitle")}
+            </DialogTitle>
+            <DialogDescription>
+              {group ? t("groupsPanel.editDescription") : t("groupsPanel.createDescription")}
+            </DialogDescription>
           </DialogHeader>
 
           <form
-            key={group.id}
+            // Remounts between create and edit so the uncontrolled defaults reload.
+            key={group?.id ?? "create"}
             className="grid gap-5"
             onSubmit={(event) => {
               event.preventDefault();
               const formData = new FormData(event.currentTarget);
 
               onSubmit({
-                projectGroupId: group.id,
                 name: getGroupFormString(formData, "name"),
                 slug: getGroupFormString(formData, "slug"),
                 description: getGroupFormString(formData, "description"),
@@ -576,7 +521,7 @@ function ProjectGroupEditDialog({
               });
             }}
           >
-            <div className="grid gap-4 md:grid-cols-2">
+            <div className="grid items-start gap-4 md:grid-cols-2">
               <Field
                 label={t("groupsPanel.groupName")}
                 required
@@ -587,7 +532,7 @@ function ProjectGroupEditDialog({
                   <Input
                     id={id}
                     name="name"
-                    defaultValue={group.name}
+                    defaultValue={group?.name ?? ""}
                     autoComplete="off"
                     aria-describedby={describedBy}
                     invalid={invalid}
@@ -597,6 +542,7 @@ function ProjectGroupEditDialog({
               </Field>
               <Field
                 label={t("form.slug")}
+                hint={group ? undefined : t("groupsPanel.generatedSlug")}
                 reserveMessageSpace
                 error={actionState.fieldErrors?.slug}
               >
@@ -604,7 +550,7 @@ function ProjectGroupEditDialog({
                   <Input
                     id={id}
                     name="slug"
-                    defaultValue={group.slug}
+                    defaultValue={group?.slug ?? ""}
                     autoComplete="off"
                     aria-describedby={describedBy}
                     invalid={invalid}
@@ -622,7 +568,8 @@ function ProjectGroupEditDialog({
                 <Textarea
                   id={id}
                   name="description"
-                  defaultValue={group.description ?? ""}
+                  defaultValue={group?.description ?? ""}
+                  placeholder={t("groupsPanel.descriptionPlaceholder")}
                   aria-describedby={describedBy}
                   invalid={invalid}
                 />
@@ -634,7 +581,7 @@ function ProjectGroupEditDialog({
                 type="checkbox"
                 name="active"
                 value="true"
-                defaultChecked={group.active}
+                defaultChecked={group?.active ?? true}
                 className={nativeCheckboxClassName}
               />
               {t("states.active")}
@@ -650,8 +597,8 @@ function ProjectGroupEditDialog({
                   {t("actions.cancel")}
                 </Button>
               </DialogClose>
-              <Button type="submit" icon={Save} loading={pending}>
-                {t("actions.saveGroup")}
+              <Button type="submit" icon={group ? Save : FolderPlus} loading={pending}>
+                {group ? t("actions.saveGroup") : t("actions.createGroup")}
               </Button>
             </DialogFooter>
           </form>

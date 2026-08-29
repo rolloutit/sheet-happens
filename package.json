@@ -18,7 +18,6 @@
     "db:dev": "node scripts/dev-db.mjs",
     "db:dev:reset": "node scripts/dev-db.mjs reset",
     "db:dev:seed": "node scripts/dev-db.mjs seed",
-    "db:dev:seed:reports-demo": "node scripts/seed-reports-demo.mjs",
     "db:dev:stop": "node scripts/dev-db.mjs stop",
     "db:generate": "prisma generate",
     "db:migrate:deploy": "prisma migrate deploy",

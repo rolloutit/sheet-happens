@@ -833,17 +833,7 @@
       "accepted": "Accepted",
       "paid": "Paid"
     },
-    "stats": {
-      "matching": "Matching",
-      "matchingCaption": "Timesheets matching the current filters.",
-      "page": "Current page",
-      "pageCaption": "Visible range on this page.",
-      "pageSize": "Page size",
-      "pageSizeCaption": "Rows loaded per page."
-    },
     "filters": {
-      "title": "Filters",
-      "description": "Search by contractor name or email, then narrow by status, contractor, project, or month.",
       "search": "Search",
       "searchPlaceholder": "Name or email...",
       "status": "Status",
@@ -855,7 +845,9 @@
       "month": "Month",
       "allMonths": "All months",
       "apply": "Apply filters",
-      "clear": "Clear"
+      "clear": "Clear",
+      "active": "Active filters",
+      "removeFilter": "Remove filter: {filter}"
     },
     "list": {
       "title": "Submitted timesheets",
@@ -1074,11 +1066,12 @@
     },
     "invite": {
       "title": "Invite member",
-      "description": "Send an invitation link and create the member profile used across the app."
-    },
-    "directory": {
-      "title": "Member directory",
-      "description": "Manage invited, active, inactive, and archived members."
+      "description": "Send an invitation link and create the member profile used across the app.",
+      "detailsTitle": "Member details",
+      "emailHint": "The invitation link is sent here.",
+      "defaultsTitle": "Role and defaults",
+      "defaultsHint": "Pre-filled with the usual team settings. Change these only when this person differs.",
+      "inviteAnother": "Invite another after sending"
     },
     "filters": {
       "search": "Search",
@@ -1091,7 +1084,9 @@
       "allProfiles": "All profiles",
       "showing": "Showing {start}-{end} of {total} members",
       "apply": "Apply filters",
-      "clear": "Clear"
+      "clear": "Clear",
+      "active": "Active filters",
+      "removeFilter": "Remove filter: {filter}"
     },
     "pager": {
       "navigation": "People pages",
@@ -1147,6 +1142,8 @@
       }
     },
     "actions": {
+      "inviteMember": "Invite member",
+      "close": "Close",
       "sendInvitation": "Send invitation",
       "openFor": "Open actions for {name}",
       "menuLabel": "Actions",
@@ -1190,6 +1187,12 @@
       "effectiveDate": "Effective date",
       "reason": "Reason",
       "reasonHint": "Add a reason for this profile change."
+    },
+    "discardDialog": {
+      "title": "Discard this invitation?",
+      "description": "The details you filled in will not be saved.",
+      "confirm": "Discard",
+      "cancel": "Keep editing"
     }
   },
   "AdminPeopleActions": {
@@ -1256,7 +1259,11 @@
     },
     "create": {
       "title": "Create project",
-      "description": "Projects are the work targets used for assignments and time entries."
+      "description": "Projects are the work targets used for assignments and time entries.",
+      "detailsTitle": "Project details",
+      "timelineTitle": "Timeline and notes",
+      "timelineHint": "Optional. Leave the dates empty for a project with no fixed end.",
+      "createAnother": "Create another after saving"
     },
     "directory": {
       "title": "Project directory",
@@ -1308,7 +1315,14 @@
       "unassigned": "Unassigned today",
       "showing": "Showing {start}-{end} of {total} projects",
       "apply": "Apply filters",
-      "clear": "Clear"
+      "clear": "Clear",
+      "active": "Active filters",
+      "removeFilter": "Remove filter: {filter}",
+      "allStates": "All states",
+      "allTypes": "All types",
+      "allTimelines": "Any timeline",
+      "allGroups": "All groups",
+      "allAssignments": "Any assignment"
     },
     "pager": {
       "navigation": "Project pages",
@@ -1362,9 +1376,14 @@
         "withProjects": "With projects",
         "empty": "Empty",
         "showing": "Showing {count} of {total} groups"
-      }
+      },
+      "createTitle": "Create project group",
+      "createDescription": "Groups organize projects for filtering and reporting. They do not change assignments or billing."
     },
     "actions": {
+      "newProject": "New project",
+      "newGroup": "New group",
+      "close": "Close",
       "createProject": "Create project",
       "createGroup": "Create group",
       "addProject": "Add project",
@@ -1453,6 +1472,12 @@
       "scheduledOverride": "Scheduled override",
       "scheduledOverrideDetail": "{count, plural, one {# override period scheduled.} other {# override periods scheduled.}}",
       "contractorCentralRate": "Contractor assignment currently uses the member central rate."
+    },
+    "discardDialog": {
+      "title": "Discard this project?",
+      "description": "The details you filled in will not be saved.",
+      "confirm": "Discard",
+      "cancel": "Keep editing"
     }
   },
   "AdminProjectsActions": {
@@ -2671,13 +2696,14 @@
       "title": "Payslips",
       "subtitle": "Upload and manage monthly payslips by employee. Payroll is not calculated in Sheet Happens.",
       "filters": {
-        "title": "Filters",
         "employee": "Employee",
         "allEmployees": "All employees",
         "month": "Month",
         "allMonths": "All months",
         "search": "Search name or email",
-        "apply": "Apply filters"
+        "apply": "Apply filters",
+        "active": "Active filters",
+        "removeFilter": "Remove filter: {filter}"
       },
       "overview": {
         "title": "Month overview",
