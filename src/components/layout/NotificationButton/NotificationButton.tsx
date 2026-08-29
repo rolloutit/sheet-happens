@@ -55,10 +55,9 @@ export function NotificationButton({
 
     const loadNotifications = async () => {
       try {
-        const response = await fetch(
-          `/api/notifications?locale=${encodeURIComponent(locale)}`,
-          { cache: "no-store" },
-        );
+        const response = await fetch(`/api/notifications?locale=${encodeURIComponent(locale)}`, {
+          cache: "no-store",
+        });
         const data = response.ok
           ? ((await response.json()) as {
               notifications?: NonNullable<NotificationButtonProps["notifications"]>;

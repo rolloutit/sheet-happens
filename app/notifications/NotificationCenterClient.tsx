@@ -31,9 +31,7 @@ export function NotificationCenterClient({
         body: JSON.stringify({ all: true }),
       });
       if (!response.ok) return;
-      setItems((current) =>
-        unreadOnly ? [] : current.map((item) => ({ ...item, read: true })),
-      );
+      setItems((current) => (unreadOnly ? [] : current.map((item) => ({ ...item, read: true }))));
       router.refresh();
     });
   }

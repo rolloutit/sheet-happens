@@ -87,7 +87,8 @@ export function EmployeePayslipList({
     router.push(`/payslips${params.size > 0 ? `?${params.toString()}` : ""}` as Route);
   }
 
-  const filtersActive = filters.year !== null || filters.sort !== "newest" || filters.pageSize !== 12;
+  const filtersActive =
+    filters.year !== null || filters.sort !== "newest" || filters.pageSize !== 12;
   const showHistory = history.length > 0 || pagination.totalItems > 0 || filtersActive;
 
   return (

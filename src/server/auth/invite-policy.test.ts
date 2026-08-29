@@ -1,10 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 
-import {
-  canCreateAuthUser,
-  canCreateInvitationSession,
-  canSendAuthLink,
-} from "./invite-policy";
+import { canCreateAuthUser, canCreateInvitationSession, canSendAuthLink } from "./invite-policy";
 
 type TestMember = {
   authUserId: string | null;
