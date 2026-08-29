@@ -291,7 +291,9 @@ export function AppShell({
           <a
             href="/help"
             className={cn(
-              "flex items-center gap-3 rounded-[var(--radius-md)] px-3 py-2 text-sm font-medium text-subtle-foreground transition hover:bg-secondary hover:text-foreground aria-[current=page]:bg-accent-soft aria-[current=page]:font-semibold aria-[current=page]:text-accent",
+              // Same active treatment as the main rail above, minus the rail itself — this row
+              // sits in the footer group and has no gutter to hang one in.
+              "flex items-center gap-3 rounded-[var(--radius-md)] px-3 py-2 text-sm font-medium text-subtle-foreground transition hover:bg-secondary hover:text-foreground aria-[current=page]:bg-accent-soft aria-[current=page]:font-semibold aria-[current=page]:text-accent aria-[current=page]:shadow-[inset_0_0_0_1px_var(--accent-line)]",
               isCollapsed && "justify-center px-0",
             )}
             aria-current={current === "help" ? "page" : undefined}
@@ -613,14 +615,29 @@ function NavGroup({
                 onNavigate?.(item.id);
               }}
               className={cn(
-                "relative flex items-center gap-3 rounded-[var(--radius-md)] px-3 py-2.5 text-sm font-medium text-subtle-foreground transition hover:bg-secondary hover:text-foreground aria-[current=page]:bg-accent-soft aria-[current=page]:font-semibold aria-[current=page]:text-accent",
+                // The active row is the one piece of permanent mint on the screen, so it is worth
+                // lighting properly: the tint carries a hairline of its own hue and the label
+                // takes a soft glow, which is what separates "selected" from "hovered" at a
+                // glance in a list where every row is the same shape.
+                //
+                // The label glow is dark-only. It is a blur of `--accent` behind text of
+                // `--accent`, which on a near-black ground is light spilling off a bright glyph —
+                // and on a pale cyan tint is a dark smudge behind a dark glyph. Light does not
+                // need a substitute: the tint sits ΔE 0.057 off the sidebar, the hairline reads at
+                // 1.86, and the rail is 4.95:1 against its ground, so "selected" is already
+                // unmistakable there.
+                "relative flex items-center gap-3 rounded-[var(--radius-md)] px-3 py-2.5 text-sm font-medium text-subtle-foreground transition hover:bg-secondary hover:text-foreground aria-[current=page]:bg-accent-soft aria-[current=page]:font-semibold aria-[current=page]:text-accent aria-[current=page]:shadow-[inset_0_0_0_1px_var(--accent-line)] dark:aria-[current=page]:[text-shadow:0_0_18px_color-mix(in_srgb,var(--accent)_55%,transparent)]",
                 collapsed && "justify-center px-0",
               )}
               aria-label={collapsed ? t(item.labelKey) : undefined}
               title={collapsed ? t(item.labelKey) : undefined}
             >
               {active ? (
-                <span className="absolute -left-2 top-1/2 h-5 w-0.5 -translate-y-1/2 rounded-full bg-[linear-gradient(180deg,var(--accent),var(--primary))]" />
+                // 2px wide rather than 0.5, and lit — at w-0.5 with no glow the rail was a hairline
+                // the eye never found, so the tint was doing all the work on its own. The bloom is
+                // dark-only for the same reason as the label glow above; in light the rail is a
+                // dark stroke on a pale surface and already carries itself at 4.95:1.
+                <span className="absolute -left-2 top-1/2 h-6 w-[3px] -translate-y-1/2 rounded-full bg-[linear-gradient(180deg,var(--accent),var(--primary))] dark:shadow-[0_0_12px_0_color-mix(in_srgb,var(--accent)_70%,transparent)]" />
               ) : null}
               <item.icon className="size-[19px]" aria-hidden="true" />
               {!collapsed ? t(item.labelKey) : null}

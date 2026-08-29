@@ -86,3 +86,20 @@ export const DataDrivenAdmin: Story = {
     await expect(args.onRemindFlaggedUsers).toHaveBeenCalledWith(["balazs"]);
   },
 };
+
+/**
+ * The same dashboard in the light theme — its own export because the meta pins `theme: "dark"` and
+ * a story-level global outranks the toolbar and the URL alike.
+ *
+ * No `play`: the interactions are asserted once on `DataDrivenAdmin` and re-running them here would
+ * buy nothing. This story exists for the pixels, and it is where most of the theme-dependent
+ * treatments meet — the hero's mesh, both stat-card tones with their corner glows and sparklines,
+ * the flagged-user severities, and the distribution meter's three signal fills.
+ */
+export const DataDrivenAdminLight: Story = {
+  args: DataDrivenAdmin.args,
+  globals: {
+    theme: "light",
+    locale: "hu",
+  },
+};

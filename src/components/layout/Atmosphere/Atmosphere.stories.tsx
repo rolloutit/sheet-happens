@@ -13,7 +13,9 @@ const meta = {
           "The decorative brand layer `AppShell` and `AuthShell` render behind their content: " +
           "the styleguide's blob silhouettes as gradient-lit glows with outline echoes, a wave " +
           "ridge, a line-art swoosh, a gutter dot lattice, and the grain that keeps the aurora " +
-          "from banding. Dark-only — in the light theme both layers render nothing.",
+          "from banding. Both themes: the geometry is shared and only the `--atmo-*` values " +
+          "differ, so dark reads the shapes as light and light reads them as printed ink. Only " +
+          "the grain is dark-only — banding is a near-black artifact.",
       },
     },
   },

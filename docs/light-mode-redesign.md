@@ -1,7 +1,11 @@
 # Light Mode Redesign — "Ivory Ledger"
 
-Status: **proposal** (docs/light-mode-redesign, 2026-08). Not implemented; no token or component
-changes ship with this document. It is the light-theme counterpart of
+Status: **§1–§11 are the proposal; §12 is what shipped.** The proposal was written before the dark
+relight (`docs/dark-mode-redesign.md` §12) and parts of it did not survive contact with that pass or
+with the measurements — §12 records what was adopted, what was revised, and why, with the computed
+tables. Read §12 first if you want the current state; §1–§11 remain as the reasoning that led there.
+
+It is the light-theme counterpart of
 `docs/dark-mode-redesign.md` ("Graphite Aurora") and builds on everything that redesign shipped —
 the cross-theme signal hues, the theme-stable chart ramp and inks, the single-elevation
 discipline, the opaque-surface rule, and the `Atmosphere` component with its motion constraints.
@@ -638,3 +642,272 @@ body-text targets around Lc 75–90 — since the tertiary tier sits at 4.51 by 
 - [APCA in a Nutshell](https://git.apcacontrast.com/documentation/APCA_in_a_Nutshell.html) ·
   [Why APCA?](https://git.apcacontrast.com/documentation/WhyAPCA) — polarity-aware contrast; §10's
   second-opinion gate.
+
+---
+
+## 12. The relight pass (2026-08)
+
+Status: **implemented**. The brief was the light-side mirror of dark's: keep the palette's identity
+(warm cream canvas, deep teal primary, peach CTA, near-black-teal ink), keep the same radii, type
+tokens, brand silhouettes and variant APIs, and make the result vibrant, modern and alive without
+regressing dark.
+
+Every number below was computed, not estimated, with a scratch OKLab/OKLCH + WCAG + alpha-compositing
+library. The library was validated by reproducing dark §12.3's three published stacked ratios
+(4.94 / 4.95 / 5.58) to two decimals before any light value was derived from it.
+
+### 12.1 What was actually wrong
+
+**a) The third text tier failed WCAG on every surface it touched.** `--text-subtle` `#8a938f`
+carried table headers, placeholders and sidebar nav labels — running text:
+
+| `#8a938f` on | white    | `--background` | `--secondary` | `--muted` | canvas   |
+| ------------ | -------- | -------------- | ------------- | --------- | -------- |
+| contrast     | **3.16** | **3.03**       | **2.91**      | **2.70**  | **2.67** |
+
+**b) The whole warning family failed.** `#b07a1e` scored 3.72 on white falling to 3.15 on the
+canvas, its own soft at 3.26, and `--warning-foreground` `#fff8e7` on the fill at **3.51**. Its hue
+sat at 75.0°, 10° off dark's amber — the one family that escaped the cross-theme alignment was also
+the only one that failed contrast.
+
+**c) A white card had almost nothing to sit on, and in one corner nothing at all.** `--card` is
+`#ffffff` and `--background` `#fdfaf4`, i.e. ΔL 0.014 and a 1.04 ratio; card-over-void was 0.057 L
+against dark's 0.109. Worse, `--atmo-mint` held the literal value **`#ffffff` at full alpha** inside
+`radial-gradient(1150px 700px at 100% -8%, …)`, so in the top-right corner of every page the canvas
+_was_ white — card-over-canvas 1.00, with a `--border` hairline at 1.26 as the only evidence a panel
+existed. This is light's exact equivalent of dark's "a card sat 0.036 L above the canvas and every
+panel dissolved into its ground".
+
+**d) The ink was three different pens.** `--foreground` 215.4°, `--muted-foreground` 232.6°,
+`--text-subtle` 167.6° — a 64.9° hue spread across three tiers of one ladder, plus a scrim at 186.3°
+and a skeleton at 215.4°.
+
+**e) Seven surface tokens resolved to four planes.** `--sidebar` = `--card` = white, `--secondary` =
+`--surface-inset`, and `--muted` sat ΔL 0.003 from `--canvas-base`.
+
+**f) The tints camouflaged, and the two warm ones camouflaged worst.** Minimum ΔE across the
+surfaces each can land on: accent 0.028, success 0.031, warning 0.023, danger 0.020 — against dark's
+tint band of 0.118–0.146. Warning's hue (85.4°) sat _inside_ the chassis's own 76–85° band.
+
+**g) The brand layer did not exist**, and **h) `--elevation-glow` was the invisible glow** — light
+still held `0 10px 26px -12px var(--accent-line)`, the exact value dark §12.2 move 4 was written to
+kill.
+
+### 12.2 The four moves
+
+**1. Widen the ladder — downward.** Dark pulled its ramp apart upward. Light cannot: `--card` is
+already white. So the void drops to beige-700 and the whole chassis snaps onto real brand steps.
+
+|     | void      | muted     | inset     | secondary | base      | card      | card−void |
+| --- | --------- | --------- | --------- | --------- | --------- | --------- | --------- |
+| was | `#f4ebdd` | `#f4ece1` | `#faf5ee` | `#faf5ee` | `#fdfaf4` | `#ffffff` | 0.057     |
+| now | `#efe5db` | `#f4ece3` | `#f8f2eb` | `#faf6f1` | `#fdfaf4` | `#ffffff` | **0.073** |
+
+Six tokens, six distinct planes, chroma falling monotonically (0.0173 → 0) as the surface lifts.
+beige-800 was tested and rejected: at relative luminance 0.7166 it sits below the text floor in
+§12.3.
+
+**2. Elevation is the hairline and the shadow, because it cannot be a lightness step.**
+`--border` moves to beige-800 — 1.37 against the card, the same weight class as dark's
+`--border-strong` composite (1.56), where `#ece4d8` gave 1.26 and the card's own shadow ring gave
+1.09. Both `--elevation-pop` layers strengthen (ring 0.05 → 0.07, cast 0.22 → 0.26); the ink stays
+brand mint-900, which is the styleguide's own `--shadow-1..3` recipe.
+
+**3. Spend the budget on chroma — but the ends of the ladder swap.** Dark's rule is that at a
+luminance _ceiling_ the pale end returns almost no colour, so draw from the saturated middle. Light's
+resource is luminance _displacement_, and a source far from the ground's own luminance displaces it
+fast and is therefore rationed to a low alpha:
+
+| source over the void            | max alpha in budget | C returned | hue        |
+| ------------------------------- | ------------------- | ---------- | ---------- |
+| mint-700 `#1F7475` (deep)       | 0.06                | 0.0138     | 93.0°      |
+| mint-300 `#29C6C6` (mid)        | 0.14                | 0.0185     | 155.8°     |
+| **mint-200 `#84F4F4` (bright)** | **1.00**            | **0.1023** | **195.5°** |
+
+The deep end is light's khaki: subtracting luminance from a warm cream drags the result toward the
+chassis hue, not toward the source's. So the washes come from the bright end here — the exact
+opposite instruction to dark's, reached by the same argument.
+
+**4. Translate the glows instead of transplanting them.** A glow is emitted light; on paper the same
+shape is a smudge. Every coloured bloom in the shared components now has a light form that is a
+_directional coloured shadow_ — the element tints the page beneath it rather than lighting the room
+around it — with the omnidirectional version behind `dark:`. Still two elevations, still keyed to the
+control's own family.
+
+### 12.3 The constraint that shapes the atmosphere — and it is two-sided
+
+Dark has one bound. Light has two, because its atmosphere can move the ground in both directions and
+each direction breaks something different:
+
+| bound       | value                | what it protects                       | what binds it                  |
+| ----------- | -------------------- | -------------------------------------- | ------------------------------ |
+| **floor**   | rel lum ≥ **0.5390** | dark text sitting on the canvas        | `--muted-foreground`, at 4.5:1 |
+| **ceiling** | rel lum ≤ **0.9406** | the white card that sits on the canvas | card-over-ground at 1.06:1     |
+
+**Tier 2 binds the floor**, not tier 1 and not tier 3. `AuthForm` renders its heading in
+`--foreground` and everything else — description, field labels, the ghost button — in
+`--muted-foreground`, directly on the canvas; tier 1 is far more forgiving, and tier 3 never lands on
+the canvas at all (§12.4). The ceiling is not a text bound at all, which is the part with no
+counterpart in dark: `--card` cannot go lighter, so every step the canvas takes toward white is a
+step of card separation destroyed. That bound is what the shipped `#ffffff` aurora violated outright.
+
+The stacking model is dark's, made explicit: **any two overlapping _area_ layers** must land inside
+the band. Thin strokes are excluded — dark spells this out for the dot lattice (~0.14% coverage,
+masked out of the content area) and leaves it implicit for the echo lines, whose own three-layer case
+in dark scores 2.67. Light checks all three pairs:
+
+| stacked pair (over the void) | composite | rel lum | tier 2 | card:ground |
+| ---------------------------- | --------- | ------- | ------ | ----------- |
+| aurora + blob, mint          | `#a6e6e1` | 0.7014  | 5.74   | 1.40        |
+| aurora + echo line, mint     | `#9ed3ce` | 0.5831  | 4.84   | 1.66        |
+| blob + its own echo, mint    | `#a8c9c2` | 0.5399  | 4.51   | 1.78        |
+| aurora + blob, peach         | `#f8cb9c` | 0.6507  | 5.35   | 1.50        |
+| aurora + echo line, peach    | `#f9bc7e` | 0.5761  | 4.78   | 1.68        |
+| blob + its own echo, peach   | `#f7ba7b` | 0.5632  | 4.69   | 1.71        |
+
+**Fills bloom, lines stay crisp — costed the other way round.** In dark the wave became line-art
+because a large soft warm mass is a camouflage blotch. In light the division of labour survives but
+the price does not: the 40px blur destroys the fill's form, so the _fill buys colour_ and the _line
+buys shape_ — and the line is the only layer drawn from the deep end, because a visible line simply
+_is_ a luminance difference and that cost cannot be optimised away. The echo lines therefore take the
+budget the washes give up, landing at 1.31 against the void.
+
+### 12.4 The rule that makes a third text tier possible
+
+> **Only tiers 1 and 2 may sit directly on the canvas. Tier 3 always sits on an opaque surface.**
+
+This is not a convenience. Require tier 3 to clear 4.5:1 on the void as well and it collapses into
+tier 2 — searched that way the two land ΔL 0.026 apart (ΔE 0.028), which is not a ladder, it is one
+colour printed twice. Excluding the void buys the third step ΔL 0.088. Verified against every tier-3
+call site in the codebase: `Input`/`Textarea`/`PasswordInput` placeholders and the sidebar/drawer nav
+labels on `--surface-inset` (4.97), `Table`'s `<thead>` and the command-palette input on the card
+(5.53), nav hover on `--secondary` (5.14), `AuthForm`'s placeholder on the card. None renders on the
+canvas.
+
+The ladder is rebuilt at `--foreground`'s own hue rather than replaced — see the deviations below:
+
+| tier                 | hex       | L     | C      | H      | card  | base  | secondary | inset | muted | APCA/white |
+| -------------------- | --------- | ----- | ------ | ------ | ----- | ----- | --------- | ----- | ----- | ---------- |
+| `--foreground`       | `#0a2930` | 0.262 | 0.0379 | 215.4° | 15.30 | 14.68 | 14.22     | 13.76 | 13.08 | 102.1      |
+| `--muted-foreground` | `#3d545b` | 0.430 | 0.0303 | 218.5° | 8.02  | 7.70  | 7.46      | 7.22  | 6.86  | 87.8       |
+| `--text-subtle`      | `#5d6b6f` | 0.517 | 0.0181 | 216.8° | 5.53  | 5.31  | 5.14      | 4.97  | 4.73  | 77.6       |
+
+Hue spread 3.1°, against 64.9° before. On the canvas: tier 1 12.31, tier 2 6.46. Dark's own ladder on
+its raised surface is 14.26 / 7.75 / 5.77, so light's 15.30 / 8.02 / 5.53 is deliberately the same
+shape.
+
+### 12.5 Signals, tints, and a second rose step after all
+
+Hues are dark's to within hex rounding (196.2° / 153.0° / 64.7° / 14.5°). What is re-derived is
+lightness and chroma, because a saturated colour on white must be darker to stay legible. Each family
+spends **the same fraction of the sRGB gamut ceiling its dark counterpart spends** — that is what
+makes them feel equally saturated rather than merely equally named — with the spread then **capped at
+1.9× the least-saturated**, which is `--primary`, fixed by the brand at C 0.0776. That cap is the
+chart ramp's rule applied to chrome: uncapped, danger lands at C 0.223, 2.9× the accent, shouting
+beside a whispering teal in the same status column.
+
+| family        | was       | now       | L     | C      | card | base | secondary | inset | muted | own tint |
+| ------------- | --------- | --------- | ----- | ------ | ---- | ---- | --------- | ----- | ----- | -------- |
+| accent (text) | `#1f7475` | `#196869` | 0.473 | 0.0726 | 6.51 | 6.25 | 6.05      | 5.86  | 5.57  | 5.95     |
+| primary(fill) | `#1f7475` | `#1f7475` | 0.511 | 0.0776 | 5.51 | 5.29 | 5.12      | 4.95  | 4.71  | 5.04     |
+| success       | `#247f48` | `#2e794a` | 0.516 | 0.1052 | 5.32 | 5.10 | 4.94      | 4.78  | 4.55  | 4.89     |
+| warning       | `#b07a1e` | `#995e18` | 0.536 | 0.1107 | 5.29 | 5.08 | 4.92      | 4.76  | 4.52  | 4.53     |
+| destructive   | `#be3c52` | `#b64455` | 0.547 | 0.1477 | 5.32 | 5.11 | 4.94      | 4.79  | 4.55  | 4.54     |
+
+**`--accent` becomes mint-800, a genuinely different step from `--primary`.** Two things needed it.
+`Button variant="primary"` is `linear-gradient(135deg, var(--primary), var(--accent))`, which in
+light was a gradient between one colour and itself — a flat fill where dark has a lit one. And
+`--accent` is the _text_ step (`text-accent`, `border-accent`, checked checkboxes), which in this
+polarity wants to be darker than the fill, not lighter. It is the exact mirror of dark's pair, where
+`--accent` `#84f4f4` is the lighter step above `--primary` `#29c6c6`.
+
+**Tints.** Solid pastels get their own derivation, not a per-tone alpha. §4.1 concluded from the warm
+pair that all four were gamut-stuck; that is **half right**. Near white the ceiling at 196°/153° is
+0.075/0.081 against 0.033/0.025 at 66°/15°, so letting the cool tints darken buys them separation the
+warm ones can never have. Pushed to their own maxima the four span 6.8× — not a set — so they are
+held to a common band instead:
+
+| tint                 | was       | now       | ΔE card | ΔE base | ΔE secondary | ΔE inset | ΔE muted |
+| -------------------- | --------- | --------- | ------- | ------- | ------------ | -------- | -------- |
+| `--accent-soft`      | `#e4f7f6` | `#cdfefe` | 0.0618  | 0.0580  | 0.0556       | 0.0569   | 0.0618   |
+| `--success-soft`     | `#e5faea` | `#dbfee3` | 0.0619  | 0.0527  | 0.0510       | 0.0503   | 0.0540   |
+| `--warning-soft`     | `#fbefd6` | `#feead7` | 0.0617  | 0.0454  | 0.0370       | 0.0272   | 0.0187   |
+| `--destructive-soft` | `#fee8e9` | `#fee8e8` | 0.0567  | 0.0432  | 0.0334       | 0.0249   | 0.0194   |
+
+`--muted` is the honest exception: a warm pastel cannot move far from a warm chassis, and warning and
+danger sit at ΔE 0.019 from beige-600 with no value able to fix it. This is why the 45% same-hue
+border on `StatusPill`, `Card` and `Button` is **mandatory** in light rather than decorative — it
+composites to 1.82–1.88 against its own tint.
+
+**`--destructive-bright` is a real token in light now, and the old note was wrong about why it was
+not.** The alias was checked against the tint (4.54, fine) and never against the other ground this
+token labels: `Button variant="danger"` hovers to `bg-destructive/30`, and under the alias the label
+and the wash are the same colour, so every point of alpha eats contrast directly — **3.42** on a
+card, 3.02 over `--muted`. The token's job is "the rose that labels a rose ground"; in dark that
+ground is dark so the step is lighter, in light the ground is light so the step is **deeper**. Same
+role, mirrored, exactly like the `--accent`/`--primary` pair. `#8a323f` — same hue, same 68% of the
+gamut ceiling, ΔL 0.100 below `--destructive` (dark's pair is ΔL 0.064 the other way). It clears 6.87
+on the tint and 4.57 on the darkest hover wash it can meet.
+
+### 12.6 What was adopted from §1–§11, what was revised
+
+**Adopted:** the thesis that light is the brand kit's native medium and the shapes go back to being
+ink (§5); the brand Beige ramp as the chassis (§3.1); the receding sidebar (§9.2); the darker amber
+(§9.3); app-wide atmosphere reach (§9.4); beige-800 hairlines (§9.5); `--cta-foreground` →
+`var(--ink-amber)` and `--cta-hover` → amber-700 (§4); the mandatory pill border (§4.1); "only tiers
+1–2 on the canvas" (§5.1); no grain in light (§5, Layer 4); no chart-ramp override (§7).
+
+**Revised, with the reason:**
+
+1. **Cool graphite ink → the teal ladder stays.** §3.2 proposed replacing `--foreground` with a
+   graphite ladder at H 265° and parked it as open decision #1. The brief settles it the other way:
+   near-black-teal ink is named as part of the light identity to keep. The diagnosis in §1d was never
+   "the ink is the wrong colour" but "there are three different inks", and that is fixed by deriving
+   tiers 2 and 3 at ink-800's own hue — 64.9° of spread down to 3.1° — without touching the brand
+   anchor.
+2. **The void separates from `--muted`.** §3.1 set both to beige-600, which regularises the values
+   onto brand steps but does not widen the ladder at all (card-over-void 0.053, marginally _flatter_
+   than the 0.057 it replaced). Splitting them lets the void drop to beige-700 for card separation
+   while `--muted` stays light enough for a third text tier to exist. The proposal predates dark's
+   "pull the ladder apart" finding.
+3. **`--surface-inset` is beige-500, but the drift table was off.** §1f lists it as ΔE 0.0083 from
+   beige-500; recomputed it is ΔE 0.0040 from **beige-400**. beige-500 is still the right assignment —
+   it makes the ladder monotonic — but as a choice, not as a snap.
+4. **The cool tints are not gamut-stuck.** §4.1's "all four are physically stuck at ΔE ≈ 0.021" holds
+   only if the tint is pinned near L 0.95. See §12.5.
+5. **`--destructive-bright` is needed.** See §12.5.
+6. **`--accent` moves off `--primary`.** Not in the proposal; forced by the primary button's gradient.
+7. **The AuthGyroscope needs no light retint.** §5 Layer 5 asserts its cyan glows "wash out on
+   paper". They do not: the gyroscope lives inside `AuthShell`'s `<aside>`, whose background is
+   `radial-gradient(…#2c7c7c…#0c423f…#08302d)` in **both** themes — the file's own comment reads "The
+   panel is teal in both themes". The premise is false and the whole phase is dropped.
+8. **The signal values differ from §4** because the constraint set is stricter (every opaque surface
+   including `--muted`, plus the gamut-fraction and 1.9× spread rules), and because they are solved
+   against the widened chassis rather than the shipped one.
+9. **`--elevation-glow` is re-derived, not left alone.** §8 keeps light's existing value; it is the
+   invisible glow dark deleted.
+
+### 12.7 Verified
+
+- Every text tier on all five opaque surfaces plus the canvas; every signal label on every surface
+  and on its own tint; body text on all four tints; every ink on every fill; `--destructive-bright`
+  on the tint and on the hover wash over each surface; the pill borders; the hairlines; the ring on
+  every surface an outline can land on; `--scrim`, `--skeleton`, `::selection`, `--accent-line`; both
+  atmosphere families' single layers and all six stacked pairs; the chart ramp on all four light
+  surfaces. **100 gated checks, all pass.**
+- `dataviz` `scripts/validate_palette.js` re-run against `#ffffff` (light's `--card`): all five checks
+  PASS with no contrast relief warning. The ramp is unchanged and carries no `.light` override.
+  Against the beige surfaces three steps dip below 3:1, which is the standing "charts stay on cards"
+  rule, not a regression.
+- `pnpm typecheck`, `pnpm lint`, `pnpm test` clean.
+
+**Two findings handed on rather than fixed here.**
+
+1. **Dark's `--destructive-bright` is marginal on the same hover wash.** Over `--popover` it scores
+   **4.02** and over `--secondary` 4.35 — §12.5 of the dark doc verified the token against the tint
+   only. Pre-existing, and dark is finished, so nothing was changed; it wants either a lighter rose
+   or a lower hover alpha.
+2. **`chart-primitives-trend-dark` is not a stable baseline.** Recharts' `ResponsiveContainer`
+   settles at a different width run to run, moving ~0.15–0.30% of pixels. It passes normally because
+   that is under `maxDiffPixelRatio`, but it re-renders differently under `--update-snapshots=all`
+   every single time. Two forced regenerations were inspected and discarded during this pass.

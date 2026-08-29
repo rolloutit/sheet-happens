@@ -11,7 +11,7 @@ export const badgeVariants = cva(
         info: "bg-accent-soft text-accent",
         success: "bg-success-soft text-success",
         warning: "bg-warning-soft text-warning",
-        danger: "bg-destructive-soft text-destructive",
+        danger: "bg-destructive-soft text-destructive-bright",
         cta: "bg-cta/16 text-cta",
       },
     },

@@ -38,9 +38,11 @@ export const FoundationPage: Story = {
             <StatusPill status="paid" />
           </div>
           <h1 className="mt-4 text-3xl font-bold">Alkalmazás váz</h1>
+          {/* Theme-neutral wording on purpose: `FoundationPageLight` reuses this render, so the
+              copy may not claim to be showing "dark surfaces". */}
           <p className="mt-3 max-w-2xl text-sm leading-6 text-muted-foreground">
-            A layout story láthatóvá teszi a navigációt, a fejléc ritmusát és a sötét felületeket a
-            komponenskönyvtárban.
+            A layout story láthatóvá teszi a navigációt, a fejléc ritmusát és az alkalmazás
+            felületeit a komponenskönyvtárban.
           </p>
           <div className="mt-5 flex flex-wrap gap-3">
             <Button icon={Clock3}>Idő rögzítése</Button>
@@ -55,6 +57,20 @@ export const FoundationPage: Story = {
       </div>
     </AppShell>
   ),
+};
+
+/**
+ * The same shell in the light theme, and it has to be its own export rather than a toolbar or URL
+ * setting: the meta pins `theme: "dark"`, and a story-level global outranks both. This is the only
+ * full-screen light view in the library — the sidebar's receded plane, the widened surface ladder
+ * and the light atmosphere all live here and nowhere else.
+ */
+export const FoundationPageLight: Story = {
+  ...FoundationPage,
+  globals: {
+    theme: "light",
+    locale: "hu",
+  },
 };
 
 /**

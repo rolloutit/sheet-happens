@@ -129,7 +129,7 @@ export function AuthNotice({ children, className, tone }: AuthNoticeProps) {
       className={cn(
         "rounded-[var(--radius-md)] border px-3 py-2 text-sm",
         tone === "success" && "border-success/40 bg-success-soft text-success",
-        tone === "error" && "border-destructive/40 bg-destructive-soft text-destructive",
+        tone === "error" && "border-destructive/45 bg-destructive-soft text-destructive-bright",
         tone === "info" && "border-accent/40 bg-accent-soft text-accent",
         tone === "warning" && "border-warning/40 bg-warning-soft text-warning",
         className,

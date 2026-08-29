@@ -24,7 +24,7 @@ function DiffBadge({ state, label, delta }: Pick<ReviewDiffItem, "state" | "labe
       )}
     >
       <Icon
-        className={cn("size-5", state === "match" ? "text-success" : "text-destructive")}
+        className={cn("size-5", state === "match" ? "text-success" : "text-destructive-bright")}
         aria-hidden="true"
       />
       <div>

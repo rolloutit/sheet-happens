@@ -15,7 +15,11 @@ export const cardVariants = cva(
           "rounded-[var(--radius-xl)] border-border bg-[radial-gradient(120%_140%_at_100%_0%,color-mix(in_srgb,var(--accent)_9%,transparent),transparent_55%),var(--card)] shadow-panel",
         // `.mg-segbtn.on`: full-strength accent edge over the soft fill.
         selected: "border-accent bg-accent-soft shadow-soft",
-        warning: "border-warning/35 bg-warning-soft text-foreground",
+        warning: "border-warning/45 bg-warning-soft text-foreground shadow-soft",
+        // A danger card used to borrow `warning`, so a rose stat card was painted with an amber
+        // wash and then filled with rose content — an amber ground under rose marks is most of
+        // why the dashboard's "Rejected rows" tile read as mud. Danger now has its own tone.
+        danger: "border-destructive/45 bg-destructive-soft text-foreground shadow-soft",
       },
       density: {
         sm: "p-3",

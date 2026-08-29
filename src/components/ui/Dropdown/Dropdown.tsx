@@ -44,7 +44,8 @@ export const DropdownItem = React.forwardRef<
     ref={ref}
     className={cn(
       "flex cursor-default select-none items-center gap-2 rounded-[var(--radius-md)] px-3 py-2 text-sm outline-none transition focus:bg-secondary data-[disabled]:pointer-events-none data-[disabled]:opacity-45",
-      tone === "danger" && "text-destructive focus:bg-destructive-soft focus:text-destructive",
+      tone === "danger" &&
+        "text-destructive focus:bg-destructive-soft focus:text-destructive-bright",
       className,
     )}
     {...props}
@@ -60,7 +61,8 @@ export const DropdownCheckboxItem = React.forwardRef<
     ref={ref}
     className={cn(
       "relative flex cursor-default select-none items-center gap-2 rounded-[var(--radius-md)] py-2 pl-8 pr-3 text-sm outline-none transition focus:bg-secondary data-[disabled]:pointer-events-none data-[disabled]:opacity-45",
-      tone === "danger" && "text-destructive focus:bg-destructive-soft focus:text-destructive",
+      tone === "danger" &&
+        "text-destructive focus:bg-destructive-soft focus:text-destructive-bright",
       className,
     )}
     {...props}
@@ -85,7 +87,8 @@ export const DropdownRadioItem = React.forwardRef<
     ref={ref}
     className={cn(
       "relative flex cursor-default select-none items-center gap-2 rounded-[var(--radius-md)] py-2 pl-8 pr-3 text-sm outline-none transition focus:bg-secondary data-[disabled]:pointer-events-none data-[disabled]:opacity-45",
-      tone === "danger" && "text-destructive focus:bg-destructive-soft focus:text-destructive",
+      tone === "danger" &&
+        "text-destructive focus:bg-destructive-soft focus:text-destructive-bright",
       className,
     )}
     {...props}

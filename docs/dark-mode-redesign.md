@@ -1,8 +1,10 @@
 # Dark Mode Redesign — "Graphite Aurora"
 
-Status: **implemented** (feature/dark-mode-graphite-aurora, 2026-08). The adopted token families
-live in `docs/tokens.md`; this file is the rationale record. Deviations from the proposal as
-written, and why:
+Status: **implemented** (feature/dark-mode-graphite-aurora, 2026-08), then **relit** in a second
+pass — see [§12](#12-the-relight-pass-2026-08) for what changed and why. §1–§11 are the original
+record and are left as written; where §12 contradicts them, §12 is what ships. The adopted token
+families live in `docs/tokens.md`; this file is the rationale record. Deviations from the proposal
+as written, and why:
 
 - **Chart ramp (§7):** the literal six hex values failed the repo's `dataviz` validator (its own
   adoption gate) — every step sat above the dark mark-lightness band and peach fell below the
@@ -598,3 +600,155 @@ is known to be unreliable at this polarity.
 - [Web Design Trends 2026 — Fireart](https://fireart.studio/blog/the-best-web-design-trends/) · [Top 16 Web Design Trends for 2026 — WP Creative](https://wpcreative.com.au/web-design-trends/) — organic, anti-grid composition: soft blobs and biomorphic shapes bending a grid that is still structurally there.
 - [APCA in a Nutshell](https://git.apcacontrast.com/documentation/APCA_in_a_Nutshell.html) · [Why APCA?](https://git.apcacontrast.com/documentation/WhyAPCA) — polarity-aware contrast, and why light-on-dark needs its own thresholds.
 - **Internal:** the styleguide's _Colors_ and _Graphical elements_ frames (Grey Dark and Beige ramps, blob silhouettes, dot grids, line-art); `claude_design_proto/_ds/**/colors_and_type.css`; the `AuthGyroscope` comments in `app/globals.css`, whose reduced-motion and frozen-frame constraints §5.3 inherits.
+
+---
+
+## 12. The relight pass (2026-08)
+
+Status: **implemented**. The verdict on §1–§11 as shipped was that the interface "resembles
+military camouflage". That is a fair reading and it has a measurable cause: the pass cured the
+monochrome teal wash of §1 and overshot into drabness. Camouflage is, precisely, low value
+contrast plus low-chroma khaki/olive/drab-teal — and the shipped theme had all four.
+
+Every number below was computed, not estimated. The brief was to keep the palette, the forms and
+the assets, and to make the result vibrant, modern and alive.
+
+### 12.1 What actually caused the camouflage read
+
+**a) The value ladder was too narrow to separate anything.** §3.1's ramp spans L 0.145 → 0.251.
+A card sat 0.036 L above the canvas behind it — below the threshold where an edge reads, so panels
+dissolved into their ground. This was the single largest contributor.
+
+|      | void  | inset | base  | card  | hover | over  | card−base | card−void |
+| ---- | ----- | ----- | ----- | ----- | ----- | ----- | --------- | --------- |
+| §3.1 | 0.145 | 0.155 | 0.173 | 0.209 | 0.231 | 0.251 | 0.036     | 0.064     |
+| now  | 0.134 | 0.160 | 0.192 | 0.243 | 0.272 | 0.300 | **0.051** | **0.109** |
+
+**b) The chart ramp was literally a camouflage swatch set.** `#C08442` is tan, `#3FA164` olive,
+`#2CA2A2` drab teal, `#B23A4E` brick. The §7 note blames the validator's mark-lightness band, but
+that is not what happened: every one of those steps sat _inside_ the band while using only 59–80%
+of the chroma available at its own lightness. The band was never the constraint — the chroma
+headroom simply went unspent.
+
+**c) The atmosphere composited to mud.** A composite carries `alpha × source` chroma, so the §5
+warm layers — a low-chroma peach at 6–8.5% over near-black — landed at C 0.007 and hue 48°. That
+is a desaturated brown. The wave made it worse by being a _filled_ silhouette at 6px blur: a large
+soft-edged warm mass with a still-legible edge, which is the definition of a camouflage blotch.
+
+**d) The discipline rule was doing exactly what it said.** "Mint is a signal, never a surface,
+under ~5% of the pixels" (§2) is what prevented anything on screen from having life in it. Paired
+with one flat elevation, no gradients, and a `--shadow-accent-glow` of
+`0 10px 26px -12px var(--accent-line)` — a 30%-alpha colour pulled in 12px, i.e. invisible — there
+was no lit element anywhere in the interface.
+
+### 12.2 The four moves
+
+**1. Pull the ladder apart.** The table above. Nothing else buys as much.
+
+**2. Keep the semantics, drop the pixel budget.** Mint still means system/active/primary, peach
+still means the CTA, and **mint is still never the page or sidebar background** — that rule is what
+cured the original complaint and it stands. What is gone is the ~5% cap: colour may now carry
+gradients, glows and tinted surfaces at whatever size the design needs.
+
+**3. Spend a capped budget on chroma, not brightness.** This is the generalisable finding. The
+atmosphere's ceiling is a _luminance_ ceiling (§12.3), and at a fixed resulting luminance the
+choice of source colour changes the returned chroma enormously:
+
+| family | pale source           | C returned | saturated source    | C returned | gain  |
+| ------ | --------------------- | ---------- | ------------------- | ---------- | ----- |
+| cool   | `mint-glow` `#84F4F4` | 0.034      | `mint` `#29C6C6`    | 0.054      | +56%  |
+| warm   | `peach` `#FFD9B4`     | 0.013      | `warning` `#FAAB59` | 0.044      | +245% |
+
+The lightest step spends the whole budget on brightness and returns almost no colour. Both
+atmosphere families therefore now draw from the saturated middle of their ladder. Chroma is up
+62–103% across the four glow layers with no loss of legibility.
+
+**4. Give the theme a second, coloured elevation.** `--elevation-glow` and
+`--elevation-glow-warm`, exposed as `shadow-accent-glow` / `shadow-cta-glow`. Two, so a warm
+control is lit by warm light. This is the §3.3 `--elevation-glow` that was specified and never
+shipped.
+
+### 12.3 The constraint that shapes the atmosphere
+
+`AuthForm` renders `--muted-foreground` **directly on the canvas** — it has no card of its own —
+so the brightest point two overlapping atmosphere layers can reach must still carry that tier at
+4.5:1. On `--background`, the lighter of the two bases and therefore the worse case, that puts a
+hard ceiling on the ground of **relative luminance 0.0607**. The shipped values peak at 0.0525.
+
+This is why the atmosphere cannot simply be turned up, and why move 3 above exists at all. Verified
+stacked cases (muted-foreground on the composite): mint aurora + mint blob on `--background` 4.94;
+warm pair 4.95; mint pair on the void 5.58. `--atmo-dot` is excluded from the stack — 1px dots on a
+24px grid is ~0.14% coverage and the lattice is masked out of the content area, so modelling it as
+a full third layer would fail a case that cannot occur.
+
+Two further rules fell out of it: **fills bloom, lines stay crisp** — the wave is now stroke-only
+line-art alongside the arc, and the blobs blur 40px rather than 26px — and a _complete_ shape reads
+as a sticker, which is why the `StatCard` corner glow lost its outline ring when `--accent-line`
+rose to 42%.
+
+### 12.4 The chart ramp, re-derived
+
+Same six hues, same fixed order, chroma spent. Each step now runs at ~95% of the sRGB gamut ceiling
+for its hue, capped so no series exceeds ~1.9× the chroma of the least-saturated — cyan's ceiling
+in the dark band is barely half of violet's, and a flat fraction of each ceiling produces a set
+where violet and rose shout while mint whispers, which is not a categorical ramp.
+
+| slot     | was       | C     | now       | C     | gain |
+| -------- | --------- | ----- | --------- | ----- | ---- |
+| 1 mint   | `#2CA2A2` | 0.100 | `#1EA5A5` | 0.107 | +6%  |
+| 2 amber  | `#C08442` | 0.111 | `#CE801A` | 0.141 | +28% |
+| 3 violet | `#715CC7` | 0.160 | `#8969F9` | 0.206 | +29% |
+| 4 green  | `#3FA164` | 0.130 | `#199552` | 0.144 | +11% |
+| 5 rose   | `#B23A4E` | 0.155 | `#F64C6A` | 0.205 | +32% |
+| 6 blue   | `#427BC6` | 0.131 | `#1681F9` | 0.200 | +53% |
+
+**Lightness is staggered deliberately.** Green and rose are adjacent in the fixed order and
+collapse under deuteranopia when they share a lightness — ΔE 1.3 at equal L, against a target of
+8.0. The stagger is what carries that pair, and it is why the ramp is not simply the six brand hues
+at full strength. Do not flatten it "for consistency".
+
+All five `dataviz` validator checks **PASS** against both the dark card `#1C2027` and white, with
+no contrast relief warning in either mode: band, chroma floor, CVD separation (worst adjacent ΔE
+8.7), normal-vision floor (22.5), contrast ≥ 3:1. The ramp stays theme-stable and `.light` carries
+no override.
+
+### 12.5 The one palette addition
+
+`--destructive-bright` `#FF91A3` — the lighter rose step, same hue and chroma as `--destructive` at
+L 0.834. Rose is the darkest of the four signals (L 0.714) and cannot serve as both the fill and
+the label on its own tint. It was already marginal before this pass (4.54:1 on the old popover) and
+the lifted ladder drops it to 3.92:1. The new step is exactly the relationship `--accent` already
+has to `--primary`; it is a lightness step inside an existing family, not a new hue. Use it for a
+rose label _on_ a rose tint; keep `--destructive` for fills and for text on a plain card. Light
+aliases it to `--destructive`, whose tints are solid pastels.
+
+The `*-soft` alphas also became per-tone (accent 0.24, warning 0.21, success and danger 0.22) — each
+the loudest tint whose own label still clears 4.5:1 on every surface it can land on, `--popover`
+included. Warning is the tightest and is the reason a flat number does not work.
+
+### 12.6 Verified
+
+- Every text tier on all six surfaces; every signal label on its own tint over `base`, `card`,
+  `secondary` and `popover`; body text on all four tints; all three inks on their fills; the chart
+  ramp against the card; the atmosphere's stacked worst cases. All pass.
+- `--text-subtle` was lifted `#948F87` → `#9E9991` (L 0.652 → 0.684): the old value was tuned
+  against a `--popover` at L 0.251 and fell to 4.25:1 against the new one at L 0.300.
+- `pnpm typecheck`, `pnpm lint`, `pnpm test` clean; all 27 changed visual baselines reviewed.
+
+**Baseline gotcha.** `maxDiffPixelRatio: 0.01` with Playwright's default per-pixel `threshold: 0.2`
+means a theme-wide recolour of this size **passes** `pnpm test:visual` without regenerating
+anything — the per-pixel deltas fall under the threshold, so nothing is counted as different. Use
+`--update-snapshots=all`; a plain `--update-snapshots` will silently leave the old baselines in
+place and the diff will look like the theme never changed.
+
+### 12.7 Light mode
+
+The `.light` **token palette is unchanged**, bar three additions that exist only so the shared
+`@theme` names resolve: `--destructive-bright` (aliased to `--destructive`), `--elevation-glow` and
+`--elevation-glow-warm` (both set to the literal value `--shadow-accent-glow` already held, so
+light renders as before).
+
+Component treatments are shared between themes, so light does pick up the structural polish —
+the CTA gradient and glow, stronger status-pill borders, gradient sparkline bars, the opaque
+`EmptyState` fill. Its own redesign (`docs/light-mode-redesign.md`, "Ivory Ledger") remains a
+proposal and is untouched.

@@ -119,7 +119,11 @@ export function DashboardCards({
 
   return (
     <div className={cn("grid gap-5", className)}>
-      <section className="flex flex-col gap-4 rounded-[var(--radius-xl)] border border-border bg-card/80 p-5 shadow-panel md:flex-row md:items-center md:justify-between">
+      {/* The hero is the first thing on the dashboard and the one panel with room to spend, so it
+          gets the mesh the `featured` card variant uses — mint pulled from the top-right, warm
+          from the bottom-left, echoing the canvas aurora behind it. Opaque, not `bg-card/80`: a
+          translucent panel samples whatever canvas is under it and never lands on `--card`. */}
+      <section className="flex flex-col gap-4 rounded-[var(--radius-xl)] border border-border bg-[radial-gradient(120%_150%_at_100%_0%,color-mix(in_srgb,var(--accent)_11%,transparent),transparent_58%),radial-gradient(110%_140%_at_0%_100%,color-mix(in_srgb,var(--cta)_9%,transparent),transparent_60%),var(--card)] p-5 shadow-panel md:flex-row md:items-center md:justify-between">
         <div className="flex items-center gap-4">
           <Avatar name={name} size="lg" tone={isAdmin ? "teal" : "deep"} />
           <div>

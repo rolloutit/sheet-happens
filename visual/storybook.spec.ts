@@ -50,6 +50,40 @@ const storyCases: StoryVisualCase[] = [
     locale: "en",
     projects: ["desktop"],
   },
+  /**
+   * The three light cases below mirror the dark ones directly above and in the block after.
+   * Until the light relight there was no full-screen light baseline at all — the ten light
+   * snapshots were single components — so the chassis, the sidebar plane and the whole
+   * atmosphere layer shipped with no visual regression cover on the side of the theme where
+   * they differ most.
+   *
+   * Two of them point at a `*Light` story rather than reusing the dark story's id with a
+   * different `theme` here. `AppShell` and `DashboardCards` pin `globals: { theme: "dark" }` on
+   * their meta, and a story-level global outranks the URL — so the `globals` this file writes
+   * are silently ignored for those two and the screenshot comes back dark. The `theme` field is
+   * still set to `light` below because it also drives the locale/theme pair the story loads with;
+   * it simply is not what selects the theme in those two cases.
+   */
+  {
+    id: "layout-appshell--foundation-page-light",
+    slug: "app-shell-desktop-light",
+    theme: "light",
+    locale: "hu",
+    projects: ["desktop"],
+  },
+  {
+    id: "layout-atmosphere--over-canvas",
+    slug: "atmosphere-over-canvas-light",
+    theme: "light",
+    locale: "en",
+    projects: ["desktop"],
+  },
+  {
+    id: "sheet-dashboardcards--data-driven-admin-light",
+    slug: "dashboard-admin-light",
+    theme: "light",
+    locale: "hu",
+  },
   {
     id: "layout-appshell--mobile-navigation",
     slug: "app-shell-mobile-drawer-dark",

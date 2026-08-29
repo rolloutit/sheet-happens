@@ -5,11 +5,16 @@ import { arc, mintBlob, peachBlob, wave } from "./Atmosphere.shapes";
  * banding. All geometry comes from the styleguide exports in `Atmosphere.shapes.ts`; positioning,
  * motion and theming live in `app/globals.css`. Rendered once by `AppShell` and once by
  * `AuthShell`, inside a positioned container, with the shell's own content lifted to `z-index: 2`.
- * Dark-only — `.light` hides both layers.
+ * Both themes; only `.sheet-grain` is dark-only, because banding is a near-black artifact.
  *
  * Each blob is the brand's signature composition: a gradient-lit fill plus the same silhouette as
  * an offset outline echo (see `svgs/Group-1.svg`). The echo is what lets the eye read the shape's
  * form without the fill getting loud — the glow carries light, the line carries edge.
+ *
+ * Nothing in this file is per-theme: geometry, blurs, offsets and drift are shared, and the themes
+ * differ only in the `--atmo-*` values they resolve. In dark the shapes stop being ink and become
+ * light; in light they go back to being ink — a printed pastel with its echo line — which is the
+ * medium the styleguide drew them in to begin with.
  */
 
 type BlobShape = {
@@ -81,8 +86,21 @@ export function Atmosphere() {
           lineVar="--atmo-line-peach"
           echoOffset="-3% 3%"
         />
+        {/* Stroke, not fill. `wave` is a closed three-hump silhouette, and filling it with a warm
+            token over near-black produced a soft-edged tan cloud — the single most
+            camouflage-looking element in the layer, and no amount of blur or gradient fixed it,
+            because a large low-chroma warm mass *is* a khaki blotch. As an outline it becomes what
+            the design intends, a horizon ridge, and it joins the arc in the layer's line-art
+            language: the glows carry light, the lines carry edge. */}
         <svg className="sheet-wave" viewBox={wave.viewBox} fill="none">
-          <path d={wave.d} style={{ fill: "var(--atmo-blob-peach)" }} />
+          <path
+            d={wave.d}
+            style={{ stroke: "var(--atmo-line-peach)" }}
+            strokeWidth={2}
+            vectorEffect="non-scaling-stroke"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
         </svg>
         <svg className="sheet-arc" viewBox={arc.viewBox} fill="none">
           <path

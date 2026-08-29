@@ -160,6 +160,7 @@
   --color-cta-foreground: var(--cta-foreground);
   --color-destructive: var(--destructive);
   --color-destructive-soft: var(--destructive-soft);
+  --color-destructive-bright: var(--destructive-bright);
   --color-destructive-foreground: var(--destructive-foreground);
   --color-success: var(--success);
   --color-success-soft: var(--success-soft);
@@ -193,11 +194,13 @@
   --radius-xl: 22px;
   --radius-pill: 999px;
 
-  /* The prototype has exactly one elevation. Both names are kept so existing call sites stand;
-     both resolve to the theme-aware `--elevation-pop`. */
+  /* Two elevations now: the neutral pop every surface uses, and the coloured glow that sits under
+     an element carrying a signal. Both names for the pop are kept so existing call sites stand;
+     all of them resolve to the theme-aware raw variables. */
   --shadow-soft: var(--elevation-pop);
   --shadow-panel: var(--elevation-pop);
-  --shadow-accent-glow: 0 10px 26px -12px var(--accent-line);
+  --shadow-accent-glow: var(--elevation-glow);
+  --shadow-cta-glow: var(--elevation-glow-warm);
 }
 
 :root {
@@ -207,33 +210,60 @@
   --font-poppins:
     "Poppins", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 
-  /* Atmosphere — "Graphite Aurora" (docs/dark-mode-redesign.md §5). `--canvas-base` is the void
-     behind everything; `--canvas-aurora` carries the two glow layers so each theme owns its own
-     geometry as well as its colours. The dark aurora is deliberately huge and faint: mint at 10%
-     lifts the void from L 0.145 to L 0.217, a presence rather than a spotlight. */
-  --canvas-base: #090a0c;
-  --atmo-mint: rgb(41 198 198 / 0.1);
-  --atmo-peach: rgb(255 203 151 / 0.06);
-  --atmo-dot: rgb(132 244 244 / 0.055);
-  --atmo-blob-mint: rgb(41 198 198 / 0.1);
-  --atmo-blob-peach: rgb(255 203 151 / 0.085);
-  --atmo-line-mint: rgb(132 244 244 / 0.12);
-  --atmo-line-peach: rgb(255 203 151 / 0.1);
-  --atmo-grain: 0.04;
+  /* Atmosphere — "Graphite Aurora", relit (docs/dark-mode-redesign.md §5, §12). `--canvas-base`
+     is the void behind everything; `--canvas-aurora` carries the two glow layers so each theme
+     owns its own geometry as well as its colours.
+
+     The alphas here are capped by legibility, not taste. `AuthForm` puts `--muted-foreground`
+     directly on this canvas, so the brightest point two overlapping layers can reach must still
+     carry it at 4.5:1. On `--background` — the lighter of the two bases and therefore the worse
+     case — that ceiling is relative luminance 0.0607. The values below peak at 0.0525.
+
+     What that budget caps is *luminance*, and the khaki cast was a *chroma* problem, so the fix is
+     to spend the budget on the most chromatic source rather than the brightest one. A composite
+     carries only `alpha × source` chroma, and at a fixed resulting luminance the two families
+     differ enormously in what they return:
+
+       cool, at the ceiling    mint-glow #84F4F4 -> C 0.034   ·   mint #29C6C6 -> C 0.054  (+56%)
+       warm, at the ceiling    peach #FFD9B4     -> C 0.013   ·   warning #FAAB59 -> C 0.044 (+245%)
+
+     So both families draw from the saturated middle of their ladder, not the pale top of it. The
+     old warm layer was `#FFCB97` at 8.5%, which composited to C 0.007 at hue 48° — a desaturated
+     brown, which is precisely what a khaki is. It now lands at C 0.025 at hue 64°: amber light.
+     Chroma is up 62–103% across the four layers with no loss of legibility.
+
+     `--atmo-dot` is not counted as a third stacked layer. The lattice is 1px dots on a 24px grid —
+     about 0.14% pixel coverage — and is masked out of the centre-top where content sits, so no
+     glyph ever rests on one. Modelling it as full coverage would fail a case that cannot occur. */
+  --canvas-base: #07080a;
+  --atmo-mint: rgb(41 198 198 / 0.145);
+  --atmo-peach: rgb(250 171 89 / 0.135);
+  --atmo-dot: rgb(132 244 244 / 0.1);
+  --atmo-blob-mint: rgb(41 198 198 / 0.16);
+  --atmo-blob-peach: rgb(250 171 89 / 0.15);
+  --atmo-line-mint: rgb(132 244 244 / 0.28);
+  --atmo-line-peach: rgb(250 185 118 / 0.28);
+  --atmo-grain: 0.045;
   --canvas-aurora:
     radial-gradient(1600px 1000px at 100% -12%, var(--atmo-mint), transparent 62%),
     radial-gradient(1300px 900px at -10% 115%, var(--atmo-peach), transparent 64%);
 
-  /* Chassis — cool graphite (H ≈ 264°), chroma rising with elevation (C 0.005 → 0.016).
+  /* Chassis — cool graphite (H ≈ 264°), chroma rising with elevation (C 0.005 → 0.022).
      inset < base < raised (card) < hover (secondary) < over (popover/muted). The sidebar sits
-     *below* the canvas: navigation recedes, content comes forward. */
-  --background: #0e1014;
-  --surface-inset: #0b0c0f;
-  --card: #15181e;
-  --popover: #1e222a;
-  --secondary: #1a1d24;
-  --muted: #1e222a;
-  --sidebar: #0b0c0f;
+     *below* the canvas: navigation recedes, content comes forward.
+
+     The steps are deliberately far apart. The first pass ran the whole ramp inside 0.145–0.251 L,
+     which put a card only 0.036 L above the canvas it sits on — below the threshold where an edge
+     reads, so every panel dissolved into its ground and the interface flattened into a murk. The
+     ladder now spans 0.134–0.300: card-over-canvas is 0.051 and card-over-void 0.109, roughly
+     +40% and +70%. Nothing else in this file buys as much as pulling these six numbers apart. */
+  --background: #12141a;
+  --surface-inset: #0c0d11;
+  --card: #1c2027;
+  --popover: #282e39;
+  --secondary: #222730;
+  --muted: #282e39;
+  --sidebar: #0c0d11;
 
   /* Type — warm ivory (H ≈ 79°, from the brand Beige ramp) on the cool chassis. All three live
      tiers clear 4.5:1 on every surface up to `--popover`. */
@@ -242,64 +272,116 @@
   --popover-foreground: #f3efe9;
   --secondary-foreground: #f3efe9;
   --muted-foreground: #b7b2aa;
-  --text-subtle: #948f87;
+  /* Lifted from #948F87 (L 0.652). The old value was tuned against a `--popover` at L 0.251;
+     against the new one at L 0.300 it fell to 4.25:1. L 0.684 restores the floor with margin —
+     4.82:1 on the lightest surface it can land on. Same warm-ivory hue, so the tier still reads
+     as the third step of the Beige ramp rather than a different colour. */
+  --text-subtle: #9e9991;
 
   /* Inks — dark text for full-strength signal fills. One per family; every pairing clears 6:1. */
   --ink-mint: #04211f;
   --ink-amber: #2a1608;
   --ink-rose: #2a0a10;
 
-  /* Signals — mint is a signal, never a surface. The four families sit ≥ 42° apart in hue so the
-     16% `*-soft` tints stay distinguishable over the neutral card. */
+  /* Signals. The four families sit ≥ 42° apart in hue so the `*-soft` tints stay distinguishable
+     over the neutral card. The hues are unchanged; what changed is the licence to use them.
+
+     The original discipline rule — "mint is a signal, never a surface, under ~5% of the pixels on
+     any screen" — cured the old monochrome teal wash but left nothing on screen with any life in
+     it. The rule is now semantic only: a colour still has to mean the thing it means (mint =
+     system/active/primary, peach = the CTA, green = approved, rose = blocked), but it may carry
+     gradients, glows and tinted surfaces at whatever size the design needs. The one part that
+     stands is the part that caused the original complaint: **mint is still never the page or
+     sidebar background.** Structure stays neutral; everything on top of it may sing.
+
+     The `*-soft` alphas rise from a flat 16% to per-tone values, each the loudest tint whose own
+     full-strength label still clears 4.5:1 on every surface the tint can land on — card,
+     canvas and the `--secondary` hover fill alike. They are not a single number because the four
+     hues do not composite alike. */
   --primary: #29c6c6;
   --primary-foreground: var(--ink-mint);
   --accent: #84f4f4;
   --accent-foreground: var(--ink-mint);
-  --accent-soft: rgb(41 198 198 / 0.16);
-  --accent-line: rgb(132 244 244 / 0.3);
+  --accent-soft: rgb(41 198 198 / 0.24);
+  --accent-line: rgb(132 244 244 / 0.42);
   --cta: #ffcb97;
   --cta-hover: #fab976;
   --cta-foreground: var(--ink-amber);
   --success: #5ce08c;
-  --success-soft: rgb(92 224 140 / 0.16);
+  --success-soft: rgb(92 224 140 / 0.22);
   --success-foreground: var(--ink-mint);
   --warning: #faab59;
-  --warning-soft: rgb(250 171 89 / 0.16);
+  --warning-soft: rgb(250 171 89 / 0.21);
   --warning-foreground: var(--ink-amber);
   --destructive: #ff6a7e;
-  --destructive-soft: rgb(255 106 126 / 0.16);
+  --destructive-soft: rgb(255 106 126 / 0.22);
   --destructive-foreground: var(--ink-rose);
+  /* Rose is the one family that needs two steps, exactly as mint does. `--destructive` #FF6A7E is
+     the darkest of the four signals (L 0.714), so it cannot serve as both the fill and the label
+     on its own tint: it already only just held at 4.54:1 on the old popover, and the lifted ladder
+     drops it to 3.92:1. `--destructive-bright` is the same hue and chroma at L 0.834 — the rose
+     equivalent of what `--accent` is to `--primary` — and clears 4.63:1 on the tint over every
+     surface. Use it for a label *on* a rose tint; keep `--destructive` for fills and for text on a
+     plain card. */
+  --destructive-bright: #ff91a3;
 
   /* Edges, depth, chrome — neutral hairlines; a mint edge is reserved for elements that carry
      the accent. */
-  --border: rgb(232 236 242 / 0.08);
-  --border-strong: rgb(232 236 242 / 0.16);
+  --border: rgb(232 236 242 / 0.11);
+  --border-strong: rgb(232 236 242 / 0.22);
   /* Input borders are the prototype's `--border-strong`. Declared once: `var()` resolves at the
      use site, so re-binding `--border-strong` in `.light` carries `--input` with it. */
   --input: var(--border-strong);
   --ring: #84f4f4;
-  --sidebar-border: rgb(232 236 242 / 0.06);
-  --header-bg: rgb(14 16 20 / 0.72);
-  --scrim: rgb(9 10 12 / 0.66);
+  --sidebar-border: rgb(232 236 242 / 0.09);
+  --header-bg: rgb(18 20 26 / 0.72);
+  --scrim: rgb(7 8 10 / 0.72);
 
   /* Skeleton shimmer stops. Raw variables — they feed a gradient, not a colour utility. */
-  --skeleton: rgb(232 236 242 / 0.05);
-  --skeleton-sheen: rgb(232 236 242 / 0.1);
+  --skeleton: rgb(232 236 242 / 0.06);
+  --skeleton-sheen: rgb(232 236 242 / 0.13);
 
-  --elevation-pop: 0 20px 48px -16px rgb(0 0 0 / 0.72), 0 0 0 1px rgb(232 236 242 / 0.06);
+  --elevation-pop: 0 24px 56px -18px rgb(0 0 0 / 0.8), 0 0 0 1px rgb(232 236 242 / 0.09);
+
+  /* The second elevation the redesign specified (§3.3) and never shipped. `--shadow-accent-glow`
+     used to resolve to `0 10px 26px -12px var(--accent-line)`: a 30%-alpha colour pulled in 12px,
+     which is close to invisible — the "glow" under the primary button was doing nothing. These are
+     real light sources: a wide coloured bloom plus a tight one for the contact edge. Two so a warm
+     control is lit by warm light; peach glowing mint is the giveaway of a palette applied by
+     search-and-replace. */
+  --elevation-glow:
+    0 10px 34px -10px rgb(41 198 198 / 0.5), 0 2px 12px -4px rgb(132 244 244 / 0.32);
+  --elevation-glow-warm:
+    0 10px 34px -10px rgb(250 185 118 / 0.45), 0 2px 12px -4px rgb(255 217 180 / 0.3);
 
   /* Charts — categorical ramp in the redesign's hue order (mint, amber, violet, green, rose,
-     blue; §7), with each step snapped into the dataviz validator's mark-lightness band. The
-     proposal's literal values failed that gate (too bright for marks, peach under the chroma
-     floor); these pass all six checks against both the dark card and white, so the ramp is
-     deliberately theme-stable — `.light` does not override it. Violet and blue are chart-only;
-     they never appear in chrome. */
-  --chart-1: #2ca2a2;
-  --chart-2: #c08442;
-  --chart-3: #715cc7;
-  --chart-4: #3fa164;
-  --chart-5: #b23a4e;
-  --chart-6: #427bc6;
+     blue; §7). Same six hues, same fixed order, re-derived for chroma.
+
+     The previous values passed the `dataviz` validator but read as tan, olive, drab teal and
+     brick — a literal camouflage swatch set. The cause was not the validator's mark-lightness
+     band: every one of those steps sat *inside* the band while using only 59–80% of the chroma
+     available at its own lightness. So the fix is to spend that headroom. Each step now runs at
+     95% of the sRGB gamut ceiling for its hue, capped so no series exceeds ~1.9× the chroma of the
+     least-saturated one — cyan's ceiling in this band is barely half of violet's, and taking a
+     flat fraction of each ceiling would make violet and rose shout while mint whispered, which is
+     not a categorical set.
+
+     Lightness is deliberately staggered rather than flat. Green and rose are adjacent in the fixed
+     order and collapse under deuteranopia when they share a lightness (ΔE 1.3 at equal L); the
+     stagger is what carries that pair, and it is why this ramp is not simply the six brand hues at
+     full strength.
+
+     Verified with the skill's own validator, not by eye: all five checks PASS against both the
+     dark card (#1C2027) and white — band, chroma floor, CVD separation (worst adjacent ΔE 8.7,
+     above the 8.0 target), normal-vision floor (22.5), and ≥3:1 contrast with no relief warning.
+     The ramp therefore stays theme-stable and `.light` carries no override. Chroma is up 6–53%
+     per step. Violet and blue are chart-only; they never appear in chrome. */
+  --chart-1: #1ea5a5;
+  --chart-2: #ce801a;
+  --chart-3: #8969f9;
+  --chart-4: #199552;
+  --chart-5: #f64c6a;
+  --chart-6: #1681f9;
 
   --sidebar-w: 256px;
   --sidebar-w-collapsed: 76px;
@@ -315,62 +397,206 @@
 .light {
   color-scheme: light;
 
-  /* Warm cream canvas: white glow off the top-right, peach off the bottom-left. The atmosphere
-     layers (§5) do not ship to light mode in this pass — only the aurora vars carry over, holding
-     the same composition light mode has always had. */
-  --canvas-base: #f4ebdd;
-  --atmo-mint: #ffffff;
-  --atmo-peach: rgb(255 183 122 / 0.2);
+  /* Atmosphere — "Ivory Ledger", relit (docs/light-mode-redesign.md §12). In dark the brand
+     silhouettes stop being ink and become light; light is the kit's native medium, so they go back
+     to being ink — a printed pastel fill with its offset echo line. Same shapes, same blurs, same
+     drift; only these values differ.
+
+     THE BUDGET IS TWO-SIDED HERE, and that is the whole difference from dark. Dark has one bound,
+     a luminance ceiling, because the only thing its atmosphere can do to a near-black ground is
+     lighten it. Light's atmosphere can move the ground both ways and each way breaks something
+     different:
+
+       FLOOR    relative luminance 0.5390. `AuthForm` renders `--muted-foreground` directly on this
+                canvas, so darkening the ground eats that tier's contrast. Tier 1 is far more
+                forgiving and tier 3 is not allowed on the canvas at all, so tier 2 is what binds.
+       CEILING  relative luminance 0.9406. `--card` is #ffffff and cannot go lighter, so every step
+                the canvas takes toward white is a step of card separation destroyed. This is the
+                bound light had no concept of: `--atmo-mint` was the literal value `#ffffff` at
+                full alpha, in a radial that reaches the top-right corner of every page. The canvas
+                there *was* white, card-over-canvas was 1.00, and a panel in that corner had
+                nothing but a hairline to show it existed.
+
+     The stacking model is dark's, made explicit: any two overlapping AREA layers must sit inside
+     that band — aurora+blob, aurora+echo, and blob+its-own-echo are each checked. The dot lattice
+     is excluded for the reason §12.3 gives (1px dots on a 24px grid is ~0.14% coverage, masked out
+     of the content area). Verified: 5.74 / 4.84 / 4.51 cool, 5.35 / 4.78 / 4.69 warm.
+
+     WHICH END OF THE LADDER TO DRAW FROM ALSO INVERTS. Dark's rule is "spend a capped budget on
+     chroma, not brightness" — at a luminance ceiling the pale end returns almost no colour, so
+     draw from the saturated middle. In light the resource is luminance *displacement*, and a
+     source far from the ground's own luminance displaces it fast and is therefore rationed to a
+     low alpha. mint-700 at the alpha the floor allows returns C 0.014 at hue 155° — a grey-olive,
+     light's own khaki. mint-200 sits near the ground's luminance, so it can run at 0.44 and hands
+     back C 0.046 at hue 186°. The washes therefore come from the BRIGHT end here, and the deep end
+     is reserved for the one layer whose job is edge rather than colour. */
+  --canvas-base: #efe5db;
+  --atmo-mint: rgb(132 244 244 / 0.44);
+  --atmo-peach: rgb(255 203 151 / 0.48);
+  --atmo-dot: rgb(10 41 48 / 0.1);
+  --atmo-blob-mint: rgb(41 198 198 / 0.17);
+  --atmo-blob-peach: rgb(250 171 89 / 0.31);
+  /* The echo lines are the only layer drawn from the deep end, because a line is visible precisely
+     by *being* a luminance difference — that cost is intrinsic and cannot be optimised away. They
+     are what carries "printed, not lit", so they get the budget the washes give up: 1.31 against
+     the void, the same weight dark's echoes have against theirs. */
+  --atmo-line-mint: rgb(31 116 117 / 0.21);
+  --atmo-line-peach: rgb(250 171 89 / 0.62);
+  /* No grain in light. Banding is a near-black artifact — the light aurora spans ΔL ≈ 0.02 across
+     enormous radii at L ≈ 0.91, far below the 8-bit step — and the grain tile is white-alpha noise,
+     which composites to nothing on paper. `.sheet-grain` stays hidden; this documents the intent. */
+  --atmo-grain: 0;
   --canvas-aurora:
     radial-gradient(1150px 700px at 100% -8%, var(--atmo-mint), transparent 58%),
     radial-gradient(880px 600px at -8% 112%, var(--atmo-peach), transparent 60%);
 
+  /* Chassis — the brand Beige ramp, verbatim, with chroma falling as the surface lifts toward
+     white (0.0173 → 0). Dark's fix was to pull its ladder apart upward; light cannot lift, because
+     `--card` is already white, so the only direction available is DOWN. The void drops to beige-700
+     and card-over-void goes 0.057 → 0.073 L (1.18 → 1.24). beige-800 is not available: at relative
+     luminance 0.7166 it sits below the text floor above.
+
+     The void is deliberately NOT `--muted` any more. It is decorative ground, not a text surface,
+     and separating the two is what lets `--muted` stay light enough for a third text tier to exist
+     (see below). Seven tokens now resolve to six distinct planes; they used to resolve to four. */
   --background: #fdfaf4;
-  --surface-inset: #faf5ee;
-  --foreground: #0a2930;
+  --surface-inset: #f8f2eb;
   --card: #ffffff;
-  --card-foreground: #0a2930;
   --popover: #ffffff;
+  --secondary: #faf6f1;
+  --muted: #f4ece3;
+  /* The sidebar recedes below the canvas, as in dark: navigation recedes, content comes forward.
+     It used to be #ffffff, i.e. the same plane as `--card`. */
+  --sidebar: #f8f2eb;
+
+  /* Type — one ink, three tiers. The diagnosis was not that the ink was wrong but that there were
+     three different ones: `--foreground` at H 215°, `--muted-foreground` at 233°, `--text-subtle`
+     at 168° — a 65° spread across three steps of what is supposed to be one ladder. Tier 1 is brand
+     ink-800 and does not move; tiers 2 and 3 are re-derived at its hue, so the spread is now 3.1°.
+
+     `--text-subtle` was the real fault: at #8a938f it cleared 4.5:1 on NOTHING (3.16 on white down
+     to 2.67 on the canvas) while carrying table headers, placeholders and sidebar nav labels —
+     running text, not decoration.
+
+     THE RULE THAT MAKES A THIRD TIER POSSIBLE: only tiers 1 and 2 may sit directly on the canvas.
+     Require tier 3 to clear 4.5:1 on the void as well and it collapses into tier 2 — searched that
+     way the two land ΔL 0.026 apart, which is not a ladder, it is one colour printed twice.
+     Excluding the void buys the third step ΔL 0.088. Verified against every call site: placeholders
+     and sidebar labels sit on `--surface-inset` (4.97), table headers and the command input on the
+     card (5.53), nav hover on `--secondary` (5.14). None renders on the canvas. */
+  --foreground: #0a2930;
+  --card-foreground: #0a2930;
   --popover-foreground: #0a2930;
+  --secondary-foreground: #0a2930;
+  --muted-foreground: #3d545b;
+  --text-subtle: #5d6b6f;
+
+  /* Signals. The four hues are dark's, to within hex rounding (196° / 153° / 65° / 15°), so a
+     status means one colour in both themes; what is re-derived is lightness and chroma, because a
+     saturated colour on white has to be darker to stay legible. Each family spends the same
+     fraction of the sRGB gamut ceiling its dark counterpart spends, which is what makes them feel
+     equally saturated rather than merely equally named — except that the spread is then capped at
+     1.9× the least-saturated (which is `--primary`, fixed by the brand at C 0.0776). That is the
+     chart ramp's rule applied to chrome, and for the same reason: four families that appear side
+     by side in a status column are a set, and an uncapped rose lands at C 0.223, 2.9× the accent —
+     one member shouting while another whispers. Large areas of saturated colour also fatigue faster
+     in light than in dark, which is the second argument for the cap.
+
+     `--warning` moves furthest: #b07a1e failed every pairing it had (3.72 on white down to 3.15)
+     and sat at hue 75°, the one family that escaped the cross-theme alignment. It is now on dark's
+     64.7° amber and clears 4.5:1 everywhere. `--warning-foreground` becomes plain white (5.29),
+     replacing #fff8e7 at 3.51. */
   --primary: #1f7475;
   --primary-foreground: #ffffff;
-  --secondary: #faf5ee;
-  --secondary-foreground: #0a2930;
-  --muted: #f4ece1;
-  --muted-foreground: #5b6266;
-  --text-subtle: #8a938f;
-  --accent: #1f7475;
+  /* mint-800, not a second copy of `--primary`. Two things need it. The `primary` button is
+     `linear-gradient(135deg, var(--primary), var(--accent))`, which in light was a gradient between
+     one colour and itself — a flat fill where dark has a lit one. And `--accent` is the text/border
+     step (`text-accent`, `border-accent`, checked checkboxes), which in this polarity wants to be
+     DARKER than the fill, not lighter. It is the exact mirror of dark's pair, where `--accent`
+     #84f4f4 is the lighter step above `--primary` #29c6c6. White on it reads 6.51. */
+  --accent: #196869;
   --accent-foreground: #ffffff;
-  --accent-soft: #e4f7f6;
-  --accent-line: rgb(31 116 117 / 0.4);
+  --accent-line: rgb(31 116 117 / 0.42);
   --cta: #ffcb97;
-  --cta-hover: #f9c088;
-  --cta-foreground: #20140a;
-  /* Success and danger share their dark-mode hues (152.7° green, 14.8° rose) so a status means
-     the same colour in both themes. Tuned against this theme's own surfaces: every text pairing —
-     on white, on `--background`, on `--secondary`, and on its own soft — clears 4.5:1, which the
-     previous values did not. */
-  --destructive: #be3c52;
-  --destructive-soft: #fee8e9;
-  --destructive-foreground: #ffffff;
-  --success: #247f48;
-  --success-soft: #e5faea;
+  /* amber-700, snapped from #f9c088 — it was ΔE 0.0048 off a real brand step for no reason. */
+  --cta-hover: #f9c289;
+  /* The theme-stable ink rather than a one-off #20140a (12.22 → 11.70; consolidation, not
+     contrast). The CTA is a light fill in both themes and is the one control whose label does not
+     follow the polarity. */
+  --cta-foreground: var(--ink-amber);
+  --success: #2e794a;
   --success-foreground: #ffffff;
-  --warning: #b07a1e;
-  --warning-soft: #fbefd6;
-  --warning-foreground: #fff8e7;
-  --border: #ece4d8;
-  --border-strong: #dccfc0;
+  --warning: #995e18;
+  --warning-foreground: #ffffff;
+  --destructive: #b64455;
+  --destructive-foreground: #ffffff;
+  /* Light's tints are solid pastels, not alpha, so they get their own derivation rather than a
+     per-tone alpha. Each is the pastel whose separation from the surfaces it lands on is as close
+     as the gamut allows to a common target, with its own full-strength label still clearing 4.5:1
+     on it and body text clearing it too.
+
+     The cool pair and the warm pair are not equally free, and the proposal that predates this pass
+     concluded from the warm pair that all four were stuck. They are not: near white the sRGB
+     ceiling at 196°/153° is 0.075/0.081 against 0.033/0.025 at 66°/15°, so letting the cool tints
+     darken buys them separation the warm ones can never have. Held to a common band instead, so the
+     four read as one set: ΔE 0.057–0.062 from the card, against 0.043–0.057 before.
+
+     `--muted` is the honest exception. A warm pastel cannot move far from a warm chassis — warning
+     and danger sit at ΔE 0.019 from beige-600 and no value fixes that — which is why the 45%
+     same-hue border on `StatusPill`, `Card` and `Button` is mandatory in light rather than
+     decorative. It composites to 1.82–1.88 against its own tint. */
+  --accent-soft: #cdfefe;
+  --success-soft: #dbfee3;
+  --warning-soft: #feead7;
+  --destructive-soft: #fee8e8;
+  /* Light DOES need a second rose step, and the previous note here was wrong about why it did not.
+     The alias was checked against the tint (4.54, fine) but not against the other ground this token
+     labels: `Button variant="danger"` hovers to `bg-destructive/30`, and with the alias in place the
+     label and the wash are the same colour, so every point of alpha eats contrast directly — 3.42 on
+     a card, 3.02 over `--muted`.
+
+     The token's job is "the rose that labels a rose ground". In dark that ground is dark, so the
+     step is lighter; in light the ground is light, so the step is DEEPER — same role, mirrored,
+     exactly like the `--accent`/`--primary` pair above. Same hue and the same 68% of the gamut
+     ceiling as `--destructive`, ΔL 0.100 below it. Clears 4.57 on the darkest hover wash it can
+     meet and 6.87 on the tint. */
+  --destructive-bright: #8a323f;
+
+  /* Edges. In light, elevation cannot come from a lightness step — `--card` is white — so it comes
+     from the hairline and the shadow, and the hairline has to do real work. `--border` moves to
+     beige-800: 1.37 against the card, the same weight class as dark's `--border-strong` composite
+     (1.56) and a genuine edge where #ece4d8 gave 1.26 and the card's own shadow ring gave 1.09. */
+  --border: #e8dacc;
+  --border-strong: #dccfc2;
   --ring: #1f7475;
-  --sidebar: #ffffff;
-  --sidebar-border: #ece4d8;
+  --sidebar-border: #efe5db;
   --header-bg: rgb(253 250 244 / 0.82);
-  --scrim: rgb(12 30 28 / 0.32);
+  /* Scrim and skeleton move onto the ink ladder's own hue (215°) instead of two unrelated teals at
+     186° and 215°. The scrim is also a little heavier, because it now has to dim a deeper canvas. */
+  --scrim: rgb(10 41 48 / 0.38);
+  --skeleton: rgb(10 41 48 / 0.07);
+  --skeleton-sheen: rgb(10 41 48 / 0.03);
 
-  --skeleton: rgb(10 41 48 / 0.05);
-  --skeleton-sheen: rgb(10 41 48 / 0.025);
+  /* The shadow ink stays brand mint-900 — rgb(12 66 63) is the styleguide's own `--shadow-1..3`
+     recipe and the one sanctioned place teal touches the chassis. Both layers are stronger: the
+     ring went 0.05 → 0.07 (1.09 → 1.13 against the page) and the cast 0.22 → 0.26, because the
+     widened ladder gives a card more to lift off. */
+  --elevation-pop: 0 18px 44px -14px rgb(12 66 63 / 0.26), 0 0 0 1px rgb(12 66 63 / 0.07);
 
-  --elevation-pop: 0 18px 44px -14px rgb(12 66 63 / 0.22), 0 0 0 1px rgb(12 66 63 / 0.05);
+  /* Light's own glows, finally — these two used to hold `0 10px 26px -12px var(--accent-line)`,
+     which is the exact "invisible glow" dark §12.2 was written to kill: a 40%-alpha colour pulled
+     in 12px. Light inherited it verbatim and kept it.
+
+     A glow does not translate. Emitted light on a near-black ground reads as light; the same shape
+     on paper reads as a smudge. The light equivalent of "this control is lit" is a COLOURED
+     SHADOW — the element tints the page beneath it instead of lighting the room around it — so
+     these are directional, not omnidirectional, with a tight second layer for the contact edge.
+     Still two of them, and still keyed to the control's own family: a warm control lit by mint is
+     the giveaway of a palette applied by search-and-replace. */
+  --elevation-glow:
+    0 10px 30px -10px rgb(31 116 117 / 0.45), 0 2px 10px -4px rgb(31 116 117 / 0.22);
+  --elevation-glow-warm:
+    0 10px 30px -10px rgb(250 171 89 / 0.55), 0 2px 10px -4px rgb(250 171 89 / 0.3);
 }
 
 * {
@@ -397,8 +623,9 @@ body,
   background: var(--canvas-aurora), var(--canvas-base);
 }
 
-/* Atmosphere — the brand layer behind the app (docs/dark-mode-redesign.md §5). Dark-only in this
-   pass: light mode is the brand kit's native habitat and gets its own treatment later. Mounted by
+/* Atmosphere — the brand layer behind the app (docs/dark-mode-redesign.md §5,
+   docs/light-mode-redesign.md §12). Both themes: the geometry below is shared and only the
+   `--atmo-*` values differ, so dark reads the shapes as light and light reads them as ink. Mounted by
    `AppShell` and `AuthShell` inside their own positioned roots, so `absolute` rather than the
    usual `fixed` — the auth screen must keep it off the brand panel. Content sits at z-index 2,
    above both layers; surfaces stay opaque, so on dense screens the atmosphere lives only in the
@@ -449,8 +676,12 @@ body,
   height: 100%;
 }
 
+/* 40px rather than 26px. At the old radius the blob still had a discernible edge, and a soft-edged
+   warm patch over a cool near-black is exactly what a camouflage blotch is — the shape read as
+   painted-on rather than lit. Blurring further past the silhouette's own scale turns it back into
+   a light source; the echo below is what keeps the form legible. */
 .sheet-blob-fill {
-  filter: blur(26px);
+  filter: blur(40px);
 }
 
 .sheet-blob-echo {
@@ -481,14 +712,16 @@ body,
 
 /* The wave ridge sits on the bottom edge like a horizon line; the swoosh bleeds off the top-right
    corner alongside the aurora. Both are stationary and quieter than the blobs. */
+/* Wider than the original 26vmax, and barely blurred: it is line-art now (see `Atmosphere.tsx`),
+   so it wants the arc's near-crisp treatment rather than the blobs' bloom. */
 .sheet-wave {
   position: absolute;
-  bottom: -4%;
-  left: 24%;
-  width: 26vmax;
+  bottom: -6%;
+  left: 18%;
+  width: 38vmax;
   height: auto;
   aspect-ratio: 250 / 91;
-  filter: blur(6px);
+  filter: blur(1.5px);
 }
 
 .sheet-arc {
@@ -571,7 +804,10 @@ body,
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix type='matrix' values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0.28 0.28 0.28 0 0'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23g)'/%3E%3C/svg%3E");
 }
 
-.light .sheet-atmosphere,
+/* Only the grain. The atmosphere itself ships to light (docs/light-mode-redesign.md §12) — the
+   silhouettes are drawn as ink on a warm page in the styleguide, so light is the layer's native
+   habitat, not an adaptation of it. Grain stays out: it exists because 8-bit near-black radials
+   band, and its tile is white-alpha noise, which composites to nothing at L ≈ 0.91. */
 .light .sheet-grain {
   display: none;
 }
@@ -592,7 +828,7 @@ textarea {
 }
 
 ::selection {
-  background: rgb(41 198 198 / 0.26);
+  background: rgb(41 198 198 / 0.32);
 }
 
 /* The only layered rules in this file, and they have to be. A control that wants a different focus
@@ -638,6 +874,20 @@ textarea {
   border: 1px solid var(--border);
   background: var(--card);
   box-shadow: var(--elevation-pop);
+}
+
+/* The trend line's own light (`ChartPrimitives`). `flood-opacity` is a real CSS property on
+   `feDropShadow`, not just a presentation attribute, which is the only way to theme an SVG filter
+   — the attribute form cannot read a `var()`. Dark gets a glow around the stroke; light gets a
+   quarter of it, because a coloured bloom around a dark line on white is a blurred line, not a lit
+   one. Not removed outright in light: at 0.14 it still softens the stroke's contact with the area
+   fill under it, which is what stops the two reading as separate objects. */
+.sheet-trend-glow {
+  flood-opacity: 0.55;
+}
+
+.light .sheet-trend-glow {
+  flood-opacity: 0.14;
 }
 
 .sheet-shimmer {

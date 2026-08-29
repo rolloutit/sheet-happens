@@ -2813,3 +2813,38 @@ Expected result:
 - Notification settings persist, the dispatcher is fresh, and the bell unread count updates.
 - Weekly reminders exclude projects with time or inactive-week markers.
 - Invoice reminders use exact elapsed hours and stop after invoice upload.
+- Dark mode reads as lit rather than drab: cards sit visibly above the canvas on every screen, the
+  primary and CTA buttons each carry a glow of their own temperature, and the active sidebar item
+  shows a lit rail plus a tinted row.
+- No surface, glow, or chart mark reads as khaki, olive, tan, or drab teal in dark mode.
+- The dashboard's danger stat card is rose throughout — tinted surface, sparkline bars, and corner
+  glow — with no amber ground under rose content.
+- Status pills keep four visibly different tones side by side, each with a border of its own hue,
+  and every label stays readable on a card, on a hovered row, and inside a dropdown.
+- The atmosphere stays a gutter phenomenon: on the auth screen the description text remains fully
+  legible wherever the glows and blobs fall behind it, and no card, table, or panel shows it through.
+- Reports charts show six clearly distinct series, and green and rose remain tellable apart when
+  viewed through a deuteranopia simulator.
+- Light mode reads as a warm printed page rather than a flat white one: a card is clearly a panel
+  sitting on the canvas everywhere, including the top-right corner of a page, where a white card
+  used to disappear into a white glow.
+- Every de-emphasised string is readable in light — table column headers, input placeholders, the
+  command-palette placeholder, and inactive sidebar labels. None of them is a pale grey-green.
+- No text tier smaller than a heading sits directly on the light canvas: on the auth screen the
+  heading and the description are legible wherever the blobs and echo lines fall behind them.
+- Warning reads as a real amber in light and its label is legible on a pill, on a card, on a table
+  stripe, and on a hovered row — not a mustard on cream.
+- Status pills stay four visibly different tones in light, each with a border of its own hue; check
+  a warning pill and a danger pill sitting on a beige chip or table stripe specifically.
+- The light danger button is legible both at rest and while hovered, and so is a danger row in a
+  dropdown menu.
+- The light primary button shows a teal gradient rather than a flat fill, and it and the CTA each
+  cast a shadow of their own temperature — cool under primary, warm under the CTA.
+- Nothing in light reads as a smudge: the active sidebar label and rail, the stat-card sparkline's
+  final bar, and the distribution meter bars all have crisp edges with no dark halo behind them.
+- The brand atmosphere is present in light — printed pastel blobs with crisp echo lines, the wave,
+  the swoosh and the dot lattice — and stays in the gutters, never showing through a card, table or
+  panel. It carries no film grain.
+- The theme toggle survives a reload in both directions, and switching light↔dark on a dense screen
+  changes no layout or geometry, only colour.
+- Reports charts stay on white cards in light and show six clearly distinct series there.
