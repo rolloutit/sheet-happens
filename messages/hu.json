@@ -86,7 +86,10 @@
       "signOut": "Kijelentkezés"
     },
     "timer": {
-      "stop": "Időmérő leállítása"
+      "stop": "Időmérő leállítása",
+      "open": "Időkövetés megnyitása",
+      "running": "Az időmérő fut",
+      "dismissError": "Bezárás"
     }
   },
   "AuthShell": {
@@ -1935,11 +1938,13 @@
       "edit": "Szerkesztés",
       "close": "Bezárás",
       "cancel": "Mégse",
-      "save": "Mentés"
+      "save": "Mentés",
+      "newTimer": "Új időmérő"
     },
     "tooltips": {
       "copyPreviousDay": "Bejegyzések másolása a(z) {date} előtti napról.",
-      "duplicatePreviousWeek": "Az előző hét bejegyzéseinek másolása erre a hétre."
+      "duplicatePreviousWeek": "Az előző hét bejegyzéseinek másolása erre a hétre.",
+      "stopTimerFirst": "Új időmérő indítása előtt állítsd le a futó időmérőt."
     },
     "quickActionConfirm": {
       "confirm": "Bejegyzések másolása",
@@ -1993,6 +1998,10 @@
       "projectLabel": "Időmérő projekt",
       "start": "Indítás",
       "stop": "Leállítás"
+    },
+    "timerModal": {
+      "title": "Új időmérő",
+      "description": "Válassz projektet, és írd le, min dolgozol. Az időmérő azonnal elindul."
     },
     "entryModal": {
       "newTitle": "Új időbejegyzés",

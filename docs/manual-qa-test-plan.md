@@ -455,19 +455,56 @@ Expected result:
 
 ### Timer Start And Stop
 
-1. Open `https://{DOMAIN_NAME}/time?week={TIME_TRACKING_WEEK_START}`.
-2. Switch to `Day` view.
-3. Enter `{TIME_ENTRY_DESCRIPTION}` in the timer description field.
+1. Open `https://{DOMAIN_NAME}/time?week={TIME_TRACKING_WEEK_START}` and stay in `Grid` view.
+2. Click `New timer`.
+3. Enter `{TIME_ENTRY_DESCRIPTION}` in the description field.
 4. Choose `{TIME_TRACKING_PROJECT_A}`.
 5. Click `Start`.
-6. Confirm the running timer appears in the day view and app header.
-7. Stop the timer from the header or day view.
+6. Confirm the running timer appears on the page and in the app header, in `Grid` view as well as
+   in `Day` view.
+7. Confirm `New timer` is now disabled, and that hovering it explains that the running timer has to
+   be stopped first.
+8. Stop the timer from the card on the page.
 
 Expected result:
 
 - Only one timer can run for the user.
 - The elapsed timer label changes while running without hydration errors.
 - Stopping the timer creates a time entry on the timer start date.
+- Reopening `https://{DOMAIN_NAME}/time?new=timer` directly opens the dialog with empty fields.
+- Cancelling the dialog, or pressing `Escape`, leaves no timer running and no entry behind.
+
+### Running Timer Is Visible And Stoppable From Every Page
+
+1. Open `https://{DOMAIN_NAME}/time` and start a timer for `{TIME_TRACKING_PROJECT_A}`.
+2. Navigate to `Dashboard`, then `Timesheets`, then an admin page such as `Projects`.
+3. Confirm on each page that the header shows the running timer and that the elapsed reading keeps
+   counting up rather than restarting at `0:00`.
+4. Narrow the window to a mobile width and confirm the timer is still in the header — the elapsed
+   time and the stop button remain, the project name gives way.
+5. Stop the timer from the header while on the admin page.
+6. Confirm the timer disappears from the header immediately, without a page reload.
+7. Open `https://{DOMAIN_NAME}/time` and confirm the entry was saved on the day the timer started.
+
+Expected result:
+
+- The timer follows the user across every signed-in page and both breakpoints.
+- Moving between pages neither hides the timer nor resets its elapsed reading.
+- Stopping from any page clears the timer everywhere and writes the time entry.
+- A page reload on any route still shows the running timer.
+
+### Timer Discarded At The Daily Limit Says So
+
+1. Log entries totalling close to 24 hours on one day for the test user.
+2. Start a timer that would push that day past 24 hours, and let it run.
+3. Navigate away from `Time`, then stop the timer from the app header.
+
+Expected result:
+
+- The timer disappears from the header rather than lingering as a phantom.
+- The reason the time was discarded is shown next to where the timer was, and stays on screen until
+  it is dismissed.
+- No time entry is created for that day.
 
 ### Same As Yesterday Does Not Duplicate Existing Cells
 
@@ -2946,3 +2983,5 @@ Expected result:
   field.
 - Closing an overlay with unsaved input asks first, whichever way it is closed.
 - Admin list filters read as a single toolbar row with removable chips for whatever is applied.
+- A running timer sits in the app header on every signed-in page and at every width, and can be
+  stopped from there; starting one happens in an overlay opened from the time-tracking toolbar.

@@ -86,7 +86,10 @@
       "signOut": "Sign out"
     },
     "timer": {
-      "stop": "Stop timer"
+      "stop": "Stop timer",
+      "open": "Open time tracking",
+      "running": "Timer running",
+      "dismissError": "Dismiss"
     }
   },
   "AuthShell": {
@@ -1935,11 +1938,13 @@
       "edit": "Edit",
       "close": "Close",
       "cancel": "Cancel",
-      "save": "Save"
+      "save": "Save",
+      "newTimer": "New timer"
     },
     "tooltips": {
       "copyPreviousDay": "Copy entries from the day before {date}.",
-      "duplicatePreviousWeek": "Copy entries from the previous week into this week."
+      "duplicatePreviousWeek": "Copy entries from the previous week into this week.",
+      "stopTimerFirst": "Stop the running timer before starting another one."
     },
     "quickActionConfirm": {
       "confirm": "Copy entries",
@@ -1993,6 +1998,10 @@
       "projectLabel": "Timer project",
       "start": "Start",
       "stop": "Stop"
+    },
+    "timerModal": {
+      "title": "New timer",
+      "description": "Pick a project and describe what you are working on. The timer starts right away."
     },
     "entryModal": {
       "newTitle": "New time entry",

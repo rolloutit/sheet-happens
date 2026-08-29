@@ -16,7 +16,6 @@ import {
   Moon,
   Pencil,
   Play,
-  PlayCircle,
   Plus,
   RotateCcw,
   ShieldCheck,
@@ -35,7 +34,6 @@ import {
   useRef,
   useMemo,
   useState,
-  useSyncExternalStore,
   useTransition,
   type ReactNode,
 } from "react";
@@ -62,6 +60,8 @@ import {
 } from "@/src/lib/formatting";
 import { DAILY_HARD_LIMIT_MINUTES, DAILY_SOFT_WARNING_MINUTES } from "@/src/lib/time-entry-limits";
 import { usePickerLabels } from "@/src/i18n/picker-labels";
+import { useElapsedLabel } from "@/src/lib/use-elapsed-label";
+import { useOverlayParam } from "@/src/lib/use-overlay-param";
 import { cn } from "@/src/lib/utils";
 import type {
   TimeGridAssignedProject,
@@ -78,7 +78,6 @@ import {
   duplicatePreviousWeekAction,
   markInactiveProjectWeekAction,
   saveTimeEntryDraftAction,
-  startRunningTimerAction,
   stopRunningTimerAction,
   unmarkInactiveProjectWeekAction,
   updateTimeEntryAction,
@@ -88,6 +87,8 @@ import {
   type TimeEntryTimingMode,
   type TimeTrackingActionState,
 } from "./actions.types";
+import { TimerCreateDialog } from "./TimerCreateDialog";
+import { TIME_OVERLAY_PARAM, TIMER_OVERLAY_VALUE } from "./time-overlays";
 
 const GRID_ENTRY_IDLE_OPEN_DELAY_MS = 900;
 
@@ -168,6 +169,7 @@ function TimeGridContent({ week }: { week: TimeGridWeek }) {
   const [entryModal, setEntryModal] = useState<EntryModalState>(null);
   const [breakdown, setBreakdown] = useState<BreakdownState>(null);
   const [pendingQuickAction, setPendingQuickAction] = useState<PendingQuickAction | null>(null);
+  const [, setTimerOpen] = useOverlayParam(TIME_OVERLAY_PARAM, TIMER_OVERLAY_VALUE);
 
   const inactiveProjectIds = useMemo(
     () => new Set(week.inactiveWeeks.map((inactiveWeek) => inactiveWeek.projectId)),
@@ -375,32 +377,58 @@ function TimeGridContent({ week }: { week: TimeGridWeek }) {
           </button>
         </div>
 
-        <button
-          type="button"
-          className="inline-flex items-center gap-2 rounded-[var(--radius-pill)] bg-cta px-4 py-2.5 text-sm font-semibold text-cta-foreground shadow-soft transition hover:bg-[color-mix(in_srgb,var(--cta)_88%,white)] disabled:cursor-not-allowed disabled:opacity-60"
-          disabled={!projectRows.length || isPending}
-          onClick={() => {
-            const project = projectRows[0];
-            if (!project) return;
+        <div className="flex items-center gap-2">
+          {/* `Button` carries `disabled:pointer-events-none`, so a title on the button itself would
+              never fire — the wrapper is what makes the disabled reason reachable on hover. */}
+          <span title={week.runningTimer ? t("tooltips.stopTimerFirst") : undefined}>
+            <Button
+              type="button"
+              variant="soft"
+              icon={Play}
+              disabled={Boolean(week.runningTimer) || !projectRows.length || isPending}
+              onClick={() => setTimerOpen(true)}
+            >
+              {t("actions.newTimer")}
+            </Button>
+          </span>
+          <Button
+            type="button"
+            variant="cta"
+            icon={Plus}
+            disabled={!projectRows.length || isPending}
+            onClick={() => {
+              const project = projectRows[0];
+              if (!project) return;
 
-            setEntryModal({
-              mode: "create",
-              source: "FORM",
-              projectId: project.projectId,
-              localDate:
-                view === "day" && selectedDay
-                  ? selectedDay.isoDate
-                  : week.todayIso >= week.weekStart && week.todayIso <= week.weekEnd
-                    ? week.todayIso
-                    : week.weekStart,
-              durationMinutes: 60,
-            });
-          }}
-        >
-          <Plus className="size-4" aria-hidden="true" />
-          {t("actions.newEntry")}
-        </button>
+              setEntryModal({
+                mode: "create",
+                source: "FORM",
+                projectId: project.projectId,
+                localDate:
+                  view === "day" && selectedDay
+                    ? selectedDay.isoDate
+                    : week.todayIso >= week.weekStart && week.todayIso <= week.weekEnd
+                      ? week.todayIso
+                      : week.weekStart,
+                durationMinutes: 60,
+              });
+            }}
+          >
+            {t("actions.newEntry")}
+          </Button>
+        </div>
       </div>
+
+      {/* Above the week navigation and outside the view branch below, so a running timer is on
+          screen in the grid as well as the day list. */}
+      {week.runningTimer ? (
+        <RunningTimerCard
+          disabled={isPending}
+          runningTimer={week.runningTimer}
+          onStop={() => runAction(stopRunningTimerAction)}
+          t={t}
+        />
+      ) : null}
 
       <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
         <div className="flex flex-wrap items-center gap-3">
@@ -591,10 +619,7 @@ function TimeGridContent({ week }: { week: TimeGridWeek }) {
             entries={selectedDayEntries}
             entriesByDay={entriesByDay}
             isPending={isPending}
-            projects={projectRows}
             projectsById={projectsById}
-            recentProjects={recentProjects}
-            runningTimer={week.runningTimer}
             onAddEntry={(localDate) => {
               const project = projectRows[0];
               if (!project) return;
@@ -612,10 +637,6 @@ function TimeGridContent({ week }: { week: TimeGridWeek }) {
             }
             onEditEntry={(entry) => setEntryModal({ mode: "edit", entry })}
             onSelectDay={setSelectedDayIso}
-            onStartTimer={(projectId, description) =>
-              runAction(() => startRunningTimerAction({ projectId, description }))
-            }
-            onStopTimer={() => runAction(stopRunningTimerAction)}
             t={t}
           />
         ) : (
@@ -876,6 +897,12 @@ function TimeGridContent({ week }: { week: TimeGridWeek }) {
           </p>
         </div>
       )}
+
+      <TimerCreateDialog
+        projects={projectRows}
+        recentProjects={recentProjects}
+        onStarted={refreshWithResult}
+      />
 
       {entryModal ? (
         <EntryModal
@@ -1241,16 +1268,11 @@ type DayViewProps = {
   entries: TimeGridEntry[];
   entriesByDay: Map<string, TimeGridEntry[]>;
   isPending: boolean;
-  projects: TimeGridAssignedProject[];
   projectsById: Map<string, TimeGridAssignedProject>;
-  recentProjects: TimeGridAssignedProject[];
-  runningTimer: TimeGridWeek["runningTimer"];
   onAddEntry: (localDate: string) => void;
   onDeleteEntry: (entry: TimeGridEntry) => void;
   onEditEntry: (entry: TimeGridEntry) => void;
   onSelectDay: (localDate: string) => void;
-  onStartTimer: (projectId: string, description: string) => void;
-  onStopTimer: () => void;
   t: TimeTrackingTranslator;
 };
 
@@ -1261,16 +1283,11 @@ function DayView({
   entries,
   entriesByDay,
   isPending,
-  projects,
   projectsById,
-  recentProjects,
-  runningTimer,
   onAddEntry,
   onDeleteEntry,
   onEditEntry,
   onSelectDay,
-  onStartTimer,
-  onStopTimer,
   t,
 }: DayViewProps) {
   const { formatMinutesWithUnit } = useDurationFormatting();
@@ -1282,16 +1299,6 @@ function DayView({
 
   return (
     <div className="grid gap-4">
-      <TimerComposer
-        disabled={isPending || !projects.length}
-        projects={projects}
-        recentProjects={recentProjects}
-        runningTimer={runningTimer}
-        onStart={onStartTimer}
-        onStop={onStopTimer}
-        t={t}
-      />
-
       <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
         <div className="grid grid-cols-7 gap-1.5 sm:w-auto">
           {days.map((option) => (
@@ -1459,126 +1466,55 @@ function DayView({
   );
 }
 
-function TimerComposer({
+/**
+ * The running timer, in full size, on the page where time gets tracked.
+ *
+ * The header pill covers every other route; this exists because `/time` is where you want the
+ * elapsed reading big enough to glance at and the stop button where your hand already is. It has no
+ * idle state any more — starting a timer is the `New timer` overlay.
+ */
+function RunningTimerCard({
   disabled,
-  projects,
-  recentProjects,
   runningTimer,
-  onStart,
   onStop,
   t,
 }: {
   disabled: boolean;
-  projects: TimeGridAssignedProject[];
-  recentProjects: TimeGridAssignedProject[];
-  runningTimer: TimeGridWeek["runningTimer"];
-  onStart: (projectId: string, description: string) => void;
+  runningTimer: NonNullable<TimeGridWeek["runningTimer"]>;
   onStop: () => void;
   t: TimeTrackingTranslator;
 }) {
-  const pickerLabels = usePickerLabels();
-  const [description, setDescription] = useState("");
-  const [projectId, setProjectId] = useState(projects[0]?.projectId ?? "");
-  const selectedProjectId = projectId || (projects[0]?.projectId ?? "");
-  const elapsed = useElapsedLabel(runningTimer?.startedAt ?? null);
-  const ready = Boolean(selectedProjectId && description.trim());
-
-  if (runningTimer) {
-    return (
-      <div className="flex flex-col gap-3 rounded-[var(--radius-lg)] border border-accent-line bg-accent-soft p-4 sm:flex-row sm:items-center">
-        <span className="relative flex size-3 shrink-0">
-          <span className="absolute inline-flex size-full animate-ping rounded-full bg-accent opacity-45" />
-          <span className="relative inline-flex size-3 rounded-full bg-accent" />
-        </span>
-        <div className="min-w-0 flex-1">
-          <p className="truncate text-sm font-semibold text-foreground">
-            {runningTimer.description || t("timer.trackedWithTimer")}
-          </p>
-          <p className="mt-1 flex items-center gap-2 text-sm text-muted-foreground">
-            <span
-              className="size-2 rounded-full"
-              style={{ backgroundColor: runningTimer.projectColor }}
-              aria-hidden="true"
-            />
-            {runningTimer.projectName}
-          </p>
-        </div>
-        <span className="text-2xl font-semibold text-accent">{elapsed}</span>
-        <button
-          type="button"
-          disabled={disabled}
-          className="inline-flex items-center justify-center gap-2 rounded-[var(--radius-md)] bg-destructive px-4 py-2.5 text-sm font-semibold text-destructive-foreground transition hover:bg-destructive/90 disabled:cursor-not-allowed disabled:opacity-50"
-          onClick={onStop}
-        >
-          <Square className="size-3.5 fill-current" aria-hidden="true" />
-          {t("timer.stop")}
-        </button>
-      </div>
-    );
-  }
+  const elapsed = useElapsedLabel(runningTimer.startedAt);
 
   return (
-    <div className="grid gap-3 rounded-[var(--radius-lg)] border border-border bg-card p-4">
-      <div className="grid gap-3 lg:grid-cols-[auto_1fr_16rem_auto] lg:items-center">
-        <PlayCircle className="hidden size-5 text-muted-foreground lg:block" aria-hidden="true" />
-        <input
-          value={description}
-          placeholder={t("timer.placeholder")}
-          className={inputClassName(false)}
-          onChange={(event) => setDescription(event.target.value)}
-        />
-        <Combobox
-          label={t("timer.projectLabel")}
-          value={selectedProjectId}
-          onValueChange={setProjectId}
-          labels={pickerLabels.combobox}
-          triggerClassName="bg-card"
-          options={projects.map((project) => ({
-            value: project.projectId,
-            label: project.name,
-          }))}
-        />
-        <button
-          type="button"
-          disabled={disabled || !ready}
-          className="inline-flex items-center justify-center gap-2 rounded-[var(--radius-md)] bg-gradient-to-br from-primary to-accent px-4 py-2.5 text-sm font-semibold text-accent-foreground transition disabled:cursor-not-allowed disabled:opacity-50"
-          onClick={() => {
-            onStart(selectedProjectId, description);
-            setDescription("");
-          }}
-        >
-          <Play className="size-4 fill-current" aria-hidden="true" />
-          {t("timer.start")}
-        </button>
+    <div className="flex flex-col gap-3 rounded-[var(--radius-lg)] border border-accent-line bg-accent-soft p-4 sm:flex-row sm:items-center">
+      <span className="relative flex size-3 shrink-0">
+        <span className="absolute inline-flex size-full animate-ping rounded-full bg-accent opacity-45" />
+        <span className="relative inline-flex size-3 rounded-full bg-accent" />
+      </span>
+      <div className="min-w-0 flex-1">
+        <p className="truncate text-sm font-semibold text-foreground">
+          {runningTimer.description || t("timer.trackedWithTimer")}
+        </p>
+        <p className="mt-1 flex items-center gap-2 text-sm text-muted-foreground">
+          <span
+            className="size-2 rounded-full"
+            style={{ backgroundColor: runningTimer.projectColor }}
+            aria-hidden="true"
+          />
+          {runningTimer.projectName}
+        </p>
       </div>
-
-      {recentProjects.length ? (
-        <div className="flex flex-wrap items-center gap-2">
-          <span className="font-ui text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
-            {t("labels.recent")}
-          </span>
-          {recentProjects.slice(0, 4).map((project) => (
-            <button
-              key={project.projectId}
-              type="button"
-              className={cn(
-                "inline-flex items-center gap-2 rounded-[var(--radius-pill)] border px-3 py-1.5 text-sm font-medium transition",
-                selectedProjectId === project.projectId
-                  ? "border-accent bg-accent-soft text-accent"
-                  : "border-border bg-background text-foreground hover:border-accent-line hover:bg-accent-soft",
-              )}
-              onClick={() => setProjectId(project.projectId)}
-            >
-              <span
-                className="size-2 rounded-full"
-                style={{ backgroundColor: project.color }}
-                aria-hidden="true"
-              />
-              {project.name}
-            </button>
-          ))}
-        </div>
-      ) : null}
+      <span className="text-2xl font-semibold text-accent">{elapsed}</span>
+      <button
+        type="button"
+        disabled={disabled}
+        className="inline-flex items-center justify-center gap-2 rounded-[var(--radius-md)] bg-destructive px-4 py-2.5 text-sm font-semibold text-destructive-foreground transition hover:bg-destructive/90 disabled:cursor-not-allowed disabled:opacity-50"
+        onClick={onStop}
+      >
+        <Square className="size-3.5 fill-current" aria-hidden="true" />
+        {t("timer.stop")}
+      </button>
     </div>
   );
 }
@@ -2613,44 +2549,6 @@ function getFocusableElements(container: HTMLElement | null) {
       ].join(","),
     ),
   ).filter((element) => element.offsetParent !== null);
-}
-
-function useElapsedLabel(startedAt: string | null) {
-  const nowSeconds = useClientClock();
-
-  if (!startedAt || nowSeconds === null) return "0:00";
-
-  return formatElapsed(Math.max(0, nowSeconds * 1000 - Date.parse(startedAt)));
-}
-
-function useClientClock() {
-  return useSyncExternalStore(subscribeToClock, getClockSnapshot, getServerClockSnapshot);
-}
-
-function subscribeToClock(onStoreChange: () => void) {
-  const timerId = window.setInterval(onStoreChange, 1000);
-  return () => window.clearInterval(timerId);
-}
-
-function getClockSnapshot() {
-  return Math.floor(Date.now() / 1000);
-}
-
-function getServerClockSnapshot() {
-  return null;
-}
-
-function formatElapsed(milliseconds: number) {
-  const totalSeconds = Math.floor(milliseconds / 1000);
-  const hours = Math.floor(totalSeconds / 3600);
-  const minutes = Math.floor((totalSeconds % 3600) / 60);
-  const seconds = totalSeconds % 60;
-
-  if (hours > 0) {
-    return `${hours}:${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
-  }
-
-  return `${minutes}:${String(seconds).padStart(2, "0")}`;
 }
 
 function formatDraftTimestamp(value: string) {

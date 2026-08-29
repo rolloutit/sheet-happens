@@ -130,6 +130,32 @@ const storyCases: StoryVisualCase[] = [
     },
   },
   {
+    id: "layout-runningtimerpill--running",
+    slug: "running-timer-pill-dark",
+    theme: "dark",
+    locale: "en",
+    projects: ["desktop"],
+  },
+  {
+    /*
+      Points at the `*Light` story rather than flipping `theme` here, for the same reason the
+      AppShell cases above do: the meta pins `theme: "dark"` and a story-level global outranks the
+      URL. The pill sits on the header plane, which is the surface the two themes differ on most.
+    */
+    id: "layout-runningtimerpill--running-light",
+    slug: "running-timer-pill-light",
+    theme: "light",
+    locale: "en",
+    projects: ["desktop"],
+  },
+  {
+    id: "layout-runningtimerpill--compact-mobile",
+    slug: "running-timer-pill-compact-mobile",
+    theme: "dark",
+    locale: "en",
+    projects: ["mobile"],
+  },
+  {
     id: "layout-mobilebottombar--default",
     slug: "mobile-bottom-bar-dark",
     theme: "dark",
@@ -159,6 +185,26 @@ const storyCases: StoryVisualCase[] = [
     theme: "dark",
     locale: "en",
     projects: ["desktop"],
+  },
+  {
+    id: "sheet-timerstartdialog--open",
+    slug: "timer-start-dialog-dark",
+    theme: "dark",
+    locale: "en",
+    projects: ["desktop"],
+    prepare: async (page) => {
+      await expect(page.getByRole("dialog")).toBeVisible();
+    },
+  },
+  {
+    id: "sheet-timerstartdialog--open-light",
+    slug: "timer-start-dialog-light",
+    theme: "light",
+    locale: "en",
+    projects: ["desktop"],
+    prepare: async (page) => {
+      await expect(page.getByRole("dialog")).toBeVisible();
+    },
   },
   {
     id: "sheet-timebreakdowndialog--default",

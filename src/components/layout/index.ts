@@ -1,5 +1,5 @@
 export { AppShell } from "./AppShell";
-export type { AppShellProps } from "./AppShell";
+export type { AppShellProps, AppShellTimer, AppShellTimerActionResult } from "./AppShell";
 export { Atmosphere } from "./Atmosphere";
 export {
   AuthButton,
@@ -42,6 +42,15 @@ export type {
   NotificationTone,
   ShellNotification,
 } from "./NotificationButton";
+export { RunningTimerPill } from "./RunningTimerPill";
+export type { RunningTimerPillLabels, RunningTimerPillProps } from "./RunningTimerPill";
+export { RunningTimerProvider, useRunningTimer } from "./RunningTimerProvider";
+export type {
+  RunningTimerContextValue,
+  RunningTimerProviderProps,
+  RunningTimerSnapshot,
+  RunningTimerStopResult,
+} from "./RunningTimerProvider";
 export { ThemeProvider, useTheme } from "./ThemeProvider";
 export type { ThemeProviderProps, UseThemeResult } from "./ThemeProvider";
 export { ThemeToggle } from "./ThemeToggle";

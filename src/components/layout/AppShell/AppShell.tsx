@@ -17,13 +17,13 @@ import {
   ReceiptText,
   ScrollText,
   Settings,
-  Square,
   Users,
   WalletCards,
 } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
+import type { Route } from "next";
 import { useRouter } from "next/navigation";
-import { useState, useSyncExternalStore, useTransition } from "react";
+import { useState, useTransition } from "react";
 
 import {
   Drawer,
@@ -35,6 +35,7 @@ import {
   DrawerTrigger,
 } from "@/src/components/ui/Drawer";
 import { authClient } from "@/src/lib/auth-client";
+import { useElapsedLabel } from "@/src/lib/use-elapsed-label";
 import { cn } from "@/src/lib/utils";
 import { setLocaleAction } from "@/src/i18n/actions";
 import { Atmosphere } from "../Atmosphere";
@@ -43,9 +44,11 @@ import { CommandPill } from "../CommandPill";
 import { LanguageToggle } from "../LanguageToggle";
 import { MobileBottomBar } from "../MobileBottomBar";
 import { NotificationButton } from "../NotificationButton";
+import { RunningTimerPill } from "../RunningTimerPill";
+import { useRunningTimer } from "../RunningTimerProvider";
 import { ThemeToggle } from "../ThemeToggle";
 import { UserMenu } from "../UserMenu";
-import type { AppShellProps, AppShellTimer } from "./AppShell.types";
+import type { AppShellProps } from "./AppShell.types";
 
 type AppShellTranslator = ReturnType<typeof useTranslations>;
 type AppShellRole = NonNullable<AppShellProps["role"]>;
@@ -145,11 +148,47 @@ export function AppShell({
   const [mobileOpen, setMobileOpen] = useState(false);
   const [isCollapsed, setIsCollapsed] = useState(initiallyCollapsed);
   const [localLanguage, setLocalLanguage] = useState(language ?? locale);
-  const [timerNotice, setTimerNotice] = useState<string | null>(null);
   const resolvedProfile = profile ?? inferProfileFromLegacyRole(role);
   const selectedLanguage = language ?? localLanguage;
-  const [isStoppingTimer, startStoppingTimerTransition] = useTransition();
   const [, startLanguageTransition] = useTransition();
+  const [isStoppingLocalTimer, startStoppingTimerTransition] = useTransition();
+  const [localTimerError, setLocalTimerError] = useState<string | null>(null);
+  const shellTimer = useRunningTimer();
+
+  /*
+    The props win over the provider, not the other way round. The app leaves them undefined and the
+    header sources the timer from the root layout on every route; stories and tests pass them
+    directly to draw a specific state without standing up a provider. `null` is a deliberate
+    "nothing running", so only `undefined` falls through to the context.
+  */
+  const resolvedTimer = timer !== undefined ? timer : shellTimer.timer;
+  const usingLocalStop = Boolean(onStopTimer);
+  const resolvedStopTimer = usingLocalStop ? handleStopTimer : shellTimer.stopTimer;
+  const timerError = usingLocalStop ? localTimerError : shellTimer.error;
+  const isStoppingTimer = usingLocalStop ? isStoppingLocalTimer : shellTimer.isStopping;
+  const elapsedLabel = useElapsedLabel(resolvedTimer?.startedAt ?? null);
+
+  function handleStopTimer() {
+    if (!onStopTimer) return;
+
+    startStoppingTimerTransition(async () => {
+      const result = await onStopTimer();
+
+      setLocalTimerError(result.status === "error" ? result.message : null);
+      // Refreshed on the error path too — see RunningTimerProvider for why the daily-limit
+      // discard makes that necessary rather than merely tidy.
+      router.refresh();
+    });
+  }
+
+  function dismissTimerError() {
+    if (usingLocalStop) {
+      setLocalTimerError(null);
+      return;
+    }
+
+    shellTimer.dismissError();
+  }
 
   const translatedUser = {
     ...user,
@@ -208,22 +247,6 @@ export function AppShell({
     if (actionId === "my-rates") {
       window.location.href = "/rates";
     }
-  }
-
-  function handleStopTimer() {
-    if (!onStopTimer) return;
-
-    startStoppingTimerTransition(async () => {
-      const result = await onStopTimer();
-
-      if (result.status === "error") {
-        setTimerNotice(result.message);
-        return;
-      }
-
-      setTimerNotice(null);
-      router.refresh();
-    });
   }
 
   return (
@@ -414,19 +437,24 @@ export function AppShell({
               </div>
             </div>
             <div className="flex items-center gap-3">
+              {/* Outside the desktop-only cluster below: a running timer has to be visible and
+                  stoppable at every width, not only where there is room for the command pill. */}
+              <RunningTimerPill
+                timer={resolvedTimer ?? null}
+                elapsedLabel={elapsedLabel}
+                error={timerError}
+                disabled={isStoppingTimer}
+                labels={{
+                  open: t("timer.open"),
+                  stop: t("timer.stop"),
+                  running: t("timer.running"),
+                  dismissError: t("timer.dismissError"),
+                }}
+                onOpen={() => router.push((resolvedTimer?.href ?? "/time") as Route)}
+                onStop={resolvedStopTimer}
+                onDismissError={dismissTimerError}
+              />
               <div className="hidden items-center gap-3 md:flex">
-                {timer ? (
-                  <HeaderTimerPill
-                    timer={timer}
-                    disabled={!onStopTimer || isStoppingTimer}
-                    error={timerNotice}
-                    stopLabel={t("timer.stop")}
-                    onOpen={() => {
-                      window.location.href = timer.href ?? "/time";
-                    }}
-                    onStop={handleStopTimer}
-                  />
-                ) : null}
                 <CommandPill
                   label={t("command.label")}
                   shortcut="Cmd+K"
@@ -478,102 +506,6 @@ export function AppShell({
       />
     </div>
   );
-}
-
-function HeaderTimerPill({
-  timer,
-  disabled,
-  error,
-  stopLabel,
-  onOpen,
-  onStop,
-}: {
-  timer: AppShellTimer;
-  disabled: boolean;
-  error: string | null;
-  stopLabel: string;
-  onOpen: () => void;
-  onStop: () => void;
-}) {
-  const elapsed = useElapsedLabel(timer.startedAt);
-
-  return (
-    <div className="relative">
-      <button
-        type="button"
-        className="inline-flex max-w-[15rem] items-center gap-2 rounded-[var(--radius-pill)] border border-accent-line bg-accent-soft px-3 py-1.5 text-sm text-foreground shadow-soft transition hover:bg-accent/25"
-        title={timer.description || timer.projectName}
-        onClick={onOpen}
-      >
-        <span className="relative flex size-2.5">
-          <span className="absolute inline-flex size-full animate-ping rounded-full bg-accent opacity-45" />
-          <span className="relative inline-flex size-2.5 rounded-full bg-accent" />
-        </span>
-        <span className="font-ui text-[12px] font-bold text-accent">{elapsed}</span>
-        <span
-          className="size-2 shrink-0 rounded-full"
-          style={{ backgroundColor: timer.projectColor }}
-          aria-hidden="true"
-        />
-        <span className="truncate text-xs font-medium">{timer.projectName}</span>
-      </button>
-      <button
-        type="button"
-        className="absolute -right-1 -top-1 grid size-5 place-items-center rounded-full border border-destructive/40 bg-card text-destructive shadow-soft transition hover:bg-destructive-soft disabled:cursor-not-allowed disabled:opacity-50"
-        aria-label={stopLabel}
-        disabled={disabled}
-        onClick={(event) => {
-          event.stopPropagation();
-          onStop();
-        }}
-      >
-        <Square className="size-2.5 fill-current" aria-hidden="true" />
-      </button>
-      {error ? (
-        <span className="absolute right-0 top-[calc(100%+0.35rem)] w-56 rounded-[var(--radius-sm)] border border-destructive/35 bg-card px-2 py-1 text-xs font-medium text-destructive shadow-panel">
-          {error}
-        </span>
-      ) : null}
-    </div>
-  );
-}
-
-function useElapsedLabel(startedAt: string) {
-  const nowSeconds = useClientClock();
-
-  if (nowSeconds === null) return "0:00";
-
-  return formatElapsed(Math.max(0, nowSeconds * 1000 - Date.parse(startedAt)));
-}
-
-function useClientClock() {
-  return useSyncExternalStore(subscribeToClock, getClockSnapshot, getServerClockSnapshot);
-}
-
-function subscribeToClock(onStoreChange: () => void) {
-  const timerId = window.setInterval(onStoreChange, 1000);
-  return () => window.clearInterval(timerId);
-}
-
-function getClockSnapshot() {
-  return Math.floor(Date.now() / 1000);
-}
-
-function getServerClockSnapshot() {
-  return null;
-}
-
-function formatElapsed(milliseconds: number) {
-  const totalSeconds = Math.floor(milliseconds / 1000);
-  const hours = Math.floor(totalSeconds / 3600);
-  const minutes = Math.floor((totalSeconds % 3600) / 60);
-  const seconds = totalSeconds % 60;
-
-  if (hours > 0) {
-    return `${hours}:${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
-  }
-
-  return `${minutes}:${String(seconds).padStart(2, "0")}`;
 }
 
 function NavGroup({

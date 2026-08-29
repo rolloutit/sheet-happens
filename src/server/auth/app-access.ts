@@ -1,5 +1,6 @@
 import type { Route } from "next";
 import { redirect } from "next/navigation";
+import { cache } from "react";
 
 import { AuthenticationError, AuthorizationError, getSession } from "./session";
 import { hasPasskeySatisfiedSecondFactor } from "./passkey-second-factor";
@@ -72,7 +73,13 @@ export type AppAuthUser = {
   passkeyCount: number;
 };
 
-export async function getAppAccessState(): Promise<AppAccessState> {
+/**
+ * Wrapped in React's request-scoped `cache` because the root layout now resolves the shell's
+ * running timer from it while the page underneath resolves its own member — two calls in one
+ * request that would otherwise be two session lookups and two member queries. The function only
+ * reads `headers()` and the database, so memoizing it per request changes nothing observable.
+ */
+export const getAppAccessState = cache(async function getAppAccessState(): Promise<AppAccessState> {
   const session = await getSession();
 
   if (!session) {
@@ -217,7 +224,7 @@ export async function getAppAccessState(): Promise<AppAccessState> {
     member,
     authUser: resolvedAuthUser,
   };
-}
+});
 
 async function hasSatisfiedStrongAuthentication(input: { userId: string; sessionToken: string }) {
   if (await hasSatisfiedSecondFactor(input)) {
