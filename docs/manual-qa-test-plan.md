@@ -1001,15 +1001,18 @@ must have an active employee profile; contractor profiles must not be used for t
 
 1. Sign in as `{ADMIN_EMAIL}` and open `https://{DOMAIN_NAME}/admin/payslips`.
 2. In the month overview, click `{EMPLOYEE_EMAIL}` or choose `Upload payslip`.
-3. Select `{EMPLOYEE_EMAIL}` and `{PAYSLIP_MONTH}`.
-4. Upload `{PAYSLIP_PDF_FILE}` and submit.
-5. Confirm the row appears in the history list with the employee, month, filename, upload date, and publisher.
-6. Open Preview and confirm the embedded PDF renders.
-7. Download the PDF and confirm the downloaded file is the uploaded document.
+3. Confirm the month selector shows January through December of the current year and initially selects the current month.
+4. Use the previous-year and next-year buttons. Confirm each step replaces the grid with all 12 months of the adjacent calendar year, then return to the year containing `{PAYSLIP_MONTH}`.
+5. Select `{EMPLOYEE_EMAIL}` and `{PAYSLIP_MONTH}`.
+6. Upload `{PAYSLIP_PDF_FILE}` and submit.
+7. Confirm the row appears in the history list with the employee, month, filename, upload date, and publisher.
+8. Open Preview and confirm the embedded PDF renders.
+9. Download the PDF and confirm the downloaded file is the uploaded document.
 
 Expected result:
 
 - Only employee profiles can be selected for upload.
+- Month navigation is calendar-year based and does not limit older or future years.
 - The PDF is private: preview and download work only through authenticated application access.
 - The month overview increments its posted count and removes the employee from the missing list when applicable.
 - Audit log entries exist for `payslip.uploaded`, `payslip.previewed`, and `payslip.downloaded`.

@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   getPayslipMonthOptions,
-  getPayslipMonthPage,
+  getPayslipYearPage,
   getPayslipMonthWindow,
 } from "./payslip-month-options";
 
@@ -31,21 +31,31 @@ describe("getPayslipMonthOptions", () => {
     expect(months[8]).toMatchObject({ value: "2025-12", yearLabel: "2025" });
   });
 
-  it("returns twelve months per page", () => {
-    const months = getPayslipMonthWindow("en", "2026-08", 1);
+  it("returns the full current calendar year", () => {
+    const months = getPayslipMonthWindow("en", "2026-08");
 
     expect(months).toHaveLength(12);
-    expect(months[0]).toMatchObject({ value: "2025-08" });
-    expect(months[11]).toMatchObject({ value: "2024-09" });
+    expect(months[0]).toMatchObject({ value: "2026-01", yearLabel: "2026" });
+    expect(months[11]).toMatchObject({ value: "2026-12", yearLabel: "2026" });
+  });
+
+  it.each([
+    { page: 1, first: "2025-01", last: "2025-12" },
+    { page: -1, first: "2027-01", last: "2027-12" },
+  ])("moves between complete years for page $page", ({ page, first, last }) => {
+    const months = getPayslipMonthWindow("en", "2026-08", page);
+
+    expect(months[0]).toMatchObject({ value: first });
+    expect(months[11]).toMatchObject({ value: last });
   });
 
   it.each([
     ["2026-08", 0],
-    ["2025-09", 0],
-    ["2025-08", 1],
-    ["2024-09", 1],
-    ["2024-08", 2],
+    ["2026-01", 0],
+    ["2025-12", 1],
+    ["2024-01", 2],
+    ["2027-01", -1],
   ])("places %s on page %i", (targetMonth, expectedPage) => {
-    expect(getPayslipMonthPage("2026-08", targetMonth)).toBe(expectedPage);
+    expect(getPayslipYearPage("2026-08", targetMonth)).toBe(expectedPage);
   });
 });

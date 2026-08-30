@@ -5,7 +5,7 @@ export type AdminPayslipMonthOption = {
   yearLabel: string;
 };
 
-export const PAYSLIP_MONTH_PAGE_SIZE = 12;
+const MONTHS_PER_YEAR = 12;
 
 export function getPayslipMonthOptions(
   locale: string,
@@ -18,15 +18,13 @@ export function getPayslipMonthOptions(
 
 export function getPayslipMonthWindow(
   locale: string,
-  newestMonth: string,
+  currentMonth: string,
   page = 0,
 ): AdminPayslipMonthOption[] {
-  return buildMonthOptions(
-    locale,
-    newestMonth,
-    Math.max(0, page) * PAYSLIP_MONTH_PAGE_SIZE,
-    PAYSLIP_MONTH_PAGE_SIZE,
-  );
+  const current = parseMonth(currentMonth);
+  const year = current.getUTCFullYear() - page;
+
+  return buildCalendarYearOptions(locale, year);
 }
 
 function buildMonthOptions(
@@ -54,15 +52,28 @@ function buildMonthOptions(
   });
 }
 
-export function getPayslipMonthPage(newestMonth: string, targetMonth: string): number {
-  const newest = parseMonth(newestMonth);
+export function getPayslipYearPage(currentMonth: string, targetMonth: string): number {
+  const current = parseMonth(currentMonth);
   const target = parseMonth(targetMonth);
-  const distance =
-    (newest.getUTCFullYear() - target.getUTCFullYear()) * 12 +
-    newest.getUTCMonth() -
-    target.getUTCMonth();
 
-  return Math.max(0, Math.floor(distance / PAYSLIP_MONTH_PAGE_SIZE));
+  return current.getUTCFullYear() - target.getUTCFullYear();
+}
+
+function buildCalendarYearOptions(locale: string, year: number): AdminPayslipMonthOption[] {
+  const formatter = new Intl.DateTimeFormat(locale, { month: "long", year: "numeric" });
+  const shortFormatter = new Intl.DateTimeFormat(locale, { month: "short" });
+  const yearLabel = String(year);
+
+  return Array.from({ length: MONTHS_PER_YEAR }, (_, monthIndex) => {
+    const month = new Date(Date.UTC(year, monthIndex, 1));
+
+    return {
+      value: `${yearLabel}-${String(monthIndex + 1).padStart(2, "0")}`,
+      label: formatter.format(month),
+      shortLabel: shortFormatter.format(month),
+      yearLabel,
+    };
+  });
 }
 
 function parseMonth(value: string): Date {

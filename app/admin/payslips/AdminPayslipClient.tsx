@@ -32,7 +32,7 @@ import { IconButton } from "@/src/components/ui/IconButton";
 import { Pager } from "@/src/components/ui/Pager";
 import { cn } from "@/src/lib/utils";
 import {
-  getPayslipMonthPage,
+  getPayslipYearPage,
   getPayslipMonthWindow,
   type AdminPayslipMonthOption,
 } from "@/src/lib/payslip-month-options";
@@ -359,11 +359,11 @@ function PayslipUploadDialog({
   const t = useTranslations("Payslips");
   const locale = useLocale();
   const router = useRouter();
-  const newestMonth = months[0]?.value ?? context.month ?? "";
+  const currentMonth = months[0]?.value ?? context.month ?? "";
   const [selectedEmployee, setSelectedEmployee] = useState(context.employeeMemberId ?? "");
-  const [selectedMonth, setSelectedMonth] = useState(context.month ?? "");
-  const [monthPage, setMonthPage] = useState(() =>
-    context.month && newestMonth ? getPayslipMonthPage(newestMonth, context.month) : 0,
+  const [selectedMonth, setSelectedMonth] = useState(context.month ?? currentMonth);
+  const [yearPage, setYearPage] = useState(() =>
+    context.month && currentMonth ? getPayslipYearPage(currentMonth, context.month) : 0,
   );
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [clientError, setClientError] = useState<string | null>(null);
@@ -382,10 +382,10 @@ function PayslipUploadDialog({
     [employees],
   );
   const visibleMonths = useMemo(
-    () => getPayslipMonthWindow(locale, newestMonth, monthPage),
-    [locale, monthPage, newestMonth],
+    () => getPayslipMonthWindow(locale, currentMonth, yearPage),
+    [currentMonth, locale, yearPage],
   );
-  const monthRange = `${visibleMonths.at(-1)?.label ?? ""} – ${visibleMonths[0]?.label ?? ""}`;
+  const visibleYear = visibleMonths[0]?.yearLabel ?? "";
 
   useEffect(() => {
     if (state.status !== "success") return;
@@ -409,8 +409,8 @@ function PayslipUploadDialog({
     setSelectedFile(file);
   }
 
-  function changeMonthPage(nextPage: number) {
-    setMonthPage(Math.max(0, nextPage));
+  function changeYearPage(nextPage: number) {
+    setYearPage(nextPage);
     setSelectedMonth("");
   }
 
@@ -451,21 +451,20 @@ function PayslipUploadDialog({
             >
               <IconButton
                 icon={ChevronLeft}
-                label={t("admin.upload.olderMonths")}
+                label={t("admin.upload.previousYear")}
                 size="sm"
                 variant="ghost"
-                onClick={() => changeMonthPage(monthPage + 1)}
+                onClick={() => changeYearPage(yearPage + 1)}
               />
               <span className="text-center font-ui text-xs font-semibold text-muted-foreground">
-                {monthRange}
+                {visibleYear}
               </span>
               <IconButton
                 icon={ChevronRight}
-                label={t("admin.upload.newerMonths")}
+                label={t("admin.upload.nextYear")}
                 size="sm"
                 variant="ghost"
-                disabled={monthPage === 0}
-                onClick={() => changeMonthPage(monthPage - 1)}
+                onClick={() => changeYearPage(yearPage - 1)}
               />
             </div>
             <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
