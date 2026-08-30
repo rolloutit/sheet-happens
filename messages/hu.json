@@ -86,7 +86,10 @@
       "signOut": "Kijelentkezés"
     },
     "timer": {
-      "stop": "Időmérő leállítása"
+      "stop": "Időmérő leállítása",
+      "open": "Időkövetés megnyitása",
+      "running": "Az időmérő fut",
+      "dismissError": "Bezárás"
     }
   },
   "AuthShell": {
@@ -833,17 +836,7 @@
       "accepted": "Elfogadva",
       "paid": "Kifizetve"
     },
-    "stats": {
-      "matching": "Találat",
-      "matchingCaption": "A jelenlegi szűrőknek megfelelő timesheetek.",
-      "page": "Aktuális oldal",
-      "pageCaption": "Ezen az oldalon látható tartomány.",
-      "pageSize": "Oldalméret",
-      "pageSizeCaption": "Betöltött sorok száma oldalanként."
-    },
     "filters": {
-      "title": "Szűrők",
-      "description": "Keresés kontraktor név vagy e-mail alapján, majd szűkítés státusz, kontraktor, projekt vagy hónap szerint.",
       "search": "Keresés",
       "searchPlaceholder": "Név vagy e-mail...",
       "status": "Státusz",
@@ -855,7 +848,9 @@
       "month": "Hónap",
       "allMonths": "Összes hónap",
       "apply": "Szűrők alkalmazása",
-      "clear": "Törlés"
+      "clear": "Törlés",
+      "active": "Aktív szűrők",
+      "removeFilter": "Szűrő eltávolítása: {filter}"
     },
     "list": {
       "title": "Beküldött timesheetek",
@@ -1074,11 +1069,12 @@
     },
     "invite": {
       "title": "Tag meghívása",
-      "description": "Küldj meghívólinket, és hozd létre az alkalmazásban használt tagprofilt."
-    },
-    "directory": {
-      "title": "Taglista",
-      "description": "Kezeld a meghívott, aktív, inaktív és archivált tagokat."
+      "description": "Küldj meghívólinket, és hozd létre az alkalmazásban használt tagprofilt.",
+      "detailsTitle": "Tag adatai",
+      "emailHint": "Erre a címre küldjük a meghívólinket.",
+      "defaultsTitle": "Szerepkör és alapértelmezések",
+      "defaultsHint": "A szokásos csapatbeállításokkal kitöltve. Csak akkor módosítsd, ha ez a tag eltér ezektől.",
+      "inviteAnother": "Küldés után újabb meghívó"
     },
     "filters": {
       "search": "Keresés",
@@ -1091,7 +1087,9 @@
       "allProfiles": "Minden profil",
       "showing": "{start}-{end} / {total} tag megjelenítve",
       "apply": "Szűrés",
-      "clear": "Törlés"
+      "clear": "Törlés",
+      "active": "Aktív szűrők",
+      "removeFilter": "Szűrő eltávolítása: {filter}"
     },
     "pager": {
       "navigation": "Taglista oldalak",
@@ -1147,6 +1145,8 @@
       }
     },
     "actions": {
+      "inviteMember": "Tag meghívása",
+      "close": "Bezárás",
       "sendInvitation": "Meghívó küldése",
       "openFor": "{name} műveleteinek megnyitása",
       "menuLabel": "Műveletek",
@@ -1190,6 +1190,12 @@
       "effectiveDate": "Hatálybalépés dátuma",
       "reason": "Indoklás",
       "reasonHint": "Adj meg indoklást ehhez a profilváltáshoz."
+    },
+    "discardDialog": {
+      "title": "Elveted ezt a meghívót?",
+      "description": "A kitöltött adatok nem lesznek elmentve.",
+      "confirm": "Elvetés",
+      "cancel": "Szerkesztés folytatása"
     }
   },
   "AdminPeopleActions": {
@@ -1256,7 +1262,11 @@
     },
     "create": {
       "title": "Projekt létrehozása",
-      "description": "A projektek a hozzárendelések és időbejegyzések munkacéljai."
+      "description": "A projektek a hozzárendelések és időbejegyzések munkacéljai.",
+      "detailsTitle": "Projekt adatai",
+      "timelineTitle": "Idővonal és jegyzetek",
+      "timelineHint": "Nem kötelező. Hagyd üresen a dátumokat, ha a projektnek nincs rögzített vége.",
+      "createAnother": "Mentés után újabb létrehozása"
     },
     "directory": {
       "title": "Projektlista",
@@ -1308,7 +1318,14 @@
       "unassigned": "Ma nincs hozzárendelve",
       "showing": "{start}-{end} / {total} projekt megjelenítve",
       "apply": "Szűrés",
-      "clear": "Törlés"
+      "clear": "Törlés",
+      "active": "Aktív szűrők",
+      "removeFilter": "Szűrő eltávolítása: {filter}",
+      "allStates": "Minden állapot",
+      "allTypes": "Minden típus",
+      "allTimelines": "Bármely időszak",
+      "allGroups": "Minden csoport",
+      "allAssignments": "Bármely hozzárendelés"
     },
     "pager": {
       "navigation": "Projektlista oldalak",
@@ -1362,9 +1379,14 @@
         "withProjects": "Projektekkel",
         "empty": "Üres",
         "showing": "{count} / {total} csoport megjelenítve"
-      }
+      },
+      "createTitle": "Projektcsoport létrehozása",
+      "createDescription": "A csoportok szűréshez és riportoláshoz rendezik a projekteket. A hozzárendeléseket és a számlázást nem érintik."
     },
     "actions": {
+      "newProject": "Új projekt",
+      "newGroup": "Új csoport",
+      "close": "Bezárás",
       "createProject": "Projekt létrehozása",
       "createGroup": "Csoport létrehozása",
       "addProject": "Projekt hozzáadása",
@@ -1453,6 +1475,12 @@
       "scheduledOverride": "Ütemezett felülírás",
       "scheduledOverrideDetail": "{count, plural, one {# felülírási időszak ütemezve.} other {# felülírási időszak ütemezve.}}",
       "contractorCentralRate": "A kontraktor-hozzárendelés jelenleg a tag központi óradíját használja."
+    },
+    "discardDialog": {
+      "title": "Elveted ezt a projektet?",
+      "description": "A kitöltött adatok nem lesznek elmentve.",
+      "confirm": "Elvetés",
+      "cancel": "Szerkesztés folytatása"
     }
   },
   "AdminProjectsActions": {
@@ -1910,11 +1938,13 @@
       "edit": "Szerkesztés",
       "close": "Bezárás",
       "cancel": "Mégse",
-      "save": "Mentés"
+      "save": "Mentés",
+      "newTimer": "Új időmérő"
     },
     "tooltips": {
       "copyPreviousDay": "Bejegyzések másolása a(z) {date} előtti napról.",
-      "duplicatePreviousWeek": "Az előző hét bejegyzéseinek másolása erre a hétre."
+      "duplicatePreviousWeek": "Az előző hét bejegyzéseinek másolása erre a hétre.",
+      "stopTimerFirst": "Új időmérő indítása előtt állítsd le a futó időmérőt."
     },
     "quickActionConfirm": {
       "confirm": "Bejegyzések másolása",
@@ -1968,6 +1998,10 @@
       "projectLabel": "Időmérő projekt",
       "start": "Indítás",
       "stop": "Leállítás"
+    },
+    "timerModal": {
+      "title": "Új időmérő",
+      "description": "Válassz projektet, és írd le, min dolgozol. Az időmérő azonnal elindul."
     },
     "entryModal": {
       "newTitle": "Új időbejegyzés",
@@ -2671,13 +2705,14 @@
       "title": "Bérjegyzékek",
       "subtitle": "Havi bérjegyzékek feltöltése és kezelése alkalmazottanként. A Sheet Happens nem számol bért.",
       "filters": {
-        "title": "Szűrők",
         "employee": "Alkalmazott",
         "allEmployees": "Minden alkalmazott",
         "month": "Hónap",
         "allMonths": "Minden hónap",
         "search": "Keresés név vagy email alapján",
-        "apply": "Szűrők alkalmazása"
+        "apply": "Szűrők alkalmazása",
+        "active": "Aktív szűrők",
+        "removeFilter": "Szűrő eltávolítása: {filter}"
       },
       "overview": {
         "title": "Havi áttekintés",

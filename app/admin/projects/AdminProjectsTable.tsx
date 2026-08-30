@@ -10,7 +10,6 @@ import {
   PauseCircle,
   Save,
   Search,
-  SquareStack,
   UserPlus,
   WalletCards,
   X,
@@ -19,11 +18,20 @@ import Link from "next/link";
 import { useLocale, useTranslations } from "next-intl";
 import type { Route } from "next";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { Children, type FormEvent, useState, useTransition, type ReactNode } from "react";
+import {
+  Children,
+  type FormEvent,
+  type ReactNode,
+  useCallback,
+  useState,
+  useTransition,
+} from "react";
 
 import { Badge } from "@/src/components/ui/Badge";
 import type { BadgeProps } from "@/src/components/ui/Badge";
 import { Button } from "@/src/components/ui/Button";
+import { FilterChips } from "@/src/components/sheet/FilterChips";
+import type { FilterChip } from "@/src/components/sheet/FilterChips";
 import { Combobox } from "@/src/components/ui/Combobox";
 import { DatePicker } from "@/src/components/ui/DatePicker";
 import { Select } from "@/src/components/ui/Select";
@@ -65,6 +73,7 @@ import {
   type ProjectColorToken,
 } from "@/src/lib/project-colors";
 import { usePickerLabels } from "@/src/i18n/picker-labels";
+import { useOverlayParam } from "@/src/lib/use-overlay-param";
 import { cn } from "@/src/lib/utils";
 import type {
   AdminProjectAssignmentRow,
@@ -99,6 +108,9 @@ import type {
   UpdateProjectActionInput,
 } from "./actions.types";
 import { nativeCheckboxClassName } from "./formStyles";
+import { PROJECT_BULK_ASSIGN_OVERLAY_VALUE, PROJECT_OVERLAY_PARAM } from "./project-overlays";
+import { ProjectCreateButton } from "./ProjectCreateButton";
+import { ProjectCreateDrawer } from "./ProjectCreateDrawer";
 import { ProjectColorField, ProjectColorSwatch } from "./ProjectColorField";
 
 export type AdminProjectsTableProps = {
@@ -114,6 +126,9 @@ export type AdminProjectsTableProps = {
 type ProjectTableRow = AdminProjectRow & Record<string, unknown>;
 type PendingAction = "edit" | "status" | "archive";
 type AdminProjectsTranslator = ReturnType<typeof useTranslations>;
+/** The query-string names, which are also the chip keys. */
+type ProjectFilterKey = "q" | "status" | "type" | "timeline" | "group" | "assignment";
+
 type ProjectFilterFormState = {
   assignment: ProjectListResult["filters"]["assignment"];
   group: string;
@@ -161,7 +176,10 @@ export function AdminProjectsTable({
   const [editState, setEditState] = useState<ProjectActionState | null>(null);
   const [archivingProject, setArchivingProject] = useState<AdminProjectRow | null>(null);
   const [detailProject, setDetailProject] = useState<AdminProjectRow | null>(null);
-  const [bulkDialogOpen, setBulkDialogOpen] = useState(false);
+  const [bulkDialogOpen, setBulkDialogOpen] = useOverlayParam(
+    PROJECT_OVERLAY_PARAM,
+    PROJECT_BULK_ASSIGN_OVERLAY_VALUE,
+  );
   const [bulkMessage, setBulkMessage] = useState<ProjectBulkAssignmentActionState | null>(null);
   const [assignmentMessage, setAssignmentMessage] = useState<ProjectAssignmentActionState | null>(
     null,
@@ -224,6 +242,37 @@ export function AdminProjectsTable({
     router.push(buildUrl(pathname, params) as Route);
   }
 
+  const isFiltered = Boolean(
+    result.filters.query ||
+    result.filters.status ||
+    result.filters.type ||
+    result.filters.timeline ||
+    result.filters.group ||
+    result.filters.assignment,
+  );
+
+  const handleCreated = useCallback(
+    (createdMessage: string) => {
+      setMessage({ status: "success", message: createdMessage });
+      router.refresh();
+    },
+    [router],
+  );
+
+  /**
+   * Takes one filter off, rather than re-applying the form. The form may hold edits the user
+   * has not applied yet, and pulling a chip should not smuggle those into the URL with it.
+   */
+  function removeFilter(key: ProjectFilterKey) {
+    const params = new URLSearchParams(searchParams.toString());
+
+    params.delete(key);
+    params.delete("page");
+    setMessage(null);
+
+    router.push(buildUrl(pathname, params) as Route);
+  }
+
   function clearFilters() {
     setMessage(null);
     router.push(pathname as Route);
@@ -280,33 +329,31 @@ export function AdminProjectsTable({
         </p>
       ) : null}
 
-      <div className="flex justify-end">
-        <Button
-          type="button"
-          variant="soft"
-          icon={SquareStack}
-          onClick={() => {
-            setBulkDialogOpen(true);
-            setBulkMessage(null);
-          }}
-        >
-          {t("actions.bulkAssign")}
-        </Button>
-      </div>
-
       <ProjectDirectoryFilters
         key={getProjectFilterKey(result.filters)}
         result={result}
         groups={groups}
         onApply={applyFilters}
         onClear={clearFilters}
+        onRemove={removeFilter}
       />
 
       <DataTable
         caption={t("table.caption")}
         aria-label={t("table.ariaLabel")}
         rows={tableRows}
-        empty={rows.length ? t("table.emptyFiltered") : t("table.empty")}
+        empty={
+          <div className="grid justify-items-center gap-4">
+            <p>{isFiltered ? t("table.emptyFiltered") : t("table.empty")}</p>
+            {isFiltered ? (
+              <Button type="button" variant="ghost" icon={X} onClick={clearFilters}>
+                {t("filters.clear")}
+              </Button>
+            ) : (
+              <ProjectCreateButton variant="soft" />
+            )}
+          </div>
+        }
         getRowKey={(row) => row.id}
         displayMode="responsive"
         density="comfortable"
@@ -525,6 +572,8 @@ export function AdminProjectsTable({
           });
         }}
       />
+
+      <ProjectCreateDrawer onCreated={handleCreated} />
     </div>
   );
 }
@@ -534,11 +583,13 @@ function ProjectDirectoryFilters({
   groups,
   onApply,
   onClear,
+  onRemove,
 }: {
   result: ProjectListResult;
   groups: AdminProjectGroupRow[];
   onApply: (filters: ProjectFilterFormState) => void;
   onClear: () => void;
+  onRemove: (key: ProjectFilterKey) => void;
 }) {
   const t = useTranslations("AdminProjects");
   const pickerLabels = usePickerLabels();
@@ -568,163 +619,201 @@ function ProjectDirectoryFilters({
     onClear();
   }
 
+  // Built from the applied filters rather than the form, so a chip always describes what the
+  // table is actually showing.
+  const activeFilters: FilterChip<ProjectFilterKey>[] = [];
+
+  if (result.filters.query) {
+    activeFilters.push({
+      id: "q",
+      label: result.filters.query,
+      aria: `${t("filters.search")}: ${result.filters.query}`,
+      // The visible chip is the bare term: these pages label their search box with a whole
+      // phrase ("Search projects"), which makes a poor prefix once several chips are up.
+      leading: <Search className="size-3" aria-hidden="true" />,
+    });
+  }
+  if (result.filters.status) {
+    activeFilters.push({
+      id: "status",
+      label: `${t("filters.state")}: ${t(`states.${result.filters.status.toLowerCase()}`)}`,
+    });
+  }
+  if (result.filters.type) {
+    activeFilters.push({
+      id: "type",
+      label: `${t("filters.type")}: ${t(`states.${result.filters.type}`)}`,
+    });
+  }
+  if (result.filters.timeline) {
+    activeFilters.push({
+      id: "timeline",
+      label: `${t("filters.timeline")}: ${t(`filters.${result.filters.timeline}`)}`,
+    });
+  }
+  if (result.filters.group) {
+    const groupName =
+      result.filters.group === "ungrouped"
+        ? t("states.ungrouped")
+        : (groups.find((group) => group.id === result.filters.group)?.name ?? result.filters.group);
+
+    activeFilters.push({ id: "group", label: `${t("filters.group")}: ${groupName}` });
+  }
+  if (result.filters.assignment) {
+    activeFilters.push({
+      id: "assignment",
+      label: `${t("filters.assignment")}: ${t(`filters.${result.filters.assignment}`)}`,
+    });
+  }
+
   return (
-    <form
-      className="grid gap-3 rounded-[var(--radius-lg)] border border-border bg-background/45 p-4"
-      onSubmit={submitFilters}
-    >
-      <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-[minmax(16rem,1.4fr)_repeat(5,minmax(8.5rem,1fr))]">
-        <Field label={t("filters.search")} htmlFor="project-search">
+    <div className="grid gap-3">
+      <form
+        className="flex flex-wrap items-center gap-2 rounded-[var(--radius-lg)] border border-border bg-card p-3"
+        onSubmit={submitFilters}
+      >
+        <div className="min-w-[13rem] flex-1">
           <Input
-            id="project-search"
             name="q"
             type="search"
             value={filterForm.query}
+            aria-label={t("filters.search")}
             placeholder={t("filters.searchPlaceholder")}
             onChange={(event) => {
               const query = event.currentTarget.value;
+
               setFilterForm((current) => ({
                 ...current,
                 query,
               }));
             }}
           />
-        </Field>
-        <Field label={t("filters.state")}>
-          {({ id }) => (
-            <Select
-              id={id}
-              label={t("filters.state")}
-              placeholder={t("filters.all")}
-              value={filterForm.status}
-              labels={pickerLabels.combobox}
-              onValueChange={(value) => {
-                const status = value as ProjectFilterFormState["status"];
-                setFilterForm((current) => ({
-                  ...current,
-                  status,
-                }));
-              }}
-              options={[
-                { value: "", label: t("filters.all") },
-                { value: "ACTIVE", label: t("states.active") },
-                { value: "INACTIVE", label: t("states.inactive") },
-              ]}
-            />
-          )}
-        </Field>
-        <Field label={t("filters.type")}>
-          {({ id }) => (
-            <Select
-              id={id}
-              label={t("filters.type")}
-              placeholder={t("filters.all")}
-              value={filterForm.type}
-              labels={pickerLabels.combobox}
-              onValueChange={(value) => {
-                const type = value as ProjectFilterFormState["type"];
-                setFilterForm((current) => ({
-                  ...current,
-                  type,
-                }));
-              }}
-              options={[
-                { value: "", label: t("filters.all") },
-                { value: "external", label: t("states.external") },
-                { value: "internal", label: t("states.internal") },
-              ]}
-            />
-          )}
-        </Field>
-        <Field label={t("filters.timeline")}>
-          {({ id }) => (
-            <Select
-              id={id}
-              label={t("filters.timeline")}
-              placeholder={t("filters.all")}
-              value={filterForm.timeline}
-              labels={pickerLabels.combobox}
-              onValueChange={(value) => {
-                const timeline = value as ProjectFilterFormState["timeline"];
-                setFilterForm((current) => ({
-                  ...current,
-                  timeline,
-                }));
-              }}
-              options={[
-                { value: "", label: t("filters.all") },
-                { value: "current", label: t("filters.current") },
-                { value: "future", label: t("filters.future") },
-                { value: "ended", label: t("filters.ended") },
-              ]}
-            />
-          )}
-        </Field>
-        <Field label={t("filters.group")}>
-          {({ id }) => (
-            <Select
-              id={id}
-              label={t("filters.group")}
-              placeholder={t("filters.all")}
-              value={filterForm.group}
-              labels={pickerLabels.combobox}
-              onValueChange={(value) => {
-                const group = value;
-                setFilterForm((current) => ({
-                  ...current,
-                  group,
-                }));
-              }}
-              options={[
-                { value: "", label: t("filters.all") },
-                { value: "ungrouped", label: t("states.ungrouped") },
-                ...groups.map((group) => ({ value: group.id, label: group.name })),
-              ]}
-            />
-          )}
-        </Field>
-        <Field label={t("filters.assignment")}>
-          {({ id }) => (
-            <Select
-              id={id}
-              label={t("filters.assignment")}
-              placeholder={t("filters.all")}
-              value={filterForm.assignment}
-              labels={pickerLabels.combobox}
-              onValueChange={(value) => {
-                const assignment = value as ProjectFilterFormState["assignment"];
-                setFilterForm((current) => ({
-                  ...current,
-                  assignment,
-                }));
-              }}
-              options={[
-                { value: "", label: t("filters.all") },
-                { value: "assigned", label: t("filters.assigned") },
-                { value: "unassigned", label: t("filters.unassigned") },
-              ]}
-            />
-          )}
-        </Field>
-      </div>
-      <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
-        <p className="text-sm font-medium text-muted-foreground" aria-live="polite">
-          {t("filters.showing", {
-            start: result.pageStart,
-            end: result.pageEnd,
-            total: result.totalItems,
-          })}
-        </p>
-        <div className="flex flex-wrap gap-2 sm:justify-end">
-          <Button type="submit" icon={Search}>
-            {t("filters.apply")}
-          </Button>
-          <Button type="button" variant="ghost" icon={X} onClick={clearFilters}>
-            {t("filters.clear")}
-          </Button>
         </div>
-      </div>
-    </form>
+        <div className="w-[calc(50%-0.25rem)] sm:w-auto sm:min-w-32 sm:max-w-64">
+          <Select
+            label={t("filters.state")}
+            placeholder={t("filters.allStates")}
+            value={filterForm.status}
+            labels={pickerLabels.combobox}
+            onValueChange={(value) => {
+              const status = value as ProjectFilterFormState["status"];
+
+              setFilterForm((current) => ({
+                ...current,
+                status,
+              }));
+            }}
+            options={[
+              { value: "", label: t("filters.allStates") },
+              { value: "ACTIVE", label: t("states.active") },
+              { value: "INACTIVE", label: t("states.inactive") },
+            ]}
+          />
+        </div>
+        <div className="w-[calc(50%-0.25rem)] sm:w-auto sm:min-w-32 sm:max-w-64">
+          <Select
+            label={t("filters.type")}
+            placeholder={t("filters.allTypes")}
+            value={filterForm.type}
+            labels={pickerLabels.combobox}
+            onValueChange={(value) => {
+              const type = value as ProjectFilterFormState["type"];
+
+              setFilterForm((current) => ({
+                ...current,
+                type,
+              }));
+            }}
+            options={[
+              { value: "", label: t("filters.allTypes") },
+              { value: "external", label: t("states.external") },
+              { value: "internal", label: t("states.internal") },
+            ]}
+          />
+        </div>
+        <div className="w-[calc(50%-0.25rem)] sm:w-auto sm:min-w-32 sm:max-w-64">
+          <Select
+            label={t("filters.timeline")}
+            placeholder={t("filters.allTimelines")}
+            value={filterForm.timeline}
+            labels={pickerLabels.combobox}
+            onValueChange={(value) => {
+              const timeline = value as ProjectFilterFormState["timeline"];
+
+              setFilterForm((current) => ({
+                ...current,
+                timeline,
+              }));
+            }}
+            options={[
+              { value: "", label: t("filters.allTimelines") },
+              { value: "current", label: t("filters.current") },
+              { value: "future", label: t("filters.future") },
+              { value: "ended", label: t("filters.ended") },
+            ]}
+          />
+        </div>
+        <div className="w-[calc(50%-0.25rem)] sm:w-auto sm:min-w-32 sm:max-w-64">
+          <Select
+            label={t("filters.group")}
+            placeholder={t("filters.allGroups")}
+            value={filterForm.group}
+            labels={pickerLabels.combobox}
+            onValueChange={(group) => {
+              setFilterForm((current) => ({
+                ...current,
+                group,
+              }));
+            }}
+            options={[
+              { value: "", label: t("filters.allGroups") },
+              { value: "ungrouped", label: t("states.ungrouped") },
+              ...groups.map((group) => ({ value: group.id, label: group.name })),
+            ]}
+          />
+        </div>
+        <div className="w-[calc(50%-0.25rem)] sm:w-auto sm:min-w-32 sm:max-w-64">
+          <Select
+            label={t("filters.assignment")}
+            placeholder={t("filters.allAssignments")}
+            value={filterForm.assignment}
+            labels={pickerLabels.combobox}
+            onValueChange={(value) => {
+              const assignment = value as ProjectFilterFormState["assignment"];
+
+              setFilterForm((current) => ({
+                ...current,
+                assignment,
+              }));
+            }}
+            options={[
+              { value: "", label: t("filters.allAssignments") },
+              { value: "assigned", label: t("filters.assigned") },
+              { value: "unassigned", label: t("filters.unassigned") },
+            ]}
+          />
+        </div>
+        <Button type="submit" icon={Search} className="ml-auto">
+          {t("filters.apply")}
+        </Button>
+      </form>
+
+      <FilterChips
+        chips={activeFilters}
+        labels={{
+          active: t("filters.active"),
+          clear: t("filters.clear"),
+          remove: (filter) => t("filters.removeFilter", { filter }),
+        }}
+        onRemove={onRemove}
+        onClear={clearFilters}
+        summary={t("filters.showing", {
+          start: result.pageStart,
+          end: result.pageEnd,
+          total: result.totalItems,
+        })}
+      />
+    </div>
   );
 }
 

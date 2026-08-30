@@ -3,7 +3,11 @@ import { NextIntlClientProvider } from "next-intl";
 import { getLocale, getMessages } from "next-intl/server";
 
 import "./globals.css";
+import { RunningTimerProvider } from "@/src/components/layout/RunningTimerProvider";
 import { ThemeProvider } from "@/src/components/layout/ThemeProvider";
+import { getShellRunningTimer } from "@/src/server/time-tracking";
+
+import { stopRunningTimerAction } from "./time/actions";
 
 export const metadata: Metadata = {
   title: "Sheet Happens",
@@ -11,8 +15,17 @@ export const metadata: Metadata = {
 };
 
 export default async function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
-  const locale = await getLocale();
-  const messages = await getMessages();
+  const [locale, messages, runningTimer] = await Promise.all([
+    getLocale(),
+    getMessages(),
+    /*
+      Resolved here rather than per page because this layout is the only node that survives a
+      client-side navigation — every page renders its own AppShell, so a timer sourced inside the
+      shell would be refetched and re-mounted on every route change. Returns null for anyone who is
+      not a signed-in active member, which is what makes it safe above the auth screens too.
+    */
+    getShellRunningTimer(),
+  ]);
 
   return (
     /*
@@ -54,7 +67,9 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
         {/* Outermost, so the blocking script is the first node in <body>. */}
         <ThemeProvider>
           <NextIntlClientProvider locale={locale} messages={messages}>
-            {children}
+            <RunningTimerProvider timer={runningTimer} stopAction={stopRunningTimerAction}>
+              {children}
+            </RunningTimerProvider>
           </NextIntlClientProvider>
         </ThemeProvider>
       </body>

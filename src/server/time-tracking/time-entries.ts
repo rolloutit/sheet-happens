@@ -292,6 +292,40 @@ export class TimeTrackingError extends Error {
   }
 }
 
+/**
+ * Shared by the week grid and the app-shell pill so both read the timer through one select and one
+ * mapper. `memberId` is `@unique` on `RunningTimer`, so this is a single indexed lookup — cheap
+ * enough for the root layout to run on every request.
+ */
+const runningTimerSelect = {
+  id: true,
+  projectId: true,
+  projectAssignmentId: true,
+  description: true,
+  startedAt: true,
+  projectAssignment: {
+    select: {
+      project: {
+        select: {
+          name: true,
+          colorToken: true,
+        },
+      },
+    },
+  },
+} as const;
+
+export async function getRunningTimerForMember(memberId: string): Promise<RunningTimerView | null> {
+  const timer = await prisma.runningTimer.findUnique({
+    where: {
+      memberId,
+    },
+    select: runningTimerSelect,
+  });
+
+  return timer ? mapRunningTimer(timer) : null;
+}
+
 export async function getMemberWeeklyTimeGrid(input: {
   memberId: string;
   weekStart?: Date | null;
@@ -413,28 +447,7 @@ export async function getMemberWeeklyTimeGrid(input: {
           projectId: true,
         },
       }),
-      prisma.runningTimer.findUnique({
-        where: {
-          memberId: member.id,
-        },
-        select: {
-          id: true,
-          projectId: true,
-          projectAssignmentId: true,
-          description: true,
-          startedAt: true,
-          projectAssignment: {
-            select: {
-              project: {
-                select: {
-                  name: true,
-                  colorToken: true,
-                },
-              },
-            },
-          },
-        },
-      }),
+      getRunningTimerForMember(member.id),
       prisma.inactiveProjectWeek.findMany({
         where: {
           memberId: member.id,
@@ -487,7 +500,7 @@ export async function getMemberWeeklyTimeGrid(input: {
     projects: projectRows,
     recentProjects,
     entries: entries.map(mapTimeEntry),
-    runningTimer: runningTimer ? mapRunningTimer(runningTimer) : null,
+    runningTimer,
     inactiveWeeks: inactiveWeeks.map((inactiveWeek) => ({
       projectId: inactiveWeek.projectId,
       weekStartDate: formatDateOnly(inactiveWeek.weekStartDate),

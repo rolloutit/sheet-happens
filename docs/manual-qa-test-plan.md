@@ -455,19 +455,56 @@ Expected result:
 
 ### Timer Start And Stop
 
-1. Open `https://{DOMAIN_NAME}/time?week={TIME_TRACKING_WEEK_START}`.
-2. Switch to `Day` view.
-3. Enter `{TIME_ENTRY_DESCRIPTION}` in the timer description field.
+1. Open `https://{DOMAIN_NAME}/time?week={TIME_TRACKING_WEEK_START}` and stay in `Grid` view.
+2. Click `New timer`.
+3. Enter `{TIME_ENTRY_DESCRIPTION}` in the description field.
 4. Choose `{TIME_TRACKING_PROJECT_A}`.
 5. Click `Start`.
-6. Confirm the running timer appears in the day view and app header.
-7. Stop the timer from the header or day view.
+6. Confirm the running timer appears on the page and in the app header, in `Grid` view as well as
+   in `Day` view.
+7. Confirm `New timer` is now disabled, and that hovering it explains that the running timer has to
+   be stopped first.
+8. Stop the timer from the card on the page.
 
 Expected result:
 
 - Only one timer can run for the user.
 - The elapsed timer label changes while running without hydration errors.
 - Stopping the timer creates a time entry on the timer start date.
+- Reopening `https://{DOMAIN_NAME}/time?new=timer` directly opens the dialog with empty fields.
+- Cancelling the dialog, or pressing `Escape`, leaves no timer running and no entry behind.
+
+### Running Timer Is Visible And Stoppable From Every Page
+
+1. Open `https://{DOMAIN_NAME}/time` and start a timer for `{TIME_TRACKING_PROJECT_A}`.
+2. Navigate to `Dashboard`, then `Timesheets`, then an admin page such as `Projects`.
+3. Confirm on each page that the header shows the running timer and that the elapsed reading keeps
+   counting up rather than restarting at `0:00`.
+4. Narrow the window to a mobile width and confirm the timer is still in the header — the elapsed
+   time and the stop button remain, the project name gives way.
+5. Stop the timer from the header while on the admin page.
+6. Confirm the timer disappears from the header immediately, without a page reload.
+7. Open `https://{DOMAIN_NAME}/time` and confirm the entry was saved on the day the timer started.
+
+Expected result:
+
+- The timer follows the user across every signed-in page and both breakpoints.
+- Moving between pages neither hides the timer nor resets its elapsed reading.
+- Stopping from any page clears the timer everywhere and writes the time entry.
+- A page reload on any route still shows the running timer.
+
+### Timer Discarded At The Daily Limit Says So
+
+1. Log entries totalling close to 24 hours on one day for the test user.
+2. Start a timer that would push that day past 24 hours, and let it run.
+3. Navigate away from `Time`, then stop the timer from the app header.
+
+Expected result:
+
+- The timer disappears from the header rather than lingering as a phantom.
+- The reason the time was discarded is shown next to where the timer was, and stays on screen until
+  it is dismissed.
+- No time entry is created for that day.
 
 ### Same As Yesterday Does Not Duplicate Existing Cells
 
@@ -2775,6 +2812,98 @@ Expected result:
 - Scheduler failures are visible on the System page and email failures remain available for
   operational diagnosis.
 
+## Create Flows In Side Sheets
+
+### Invite Member Sheet
+
+1. Sign in as `{ADMIN_EMAIL}` and open `https://{DOMAIN_NAME}/admin/people`.
+2. Confirm the member table's first data row is visible without scrolling.
+3. Click `Tag meghívása` / `Invite member` in the page header.
+4. Fill in first name, last name and an email that already belongs to a member, then submit.
+5. Correct the email to a fresh address, tick `Küldés után újabb meghívó` / `Invite another after
+sending`, and submit.
+6. Without ticking the checkbox, invite a second fresh address.
+7. Reopen the sheet, type a first name, and press `Escape`. Choose `Szerkesztés folytatása` / `Keep
+editing`, press `Escape` again, then choose `Elvetés` / `Discard`.
+8. Open `https://{DOMAIN_NAME}/admin/people?new=member` directly, then reload that URL.
+9. Repeat step 3 below the `sm` breakpoint.
+
+Expected result:
+
+- No invite form is on the page until the sheet is opened.
+- The sheet opens over the directory, the URL gains `?new=member`, and focus starts in the first
+  field.
+- The rejected submit keeps the sheet open, marks the email field, moves focus to it, and **keeps
+  every value that was typed**, including the profile, role, currency, timezone and language.
+- With `invite another` ticked the sheet stays open, empties, refocuses the first field, and shows
+  the confirmation.
+- Without it the sheet closes, the directory refreshes with the new row, and the confirmation shows
+  above the table.
+- `Escape`, the scrim and the close button all ask before discarding typed input; `Keep editing`
+  returns to the sheet with the values intact.
+- The deep link opens the sheet on load and survives a reload; closing it clears the parameter.
+- On a narrow viewport the sheet is full width, the header stays put, the fields scroll, and the
+  submit row stays visible.
+
+### Create Project And Project Group Sheets
+
+1. Open `https://{DOMAIN_NAME}/admin/projects` and confirm the project table is visible without
+   scrolling.
+2. Click `Új projekt` / `New project`, fill in a name, pick a colour, a start date and an end date
+   **before** the start date, and submit.
+3. Fix the end date and submit.
+4. Filter the directory so no project matches, and use the empty state's action.
+5. Click `Új csoport` / `New group` in the `Projektcsoportok` / `Project groups` card header, create
+   a group, then edit an existing group from its row menu.
+6. Open `https://{DOMAIN_NAME}/admin/projects?new=project` and `?new=group` directly.
+
+Expected result:
+
+- Neither create form is on the page until it is opened.
+- The rejected project keeps the sheet open and keeps the name, slug, colour, dates, internal flag
+  and notes exactly as entered.
+- A successful create closes the sheet, refreshes the directory, and reports above the table.
+- The filtered-empty table offers to clear the filters; a genuinely empty one offers to create.
+- The group dialog is the same dialog for create and edit, titled and labelled for the mode it is
+  in, and archiving a group reports at the top of the panel rather than into the create form.
+- Both deep links open their overlay on load.
+
+### Filter Toolbars
+
+Run this on all four admin lists: `/admin/timesheets`, `/admin/payslips`, `/admin/people` and
+`/admin/projects`.
+
+1. Open the page and confirm the list is visible without scrolling.
+2. Apply two or three filters and submit.
+3. Remove one filter by clicking its chip.
+4. Use `Törlés` / `Clear`.
+5. Type a search term, submit, and read the chip it produces.
+6. On `/admin/projects`, filter by a project group.
+7. Narrow the window to tablet and phone widths.
+
+Expected result:
+
+- The filters are one toolbar row with no heading, and every control keeps an accessible name for
+  screen readers even though the visible labels are gone.
+- Each applied filter shows as a chip naming both the filter and its value; removing one chip leaves
+  the others applied, and does **not** apply edits sitting unsubmitted in the toolbar.
+- `Clear` removes all of them and returns to the unfiltered URL.
+- The search chip shows the term next to a magnifier rather than repeating a long field label, and a
+  screen reader still hears which filter it is.
+- The group chip names the group, never its id.
+- On `/admin/people` and `/admin/projects` the `Showing x-y of z` line stays visible even with no
+  filters applied; on the other two it lives in the list header as before.
+- The payslip employee picker is searchable rather than a native dropdown.
+- Check this in **both** locales: the Hungarian labels are markedly longer, and the controls size
+  themselves to their content, so a hint such as `Bármely hozzárendelés` is never the thing that
+  gets cut off — it takes the width it needs and the row wraps instead.
+- Every control on the row is the same height. A long _selected_ value may still ellipsise at the
+  control's maximum width; it must never wrap out of its box, and hovering shows the full text.
+- On `/admin/projects`, `Tömeges hozzárendelés` / `Bulk assign` sits in the `Projektlista` /
+  `Project directory` header on one line, and opening it puts `?new=assignments` in the URL.
+- The controls wrap onto further lines on narrow viewports with the submit staying on the right, and
+  no page scrolls sideways.
+
 ## Regression Checklist For Every Release
 
 - Invitation activation works for a new invited user.
@@ -2851,3 +2980,11 @@ Expected result:
 - The theme toggle survives a reload in both directions, and switching light↔dark on a dense screen
   changes no layout or geometry, only colour.
 - Reports charts stay on white cards in light and show six clearly distinct series there.
+- Creating a project, a project group or an invitation happens in an overlay opened from a page
+  header; no create form sits above a directory table.
+- A rejected create keeps its overlay open with every typed value intact and focus on the offending
+  field.
+- Closing an overlay with unsaved input asks first, whichever way it is closed.
+- Admin list filters read as a single toolbar row with removable chips for whatever is applied.
+- A running timer sits in the app header on every signed-in page and at every width, and can be
+  stopped from there; starting one happens in an overlay opened from the time-tracking toolbar.

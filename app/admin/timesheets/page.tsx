@@ -1,6 +1,6 @@
 import type { Route } from "next";
 import Link from "next/link";
-import { getLocale, getTranslations } from "next-intl/server";
+import { getTranslations } from "next-intl/server";
 
 import { AppShell } from "@/src/components/layout/AppShell";
 import { Button } from "@/src/components/ui/Button";
@@ -24,7 +24,7 @@ import {
 } from "@/src/server/timesheets";
 import { AdminTimesheetTable } from "./AdminTimesheetTable";
 import { TimesheetFilterBar } from "./TimesheetFilterBar";
-import { formatCount, getActionResultMessage } from "./formatting";
+import { getActionResultMessage } from "./formatting";
 
 export const dynamic = "force-dynamic";
 
@@ -37,10 +37,9 @@ type AdminTimesheetsTranslator = Awaited<ReturnType<typeof getTranslations>>;
 export default async function AdminTimesheetsPage({ searchParams }: AdminTimesheetsPageProps) {
   const resolvedSearchParams = (await searchParams) ?? {};
   const { member: admin } = await requireAdminAppMember("/admin/timesheets");
-  const [result, t, locale] = await Promise.all([
+  const [result, t] = await Promise.all([
     listTimesheetsForAdmin(resolvedSearchParams),
     getTranslations("AdminTimesheets"),
-    getLocale(),
   ]);
   const actionResult = getSingleParam(resolvedSearchParams.result);
   const actionResultMessage = getActionResultMessage(actionResult, t, {
@@ -64,41 +63,15 @@ export default async function AdminTimesheetsPage({ searchParams }: AdminTimeshe
           </div>
         ) : null}
 
-        <div className="grid gap-3 md:grid-cols-3">
-          <SummaryCard
-            label={t("stats.matching")}
-            value={formatCount(result.totalItems, locale)}
-            caption={t("stats.matchingCaption")}
-          />
-          <SummaryCard
-            label={t("stats.page")}
-            value={`${formatCount(result.pageStart, locale)}-${formatCount(result.pageEnd, locale)}`}
-            caption={t("stats.pageCaption")}
-          />
-          <SummaryCard
-            label={t("stats.pageSize")}
-            value={formatCount(result.filters.pageSize, locale)}
-            caption={t("stats.pageSizeCaption")}
-          />
-        </div>
-
-        <Card density="lg">
-          <CardHeader className="block">
-            <CardTitle>{t("filters.title")}</CardTitle>
-            <CardDescription>{t("filters.description")}</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <TimesheetFilterBar
-              query={result.filters.query}
-              status={result.filters.status}
-              contractorMemberId={result.filters.contractorMemberId}
-              projectId={result.filters.projectId}
-              month={result.filters.month}
-              contractorOptions={result.contractorOptions}
-              projectOptions={result.projectOptions}
-            />
-          </CardContent>
-        </Card>
+        <TimesheetFilterBar
+          query={result.filters.query}
+          status={result.filters.status}
+          contractorMemberId={result.filters.contractorMemberId}
+          projectId={result.filters.projectId}
+          month={result.filters.month}
+          contractorOptions={result.contractorOptions}
+          projectOptions={result.projectOptions}
+        />
 
         <Card density="lg">
           <CardHeader className="block">
@@ -169,18 +142,6 @@ function Pagination({
           </Button>
         )}
       </div>
-    </div>
-  );
-}
-
-function SummaryCard({ label, value, caption }: { label: string; value: string; caption: string }) {
-  return (
-    <div className="rounded-[var(--radius-lg)] border border-border bg-card/70 p-4">
-      <p className="font-ui text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
-        {label}
-      </p>
-      <p className="mt-2 text-2xl font-semibold text-foreground">{value}</p>
-      <p className="mt-1 text-sm text-muted-foreground">{caption}</p>
     </div>
   );
 }

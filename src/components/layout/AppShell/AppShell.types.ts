@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 
 import type { ShellNotification } from "../NotificationButton";
+import type { RunningTimerSnapshot, RunningTimerStopResult } from "../RunningTimerProvider";
 import type { UserMenuAction, UserMenuUser } from "../UserMenu";
 
 export type AppShellProps = {
@@ -15,7 +16,9 @@ export type AppShellProps = {
   user?: UserMenuUser;
   userActions?: UserMenuAction[];
   notifications?: ShellNotification[];
+  /** Overrides the running timer from `RunningTimerProvider`; `null` forces "nothing running". */
   timer?: AppShellTimer | null;
+  /** Overrides the provider's stop handler. Pass both, or neither. */
   onStopTimer?: () => Promise<AppShellTimerActionResult>;
   onNavigate?: (itemId: string) => void;
   onCommand?: () => void;
@@ -26,15 +29,10 @@ export type AppShellProps = {
   onUserAction?: (actionId: string) => void;
 };
 
-export type AppShellTimer = {
-  description: string;
-  projectName: string;
-  projectColor: string;
-  startedAt: string;
-  href?: string;
-};
-
-export type AppShellTimerActionResult = {
-  status: "idle" | "success" | "error";
-  message: string;
-};
+/*
+  The shell no longer owns the running-timer shape; `RunningTimerProvider` does, because the root
+  layout is where the value comes from. These aliases keep the prop names the shell has always
+  exposed, which is what stories and tests drive the pill through.
+*/
+export type AppShellTimer = RunningTimerSnapshot;
+export type AppShellTimerActionResult = RunningTimerStopResult;

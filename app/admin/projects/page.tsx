@@ -8,6 +8,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/src/components/ui/Card";
+import { SectionHead } from "@/src/components/ui/SectionHead";
 import {
   mapMemberToShellProfile,
   mapMemberToShellUser,
@@ -24,7 +25,9 @@ import {
 import { listAssignmentRatesForAdmin } from "@/src/server/rates";
 import { AdminProjectGroupsPanel } from "./AdminProjectGroupsPanel";
 import { AdminProjectsTable } from "./AdminProjectsTable";
-import { ProjectCreateForm } from "./ProjectCreateForm";
+import { ProjectBulkAssignButton } from "./ProjectBulkAssignButton";
+import { ProjectCreateButton } from "./ProjectCreateButton";
+import { ProjectGroupCreateButton } from "./ProjectGroupCreateButton";
 
 export const dynamic = "force-dynamic";
 
@@ -64,55 +67,45 @@ export default async function AdminProjectsPage({ searchParams }: AdminProjectsP
       user={mapMemberToShellUser(admin)}
     >
       <section className="mx-auto grid w-full max-w-[92rem] gap-6 px-4 py-8 sm:px-6 lg:px-8">
-        <div className="flex flex-col gap-2">
-          <p className="font-ui text-sm font-medium uppercase tracking-[0.18em] text-accent">
-            {t("eyebrow")}
-          </p>
-          <div className="flex flex-col justify-between gap-4 lg:flex-row lg:items-end">
-            <div>
-              <h1 className="text-3xl font-bold text-foreground">{t("title")}</h1>
-              <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">
-                {t("subtitle")}
-              </p>
-            </div>
-            <div className="grid min-w-72 grid-cols-3 gap-2 rounded-[var(--radius-lg)] border border-border bg-card/70 p-3 text-center">
-              <div>
-                <p className="text-2xl font-semibold text-foreground">{totalProjects}</p>
-                <p className="font-ui text-[11px] font-medium uppercase tracking-[0.12em] text-muted-foreground">
-                  {t("stats.projects")}
-                </p>
+        <SectionHead
+          eyebrow={t("eyebrow")}
+          title={t("title")}
+          subtitle={t("subtitle")}
+          actions={
+            <>
+              <div className="grid min-w-72 grid-cols-3 gap-2 rounded-[var(--radius-lg)] border border-border bg-card/70 p-3 text-center">
+                <div>
+                  <p className="text-2xl font-semibold text-foreground">{totalProjects}</p>
+                  <p className="font-ui text-[11px] font-medium uppercase tracking-[0.12em] text-muted-foreground">
+                    {t("stats.projects")}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-2xl font-semibold text-accent">{activeProjects}</p>
+                  <p className="font-ui text-[11px] font-medium uppercase tracking-[0.12em] text-muted-foreground">
+                    {t("stats.active")}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-2xl font-semibold text-warning">{internalProjects}</p>
+                  <p className="font-ui text-[11px] font-medium uppercase tracking-[0.12em] text-muted-foreground">
+                    {t("stats.internal")}
+                  </p>
+                </div>
               </div>
-              <div>
-                <p className="text-2xl font-semibold text-accent">{activeProjects}</p>
-                <p className="font-ui text-[11px] font-medium uppercase tracking-[0.12em] text-muted-foreground">
-                  {t("stats.active")}
-                </p>
-              </div>
-              <div>
-                <p className="text-2xl font-semibold text-warning">{internalProjects}</p>
-                <p className="font-ui text-[11px] font-medium uppercase tracking-[0.12em] text-muted-foreground">
-                  {t("stats.internal")}
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
+              <ProjectCreateButton />
+            </>
+          }
+        />
 
         <div className="grid gap-6">
           <Card density="lg">
-            <CardHeader className="block">
-              <CardTitle>{t("create.title")}</CardTitle>
-              <CardDescription>{t("create.description")}</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <ProjectCreateForm />
-            </CardContent>
-          </Card>
-
-          <Card density="lg">
-            <CardHeader className="block">
-              <CardTitle>{t("directory.title")}</CardTitle>
-              <CardDescription>{t("directory.description")}</CardDescription>
+            <CardHeader className="flex-col sm:flex-row">
+              <div>
+                <CardTitle>{t("directory.title")}</CardTitle>
+                <CardDescription>{t("directory.description")}</CardDescription>
+              </div>
+              <ProjectBulkAssignButton className="shrink-0" />
             </CardHeader>
             <CardContent>
               <AdminProjectsTable
@@ -128,9 +121,12 @@ export default async function AdminProjectsPage({ searchParams }: AdminProjectsP
           </Card>
 
           <Card density="lg">
-            <CardHeader className="block">
-              <CardTitle>{t("groups.title")}</CardTitle>
-              <CardDescription>{t("groups.description")}</CardDescription>
+            <CardHeader className="flex-col sm:flex-row">
+              <div>
+                <CardTitle>{t("groups.title")}</CardTitle>
+                <CardDescription>{t("groups.description")}</CardDescription>
+              </div>
+              <ProjectGroupCreateButton className="shrink-0" />
             </CardHeader>
             <CardContent>
               <AdminProjectGroupsPanel groups={groups} projects={projectOptions} />

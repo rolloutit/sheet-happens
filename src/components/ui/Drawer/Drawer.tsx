@@ -33,7 +33,7 @@ export const DrawerOverlay = React.forwardRef<
 DrawerOverlay.displayName = "DrawerOverlay";
 
 export const DrawerContent = React.forwardRef<DrawerContentElement, DrawerContentProps>(
-  ({ className, side = "right", children, ...props }, ref) => (
+  ({ className, side = "right", closeLabel = "Close", children, ...props }, ref) => (
     <DrawerPortal>
       <DrawerOverlay />
       <DialogPrimitive.Content
@@ -50,7 +50,7 @@ export const DrawerContent = React.forwardRef<DrawerContentElement, DrawerConten
         {children}
         <DialogPrimitive.Close className="absolute right-4 top-4 rounded-full p-1 text-muted-foreground transition hover:bg-secondary hover:text-foreground">
           <X className="size-4" aria-hidden="true" />
-          <span className="sr-only">Close</span>
+          <span className="sr-only">{closeLabel}</span>
         </DialogPrimitive.Close>
       </DialogPrimitive.Content>
     </DrawerPortal>

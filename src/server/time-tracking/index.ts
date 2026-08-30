@@ -5,6 +5,7 @@ export {
   deleteTimeEntryDraft,
   duplicatePreviousWeek,
   getMemberWeeklyTimeGrid,
+  getRunningTimerForMember,
   markInactiveProjectWeek,
   saveTimeEntryDraft,
   startRunningTimer,
@@ -20,6 +21,7 @@ export type {
   DuplicatePreviousWeekInput,
   InactiveProjectWeekInput,
   InactiveProjectWeekRow,
+  RunningTimerView,
   SaveTimeEntryDraftInput,
   TimeEntryDraftPayload,
   TimeEntryDraftView,
@@ -32,6 +34,7 @@ export type {
   TimeGridWeek,
   TimeTrackingRequestMetadata,
 } from "./time-entries";
+export { getShellRunningTimer } from "./shell-timer";
 export {
   addDays,
   buildWeekDays,

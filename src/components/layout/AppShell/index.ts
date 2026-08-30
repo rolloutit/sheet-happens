@@ -1,2 +1,2 @@
 export { AppShell } from "./AppShell";
-export type { AppShellProps } from "./AppShell.types";
+export type { AppShellProps, AppShellTimer, AppShellTimerActionResult } from "./AppShell.types";
