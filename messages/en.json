@@ -2038,12 +2038,12 @@
       "futureDate": "Future date",
       "futureDateAllowed": "This is a future date. Entries are allowed, but they stay flagged.",
       "dailyTotalOver8": "Daily total is over 8h.",
-      "dailyTotalExact": "That is {hours}h in one day.",
+      "dailyTotalExact": "That is {hours} in one day.",
       "dailyTotalOver24Blocked": "Daily total cannot exceed 24 hours.",
-      "dailyTotalOver24Projected": "Daily total cannot exceed 24 hours, the total would be {hours}h.",
+      "dailyTotalOver24Projected": "Daily total cannot exceed 24 hours, the total would be {hours}.",
       "dayHasOverlaps": "Day has overlapping entries.",
       "dayOver8": "The selected day has more than 8 logged hours.",
-      "dayOver8Projected": "The selected day has more than 8 logged hours, the total is {hours}h.",
+      "dayOver8Projected": "The selected day has more than 8 logged hours, the total is {hours}.",
       "longContinuousSession": "Long continuous session",
       "overlapsAnotherEntry": "Overlaps another entry",
       "durationOver24Blocked": "Duration cannot exceed 24 hours.",
@@ -2246,8 +2246,8 @@
         "description": "Choose how worked durations appear throughout the application.",
         "decimal": "Decimal hours",
         "hoursMinutes": "Hours and minutes",
-        "decimalExample": "Example: 3 hours 23 minutes appears as 3.3833 h.",
-        "hoursMinutesExample": "Example: 3 hours 23 minutes appears as 3 h 23 m.",
+        "decimalExample": "Example: 3 hours 23 minutes appears as 3.38 h.",
+        "hoursMinutesExample": "Example: 3 hours 23 minutes appears as 3:23.",
         "save": "Save display"
       }
     },
@@ -2483,6 +2483,7 @@
       "durationFormatLabel": "Time display",
       "durationFormatDecimal": "Decimal hours",
       "durationFormatHoursMinutes": "Hours and minutes",
+      "durationFormatInternalHint": "Internal exports always show decimal hours, so they stay checkable against the amounts printed beside them.",
       "modeLabel": "Content",
       "modeCostFree": "Cost-free",
       "modeCostFreeHint": "Hours and descriptions only — safe to share externally.",
@@ -2559,7 +2560,8 @@
       "editingDone": "Editing done",
       "editHint": "Changes stay in this report and its export until you explicitly save them to recorded time.",
       "descriptionInput": "Description for {name}",
-      "hoursInput": "Hours for {name}"
+      "hoursInput": "Hours for {name}",
+      "hoursInputHint": "Type time like 3.5, 3:30, 3h 20m, or 200m."
     },
     "persistence": {
       "unsavedTitle": "{count, plural, one {# unsaved report change} other {# unsaved report changes}}",

@@ -89,7 +89,9 @@ describe("report PDF payload", () => {
     expect(payload.lines[0].amount).toBe("€300.00");
     expect(payload.groups[0].amount).toBe("€300.00");
     expect(payload.summary.heroes.at(-1)).toEqual({ label: "Amount", value: "€300.00" });
-    expect(payload.totals).toEqual({ hours: "3 h", entries: "1", amount: "€300.00" });
+    // Hours are pinned decimal on an internal export (see "pins decimal hours..." below), so a
+    // whole-hour total still carries its two zero decimals rather than dropping them.
+    expect(payload.totals).toEqual({ hours: "3.00 h", entries: "1", amount: "€300.00" });
   });
 
   it("totals the report once for both tables", () => {
@@ -98,17 +100,34 @@ describe("report PDF payload", () => {
     expect(payload.totals).toEqual({ hours: "3 h", entries: "1" });
   });
 
-  it("uses the independently selected hour-minute format throughout the PDF", () => {
+  it("uses the independently selected hour-minute format throughout a cost-free PDF", () => {
     const snapshot = createCostFreeReportSnapshot();
     snapshot.lines[0].durationMinutes = 203;
     snapshot.groups[0].totalMinutes = 203;
     snapshot.summary.totalMinutes = 203;
     const payload = buildPayload(snapshot, "en", "Client July report", "HOURS_MINUTES");
 
-    expect(payload.summary.heroes[0].value).toBe("3 h 23 m");
-    expect(payload.groups[0].hours).toBe("3 h 23 m");
-    expect(payload.lines[0].hours).toBe("3 h 23 m");
-    expect(payload.totals.hours).toBe("3 h 23 m");
+    expect(payload.summary.heroes[0].value).toBe("3:23");
+    expect(payload.groups[0].hours).toBe("3:23");
+    expect(payload.lines[0].hours).toBe("3:23");
+    expect(payload.totals.hours).toBe("3:23");
+  });
+
+  it("pins decimal hours on an internal export regardless of the requested format", () => {
+    const snapshot = createInternalReportSnapshot();
+    snapshot.lines[0].durationMinutes = 203;
+    snapshot.groups[0].totalMinutes = 203;
+    snapshot.summary.totalMinutes = 203;
+    const payload = buildPayload(snapshot, "en", "Client July report", "HOURS_MINUTES");
+
+    if (payload.mode !== "INTERNAL") throw new Error("expected an internal payload");
+    // An internal export prints amounts beside every hours figure, so the member's
+    // HOURS_MINUTES preference is overridden — hours stay checkable against the amount printed
+    // beside them, the same rule Harvest and Clockify apply on their own money-facing screens.
+    expect(payload.summary.heroes[0].value).toBe("3.38 h");
+    expect(payload.groups[0].hours).toBe("3.38 h");
+    expect(payload.lines[0].hours).toBe("3.38 h");
+    expect(payload.totals.hours).toBe("3.38 h");
   });
 
   it("describes the export scope through header facets instead of the mode", () => {

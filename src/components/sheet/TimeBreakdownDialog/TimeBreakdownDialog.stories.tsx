@@ -7,12 +7,12 @@ const rows = [
   {
     id: "apollo",
     label: "Apollo Migration",
-    hours: 28,
+    durationMinutes: 1_680,
     amount: "EUR 2,240",
     tone: "success" as const,
   },
-  { id: "helix", label: "Helix Support", hours: 6, amount: "EUR 420" },
-  { id: "admin", label: "Internal admin", hours: 2, tone: "warning" as const },
+  { id: "helix", label: "Helix Support", durationMinutes: 360, amount: "EUR 420" },
+  { id: "admin", label: "Internal admin", durationMinutes: 120, tone: "warning" as const },
 ];
 
 const meta = {

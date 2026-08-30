@@ -30,7 +30,6 @@ import {
 import { Field } from "@/src/components/ui/Field";
 import { SectionHead } from "@/src/components/ui/SectionHead";
 import { Textarea } from "@/src/components/ui/Textarea";
-import type { DurationDisplayFormat } from "@/src/lib/formatting";
 import {
   mapMemberToShellProfile,
   mapMemberToShellUser,
@@ -53,7 +52,7 @@ import {
 } from "../actions";
 import {
   formatCount,
-  formatHours,
+  formatDecimalHours,
   formatMoney,
   formatMonthLabel,
   formatPeriodRange,
@@ -124,12 +123,7 @@ export default async function AdminTimesheetReviewPage({
           </div>
         ) : null}
 
-        <ReviewHeader
-          review={review}
-          locale={locale}
-          durationDisplayFormat={admin.durationDisplayFormat}
-          t={t}
-        />
+        <ReviewHeader review={review} locale={locale} t={t} />
 
         {review.rejectionReason ? (
           <div className="flex items-start gap-3 rounded-[var(--radius-lg)] border border-warning/35 bg-warning-soft px-4 py-3 text-sm text-warning">
@@ -140,12 +134,7 @@ export default async function AdminTimesheetReviewPage({
 
         <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_24rem]">
           <div className="grid gap-6">
-            <ProjectSnapshot
-              review={review}
-              locale={locale}
-              durationDisplayFormat={admin.durationDisplayFormat}
-              t={t}
-            />
+            <ProjectSnapshot review={review} locale={locale} t={t} />
             <InvoiceReviewCard review={review} locale={locale} t={t} />
             <EventHistory events={review.events} locale={locale} t={t} />
           </div>
@@ -159,12 +148,10 @@ export default async function AdminTimesheetReviewPage({
 function ReviewHeader({
   review,
   locale,
-  durationDisplayFormat,
   t,
 }: {
   review: AdminTimesheetReview;
   locale: string;
-  durationDisplayFormat: DurationDisplayFormat;
   t: AdminTimesheetsTranslator;
 }) {
   return (
@@ -193,7 +180,9 @@ function ReviewHeader({
           <SummaryMetric
             icon={Clock3}
             label={t("summary.hours")}
-            value={formatHours(review.totalMinutes, locale, durationDisplayFormat)}
+            // The amount metric sits right beside this one, so hours are pinned decimal
+            // regardless of the admin's display preference — see `formatDecimalHours`.
+            value={formatDecimalHours(review.totalMinutes, locale)}
           />
           <SummaryMetric
             icon={WalletCards}
@@ -219,12 +208,10 @@ function ReviewHeader({
 function ProjectSnapshot({
   review,
   locale,
-  durationDisplayFormat,
   t,
 }: {
   review: AdminTimesheetReview;
   locale: string;
-  durationDisplayFormat: DurationDisplayFormat;
   t: AdminTimesheetsTranslator;
 }) {
   return (
@@ -251,7 +238,6 @@ function ProjectSnapshot({
                 key={project.projectId}
                 project={project}
                 locale={locale}
-                durationDisplayFormat={durationDisplayFormat}
                 t={t}
               />
             ))}
@@ -269,12 +255,10 @@ function ProjectSnapshot({
 function ProjectSnapshotCard({
   project,
   locale,
-  durationDisplayFormat,
   t,
 }: {
   project: AdminTimesheetReviewProject;
   locale: string;
-  durationDisplayFormat: DurationDisplayFormat;
   t: AdminTimesheetsTranslator;
 }) {
   return (
@@ -289,8 +273,10 @@ function ProjectSnapshotCard({
           <div>
             <h3 className="font-ui text-sm font-semibold text-foreground">{project.projectName}</h3>
             <p className="text-xs text-muted-foreground">
+              {/* The project's total amount sits right beside this caption, so hours are
+                  pinned decimal (formatDecimalHours) regardless of the admin's preference. */}
               {t("snapshot.projectSummary", {
-                hours: formatHours(project.totalMinutes, locale, durationDisplayFormat),
+                hours: formatDecimalHours(project.totalMinutes, locale),
                 entries: project.entryCount,
               })}
             </p>
@@ -314,13 +300,7 @@ function ProjectSnapshotCard({
           </thead>
           <tbody>
             {project.lines.map((line) => (
-              <SnapshotLineRow
-                key={line.id}
-                line={line}
-                locale={locale}
-                durationDisplayFormat={durationDisplayFormat}
-                t={t}
-              />
+              <SnapshotLineRow key={line.id} line={line} locale={locale} t={t} />
             ))}
           </tbody>
         </table>
@@ -332,12 +312,10 @@ function ProjectSnapshotCard({
 function SnapshotLineRow({
   line,
   locale,
-  durationDisplayFormat,
   t,
 }: {
   line: AdminTimesheetReviewLine;
   locale: string;
-  durationDisplayFormat: DurationDisplayFormat;
   t: AdminTimesheetsTranslator;
 }) {
   return (
@@ -347,7 +325,9 @@ function SnapshotLineRow({
       </td>
       <td className="px-4 py-3 text-sm text-foreground">{line.description}</td>
       <td className="px-4 py-3 font-ui text-sm font-semibold text-foreground">
-        {formatHours(line.durationMinutes, locale, durationDisplayFormat)}
+        {/* Rate and amount sit in the same row, so hours are pinned decimal
+            (formatDecimalHours) regardless of the admin's display preference. */}
+        {formatDecimalHours(line.durationMinutes, locale)}
       </td>
       <td className="px-4 py-3 text-sm text-muted-foreground">
         {formatRate(line.hourlyRate, line.currencyCode, locale)} ·{" "}

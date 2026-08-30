@@ -4,6 +4,7 @@ import {
   formatCount,
   formatDateLabel,
   formatDateTime,
+  formatDecimalHours,
   formatHours,
   formatHoursWithUnit,
   formatMonthLabel,
@@ -26,7 +27,7 @@ import {
 const NBSP = " ";
 
 describe("formatHours", () => {
-  it("renders bare decimal hours with up to four decimals", () => {
+  it("renders bare decimal hours capped at two decimals", () => {
     expect(formatHours(180, "en")).toBe("3");
     expect(formatHours(150, "en")).toBe("2.5");
     expect(formatHours(150, "hu")).toBe("2,5");
@@ -40,17 +41,40 @@ describe("formatHours", () => {
     expect(formatHoursWithUnit(0, "en")).toBe("0 h");
   });
 
-  it("keeps enough decimal precision to avoid materially changing minutes", () => {
-    expect(formatHoursWithUnit(100, "en")).toBe("1.6667 h");
-    expect(formatHoursWithUnit(203, "en")).toBe("3.3833 h");
+  it("caps at two decimals — no sub-minute-resolution digits", () => {
+    expect(formatHoursWithUnit(100, "en")).toBe("1.67 h");
+    expect(formatHoursWithUnit(203, "en")).toBe("3.38 h");
   });
 
-  it("renders exact hour-minute durations in both locales", () => {
-    expect(formatHoursWithUnit(203, "en", "HOURS_MINUTES")).toBe("3 h 23 m");
-    expect(formatHoursWithUnit(203, "hu", "HOURS_MINUTES")).toBe("3 ó 23 p");
-    expect(formatHours(45, "en", "HOURS_MINUTES")).toBe("45 m");
-    expect(formatHours(180, "hu", "HOURS_MINUTES")).toBe("3 ó");
-    expect(formatHours(0, "en", "HOURS_MINUTES")).toBe("0 h");
+  it("renders locale-neutral colon durations for the hour-minute preference", () => {
+    expect(formatHoursWithUnit(203, "en", "HOURS_MINUTES")).toBe("3:23");
+    expect(formatHoursWithUnit(203, "hu", "HOURS_MINUTES")).toBe("3:23");
+    expect(formatHours(45, "en", "HOURS_MINUTES")).toBe("0:45");
+    expect(formatHours(180, "hu", "HOURS_MINUTES")).toBe("3:00");
+    expect(formatHours(0, "en", "HOURS_MINUTES")).toBe("0:00");
+  });
+});
+
+describe("formatDecimalHours", () => {
+  it("always renders decimal at a pinned two fraction digits, regardless of preference", () => {
+    expect(formatDecimalHours(180, "en")).toBe("3.00 h");
+    expect(formatDecimalHours(203, "en")).toBe("3.38 h");
+    expect(formatDecimalHours(0, "en")).toBe("0.00 h");
+    expect(formatDecimalHours(150, "hu")).toBe("2,50 h");
+  });
+
+  it("rounds at display, not in the data — a total need not equal its parts summed", () => {
+    // Two 55-minute entries: each displays as 0.92 h, but the true total (110 min) is 1.83 h,
+    // not 1.84 h. This is the same behaviour every major time tracker ships (Toggl, Clockify,
+    // Harvest) — totals are computed from the underlying minutes and rounded once, never by
+    // summing already-rounded display strings.
+    const partA = formatDecimalHours(55, "en");
+    const partB = formatDecimalHours(55, "en");
+    const total = formatDecimalHours(55 + 55, "en");
+
+    expect(partA).toBe("0.92 h");
+    expect(partB).toBe("0.92 h");
+    expect(total).toBe("1.83 h");
   });
 });
 

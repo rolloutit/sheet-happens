@@ -89,7 +89,6 @@ export default async function AdminTimesheetsPage({ searchParams }: AdminTimeshe
               key={`${currentListHref}:${actionResult}`}
               rows={result.rows}
               returnTo={currentListHref}
-              durationDisplayFormat={admin.durationDisplayFormat}
             />
             <Pagination result={result} t={t} />
           </CardContent>

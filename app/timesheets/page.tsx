@@ -30,13 +30,12 @@ import { LockedState } from "@/src/components/ui/LockedState";
 import { SectionHead } from "@/src/components/ui/SectionHead";
 import {
   formatCount,
-  formatHours,
+  formatDecimalHours,
   formatMonthLabel,
   formatMoney as formatMoneyBase,
   formatPeriodRange as formatPeriodRangeBase,
   formatRate as formatRateBase,
   formatTimestamp as formatTimestampBase,
-  type DurationDisplayFormat,
 } from "@/src/lib/formatting";
 import {
   accountStatusRoute,
@@ -140,7 +139,9 @@ export default async function TimesheetsPage({ searchParams }: TimesheetsPagePro
                 <SummaryMetric
                   icon={Clock3}
                   label={t("summary.hours")}
-                  value={formatHours(preview.totalMinutes, locale, member.durationDisplayFormat)}
+                  // The amount metric sits right beside this one, so hours are pinned decimal
+                  // regardless of the member's display preference — see `formatDecimalHours`.
+                  value={formatDecimalHours(preview.totalMinutes, locale)}
                 />
                 <SummaryMetric
                   icon={WalletCards}
@@ -219,12 +220,7 @@ export default async function TimesheetsPage({ searchParams }: TimesheetsPagePro
           </CardHeader>
           <CardContent>
             {preview.projects.length > 0 ? (
-              <ProjectBreakdownTable
-                projects={preview.projects}
-                locale={locale}
-                durationDisplayFormat={member.durationDisplayFormat}
-                t={t}
-              />
+              <ProjectBreakdownTable projects={preview.projects} locale={locale} t={t} />
             ) : (
               <div className="rounded-[var(--radius-lg)] border border-dashed border-border bg-secondary/45 px-5 py-8 text-center text-sm text-muted-foreground">
                 {t("breakdown.empty")}
@@ -304,12 +300,10 @@ function PreviewWarnings({
 function ProjectBreakdownTable({
   projects,
   locale,
-  durationDisplayFormat,
   t,
 }: {
   projects: TimesheetProjectPreview[];
   locale: string;
-  durationDisplayFormat: DurationDisplayFormat;
   t: TimesheetsTranslator;
 }) {
   return (
@@ -342,7 +336,9 @@ function ProjectBreakdownTable({
                   </div>
                 </td>
                 <td className="px-4 py-4 font-ui text-sm font-semibold text-foreground">
-                  {formatHours(project.totalMinutes, locale, durationDisplayFormat)}
+                  {/* Rate and amount sit in the same row, so hours are pinned decimal
+                      (formatDecimalHours) regardless of the member's display preference. */}
+                  {formatDecimalHours(project.totalMinutes, locale)}
                 </td>
                 <td className="px-4 py-4 text-sm text-muted-foreground">
                   <RateCell project={project} locale={locale} t={t} />

@@ -14,6 +14,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/src/components/ui/Dialog";
+import { formatHoursWithUnit } from "@/src/lib/formatting";
 import type { TimeBreakdownDialogProps, TimeBreakdownRowTone } from "./TimeBreakdownDialog.types";
 
 const toneMap: Record<TimeBreakdownRowTone, "neutral" | "warning" | "success"> = {
@@ -22,22 +23,21 @@ const toneMap: Record<TimeBreakdownRowTone, "neutral" | "warning" | "success"> =
   success: "success",
 };
 
-function formatHours(hours: number) {
-  return `${Number(hours.toFixed(2))}h`;
-}
-
 export function TimeBreakdownDialog({
   rows,
   trigger,
   open,
   defaultOpen,
-  totalHours,
+  totalMinutes,
   totalAmount,
+  locale = "en",
+  durationDisplayFormat = "DECIMAL_HOURS",
   labels,
   onOpenChange,
   onExport,
 }: TimeBreakdownDialogProps) {
-  const resolvedTotalHours = totalHours ?? rows.reduce((sum, row) => sum + row.hours, 0);
+  const resolvedTotalMinutes =
+    totalMinutes ?? rows.reduce((sum, row) => sum + row.durationMinutes, 0);
 
   return (
     <Dialog open={open} defaultOpen={defaultOpen} onOpenChange={onOpenChange}>
@@ -71,7 +71,8 @@ export function TimeBreakdownDialog({
                 ) : null}
               </div>
               <span className="font-ui text-sm font-semibold">
-                {labels?.hours ?? "Hours"}: {formatHours(row.hours)}
+                {labels?.hours ?? "Hours"}:{" "}
+                {formatHoursWithUnit(row.durationMinutes, locale, durationDisplayFormat)}
               </span>
               {row.amount ? (
                 <span className="font-ui text-sm font-semibold">
@@ -83,7 +84,8 @@ export function TimeBreakdownDialog({
         </div>
         <div className="grid gap-2 rounded-[var(--radius-lg)] bg-secondary p-4 sm:grid-cols-2">
           <p className="font-ui text-sm font-semibold">
-            {labels?.hours ?? "Hours"}: {formatHours(resolvedTotalHours)}
+            {labels?.hours ?? "Hours"}:{" "}
+            {formatHoursWithUnit(resolvedTotalMinutes, locale, durationDisplayFormat)}
           </p>
           {totalAmount ? (
             <p className="font-ui text-sm font-semibold">

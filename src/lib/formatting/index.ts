@@ -16,6 +16,7 @@ export type {
 } from "./dates";
 export {
   durationDisplayFormats,
+  formatDecimalHours,
   formatHours,
   formatHoursWithUnit,
   isDurationDisplayFormat,

@@ -733,7 +733,7 @@ function TimeGridContent({ week }: { week: TimeGridWeek }) {
                               />
                             ))}
                             <div className="flex min-h-14 items-center justify-center border-b border-border text-base font-semibold">
-                              {formatMinutesAsHours(rowTotal) || "0"}
+                              {formatMinutesAsHours(rowTotal)}
                             </div>
                           </>
                         )}
@@ -761,11 +761,11 @@ function TimeGridContent({ week }: { week: TimeGridWeek }) {
                               : "text-muted-foreground",
                         )}
                       >
-                        {formatMinutesAsHours(total) || "0"}
+                        {formatMinutesAsHours(total)}
                         {over ? (
                           <WarningTip
                             text={t("warnings.dailyTotalExact", {
-                              hours: formatMinutesAsHours(total),
+                              hours: formatMinutesWithUnit(total),
                             })}
                           />
                         ) : null}
@@ -773,7 +773,7 @@ function TimeGridContent({ week }: { week: TimeGridWeek }) {
                     );
                   })}
                   <div className="flex min-h-[52px] items-center justify-center bg-secondary text-[17px] font-semibold text-accent">
-                    {formatMinutesAsHours(weekTotal) || "0"}
+                    {formatMinutesAsHours(weekTotal)}
                   </div>
                 </div>
               </div>
@@ -868,7 +868,7 @@ function TimeGridContent({ week }: { week: TimeGridWeek }) {
                                   }
                                 }}
                               >
-                                {formatMinutesAsHours(cell.totalMinutes) || "0"}
+                                {formatMinutesAsHours(cell.totalMinutes)}
                               </button>
                             );
                           })}
@@ -1080,7 +1080,7 @@ function TimeGridCell({
         )}
         onClick={onOpenBreakdown}
       >
-        {formatMinutesAsHours(cell.totalMinutes) || "0"}
+        {formatMinutesAsHours(cell.totalMinutes)}
         {cell.entries.length > 1 ? (
           <span className="inline-flex items-center gap-0.5 text-muted-foreground">
             <Layers className="size-3" aria-hidden="true" />
@@ -1530,8 +1530,7 @@ type EntryModalProps = {
 
 function EntryModal({ state, week, projects, onClose, onDone, t }: EntryModalProps) {
   const locale = useLocale();
-  const { formatMinutesAsHours, formatMinutesForInput, formatMinutesWithUnit } =
-    useDurationFormatting();
+  const { formatMinutesForInput, formatMinutesWithUnit } = useDurationFormatting();
   const pickerLabels = usePickerLabels();
   const [isPending, startTransition] = useTransition();
   const initialProjectId = state.mode === "edit" ? state.entry.projectId : state.projectId;
@@ -1971,7 +1970,7 @@ function EntryModal({ state, week, projects, onClose, onDone, t }: EntryModalPro
             <div className="flex items-center gap-2 text-sm text-destructive">
               <AlertTriangle className="size-4" aria-hidden="true" />
               {t("warnings.dailyTotalOver24Projected", {
-                hours: formatMinutesAsHours(projectedDayTotalMinutes),
+                hours: formatMinutesWithUnit(projectedDayTotalMinutes),
               })}
             </div>
           ) : null}
@@ -1980,7 +1979,7 @@ function EntryModal({ state, week, projects, onClose, onDone, t }: EntryModalPro
             <div className="flex items-center gap-2 text-sm text-warning">
               <AlertTriangle className="size-4" aria-hidden="true" />
               {t("warnings.dayOver8Projected", {
-                hours: formatMinutesAsHours(projectedDayTotalMinutes),
+                hours: formatMinutesWithUnit(projectedDayTotalMinutes),
               })}
             </div>
           ) : null}
@@ -2559,8 +2558,7 @@ function useDurationFormatting() {
   const locale = useLocale();
   const durationDisplayFormat = useContext(DurationDisplayContext);
   const formatMinutesAsHours = useCallback(
-    (minutes: number) =>
-      minutes ? formatDurationHours(minutes, locale, durationDisplayFormat) : "",
+    (minutes: number) => formatDurationHours(minutes, locale, durationDisplayFormat),
     [durationDisplayFormat, locale],
   );
   const formatMinutesWithUnit = useCallback(

@@ -1,3 +1,5 @@
+import type { DurationDisplayFormat } from "@/src/lib/formatting";
+
 export type TimeGridCellState =
   "empty" | "filled" | "editing" | "today" | "future" | "warning" | "locked";
 
@@ -12,7 +14,7 @@ export type TimeGridDay = {
 };
 
 export type TimeGridCellValue = {
-  hours?: number;
+  durationMinutes?: number;
   state?: TimeGridCellState;
   note?: string;
   warning?: string;
@@ -25,7 +27,7 @@ export type TimeGridProject = {
   color: string;
   inactive?: boolean;
   billingLabel?: string;
-  hours?: number[];
+  durationMinutes?: number[];
   cells?: Record<string, TimeGridCellValue>;
 };
 
@@ -64,6 +66,14 @@ export type WeeklyTimeGridLabels = {
   totalColumn?: string;
   dailyTotal?: string;
   gridTitle?: string;
+  inactiveRow?: string;
+  /** e.g. `(hours) => \`${hours} óra\`` — wraps the formatted week total. */
+  totalHoursBadge?: (formattedHours: string) => string;
+  /** e.g. `(hours) => \`${hours} óra jóváhagyható\`` — wraps the approvable-hours cap. */
+  approvableHoursBadge?: (formattedHours: string) => string;
+  missingDescriptionBadge?: (count: number) => string;
+  /** e.g. `(hours) => \`${hours} óra\`` — the mobile per-day summary caption. */
+  dailyTotalCaption?: (formattedHours: string) => string;
 };
 
 export type WeeklyTimeGridProps = {
@@ -77,6 +87,10 @@ export type WeeklyTimeGridProps = {
   locked?: boolean;
   showTimer?: boolean;
   timer?: TimeGridTimerState;
+  /** Defaults to `"hu"`, matching this component's own Hungarian demo defaults. */
+  locale?: string;
+  /** Defaults to `"DECIMAL_HOURS"`. */
+  durationDisplayFormat?: DurationDisplayFormat;
   labels?: WeeklyTimeGridLabels;
   onPreviousWeek?: () => void;
   onNextWeek?: () => void;
@@ -87,6 +101,6 @@ export type WeeklyTimeGridProps = {
   onProjectSelect?: (project: TimeGridProject) => void;
   onCellFocus?: (context: TimeGridCellContext) => void;
   onCellEditStart?: (context: TimeGridCellContext) => void;
-  onCellChange?: (context: TimeGridCellContext, hours: number) => void;
+  onCellChange?: (context: TimeGridCellContext, durationMinutes: number) => void;
   className?: string;
 };

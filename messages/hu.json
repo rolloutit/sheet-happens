@@ -2038,12 +2038,12 @@
       "futureDate": "Jövőbeli dátum",
       "futureDateAllowed": "Ez jövőbeli dátum. A bejegyzés engedélyezett, de jelölve marad.",
       "dailyTotalOver8": "A napi összesen több mint 8 óra.",
-      "dailyTotalExact": "Ez {hours} óra egy nap alatt.",
+      "dailyTotalExact": "Ez {hours} egy nap alatt.",
       "dailyTotalOver24Blocked": "A napi összesen nem lehet több 24 óránál.",
-      "dailyTotalOver24Projected": "A napi összesen nem lehet több 24 óránál, az összesen {hours} óra lenne.",
+      "dailyTotalOver24Projected": "A napi összesen nem lehet több 24 óránál, az összesen {hours} lenne.",
       "dayHasOverlaps": "A napon átfedő bejegyzések vannak.",
       "dayOver8": "A kiválasztott napon több mint 8 óra van rögzítve.",
-      "dayOver8Projected": "A kiválasztott napon több mint 8 óra van rögzítve, az összesen {hours} óra.",
+      "dayOver8Projected": "A kiválasztott napon több mint 8 óra van rögzítve, az összesen {hours}.",
       "longContinuousSession": "Hosszú egybefüggő munka",
       "overlapsAnotherEntry": "Átfed egy másik bejegyzéssel",
       "durationOver24Blocked": "Az időtartam nem lehet több 24 óránál.",
@@ -2246,8 +2246,8 @@
         "description": "Válaszd ki, hogyan jelenjenek meg a munkaidők az alkalmazásban.",
         "decimal": "Tizedes óra",
         "hoursMinutes": "Óra és perc",
-        "decimalExample": "Példa: 3 óra 23 perc így jelenik meg: 3,3833 h.",
-        "hoursMinutesExample": "Példa: 3 óra 23 perc így jelenik meg: 3 ó 23 p.",
+        "decimalExample": "Példa: 3 óra 23 perc így jelenik meg: 3,38 h.",
+        "hoursMinutesExample": "Példa: 3 óra 23 perc így jelenik meg: 3:23.",
         "save": "Megjelenítés mentése"
       }
     },
@@ -2483,6 +2483,7 @@
       "durationFormatLabel": "Időtartamok megjelenítése",
       "durationFormatDecimal": "Tizedes óra",
       "durationFormatHoursMinutes": "Óra és perc",
+      "durationFormatInternalHint": "A belső exportok mindig tizedes órában jelennek meg, hogy összevethetők maradjanak a mellettük szereplő összegekkel.",
       "modeLabel": "Tartalom",
       "modeCostFree": "Költségmentes",
       "modeCostFreeHint": "Csak órák és leírások — kifelé biztonságosan megosztható.",
@@ -2559,7 +2560,8 @@
       "editingDone": "Szerkesztés kész",
       "editHint": "A módosítások ebben a riportban és az exportban maradnak, amíg külön nem mented őket a rögzített időbe.",
       "descriptionInput": "{name} bejegyzésének leírása",
-      "hoursInput": "{name} bejegyzésének óraszáma"
+      "hoursInput": "{name} bejegyzésének óraszáma",
+      "hoursInputHint": "Időt így adhatsz meg: 3.5, 3:30, 3h 20m vagy 200m."
     },
     "persistence": {
       "unsavedTitle": "{count} mentetlen riportmódosítás",

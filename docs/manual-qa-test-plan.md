@@ -614,6 +614,8 @@ Expected result:
 - Contractors can access `/timesheets`.
 - The preview is calculated from current time entries when no submitted snapshot exists.
 - Projects show total hours, rate state, currency, and amount.
+- Hours in the summary and the project breakdown render decimal at two fraction digits (e.g.
+  `9.50 h`) next to the amount, regardless of the `Time display` preference set in Settings.
 - Missing rates or mixed currencies are shown as warnings instead of hidden.
 
 ### Contractor Workflow Stepper Follows The Monthly Status
@@ -725,6 +727,9 @@ Expected result:
 - The admin review list is reachable from the sidebar approval menu.
 - The submitted timesheet appears in the filtered admin list.
 - The detail page reviews the immutable submitted snapshot, not live editable entries.
+- Hours in the admin list, the review summary, the project snapshot, and every source line render
+  decimal at two fraction digits (e.g. `9.50 h`) next to their amount, regardless of the admin's
+  `Time display` preference.
 - Approval changes the status to approved.
 - Source time entries remain locked after approval.
 - The audit log contains a `timesheet.approved` row.
@@ -1703,16 +1708,29 @@ Expected result:
 1. Sign in as any active user and open `https://{DOMAIN_NAME}/settings`.
 2. Open `Preferences` and select `Decimal hours` under time display.
 3. Save, then open the dashboard, time tracking, and any available timesheet screen.
-4. Confirm a 3-hour 23-minute duration appears as `3.3833 h` where an hour unit is shown.
-5. Return to Preferences, select `Hours and minutes`, and save.
-6. Reopen the same screens and refresh the browser.
+4. Confirm a 3-hour 23-minute duration appears as `3.38 h` where an hour unit is shown — never more
+   than two decimal digits anywhere.
+5. On `/time`, log a 55-minute entry (e.g. start `09:00`, end `09:55`) and confirm the live duration
+   badge, the grid cell, and the week total all read `0.92 h` / `0.92` / a total consistent with the
+   other entries logged that week — not `0.9167 h`.
+6. Return to Preferences, select `Hours and minutes`, and save.
+7. Reopen the same screens and refresh the browser.
+8. On `/time`, type `3:23` directly into an empty grid cell and confirm it saves as 203 minutes and
+   redisplays as `3:23`.
+9. Switch the interface language to Hungarian and repeat step 7.
 
 Expected result:
 
 - The preference survives refresh and a new sign-in.
-- The same 203 stored minutes appear as `3 h 23 m` in English and `3 ó 23 p` in Hungarian.
+- The same 203 stored minutes appear as `3:23` under the hours-and-minutes preference — identical in
+  Hungarian and English, since this format is locale-neutral (no `ó`/`p` split).
 - Changing the display does not alter time entries, totals, rates, or calculated amounts.
 - The audit log records `member.duration_display_format_updated`.
+- On the contractor's own timesheet summary, the admin timesheet review screen, and the line-level
+  hours edit field on `/admin/reports`, hours always render as decimal (e.g. `9.50 h`) next to the
+  amount they were billed at, regardless of which display preference is selected — these screens
+  intentionally do not follow the preference because the amount beside them must stay checkable
+  against hours × rate.
 
 ## Passkeys
 
@@ -1979,6 +1997,8 @@ Expected result:
 - Project view groups by projects.
 - The selected filters are reflected in the URL and survive browser refresh.
 - Clearing filters returns to the default monthly report.
+- The donut chart's center label shows exactly one hour unit (e.g. `3.38 h`), never a doubled or
+  mismatched unit, in every display-preference and locale combination.
 
 ### Edit Report Rows And Save Optional Corrections
 
@@ -1986,25 +2006,32 @@ Expected result:
 2. Open `https://{DOMAIN_NAME}/admin/reports` and choose filters that include multiple time entries.
 3. Note the total hours, one group total, and one row's description and hours.
 4. Click `Edit` above the itemized breakdown.
-5. Change the noted row's description and hours.
+5. Change the noted row's description and hours, typing a value like `3:30` or `3h 20m` into the
+   hours field.
 6. Confirm the report totals, group total, charts, and itemized row update immediately.
-7. Click `Editing done`.
-8. Confirm the edited row carries a visual edit indicator.
-9. Confirm a prominent unsaved-change bar remains visible after leaving edit mode.
-10. Click `PDF export` and inspect the preview.
-11. Leave `Save edits to recorded time` off, download the PDF, then close the dialog.
-12. Confirm the unsaved-change bar is still present after the export dialog closes.
-13. Refresh the report and confirm the original values return.
-14. Repeat the edit, click `Save to recorded time` on the report page, enter a correction reason,
+7. Type `0` into another row's hours field and tab away; separately, type an unparseable value like
+   `abc` into a row's hours field and tab away.
+8. Click `Editing done`.
+9. Confirm the edited row carries a visual edit indicator.
+10. Confirm a prominent unsaved-change bar remains visible after leaving edit mode.
+11. Click `PDF export` and inspect the preview.
+12. Leave `Save edits to recorded time` off, download the PDF, then close the dialog.
+13. Confirm the unsaved-change bar is still present after the export dialog closes.
+14. Refresh the report and confirm the original values return.
+15. Repeat the edit, click `Save to recorded time` on the report page, enter a correction reason,
     and confirm.
-15. Open the affected member's week on `/time`.
-16. Repeat with another edit by selecting `Save edits to recorded time` inside the PDF export
+16. Open the affected member's week on `/time`.
+17. Repeat with another edit by selecting `Save edits to recorded time` inside the PDF export
     dialog, enter a reason, and download the PDF.
 
 Expected result:
 
 - Edit mode replaces row descriptions and hours with in-place inputs without changing the row's
   member, project, or date.
+- The hours field accepts the same duration formats as the `/time` grid (`3.5`, `3:30`, `3h 20m`,
+  `200m`) and commits the parsed duration exactly, with no float rounding drift. Typing `0` or an
+  unparseable value is rejected: the field reverts to the row's last committed value instead of
+  silently saving a zero or truncated duration.
 - The information banner states that changes remain report-only until explicitly saved.
 - Totals, grouped summaries, charts, PDF preview, and the downloaded PDF all use the working-copy
   values consistently.
@@ -2050,11 +2077,16 @@ Expected result:
   position while the new render runs; a `Rendering the preview…` note appears next to the `PREVIEW`
   label, stays visible even when the pages are scrolled past, and the new pages replace the old ones
   in place. Switching content back and forth quickly does not make the pane strobe.
-- Selecting internal reveals the amber `Cost data is visible` warning and the preview gains rate and
-  cost columns plus a cost metric. Selecting cost-free removes all three again.
-- The time-display selector defaults to the admin's saved preference. Decimal mode renders 203
-  minutes as `3.3833 h`; hours/minutes mode renders it as `3 h 23 m` or `3 ó 23 p`. The downloaded
-  PDF matches the selected preview format without changing the saved preference.
+- Selecting internal reveals the amber `Cost data is visible` warning, the preview gains rate and
+  cost columns plus a cost metric, and the time-display selector becomes disabled with a hint
+  explaining that internal exports always show decimal hours so they stay checkable against the
+  amounts beside them. Selecting cost-free re-enables the selector and removes the warning and cost
+  columns again.
+- The time-display selector defaults to the admin's saved preference for a cost-free export. Decimal
+  mode renders 203 minutes as `3.38 h`; hours/minutes mode renders it as `3:23` — identical in both
+  Hungarian and English, since the hour-minute format is locale-neutral. Switching to internal
+  forces the selector to `Decimal hours` and greys it out; the preview and the downloaded PDF render
+  `3.38 h` for internal exports regardless of what the selector showed before switching.
 - The footer states the time zone the report was cut on, matching the admin's own time zone.
 - Below roughly 48rem the two panes stack instead of scrolling sideways, and the page never scrolls
   horizontally.
@@ -2121,6 +2153,8 @@ Expected result:
 
 - A PDF downloads successfully.
 - The PDF contains hours, hourly rates, currencies, and calculated amounts.
+- Every hours figure in the PDF renders decimal at two fraction digits (e.g. `9.50 h`), regardless
+  of the admin's saved time-display preference, so it stays checkable against the amount beside it.
 - Missing rates are marked with an em dash and explained in a footnote, not silently
   calculated as zero.
 - An audit row is recorded for `report.exported`.

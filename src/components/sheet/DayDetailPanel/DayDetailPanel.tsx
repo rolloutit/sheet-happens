@@ -4,27 +4,28 @@ import { Badge } from "@/src/components/ui/Badge";
 import { Button } from "@/src/components/ui/Button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/src/components/ui/Card";
 import { IconButton } from "@/src/components/ui/IconButton";
+import { formatHoursWithUnit, type DurationDisplayFormat } from "@/src/lib/formatting";
 import { cn } from "@/src/lib/utils";
 import { EmptyState } from "../EmptyState";
 import { StatusPill } from "../StatusPill";
 import type { DayDetailEntry, DayDetailPanelProps } from "./DayDetailPanel.types";
 
-function formatHours(hours: number) {
-  return `${Number(hours.toFixed(2))}h`;
-}
+const DEFAULT_CAPACITY_MINUTES = 8 * 60;
 
 export function DayDetailPanel({
   dateLabel,
   entries,
-  capacityHours = 8,
+  capacityMinutes = DEFAULT_CAPACITY_MINUTES,
+  locale = "en",
+  durationDisplayFormat = "DECIMAL_HOURS",
   labels,
   className,
   onAddEntry,
   onEditEntry,
   onDeleteEntry,
 }: DayDetailPanelProps) {
-  const totalHours = entries.reduce((sum, entry) => sum + entry.hours, 0);
-  const overCapacity = totalHours > capacityHours;
+  const totalMinutes = entries.reduce((sum, entry) => sum + entry.durationMinutes, 0);
+  const overCapacity = totalMinutes > capacityMinutes;
 
   return (
     <Card variant="elevated" className={className}>
@@ -41,10 +42,13 @@ export function DayDetailPanel({
       </CardHeader>
       <CardContent>
         <div className="grid gap-3 rounded-[var(--radius-lg)] border border-border bg-secondary/60 p-4 sm:grid-cols-2">
-          <Metric label={labels?.total ?? "Total"} value={formatHours(totalHours)} />
+          <Metric
+            label={labels?.total ?? "Total"}
+            value={formatHoursWithUnit(totalMinutes, locale, durationDisplayFormat)}
+          />
           <Metric
             label={labels?.capacity ?? "Capacity"}
-            value={formatHours(capacityHours)}
+            value={formatHoursWithUnit(capacityMinutes, locale, durationDisplayFormat)}
             tone={overCapacity ? "warning" : undefined}
           />
         </div>
@@ -60,6 +64,8 @@ export function DayDetailPanel({
               <DayEntryRow
                 key={entry.id}
                 entry={entry}
+                locale={locale}
+                durationDisplayFormat={durationDisplayFormat}
                 labels={labels}
                 onEditEntry={onEditEntry}
                 onDeleteEntry={onDeleteEntry}
@@ -83,11 +89,15 @@ function Metric({ label, value, tone }: { label: string; value: string; tone?: "
 
 function DayEntryRow({
   entry,
+  locale,
+  durationDisplayFormat,
   labels,
   onEditEntry,
   onDeleteEntry,
 }: {
   entry: DayDetailEntry;
+  locale: string;
+  durationDisplayFormat: DurationDisplayFormat;
   labels?: DayDetailPanelProps["labels"];
   onEditEntry?: (entry: DayDetailEntry) => void;
   onDeleteEntry?: (entry: DayDetailEntry) => void;
@@ -110,7 +120,9 @@ function DayEntryRow({
         {entry.note ? <p className="mt-1 text-sm text-muted-foreground">{entry.note}</p> : null}
       </div>
       <div className="flex items-center justify-between gap-2 sm:justify-end">
-        <span className="font-ui text-sm font-semibold">{formatHours(entry.hours)}</span>
+        <span className="font-ui text-sm font-semibold">
+          {formatHoursWithUnit(entry.durationMinutes, locale, durationDisplayFormat)}
+        </span>
         {onEditEntry ? (
           <IconButton
             icon={Pencil}
