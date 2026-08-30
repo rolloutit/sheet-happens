@@ -8,7 +8,7 @@ const entries = [
     id: "apollo",
     projectName: "Apollo Migration",
     projectColor: "#37e3de",
-    hours: 6,
+    durationMinutes: 360,
     note: "Invoice reconciliation and import test.",
     billable: true,
     status: "submitted" as const,
@@ -17,7 +17,7 @@ const entries = [
     id: "admin",
     projectName: "Internal admin",
     projectColor: "#72df9a",
-    hours: 2,
+    durationMinutes: 120,
     billable: false,
   },
 ];

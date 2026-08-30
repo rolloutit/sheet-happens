@@ -8,6 +8,7 @@ import { Button } from "@/src/components/ui/Button";
 import { Card } from "@/src/components/ui/Card";
 import { ChipButton } from "@/src/components/ui/ChipButton";
 import { LockedState } from "@/src/components/ui/LockedState";
+import { formatHours, type DurationDisplayFormat } from "@/src/lib/formatting";
 import { cn } from "@/src/lib/utils";
 import { TimeGridTimer } from "../TimeGridTimer";
 import type {
@@ -21,15 +22,28 @@ import type {
   WeeklyTimeGridProps,
 } from "./WeeklyTimeGrid.types";
 
+/** Weekly cap on hours a member can get approved, expressed in minutes. */
+const MAX_APPROVABLE_MINUTES = 32 * 60;
+
 const defaultProjects: TimeGridProject[] = [
-  { id: "apollo", name: "Apollo migráció", color: "#37e3de", hours: [8, 6, 7.5, 8, 4, 0, 0] },
-  { id: "helix", name: "Helix support", color: "#ffc68b", hours: [1, 2, 0, 1.5, 0, 0, 0] },
+  {
+    id: "apollo",
+    name: "Apollo migráció",
+    color: "#37e3de",
+    durationMinutes: [480, 360, 450, 480, 240, 0, 0],
+  },
+  {
+    id: "helix",
+    name: "Helix support",
+    color: "#ffc68b",
+    durationMinutes: [60, 120, 0, 90, 0, 0, 0],
+  },
   {
     id: "legacy",
     name: "Belső admin",
     color: "#72df9a",
     inactive: true,
-    hours: [0, 0, 2, 0, 0, 0, 0],
+    durationMinutes: [0, 0, 120, 0, 0, 0, 0],
   },
 ];
 
@@ -60,6 +74,11 @@ const defaultLabels = {
   totalColumn: "Össz.",
   dailyTotal: "Napi összesen",
   gridTitle: "Heti időrács",
+  inactiveRow: "Inaktív sor",
+  totalHoursBadge: (formattedHours: string) => `${formattedHours} óra`,
+  approvableHoursBadge: (formattedHours: string) => `${formattedHours} óra jóváhagyható`,
+  missingDescriptionBadge: (count: number) => `${count} hiányzó leírás`,
+  dailyTotalCaption: (formattedHours: string) => `${formattedHours} óra`,
 } satisfies Required<WeeklyTimeGridLabels>;
 
 function cellKey(projectId: string, dayId: string) {
@@ -70,20 +89,23 @@ function isSameCell(left?: TimeGridSelectedCell | null, right?: TimeGridSelected
   return Boolean(left && right && left.projectId === right.projectId && left.dayId === right.dayId);
 }
 
-function formatHours(hours: number) {
-  return hours > 0 ? Number(hours.toFixed(2)).toString() : "";
+/** Blank rather than `0` for an untouched cell — `formatHours` alone can't express that. */
+function formatCellMinutes(minutes: number, locale: string, format: DurationDisplayFormat) {
+  return minutes > 0 ? formatHours(minutes, locale, format) : "";
 }
 
 function mergeCell(
   project: TimeGridProject,
   day: TimeGridDay,
   dayIndex: number,
-  draftHours: Record<string, number>,
+  draftMinutes: Record<string, number>,
 ): TimeGridCellValue {
   const key = cellKey(project.id, day.id);
-  const source = project.cells?.[day.id] ?? { hours: project.hours?.[dayIndex] ?? 0 };
-  const hours = draftHours[key] ?? source.hours ?? 0;
-  return { ...source, hours };
+  const source = project.cells?.[day.id] ?? {
+    durationMinutes: project.durationMinutes?.[dayIndex] ?? 0,
+  };
+  const durationMinutes = draftMinutes[key] ?? source.durationMinutes ?? 0;
+  return { ...source, durationMinutes };
 }
 
 function getCellState(
@@ -98,7 +120,7 @@ function getCellState(
   if (cell.warning) return "warning";
   if (day.state === "future") return "future";
   if (day.state === "today") return "today";
-  return (cell.hours ?? 0) > 0 ? "filled" : "empty";
+  return (cell.durationMinutes ?? 0) > 0 ? "filled" : "empty";
 }
 
 function getCellClasses(state: TimeGridCellState) {
@@ -124,6 +146,8 @@ export function WeeklyTimeGrid({
   locked = false,
   showTimer = false,
   timer,
+  locale = "hu",
+  durationDisplayFormat = "DECIMAL_HOURS",
   labels,
   onPreviousWeek,
   onNextWeek,
@@ -143,18 +167,23 @@ export function WeeklyTimeGrid({
   const [localEditingCell, setLocalEditingCell] = useState<TimeGridSelectedCell | null>(
     defaultEditingCell,
   );
-  const [draftHours, setDraftHours] = useState<Record<string, number>>({});
+  const [draftMinutes, setDraftMinutes] = useState<Record<string, number>>({});
   const activeEditingCell = editingCell === undefined ? localEditingCell : editingCell;
 
   function getCell(project: TimeGridProject, day: TimeGridDay, dayIndex: number) {
-    return mergeCell(project, day, dayIndex, draftHours);
+    return mergeCell(project, day, dayIndex, draftMinutes);
   }
 
-  const total = projects
-    .flatMap((project) => days.map((day, dayIndex) => getCell(project, day, dayIndex).hours ?? 0))
-    .reduce((sum, hours) => sum + hours, 0);
-  const dailyTotals = days.map((day, dayIndex) =>
-    projects.reduce((sum, project) => sum + (getCell(project, day, dayIndex).hours ?? 0), 0),
+  const totalMinutes = projects
+    .flatMap((project) =>
+      days.map((day, dayIndex) => getCell(project, day, dayIndex).durationMinutes ?? 0),
+    )
+    .reduce((sum, minutes) => sum + minutes, 0);
+  const dailyTotalMinutes = days.map((day, dayIndex) =>
+    projects.reduce(
+      (sum, project) => sum + (getCell(project, day, dayIndex).durationMinutes ?? 0),
+      0,
+    ),
   );
 
   function makeContext(
@@ -191,11 +220,11 @@ export function WeeklyTimeGrid({
     onCellEditStart?.(context);
   }
 
-  function updateHours(context: TimeGridCellContext, hours: number) {
+  function updateDuration(context: TimeGridCellContext, durationMinutes: number) {
     const key = cellKey(context.project.id, context.day.id);
-    const nextValue = { ...context.value, hours };
-    setDraftHours((current) => ({ ...current, [key]: hours }));
-    onCellChange?.({ ...context, value: nextValue }, hours);
+    const nextValue = { ...context.value, durationMinutes };
+    setDraftMinutes((current) => ({ ...current, [key]: durationMinutes }));
+    onCellChange?.({ ...context, value: nextValue }, durationMinutes);
   }
 
   function renderCellControl(
@@ -211,7 +240,7 @@ export function WeeklyTimeGrid({
     const currentCell = { projectId: project.id, dayId: day.id };
     const isEditing = isSameCell(activeEditingCell, currentCell) && !disabled;
     const state = getCellState(value, day, isEditing, locked);
-    const hours = value.hours ?? 0;
+    const durationMinutes = value.durationMinutes ?? 0;
     const label = `${mobile ? "Mobile " : ""}${project.name}, ${day.label}`;
 
     if (isEditing) {
@@ -222,8 +251,11 @@ export function WeeklyTimeGrid({
           min={0}
           step={0.25}
           aria-label={`Edit ${label}`}
-          value={hours || ""}
-          onChange={(event) => updateHours(context, Number(event.target.value || 0))}
+          // Edited as fractional hours (quarter-hour steps), stored as minutes underneath.
+          value={durationMinutes ? durationMinutes / 60 : ""}
+          onChange={(event) =>
+            updateDuration(context, Math.round(Number(event.target.value || 0) * 60))
+          }
           onKeyDown={(event) => {
             if (event.key === "Enter" || event.key === "Escape") {
               event.preventDefault();
@@ -254,7 +286,11 @@ export function WeeklyTimeGrid({
         }
         type="button"
         disabled={disabled}
-        aria-label={`${label}${hours > 0 ? `, ${formatHours(hours)} hours` : ""}`}
+        aria-label={`${label}${
+          durationMinutes > 0
+            ? `, ${formatCellMinutes(durationMinutes, locale, durationDisplayFormat)} hours`
+            : ""
+        }`}
         aria-describedby={value.warning ? `${cellKey(project.id, day.id)}-warning` : undefined}
         className={getCellClasses(state)}
         onFocus={() => onCellFocus?.(context)}
@@ -282,7 +318,7 @@ export function WeeklyTimeGrid({
           }
         }}
       >
-        {formatHours(hours)}
+        {formatCellMinutes(durationMinutes, locale, durationDisplayFormat)}
       </button>
     );
   }
@@ -376,17 +412,28 @@ export function WeeklyTimeGrid({
             <h3 className="text-lg font-semibold">{resolvedLabels.gridTitle}</h3>
           </div>
           <div className="flex flex-wrap items-center gap-2">
-            <Badge tone="info">{total.toFixed(1)} óra</Badge>
-            <Badge tone="success">{Math.min(32, total).toFixed(1)} óra jóváhagyható</Badge>
+            <Badge tone="info">
+              {resolvedLabels.totalHoursBadge(
+                formatHours(totalMinutes, locale, durationDisplayFormat),
+              )}
+            </Badge>
+            <Badge tone="success">
+              {resolvedLabels.approvableHoursBadge(
+                formatHours(
+                  Math.min(MAX_APPROVABLE_MINUTES, totalMinutes),
+                  locale,
+                  durationDisplayFormat,
+                ),
+              )}
+            </Badge>
             <Badge tone="warning">
-              {
+              {resolvedLabels.missingDescriptionBadge(
                 projects
                   .flatMap((project) =>
                     days.map((day, dayIndex) => getCell(project, day, dayIndex).warning),
                   )
-                  .filter(Boolean).length
-              }{" "}
-              hiányzó leírás
+                  .filter(Boolean).length,
+              )}
             </Badge>
           </div>
         </div>
@@ -417,8 +464,9 @@ export function WeeklyTimeGrid({
               </div>
             </div>
             {projects.map((project, projectIndex) => {
-              const rowTotal = days.reduce(
-                (sum, day, dayIndex) => sum + (getCell(project, day, dayIndex).hours ?? 0),
+              const rowTotalMinutes = days.reduce(
+                (sum, day, dayIndex) =>
+                  sum + (getCell(project, day, dayIndex).durationMinutes ?? 0),
                 0,
               );
               return (
@@ -439,7 +487,8 @@ export function WeeklyTimeGrid({
                     <div className="min-w-0">
                       <span className="block truncate text-sm font-semibold">{project.name}</span>
                       <span className="block truncate text-xs text-muted-foreground">
-                        {project.billingLabel ?? (project.inactive ? "Inaktív sor" : "Billable")}
+                        {project.billingLabel ??
+                          (project.inactive ? resolvedLabels.inactiveRow : "Billable")}
                       </span>
                     </div>
                   </div>
@@ -473,7 +522,7 @@ export function WeeklyTimeGrid({
                     role="gridcell"
                     className="flex min-h-[4.5rem] items-center justify-end border-l border-border p-3 font-ui text-sm font-semibold"
                   >
-                    {rowTotal.toFixed(1)}
+                    {formatHours(rowTotalMinutes, locale, durationDisplayFormat)}
                   </div>
                 </div>
               );
@@ -485,17 +534,17 @@ export function WeeklyTimeGrid({
               <div role="rowheader" className="p-3 text-muted-foreground">
                 {resolvedLabels.dailyTotal}
               </div>
-              {dailyTotals.map((hours, index) => (
+              {dailyTotalMinutes.map((minutes, index) => (
                 <div
                   key={days[index]?.id}
                   role="gridcell"
                   className="border-l border-border p-3 text-center"
                 >
-                  {hours.toFixed(1)}
+                  {formatHours(minutes, locale, durationDisplayFormat)}
                 </div>
               ))}
               <div role="gridcell" className="border-l border-border p-3 text-right font-ui">
-                {total.toFixed(1)}
+                {formatHours(totalMinutes, locale, durationDisplayFormat)}
               </div>
             </div>
           </div>
@@ -513,7 +562,9 @@ export function WeeklyTimeGrid({
                     {day.label} {day.date}
                   </h4>
                   <p className="text-xs text-muted-foreground">
-                    {dailyTotals[dayIndex]?.toFixed(1)} óra
+                    {resolvedLabels.dailyTotalCaption(
+                      formatHours(dailyTotalMinutes[dayIndex] ?? 0, locale, durationDisplayFormat),
+                    )}
                   </p>
                 </div>
                 {day.state ? (

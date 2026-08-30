@@ -99,6 +99,10 @@ export function ReportExportModal({
   const [saveError, setSaveError] = useState<string | null>(null);
   const [savingRecordedTime, setSavingRecordedTime] = useState(false);
   const internal = mode === "INTERNAL";
+  // An internal export always renders decimal hours regardless of the picker (see
+  // `report-pdf-payload.ts`), so what actually gets requested and stored should say so too,
+  // rather than keeping whatever the picker last showed before switching modes.
+  const effectiveDurationDisplayFormat = internal ? "DECIMAL_HOURS" : durationDisplayFormat;
   // Serialized so the effect depends on a value rather than on the prop object's identity.
   const filterQuery = useMemo(() => new URLSearchParams(exportFields).toString(), [exportFields]);
   const serializedEdits = useMemo(() => serializeReportLineEdits(lineEdits), [lineEdits]);
@@ -155,7 +159,7 @@ export function ReportExportModal({
         body.set("mode", mode);
         body.set("title", title);
         body.set("locale", exportLocale);
-        body.set("durationDisplayFormat", durationDisplayFormat);
+        body.set("durationDisplayFormat", effectiveDurationDisplayFormat);
         if (serializedEdits) body.set("lineEdits", serializedEdits);
 
         const response = await fetch(PREVIEW_ENDPOINT, {
@@ -201,7 +205,7 @@ export function ReportExportModal({
       controller.abort();
     };
   }, [
-    durationDisplayFormat,
+    effectiveDurationDisplayFormat,
     exportLocale,
     filterQuery,
     mode,
@@ -259,7 +263,11 @@ export function ReportExportModal({
           ))}
           <input type="hidden" name="mode" value={mode} />
           <input type="hidden" name="locale" value={exportLocale} />
-          <input type="hidden" name="durationDisplayFormat" value={durationDisplayFormat} />
+          <input
+            type="hidden"
+            name="durationDisplayFormat"
+            value={effectiveDurationDisplayFormat}
+          />
           {serializedEdits ? (
             <input type="hidden" name="lineEdits" value={serializedEdits} />
           ) : null}
@@ -314,7 +322,16 @@ export function ReportExportModal({
                   }
                   aria-label={t("export.durationFormatLabel")}
                   searchable={false}
+                  // An internal export always pins hours to decimal so they stay checkable
+                  // against the amounts printed beside them (see `report-pdf-payload.ts`), so
+                  // this picker would otherwise silently do nothing.
+                  disabled={internal}
                 />
+                {internal ? (
+                  <span className="text-xs leading-relaxed text-muted-foreground">
+                    {t("export.durationFormatInternalHint")}
+                  </span>
+                ) : null}
               </div>
 
               <div className="grid gap-2">

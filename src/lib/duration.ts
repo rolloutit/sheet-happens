@@ -12,12 +12,10 @@ export function formatDurationForInput(
   if (format === "HOURS_MINUTES") {
     const hours = Math.floor(normalizedMinutes / 60);
     const remainingMinutes = normalizedMinutes % 60;
-    if (hours === 0) return `${remainingMinutes}m`;
-    if (remainingMinutes === 0) return `${hours}h`;
-    return `${hours}h ${remainingMinutes}m`;
+    return `${hours}:${String(remainingMinutes).padStart(2, "0")}`;
   }
 
-  return Number((normalizedMinutes / 60).toFixed(4)).toString();
+  return Number((normalizedMinutes / 60).toFixed(2)).toString();
 }
 
 export function parseDurationToMinutes(value: string) {

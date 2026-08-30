@@ -9,7 +9,12 @@ import type { TimesheetPreviewStatus } from "@/src/server/timesheets";
 
 type AdminTimesheetsTranslator = Awaited<ReturnType<typeof getTranslations>>;
 
-export { formatCount, formatHours, formatMonthLabel, formatRate } from "@/src/lib/formatting";
+export {
+  formatCount,
+  formatDecimalHours,
+  formatMonthLabel,
+  formatRate,
+} from "@/src/lib/formatting";
 
 /** Timesheet screens spell the currency out, because contractors reconcile these against invoices. */
 export function formatMoney(amount: string, currencyCode: string, locale: string) {

@@ -4,6 +4,7 @@ import {
   formatCount,
   formatDateLabel,
   formatDateTime,
+  formatDecimalHours,
   formatHoursWithUnit,
   formatMoney,
   formatPeriodRange,
@@ -34,6 +35,12 @@ import type {
  *
  * The payload never names the export mode. `mode` only selects which columns the template
  * draws, and the document itself carries no "cost-free"/"internal" wording.
+ *
+ * Hours formatting is the one place `mode` still matters for display: an `INTERNAL` export
+ * prints rates and amounts next to every hours figure, so those hours are always pinned decimal
+ * (`formatDecimalHours`) — the same convention Harvest and Clockify use — regardless of the
+ * member's `durationDisplayFormat` preference. A `COST_FREE` export carries no amounts to
+ * reconcile against, so it keeps honouring the chosen format.
  */
 
 /** A translator scoped to the `AdminReports` namespace. */
@@ -198,6 +205,13 @@ export function buildReportPdfPayload(input: BuildReportPdfPayloadInput): Report
   const title = normalizeReportPdfTitle(input.title);
   const periodLabel = formatPeriodRange(snapshot.period.start, snapshot.period.end, locale);
 
+  // INTERNAL prints rates and amounts beside every hours figure, so hours there are always
+  // pinned decimal so the two stay checkable against each other — see the module doc comment.
+  const formatHours =
+    snapshot.mode === "INTERNAL"
+      ? (minutes: number) => formatDecimalHours(minutes, locale)
+      : (minutes: number) => formatHoursWithUnit(minutes, locale, input.durationDisplayFormat);
+
   // A single-project or single-member export states that dimension once in the header instead of
   // repeating it down a column and counting it as "1" in the summary band.
   const scope = {
@@ -214,7 +228,7 @@ export function buildReportPdfPayload(input: BuildReportPdfPayloadInput): Report
       generatedAt: formatDateTime(input.generatedAt, locale),
       facets: buildHeaderFacets(snapshot, periodLabel, t),
     },
-    summary: buildSummary(snapshot, locale, input.durationDisplayFormat, scope, t),
+    summary: buildSummary(snapshot, locale, formatHours, scope, t),
     detailColumns: buildDetailColumns(snapshot, scope),
     warnings: snapshot.warnings.map((warning) => formatWarning(warning, t)),
     footnotes: buildFootnotes(snapshot, t),
@@ -225,14 +239,12 @@ export function buildReportPdfPayload(input: BuildReportPdfPayloadInput): Report
       ...base,
       mode: "INTERNAL",
       groups: snapshot.groups.map((group) => ({
-        ...buildGroup(group, locale, input.durationDisplayFormat),
+        ...buildGroup(group, locale, formatHours),
         amount: formatCurrencyTotals(group.currencyTotals, locale) || MISSING_VALUE,
       })),
-      lines: snapshot.lines.map((line) =>
-        buildInternalLine(line, locale, input.durationDisplayFormat, t),
-      ),
+      lines: snapshot.lines.map((line) => buildInternalLine(line, locale, formatHours, t)),
       totals: {
-        ...buildTotals(snapshot, locale, input.durationDisplayFormat),
+        ...buildTotals(snapshot, locale, formatHours),
         amount: formatCurrencyTotals(snapshot.summary.currencyTotals, locale) || MISSING_VALUE,
       },
     };
@@ -241,11 +253,9 @@ export function buildReportPdfPayload(input: BuildReportPdfPayloadInput): Report
   return {
     ...base,
     mode: "COST_FREE",
-    groups: snapshot.groups.map((group) => buildGroup(group, locale, input.durationDisplayFormat)),
-    lines: snapshot.lines.map((line) =>
-      buildCostFreeLine(line, locale, input.durationDisplayFormat, t),
-    ),
-    totals: buildTotals(snapshot, locale, input.durationDisplayFormat),
+    groups: snapshot.groups.map((group) => buildGroup(group, locale, formatHours)),
+    lines: snapshot.lines.map((line) => buildCostFreeLine(line, locale, formatHours, t)),
+    totals: buildTotals(snapshot, locale, formatHours),
   };
 }
 
@@ -331,14 +341,14 @@ function resolveFilteredProjectColor(snapshot: ReportSnapshot) {
 function buildSummary(
   snapshot: ReportSnapshot,
   locale: string,
-  durationDisplayFormat: DurationDisplayFormat,
+  formatHours: (minutes: number) => string,
   scope: { singleProject: boolean; singleMember: boolean },
   t: ReportPdfTranslator,
 ) {
   const heroes = [
     {
       label: t("stats.totalHours"),
-      value: formatHoursWithUnit(snapshot.summary.totalMinutes, locale, durationDisplayFormat),
+      value: formatHours(snapshot.summary.totalMinutes),
     },
   ];
 
@@ -375,10 +385,10 @@ function buildSummary(
 function buildTotals(
   snapshot: ReportSnapshot,
   locale: string,
-  durationDisplayFormat: DurationDisplayFormat,
+  formatHours: (minutes: number) => string,
 ): ReportPdfTotals {
   return {
-    hours: formatHoursWithUnit(snapshot.summary.totalMinutes, locale, durationDisplayFormat),
+    hours: formatHours(snapshot.summary.totalMinutes),
     entries: formatCount(snapshot.summary.entryCount, locale),
   };
 }
@@ -408,14 +418,14 @@ function buildGroup(
     initials: string | null;
   },
   locale: string,
-  durationDisplayFormat: DurationDisplayFormat,
+  formatHours: (minutes: number) => string,
 ): ReportPdfGroup {
   return {
     label: group.label,
     // A group is either a project (identified by its colour) or a member (by their initials).
     color: group.kind === "PROJECT" ? sanitizeColor(group.color) : null,
     initials: group.kind === "USER" ? group.initials : null,
-    hours: formatHoursWithUnit(group.totalMinutes, locale, durationDisplayFormat),
+    hours: formatHours(group.totalMinutes),
     share: `${Math.round(group.percentageOfTotal)}%`,
     sharePercent: clampPercent(group.percentageOfTotal),
     entries: formatCount(group.entryCount, locale),
@@ -425,7 +435,7 @@ function buildGroup(
 function buildCostFreeLine(
   line: ReportCostFreeLine,
   locale: string,
-  durationDisplayFormat: DurationDisplayFormat,
+  formatHours: (minutes: number) => string,
   t: ReportPdfTranslator,
 ): ReportPdfCostFreeLine {
   return {
@@ -435,7 +445,7 @@ function buildCostFreeLine(
     project: line.project.name,
     projectColor: sanitizeColor(line.project.color),
     description: line.description || t("table.noDescription"),
-    hours: formatHoursWithUnit(line.durationMinutes, locale, durationDisplayFormat),
+    hours: formatHours(line.durationMinutes),
   };
 }
 
@@ -471,7 +481,7 @@ function buildDetailColumns(
 function buildInternalLine(
   line: ReportInternalLine,
   locale: string,
-  durationDisplayFormat: DurationDisplayFormat,
+  formatHours: (minutes: number) => string,
   t: ReportPdfTranslator,
 ): ReportPdfInternalLine {
   return {
@@ -480,7 +490,7 @@ function buildInternalLine(
     project: line.project.name,
     projectColor: sanitizeColor(line.project.color),
     description: line.description || t("table.noDescription"),
-    hours: formatHoursWithUnit(line.durationMinutes, locale, durationDisplayFormat),
+    hours: formatHours(line.durationMinutes),
     rate: line.rate
       ? formatRate(line.rate.hourlyRate, line.rate.currencyCode, locale)
       : MISSING_VALUE,

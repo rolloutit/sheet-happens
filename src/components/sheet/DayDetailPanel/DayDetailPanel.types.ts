@@ -1,10 +1,11 @@
+import type { DurationDisplayFormat } from "@/src/lib/formatting";
 import type { TimesheetStatus } from "../StatusPill";
 
 export type DayDetailEntry = {
   id: string;
   projectName: string;
   projectColor?: string;
-  hours: number;
+  durationMinutes: number;
   note?: string;
   billable?: boolean;
   status?: TimesheetStatus;
@@ -23,7 +24,11 @@ export type DayDetailPanelLabels = {
 export type DayDetailPanelProps = {
   dateLabel: string;
   entries: DayDetailEntry[];
-  capacityHours?: number;
+  capacityMinutes?: number;
+  /** Defaults to `"en"`. */
+  locale?: string;
+  /** Defaults to `"DECIMAL_HOURS"`. */
+  durationDisplayFormat?: DurationDisplayFormat;
   labels?: DayDetailPanelLabels;
   className?: string;
   onAddEntry?: () => void;

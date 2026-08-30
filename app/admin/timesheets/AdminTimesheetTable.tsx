@@ -11,11 +11,10 @@ import { StatusPill } from "@/src/components/sheet/StatusPill";
 import { Badge } from "@/src/components/ui/Badge";
 import { Button } from "@/src/components/ui/Button";
 import { Checkbox } from "@/src/components/ui/Checkbox";
-import type { DurationDisplayFormat } from "@/src/lib/formatting";
 import type { AdminTimesheetRow } from "@/src/server/timesheets";
 import { bulkApproveTimesheetsReviewAction } from "./actions";
 import {
-  formatHours,
+  formatDecimalHours,
   formatMoney,
   formatMonthLabel,
   formatPeriodRange,
@@ -27,14 +26,9 @@ import {
 export type AdminTimesheetTableProps = {
   rows: AdminTimesheetRow[];
   returnTo: string;
-  durationDisplayFormat: DurationDisplayFormat;
 };
 
-export function AdminTimesheetTable({
-  rows,
-  returnTo,
-  durationDisplayFormat,
-}: AdminTimesheetTableProps) {
+export function AdminTimesheetTable({ rows, returnTo }: AdminTimesheetTableProps) {
   const t = useTranslations("AdminTimesheets");
   const locale = useLocale();
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
@@ -173,7 +167,9 @@ export function AdminTimesheetTable({
                       />
                     </td>
                     <td className="px-4 py-4 font-ui text-sm font-semibold text-foreground">
-                      {formatHours(row.totalMinutes, locale, durationDisplayFormat)}
+                      {/* The amount column sits right beside this one, so hours are pinned
+                          decimal (formatDecimalHours) regardless of the admin's preference. */}
+                      {formatDecimalHours(row.totalMinutes, locale)}
                     </td>
                     <td className="px-4 py-4 font-ui text-sm font-semibold text-foreground">
                       {formatMoney(row.totalAmount, row.currencyCode, locale)}

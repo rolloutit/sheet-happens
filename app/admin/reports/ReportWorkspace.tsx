@@ -19,15 +19,16 @@ import { SectionHead } from "@/src/components/ui/SectionHead";
 import { Textarea } from "@/src/components/ui/Textarea";
 import type { AppLocale } from "@/src/i18n/locales";
 import { addUtcDays, parseDateValue, toDateValue } from "@/src/lib/date-values";
+import { formatDurationForInput, parseDurationToMinutes } from "@/src/lib/duration";
 import {
   formatCount,
   formatDateLabel,
-  formatHours,
   formatHoursWithUnit,
   formatPeriodRange,
   type DurationDisplayFormat,
 } from "@/src/lib/formatting";
 import { applyReportLineEdits, type ReportLineEdit } from "@/src/lib/report-line-edits";
+import { DAILY_HARD_LIMIT_MINUTES } from "@/src/lib/time-entry-limits";
 import type {
   ReportCostFreeLine,
   ReportExportFields,
@@ -88,12 +89,11 @@ export function ReportWorkspace({
     updateEdit(id, "description", description === original.description ? undefined : description);
   }
 
-  function updateDuration(id: string, hours: number) {
+  function updateDuration(id: string, durationMinutes: number) {
     setSavedNotice(null);
     const original = originalLines.get(id);
     if (!original) return;
 
-    const durationMinutes = Math.min(24 * 60, Math.max(0, Math.round(hours * 60)));
     updateEdit(
       id,
       "durationMinutes",
@@ -444,11 +444,11 @@ function DonutBreakdown({
         aria-hidden="true"
       >
         <div className="grid size-24 place-items-center rounded-full bg-card text-center shadow-inner">
+          {/* formatHoursWithUnit already carries its own unit ("h" or "3:23"), so unlike the
+              siblings above this must not append a second, hardcoded unit label — doing so used
+              to render a doubled/mismatched unit under the hour-minute preference. */}
           <span className="font-display text-2xl font-semibold leading-none text-foreground">
-            {formatHours(snapshot.summary.totalMinutes, locale, durationDisplayFormat)}
-          </span>
-          <span className="font-ui text-[10px] font-semibold uppercase tracking-[0.1em] text-muted-foreground">
-            h
+            {formatHoursWithUnit(snapshot.summary.totalMinutes, locale, durationDisplayFormat)}
           </span>
         </div>
       </div>
@@ -552,7 +552,7 @@ function ReportDetail({
   editMode: boolean;
   editedIds: Set<string>;
   onDescriptionChange(id: string, description: string): void;
-  onDurationChange(id: string, hours: number): void;
+  onDurationChange(id: string, durationMinutes: number): void;
 }) {
   const t = useTranslations("AdminReports");
 
@@ -634,19 +634,47 @@ function ReportDetail({
                   <div className="font-display text-sm font-semibold text-foreground md:text-right">
                     {editMode ? (
                       <Input
-                        type="number"
-                        min={0}
-                        max={24}
-                        step={0.5}
-                        value={line.durationMinutes / 60}
+                        // Keyed by the committed minutes so the field's own text resets to it
+                        // whenever an edit is accepted or discarded, the same pattern the /time
+                        // grid cell uses for its duration input.
+                        key={line.durationMinutes}
+                        type="text"
+                        inputMode="text"
+                        defaultValue={formatDurationForInput(
+                          line.durationMinutes,
+                          durationDisplayFormat,
+                        )}
                         aria-label={t("detail.hoursInput", { name: line.member.name })}
+                        title={t("detail.hoursInputHint")}
                         className="text-right"
-                        onChange={(event) =>
-                          onDurationChange(
-                            line.id,
-                            Number.parseFloat(event.currentTarget.value) || 0,
-                          )
-                        }
+                        onBlur={(event) => {
+                          const parsed = parseDurationToMinutes(event.currentTarget.value);
+                          const clamped =
+                            parsed === null
+                              ? null
+                              : Math.min(DAILY_HARD_LIMIT_MINUTES, Math.max(0, parsed));
+
+                          // An unparseable, zero, or over-limit value is rejected client-side
+                          // rather than committed — the server requires a positive duration, and
+                          // silently quantizing whatever was typed is exactly the bug this
+                          // replaces (the old `type="number"` input did just that on every
+                          // keystroke). Reset back to the last committed value instead.
+                          if (clamped === null || clamped === 0) {
+                            event.currentTarget.value = formatDurationForInput(
+                              line.durationMinutes,
+                              durationDisplayFormat,
+                            );
+                            return;
+                          }
+
+                          onDurationChange(line.id, clamped);
+                        }}
+                        onKeyDown={(event) => {
+                          if (event.key === "Enter") {
+                            event.preventDefault();
+                            event.currentTarget.blur();
+                          }
+                        }}
                       />
                     ) : (
                       formatHoursWithUnit(line.durationMinutes, locale, durationDisplayFormat)

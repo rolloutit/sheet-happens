@@ -19,18 +19,23 @@ const projects = [
     id: "apollo",
     name: "Apollo migráció",
     color: "#37e3de",
-    hours: [8, 6, 7.5, 8, 4, 0, 0],
+    durationMinutes: [480, 360, 450, 480, 240, 0, 0],
     cells: {
-      wed: { hours: 7.5, warning: "Leírás hiányzik" },
+      wed: { durationMinutes: 450, warning: "Leírás hiányzik" },
     },
   },
-  { id: "helix", name: "Helix support", color: "#ffc68b", hours: [1, 2, 0, 1.5, 0, 0, 0] },
+  {
+    id: "helix",
+    name: "Helix support",
+    color: "#ffc68b",
+    durationMinutes: [60, 120, 0, 90, 0, 0, 0],
+  },
   {
     id: "legacy",
     name: "Belső admin",
     color: "#72df9a",
     inactive: true,
-    hours: [0, 0, 2, 0, 0, 0, 0],
+    durationMinutes: [0, 0, 120, 0, 0, 0, 0],
   },
 ] satisfies TimeGridProject[];
 
@@ -74,7 +79,8 @@ export const Editable: Story = {
     const input = canvas.getByRole("spinbutton", { name: /edit apollo migráció, hétfő/i });
     await userEvent.clear(input);
     await userEvent.type(input, "9");
-    await expect(args.onCellChange).toHaveBeenLastCalledWith(expect.any(Object), 9);
+    // The field edits fractional hours (quarter-hour steps); the component commits minutes.
+    await expect(args.onCellChange).toHaveBeenLastCalledWith(expect.any(Object), 540);
 
     await userEvent.click(canvas.getByRole("button", { name: /^mentés$/i }));
     await expect(args.onSave).toHaveBeenCalled();
@@ -92,12 +98,12 @@ export const CellStates: Story = {
         name: "Apollo migráció",
         color: "#37e3de",
         cells: {
-          mon: { hours: 8, state: "filled" },
-          tue: { hours: 0, state: "empty" },
-          wed: { hours: 7.5, warning: "Leírás hiányzik" },
-          thu: { hours: 4, locked: true },
-          fri: { hours: 2, state: "today" },
-          sat: { hours: 0, state: "future" },
+          mon: { durationMinutes: 480, state: "filled" },
+          tue: { durationMinutes: 0, state: "empty" },
+          wed: { durationMinutes: 450, warning: "Leírás hiányzik" },
+          thu: { durationMinutes: 240, locked: true },
+          fri: { durationMinutes: 120, state: "today" },
+          sat: { durationMinutes: 0, state: "future" },
         },
       },
     ],
