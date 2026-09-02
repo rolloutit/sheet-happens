@@ -7,6 +7,11 @@ export const PROJECT_COLOR_TOKENS = [
   "blue",
   "violet",
   "slate",
+  "gold",
+  "lime",
+  "indigo",
+  "magenta",
+  "brown",
 ] as const;
 
 export type ProjectColorToken = (typeof PROJECT_COLOR_TOKENS)[number];
@@ -27,6 +32,11 @@ export const projectColorValues: Record<ProjectColorToken, string> = {
   blue: "#6aa5ff",
   violet: "#9d8cff",
   slate: "#9eb9b1",
+  gold: "#f0c419",
+  lime: "#9ccc3c",
+  indigo: "#5c6bc0",
+  magenta: "#d6409f",
+  brown: "#a0693d",
 };
 
 export const projectColorOptions: ProjectColorOption[] = [
@@ -38,6 +48,11 @@ export const projectColorOptions: ProjectColorOption[] = [
   { value: "blue", label: "Blue" },
   { value: "violet", label: "Violet" },
   { value: "slate", label: "Slate" },
+  { value: "gold", label: "Gold" },
+  { value: "lime", label: "Lime" },
+  { value: "indigo", label: "Indigo" },
+  { value: "magenta", label: "Magenta" },
+  { value: "brown", label: "Brown" },
 ];
 
 const projectColorTokenSet = new Set<string>(PROJECT_COLOR_TOKENS);

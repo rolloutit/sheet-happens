@@ -1352,6 +1352,18 @@
         "updated": "Frissítve"
       }
     },
+    "groupsTable": {
+      "caption": "Projektcsoportok táblázata",
+      "ariaLabel": "Projektcsoportok táblázata",
+      "openGroup": "{name} megnyitása",
+      "moreProjects": "+{count} további",
+      "columns": {
+        "group": "Csoport",
+        "projects": "Projektek",
+        "state": "Állapot",
+        "updated": "Frissítve"
+      }
+    },
     "groupsPanel": {
       "groupName": "Csoport neve",
       "generatedSlug": "Névből generálva",
@@ -1361,10 +1373,6 @@
       "emptyFiltered": "Nincs a jelenlegi szűrőknek megfelelő projektcsoport.",
       "projectCount": "{count, plural, one {# projekt} other {# projekt}}",
       "noProjects": "Nincs projekt ebben a csoportban.",
-      "removeProjectLabel": "{project} eltávolítása innen: {group}",
-      "chooseProject": "Projekt kiválasztása",
-      "addProjectLabel": "Hozzáadandó projekt",
-      "allProjectsLinked": "Minden projekt ebben a csoportban van",
       "editTitle": "{name} szerkesztése",
       "editDescription": "A csoportmódosítások a szűrést és a projektek szervezését érintik. Nem módosítják a projekthozzárendeléseket vagy számlázási szabályokat.",
       "archiveTitle": "Projektcsoport archiválása?",
@@ -1381,7 +1389,26 @@
         "showing": "{count} / {total} csoport megjelenítve"
       },
       "createTitle": "Projektcsoport létrehozása",
-      "createDescription": "A csoportok szűréshez és riportoláshoz rendezik a projekteket. A hozzárendeléseket és a számlázást nem érintik."
+      "createDescription": "A csoportok szűréshez és riportoláshoz rendezik a projekteket. A hozzárendeléseket és a számlázást nem érintik.",
+      "manageTitle": "{name} kezelése",
+      "done": "Kész",
+      "discardDialog": {
+        "title": "Elveted ezt a csoportot?",
+        "description": "A kitöltött adatok nem lesznek elmentve.",
+        "confirm": "Elvetés",
+        "cancel": "Szerkesztés folytatása"
+      },
+      "membership": {
+        "filterLabel": "Projektszűrő",
+        "all": "Összes",
+        "inGroup": "Csoportban",
+        "available": "Elérhető",
+        "searchLabel": "Projektek keresése",
+        "searchPlaceholder": "Projektek keresése...",
+        "noMatches": "Nincs a keresésnek megfelelő projekt.",
+        "noneAvailable": "Minden projekt már ebben a csoportban van.",
+        "toggleLabel": "{project} váltása"
+      }
     },
     "actions": {
       "newProject": "Új projekt",
@@ -1389,7 +1416,7 @@
       "close": "Bezárás",
       "createProject": "Projekt létrehozása",
       "createGroup": "Csoport létrehozása",
-      "addProject": "Projekt hozzáadása",
+      "manageProjects": "Projektek kezelése",
       "cancel": "Mégse",
       "saveGroup": "Csoport mentése",
       "archiveGroup": "Csoport archiválása",

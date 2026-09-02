@@ -1,13 +1,7 @@
 import { getTranslations } from "next-intl/server";
 
 import { AppShell } from "@/src/components/layout/AppShell";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/src/components/ui/Card";
+import { FormSection } from "@/src/components/ui/FormSection";
 import { SectionHead } from "@/src/components/ui/SectionHead";
 import {
   mapMemberToShellProfile,
@@ -73,7 +67,10 @@ export default async function AdminProjectsPage({ searchParams }: AdminProjectsP
           subtitle={t("subtitle")}
           actions={
             <>
-              <div className="grid min-w-72 grid-cols-3 gap-2 rounded-[var(--radius-lg)] border border-border bg-card/70 p-3 text-center">
+              {/* Opaque, not `bg-card/70` — a translucent panel samples whatever the canvas
+                  gradient behind it happens to be instead of landing on `--card` (docs/tokens.md:
+                  "surfaces are opaque"). */}
+              <div className="grid min-w-72 grid-cols-3 gap-2 rounded-[var(--radius-lg)] border border-border bg-card p-3 text-center">
                 <div>
                   <p className="text-2xl font-semibold text-foreground">{totalProjects}</p>
                   <p className="font-ui text-[11px] font-medium uppercase tracking-[0.12em] text-muted-foreground">
@@ -98,40 +95,34 @@ export default async function AdminProjectsPage({ searchParams }: AdminProjectsP
           }
         />
 
-        <div className="grid gap-6">
-          <Card density="lg">
-            <CardHeader className="flex-col sm:flex-row">
-              <div>
-                <CardTitle>{t("directory.title")}</CardTitle>
-                <CardDescription>{t("directory.description")}</CardDescription>
-              </div>
-              <ProjectBulkAssignButton className="shrink-0" />
-            </CardHeader>
-            <CardContent>
-              <AdminProjectsTable
-                result={projectDirectory}
-                projectOptions={projectOptions}
-                groups={groups}
-                assignments={assignments}
-                assignmentRates={assignmentRates}
-                assignableMembers={assignableMembers}
-                todayDate={todayDate}
-              />
-            </CardContent>
-          </Card>
+        {/* No outer `Card` around either section — `AdminPeopleTable` on the sibling people page
+            establishes the same bare-table-under-a-heading layout, and `DataTable` already draws
+            its own bordered surface, so a wrapping card here was only ever adding a second,
+            concentric border around the same content. */}
+        <div className="grid gap-10">
+          <FormSection
+            title={t("directory.title")}
+            description={t("directory.description")}
+            actions={<ProjectBulkAssignButton />}
+          >
+            <AdminProjectsTable
+              result={projectDirectory}
+              projectOptions={projectOptions}
+              groups={groups}
+              assignments={assignments}
+              assignmentRates={assignmentRates}
+              assignableMembers={assignableMembers}
+              todayDate={todayDate}
+            />
+          </FormSection>
 
-          <Card density="lg">
-            <CardHeader className="flex-col sm:flex-row">
-              <div>
-                <CardTitle>{t("groups.title")}</CardTitle>
-                <CardDescription>{t("groups.description")}</CardDescription>
-              </div>
-              <ProjectGroupCreateButton className="shrink-0" />
-            </CardHeader>
-            <CardContent>
-              <AdminProjectGroupsPanel groups={groups} projects={projectOptions} />
-            </CardContent>
-          </Card>
+          <FormSection
+            title={t("groups.title")}
+            description={t("groups.description")}
+            actions={<ProjectGroupCreateButton />}
+          >
+            <AdminProjectGroupsPanel groups={groups} projects={projectOptions} />
+          </FormSection>
         </div>
       </section>
     </AppShell>

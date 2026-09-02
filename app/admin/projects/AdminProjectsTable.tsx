@@ -64,6 +64,7 @@ import { focusChromeWithinClassName } from "@/src/components/ui/focusRing";
 import { IconButton } from "@/src/components/ui/IconButton";
 import { Input } from "@/src/components/ui/Input";
 import { Pager } from "@/src/components/ui/Pager";
+import { ResultBanner } from "@/src/components/ui/ResultBanner";
 import { SegmentedControl } from "@/src/components/ui/SegmentedControl";
 import { DataTable } from "@/src/components/ui/Table";
 import { Textarea } from "@/src/components/ui/Textarea";
@@ -73,6 +74,7 @@ import {
   type ProjectColorToken,
 } from "@/src/lib/project-colors";
 import { usePickerLabels } from "@/src/i18n/picker-labels";
+import { formatTimestamp } from "@/src/lib/formatting/dates";
 import { useOverlayParam } from "@/src/lib/use-overlay-param";
 import { cn } from "@/src/lib/utils";
 import type {
@@ -166,6 +168,7 @@ export function AdminProjectsTable({
   todayDate,
 }: AdminProjectsTableProps) {
   const t = useTranslations("AdminProjects");
+  const locale = useLocale();
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -316,17 +319,9 @@ export function AdminProjectsTable({
   return (
     <div className="grid gap-3">
       {message ? (
-        <p
-          role={message.status === "error" ? "alert" : "status"}
-          className={cn(
-            "rounded-[var(--radius-md)] border px-3 py-2 text-sm",
-            message.status === "error"
-              ? "border-destructive/40 bg-destructive-soft text-destructive"
-              : "border-success/40 bg-success-soft text-success",
-          )}
-        >
+        <ResultBanner tone={message.status === "error" ? "error" : "success"}>
           {message.message}
-        </p>
+        </ResultBanner>
       ) : null}
 
       <ProjectDirectoryFilters
@@ -421,7 +416,7 @@ export function AdminProjectsTable({
             mobileLabel: t("table.columns.updated"),
             cell: (row) => (
               <span className="text-sm text-muted-foreground">
-                {formatTimestamp(row.updatedAt)}
+                {formatTimestamp(row.updatedAt, locale)}
               </span>
             ),
           },
@@ -1070,17 +1065,9 @@ function BulkAssignmentDialog({
 
         <div className="grid max-h-[74vh] gap-5 overflow-y-auto pr-1">
           {actionState?.message ? (
-            <p
-              role={actionState.status === "error" ? "alert" : "status"}
-              className={cn(
-                "rounded-[var(--radius-md)] border px-3 py-2 text-sm",
-                actionState.status === "error"
-                  ? "border-destructive/40 bg-destructive-soft text-destructive"
-                  : "border-success/40 bg-success-soft text-success",
-              )}
-            >
+            <ResultBanner tone={actionState.status === "error" ? "error" : "success"}>
               {actionState.message}
-            </p>
+            </ResultBanner>
           ) : null}
 
           <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
@@ -1432,17 +1419,9 @@ function ProjectDetailDrawer({
             ) : null}
 
             {actionState?.message ? (
-              <p
-                role={actionState.status === "error" ? "alert" : "status"}
-                className={cn(
-                  "rounded-[var(--radius-md)] border px-3 py-2 text-sm",
-                  actionState.status === "error"
-                    ? "border-destructive/40 bg-destructive-soft text-destructive"
-                    : "border-success/40 bg-success-soft text-success",
-                )}
-              >
+              <ResultBanner tone={actionState.status === "error" ? "error" : "success"}>
                 {actionState.message}
-              </p>
+              </ResultBanner>
             ) : null}
 
             <section className="grid gap-3">
@@ -1451,7 +1430,7 @@ function ProjectDetailDrawer({
                 <ProjectFact label={t("detail.groups")} value={String(project.groupCount)} />
                 <ProjectFact
                   label={t("detail.updated")}
-                  value={formatTimestamp(project.updatedAt)}
+                  value={formatTimestamp(project.updatedAt, locale)}
                 />
               </div>
               <div className="rounded-[var(--radius-lg)] border border-border bg-card p-4">
@@ -1988,12 +1967,7 @@ function ProjectEditDialog({
             </Field>
 
             {actionState?.status === "error" && actionState.message ? (
-              <p
-                role="alert"
-                className="rounded-[var(--radius-md)] border border-destructive/40 bg-destructive-soft px-3 py-2 text-sm text-destructive"
-              >
-                {actionState.message}
-              </p>
+              <ResultBanner tone="error">{actionState.message}</ResultBanner>
             ) : null}
 
             <DialogFooter>
@@ -2287,14 +2261,6 @@ function formatRatePeriodAmount(
     : period.hourlyRate;
 
   return `${amount} ${period.currencyCode}/h`;
-}
-
-function formatTimestamp(value: string) {
-  const date = new Date(value);
-
-  if (Number.isNaN(date.getTime())) return value;
-
-  return date.toISOString().slice(0, 16).replace("T", " ");
 }
 
 function getProjectEditFormString(formData: FormData, name: keyof UpdateProjectActionInput) {

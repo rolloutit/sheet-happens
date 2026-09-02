@@ -1352,6 +1352,18 @@
         "updated": "Updated"
       }
     },
+    "groupsTable": {
+      "caption": "Project groups table",
+      "ariaLabel": "Project groups table",
+      "openGroup": "Open {name}",
+      "moreProjects": "+{count} more",
+      "columns": {
+        "group": "Group",
+        "projects": "Projects",
+        "state": "State",
+        "updated": "Updated"
+      }
+    },
     "groupsPanel": {
       "groupName": "Group name",
       "generatedSlug": "Generated from name",
@@ -1361,10 +1373,6 @@
       "emptyFiltered": "No project groups match the current filters.",
       "projectCount": "{count, plural, one {# project} other {# projects}}",
       "noProjects": "No projects in this group.",
-      "removeProjectLabel": "Remove {project} from {group}",
-      "chooseProject": "Choose project",
-      "addProjectLabel": "Project to add",
-      "allProjectsLinked": "All projects are in this group",
       "editTitle": "Edit {name}",
       "editDescription": "Group changes affect filtering and project organization. They do not change project assignment or billing rules.",
       "archiveTitle": "Archive project group?",
@@ -1381,7 +1389,26 @@
         "showing": "Showing {count} of {total} groups"
       },
       "createTitle": "Create project group",
-      "createDescription": "Groups organize projects for filtering and reporting. They do not change assignments or billing."
+      "createDescription": "Groups organize projects for filtering and reporting. They do not change assignments or billing.",
+      "manageTitle": "Manage {name}",
+      "done": "Done",
+      "discardDialog": {
+        "title": "Discard this group?",
+        "description": "The details you filled in will not be saved.",
+        "confirm": "Discard",
+        "cancel": "Keep editing"
+      },
+      "membership": {
+        "filterLabel": "Project filter",
+        "all": "All",
+        "inGroup": "Selected",
+        "available": "Available",
+        "searchLabel": "Search projects",
+        "searchPlaceholder": "Search projects...",
+        "noMatches": "No projects match your search.",
+        "noneAvailable": "All projects are already in this group.",
+        "toggleLabel": "Toggle {project}"
+      }
     },
     "actions": {
       "newProject": "New project",
@@ -1389,7 +1416,7 @@
       "close": "Close",
       "createProject": "Create project",
       "createGroup": "Create group",
-      "addProject": "Add project",
+      "manageProjects": "Manage projects",
       "cancel": "Cancel",
       "saveGroup": "Save group",
       "archiveGroup": "Archive group",

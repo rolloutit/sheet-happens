@@ -2887,9 +2887,11 @@ Expected result:
    **before** the start date, and submit.
 3. Fix the end date and submit.
 4. Filter the directory so no project matches, and use the empty state's action.
-5. Click `Új csoport` / `New group` in the `Projektcsoportok` / `Project groups` card header, create
-   a group, then edit an existing group from its row menu.
+5. Click `Új csoport` / `New group` next to the `Projektcsoportok` / `Project groups` heading,
+   create a group, then edit an existing group from its row's `⋯` menu.
 6. Open `https://{DOMAIN_NAME}/admin/projects?new=project` and `?new=group` directly.
+7. While the create sheet is dirty, press `Escape`. Choose `Szerkesztés folytatása` / `Keep
+editing`, press `Escape` again, then choose `Elvetés` / `Discard`.
 
 Expected result:
 
@@ -2898,9 +2900,50 @@ Expected result:
   and notes exactly as entered.
 - A successful create closes the sheet, refreshes the directory, and reports above the table.
 - The filtered-empty table offers to clear the filters; a genuinely empty one offers to create.
-- The group dialog is the same dialog for create and edit, titled and labelled for the mode it is
-  in, and archiving a group reports at the top of the panel rather than into the create form.
-- Both deep links open their overlay on load.
+- Both the project and the group forms are side sheets (not modal dialogs), share layout and
+  discard-guard behaviour, and the group sheet is the same one for create and edit, titled and
+  labelled for the mode it is in.
+- Archiving a group reports at the top of the section rather than into the edit form.
+- Both deep links open their overlay on load, and the discard guard fires on every dismissal path
+  (`Escape`, the scrim, and the close button).
+
+### Project Groups Table And Membership Drawer
+
+1. Open `https://{DOMAIN_NAME}/admin/projects` and scroll to `Projektcsoportok` / `Project groups`.
+   Confirm it renders as one table with no card nested inside another.
+2. Sort by each column (`Csoport`/`Group`, `Projektek`/`Projects`, `Állapot`/`State`,
+   `Frissítve`/`Updated`) and confirm the arrow direction and row order both change.
+3. Type into the search field, then set the `Állapot`/`State` and `Projektek`/`Projects` filters.
+   Confirm chips appear for each, the `Showing` count tracks, and each chip's `×` removes only that
+   filter.
+4. Click a group's name to open the membership drawer. Confirm the drawer's segmented control shows
+   correct `All`/`Selected`/`Available` counts, and that the counts (and the underlying table row)
+   update immediately after each toggle below — no page reload and no separate save step.
+5. In the drawer, search for a project by name and by slug (accent-folded — a Hungarian project
+   name should match with or without diacritics), switch between the three segments, and confirm
+   internal and inactive/archived projects carry their badge.
+6. Uncheck a project, confirm a brief pending spinner on that row, then recheck it. Confirm the
+   result banner behind the drawer reports both changes and the `/admin/audit` log gains one
+   `project_group.project_added`/`.project_removed` entry per toggle.
+7. Click `Csoport szerkesztése` / `Edit group` inside the drawer header; confirm it opens the same
+   edit sheet as the row menu's `Csoport szerkesztése` / `Edit group` item.
+8. From the row's `⋯` menu, open `Projektek kezelése` / `Manage projects` as a second way into the
+   same drawer, then archive the group and confirm it drops out of the list.
+9. Resize to a phone width and repeat steps 2-4: the table becomes stacked cards, and the drawer's
+   segmented control stays on one line instead of wrapping.
+
+Expected result:
+
+- The section is a single bordered table (or, on phones, a single card list) — never a card drawn
+  inside another card.
+- Sorting, filtering and the `Showing N of M groups` summary all match the visible rows exactly.
+- The membership drawer never requires a separate save: every checkbox toggle is applied
+  immediately, survives closing and reopening the drawer, and is reflected in both the table's
+  project-count cell and the audit log.
+- Search matches Hungarian diacritics loosely in both directions (typing `arvizturo` finds
+  `árvíztűrő` and vice versa).
+- The drawer stays keyboard-reachable: `Tab` reaches the group's name button and the row's `⋯`
+  trigger even though the row itself is not a single focus stop.
 
 ### Filter Toolbars
 
