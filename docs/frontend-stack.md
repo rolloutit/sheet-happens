@@ -9,7 +9,7 @@ This repo implements the approved frontend foundation for Sheet Happens.
 - Tailwind CSS v4 with CSS variables as the token source.
 - shadcn/ui conventions with owned component source.
 - Radix UI for accessible interactive primitives.
-- next-themes for dark-default and light theme support.
+- next-themes for the light / dark / system theme preference (system by default).
 - next-intl for HU/EN-ready app text and Intl formatting.
 - react-hook-form and Zod for rich forms and shared validation.
 - TanStack Table for server-side admin tables.

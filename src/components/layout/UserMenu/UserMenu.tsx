@@ -1,6 +1,6 @@
 "use client";
 
-import { ChevronDown, LogOut, Settings, User } from "lucide-react";
+import { BadgeDollarSign, ChevronDown, LogOut, Settings } from "lucide-react";
 
 import { Avatar } from "@/src/components/ui/Avatar";
 import {
@@ -15,8 +15,8 @@ import { cn } from "@/src/lib/utils";
 import type { UserMenuAction, UserMenuProps } from "./UserMenu.types";
 
 const defaultActions: UserMenuAction[] = [
-  { id: "profile", label: "Profile", icon: User },
-  { id: "settings", label: "Settings", icon: Settings },
+  { id: "my-rates", label: "My rates", icon: BadgeDollarSign },
+  { id: "settings", label: "Profile and settings", icon: Settings },
   { id: "sign-out", label: "Sign out", icon: LogOut, tone: "danger" },
 ];
 
@@ -35,7 +35,7 @@ export function UserMenu({
           type="button"
           aria-label={label}
           className={cn(
-            "inline-flex items-center gap-3 rounded-[var(--radius-pill)] p-1 pr-2 transition hover:bg-secondary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+            "inline-flex items-center gap-3 rounded-[var(--radius-pill)] p-1 pr-2 transition hover:bg-secondary",
             className,
           )}
         >

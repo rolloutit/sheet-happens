@@ -5,6 +5,8 @@ import { headers } from "next/headers";
 import { getTranslations } from "next-intl/server";
 import { z } from "zod";
 
+import { isDateValue } from "@/src/lib/date-values";
+
 import { isSupportedCurrencyCode, normalizeCurrencyCode } from "@/src/lib/member-preferences";
 import { requireAdminAppMemberForAction } from "@/src/server/auth/app-access";
 import { AuthenticationError, AuthorizationError } from "@/src/server/auth/session";
@@ -231,13 +233,17 @@ export async function replaceAssignmentOverrideRateAction(
   }
 }
 
+/**
+ * Date validity for this module's schemas, where an empty value means "no date" — clearing
+ * a project end date or leaving a rate period open-ended.
+ *
+ * The `""`-tolerance is the whole reason this wrapper still exists rather than the schemas
+ * calling `isDateValue` directly: `app/admin/people` and `app/time` spell the same helper
+ * name with the opposite meaning, and folding them together would silently make optional
+ * end dates required.
+ */
 function isDateInputValue(value: string) {
-  if (value === "") return true;
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
-
-  const date = new Date(`${value}T00:00:00.000Z`);
-
-  return !Number.isNaN(date.getTime()) && date.toISOString().slice(0, 10) === value;
+  return value === "" || isDateValue(value);
 }
 
 function parseOptionalDate(value: string) {

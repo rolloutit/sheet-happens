@@ -4,6 +4,7 @@ import type { ObjectStorage } from "@/src/server/storage";
 import {
   runEmailCheck,
   runGoogleOAuthCheck,
+  runNotificationDispatcherCheck,
   runObjectStorageCheck,
   runSystemChecks,
   runTypstCheck,
@@ -122,7 +123,7 @@ describe("system checks", () => {
     expect(result.code).toBe("ok");
     expect(typstRenderer).toHaveBeenCalledWith(
       {
-        source: expect.stringContaining("Sheet Happens Typst check"),
+        template: "system-check",
         filename: "system-check",
       },
       {
@@ -148,6 +149,52 @@ describe("system checks", () => {
     expect(result.error).toContain("Typst probe did not return a PDF file.");
   });
 
+  it("passes when the notification dispatcher completed recently", async () => {
+    const result = await runNotificationDispatcherCheck({
+      checkedAt,
+      now,
+      notificationJobs: {
+        findFirst: vi.fn().mockResolvedValue({
+          status: "SUCCESS",
+          startedAt: new Date("2026-07-29T23:59:30.000Z"),
+          finishedAt: new Date("2026-07-29T23:59:32.000Z"),
+          error: null,
+        }),
+      },
+    });
+
+    expect(result.status).toBe("pass");
+  });
+
+  it("warns before the notification dispatcher has run", async () => {
+    const result = await runNotificationDispatcherCheck({
+      checkedAt,
+      now,
+      notificationJobs: { findFirst: vi.fn().mockResolvedValue(null) },
+    });
+
+    expect(result.status).toBe("warning");
+    expect(result.code).toBe("notificationDispatcherNeverRun");
+  });
+
+  it("warns when the in-service notification scheduler is stale", async () => {
+    const result = await runNotificationDispatcherCheck({
+      checkedAt,
+      now,
+      notificationJobs: {
+        findFirst: vi.fn().mockResolvedValue({
+          status: "SUCCESS",
+          startedAt: new Date("2026-07-29T23:58:59.000Z"),
+          finishedAt: new Date("2026-07-29T23:59:00.000Z"),
+          error: null,
+        }),
+      },
+    });
+
+    expect(result.status).toBe("warning");
+    expect(result.code).toBe("notificationDispatcherStale");
+  });
+
   it("summarizes warnings without failing the whole system check", async () => {
     const storage = createMemoryStorage();
     const db = {
@@ -157,6 +204,14 @@ describe("system checks", () => {
     const summary = await runSystemChecks({
       now,
       db,
+      notificationJobs: {
+        findFirst: vi.fn().mockResolvedValue({
+          status: "SUCCESS",
+          startedAt: new Date("2026-07-29T23:59:30.000Z"),
+          finishedAt: new Date("2026-07-29T23:59:32.000Z"),
+          error: null,
+        }),
+      },
       storage,
       typstRenderer: vi.fn(async () => Buffer.from("%PDF-1.7\n")),
       env: {
@@ -176,7 +231,7 @@ describe("system checks", () => {
     });
 
     expect(summary.status).toBe("warning");
-    expect(summary.checks).toHaveLength(6);
+    expect(summary.checks).toHaveLength(7);
   });
 });
 

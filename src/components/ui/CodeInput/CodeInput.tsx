@@ -3,6 +3,7 @@
 import { useId, useMemo, useRef, useState } from "react";
 
 import { cn } from "@/src/lib/utils";
+import { focusChromeClassName } from "../focusRing";
 import type { CodeInputProps } from "./CodeInput.types";
 
 function normalizeCode(value: string, length: number) {
@@ -111,7 +112,10 @@ export function CodeInput({
               updateValue(nextDigits, index - 1);
             }
           }}
-          className="flex aspect-square min-h-10 w-full rounded-[var(--radius-md)] border border-input bg-background/50 text-center font-ui text-lg font-semibold text-foreground shadow-sm transition focus-visible:border-ring focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/35 disabled:cursor-not-allowed disabled:opacity-50 aria-[invalid=true]:border-destructive aria-[invalid=true]:ring-destructive/30"
+          className={cn(
+            "flex aspect-square min-h-10 w-full rounded-[var(--radius-md)] border border-input bg-surface-inset text-center font-ui text-lg font-semibold text-foreground shadow-sm transition disabled:cursor-not-allowed disabled:opacity-50 aria-[invalid=true]:border-destructive",
+            focusChromeClassName,
+          )}
         />
       ))}
     </div>

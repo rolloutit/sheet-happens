@@ -1,23 +1,18 @@
 "use client";
 
-import { Moon, Sparkles, Sun, Table2 } from "lucide-react";
+import { Sparkles } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { useTransition } from "react";
 
 import { localeCookieName } from "@/src/i18n/locales";
 import { cn } from "@/src/lib/utils";
+import { Atmosphere } from "../Atmosphere";
+import { AuthGyroscope } from "../AuthGyroscope";
+import { BrandMark } from "../BrandMark";
 import { LanguageToggle } from "../LanguageToggle";
-import { useTheme } from "../ThemeProvider";
+import { ThemeToggle } from "../ThemeToggle";
 import type { AuthShellMood, AuthShellProps } from "./AuthShell.types";
-
-const orbitDots = Array.from({ length: 46 }, (_, index) => {
-  const angle = (index / 46) * Math.PI * 2;
-  return {
-    x: (280 + 188 * Math.cos(angle)).toFixed(3),
-    y: (280 + 122 * Math.sin(angle)).toFixed(3),
-  };
-});
 
 const moodTranslationKeys: Record<AuthShellMood, { title: string; subtitle: string }> = {
   back: {
@@ -48,10 +43,7 @@ export function AuthShell({
   const t = useTranslations("AuthShell");
   const router = useRouter();
   const locale = useLocale();
-  const { setTheme, theme } = useTheme();
   const [, startLanguageTransition] = useTransition();
-  const resolvedTheme = theme;
-  const nextTheme = resolvedTheme === "dark" ? "light" : "dark";
   const moodCopy = moodTranslationKeys[mood];
 
   function handleLanguageChange(nextLanguage: string) {
@@ -77,41 +69,26 @@ export function AuthShell({
               "radial-gradient(40% 30% at 80% 75%, rgba(41,198,198,0.22), transparent 70%), radial-gradient(30% 24% at 95% 20%, rgba(255,203,151,0.12), transparent 70%)",
           }}
         />
-        <svg
-          className="auth-shell-orbit absolute right-[-5.5rem] top-1/2 size-[20rem] -translate-y-1/2 lg:right-[-7.5rem] lg:size-[35rem]"
-          viewBox="0 0 560 560"
-          fill="none"
-          aria-hidden="true"
-        >
-          <g className="auth-shell-orbit-ring origin-center">
-            {orbitDots.map((dot, index) => (
-              <circle key={index} cx={dot.x} cy={dot.y} r="1.7" fill="rgba(234,251,250,0.35)" />
-            ))}
-            <circle
-              cx="280"
-              cy="280"
-              r="200"
-              stroke="rgba(234,251,250,0.20)"
-              strokeDasharray="2 9"
-              strokeWidth="1.4"
-            />
-            <circle
-              cx="280"
-              cy="280"
-              r="140"
-              stroke="rgba(253,207,174,0.30)"
-              strokeDasharray="5 8"
-              strokeWidth="1.2"
-            />
-            <circle cx="421" cy="139" r="9" fill="#29c6c6" />
-            <circle cx="421" cy="139" r="17" fill="#29c6c6" opacity="0.18" />
-          </g>
-        </svg>
+        {/* Positioned by its centre rather than by an edge: every offset is `50%` (or `74%`) less half
+            the cage, so these say where the hub goes and the cage hangs off it. The cage is wider than
+            the panel by design — it bleeds out both sides and the arcs sweep behind the copy.
 
-        <div className="relative z-10 flex w-full flex-col justify-between gap-8">
+            `55% + 118px` is the centre of the clear band between the copy and the footer, measured
+            rather than picked; `AuthGyroscope` owns how far the hub may wander from it, and the
+            derivation is with the numbers in `globals.css`. Nothing here may set `translate` or `scale` —
+            the drift animates both, on two elements. */}
+        <AuthGyroscope className="absolute left-[calc(100%_-_12.5rem)] top-[calc(50%_-_8.5rem)] size-[17rem] lg:left-[calc(50%_-_18rem)] lg:top-[calc(55%_+_118px_-_18rem)] lg:size-[36rem]" />
+
+        {/* Below `lg` the footer is hidden, so `justify-between` is what pins the copy to the bottom of
+            the banner and it has to stay. On `lg` the copy would otherwise be distributed to the middle
+            of a full-height panel, right where the gyroscope drifts — so the column packs to the top
+            there and the footer takes itself back down with `mt-auto`. */}
+        <div className="relative z-10 flex w-full flex-col justify-between gap-8 lg:justify-start">
           <div className="flex items-center gap-3">
-            <span className="grid size-10 place-items-center rounded-[var(--radius-md)] border border-white/20 bg-white/12 text-[#eafbfa]">
-              <Table2 className="size-5" aria-hidden="true" />
+            {/* The frosted tile stays: it lifts the mark off the gradient and the orbit dots. The
+                panel is teal in both themes, so the mark cannot follow the palette here. */}
+            <span className="grid size-10 place-items-center rounded-[var(--radius-md)] border border-white/20 bg-white/12">
+              <BrandMark size={24} tone="onDark" />
             </span>
             <div className="leading-tight">
               <p className="font-ui text-[17px] font-semibold text-[#eafbfa]">Sheet Happens</p>
@@ -121,7 +98,9 @@ export function AuthShell({
             </div>
           </div>
 
-          <div className="max-w-[22.5rem]">
+          {/* `dvh` to match the panel's own `min-h-dvh`, so the copy keeps its share of the panel
+              rather than a fixed offset that reads high on a laptop and cramped on a tall display. */}
+          <div className="max-w-[22.5rem] lg:mt-[10dvh]">
             <h1 className="font-ui text-3xl font-medium leading-[1.05] text-white lg:text-[46px]">
               {t(moodCopy.title)}
             </h1>
@@ -134,36 +113,29 @@ export function AuthShell({
             </div>
           </div>
 
-          <p className="hidden max-w-[21rem] text-[13px] leading-6 text-[#eafbfa]/55 lg:block">
+          <p className="hidden max-w-[21rem] text-[13px] leading-6 text-[#eafbfa]/55 lg:mt-auto lg:block">
             {t("panelFooter")}
           </p>
         </div>
       </aside>
 
-      <section className="relative flex flex-1 items-start justify-center overflow-hidden bg-[radial-gradient(900px_520px_at_80%_-10%,#ffffff,#f4ebdd_60%)] px-5 pb-24 pt-24 dark:bg-[radial-gradient(900px_520px_at_80%_-10%,#173f3c,#060f0e_60%)] sm:px-6 lg:items-center lg:px-6 lg:py-10">
+      {/* auth.css:56 — the same aurora stops as the app canvas, just a tighter ellipse. Both
+          themes come from the tokens, so this needs no `dark:` override. */}
+      <section className="relative flex flex-1 items-start justify-center overflow-hidden bg-[radial-gradient(900px_520px_at_80%_-10%,var(--atmo-mint),var(--canvas-base)_60%)] px-5 pb-24 pt-24 sm:px-6 lg:items-center lg:px-6 lg:py-10">
+        <Atmosphere />
         <div className="absolute right-5 top-5 z-10 flex items-center gap-2 sm:right-6">
           <LanguageToggle
             value={locale}
             label={t("language")}
             size="sm"
-            className="border-border/70 bg-secondary/75 shadow-[0_18px_44px_-28px_rgb(55_227_222_/_0.8)]"
+            className="border-border/70 bg-secondary/75 shadow-[0_18px_44px_-28px_var(--accent-line)]"
             onValueChange={handleLanguageChange}
           />
-          <button
-            type="button"
-            className="inline-flex size-9 items-center justify-center rounded-[var(--radius-md)] border border-border/70 bg-secondary/75 text-muted-foreground shadow-[0_18px_44px_-28px_rgb(55_227_222_/_0.8)] transition hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-            aria-label={resolvedTheme === "dark" ? t("themeLight") : t("themeDark")}
-            title={resolvedTheme === "dark" ? t("themeLight") : t("themeDark")}
-            onClick={() => setTheme(nextTheme)}
-          >
-            {resolvedTheme === "dark" ? (
-              <Sun className="size-4" aria-hidden="true" />
-            ) : (
-              <Moon className="size-4" aria-hidden="true" />
-            )}
-          </button>
+          <ThemeToggle className="size-9 rounded-[var(--radius-md)] border-border/70 bg-secondary/75 text-muted-foreground shadow-[0_18px_44px_-28px_var(--accent-line)] hover:text-foreground" />
         </div>
-        <div className={cn("w-full max-w-[408px]", contentClassName)}>{children}</div>
+        <div className={cn("relative z-[2] w-full max-w-[408px]", contentClassName)}>
+          {children}
+        </div>
       </section>
     </main>
   );

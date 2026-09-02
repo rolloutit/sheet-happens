@@ -1,51 +1,62 @@
 model Member {
-  id                  String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  authUserId          String?           @unique @map("auth_user_id")
-  email               String            @unique @db.Citext
-  firstName           String            @map("first_name")
-  lastName            String            @map("last_name")
-  displayName         String            @map("display_name")
-  role                MemberRole        @default(MEMBER)
-  status              MemberStatus      @default(INVITED)
-  currentProfile      MemberProfileType @map("current_profile")
-  defaultCurrencyCode String            @default("EUR") @map("default_currency_code") @db.Char(3)
-  timezone            String
-  locale              String
-  activatedAt         DateTime?         @map("activated_at") @db.Timestamptz(6)
-  inactivatedAt       DateTime?         @map("inactivated_at") @db.Timestamptz(6)
-  deletedAt           DateTime?         @map("deleted_at") @db.Timestamptz(6)
-  createdAt           DateTime          @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt           DateTime          @updatedAt @map("updated_at") @db.Timestamptz(6)
+  id                    String                @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  authUserId            String?               @unique @map("auth_user_id")
+  email                 String                @unique @db.Citext
+  firstName             String                @map("first_name")
+  lastName              String                @map("last_name")
+  displayName           String                @map("display_name")
+  role                  MemberRole            @default(MEMBER)
+  status                MemberStatus          @default(INVITED)
+  currentProfile        MemberProfileType     @map("current_profile")
+  defaultCurrencyCode   String                @default("EUR") @map("default_currency_code") @db.Char(3)
+  timezone              String
+  locale                String
+  durationDisplayFormat DurationDisplayFormat @default(DECIMAL_HOURS) @map("duration_display_format")
+  avatarStorageBucket   String?               @map("avatar_storage_bucket")
+  avatarStorageKey      String?               @unique @map("avatar_storage_key")
+  avatarContentType     String?               @map("avatar_content_type")
+  avatarByteSize        BigInt?               @map("avatar_byte_size")
+  avatarUpdatedAt       DateTime?             @map("avatar_updated_at") @db.Timestamptz(6)
+  activatedAt           DateTime?             @map("activated_at") @db.Timestamptz(6)
+  inactivatedAt         DateTime?             @map("inactivated_at") @db.Timestamptz(6)
+  deletedAt             DateTime?             @map("deleted_at") @db.Timestamptz(6)
+  createdAt             DateTime              @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt             DateTime              @updatedAt @map("updated_at") @db.Timestamptz(6)
 
   authUser User? @relation(fields: [authUserId], references: [id], onDelete: Restrict)
 
-  auditLogs               AuditLog[]                @relation("AuditActor")
-  assignmentRatePeriods   AssignmentRatePeriod[]    @relation("AssignmentRateCreatedBy")
-  contractorInvoices      ContractorInvoice[]       @relation("ContractorInvoiceUploadedBy")
-  createdDefaultRates     MemberDefaultRatePeriod[] @relation("MemberDefaultRateCreatedBy")
-  defaultRatePeriods      MemberDefaultRatePeriod[] @relation("MemberDefaultRateOwner")
-  documents               Document[]                @relation("DocumentOwner")
-  inactiveProjectWeeks    InactiveProjectWeek[]
-  infoPagesCreated        InfoPage[]                @relation("InfoPageCreatedBy")
-  infoPagesUpdated        InfoPage[]                @relation("InfoPageUpdatedBy")
-  infoPageVersions        InfoPageVersion[]         @relation("InfoPageVersionCreatedBy")
-  invitations             Invitation[]              @relation("InvitationMember")
-  invitedByInvitations    Invitation[]              @relation("InvitationInvitedBy")
-  notificationDeliveries  NotificationDelivery[]
-  notificationPreferences NotificationPreference?
-  payslips                Payslip[]                 @relation("PayslipEmployee")
-  projectsCreated         Project[]                 @relation("ProjectCreatedBy")
-  projectsUpdated         Project[]                 @relation("ProjectUpdatedBy")
-  profilePeriods          MemberProfilePeriod[]
-  projectAssignments      ProjectAssignment[]
-  reportExports           ReportExport[]
-  runningTimer            RunningTimer?
-  timeEntries             TimeEntry[]
-  timeEntryDrafts         TimeEntryDraft[]
-  timesheets              Timesheet[]               @relation("TimesheetContractor")
-  periodLocks             PeriodLock[]
-  timesheetSnapshotLines  TimesheetSnapshotLine[]
-  timesheetEvents         TimesheetEvent[]
+  auditLogs                         AuditLog[]                  @relation("AuditActor")
+  assignmentRatePeriods             AssignmentRatePeriod[]      @relation("AssignmentRateCreatedBy")
+  contractorInvoices                ContractorInvoice[]         @relation("ContractorInvoiceUploadedBy")
+  createdDefaultRates               MemberDefaultRatePeriod[]   @relation("MemberDefaultRateCreatedBy")
+  defaultRatePeriods                MemberDefaultRatePeriod[]   @relation("MemberDefaultRateOwner")
+  documents                         Document[]                  @relation("DocumentOwner")
+  inactiveProjectWeeks              InactiveProjectWeek[]
+  infoPagesCreated                  InfoPage[]                  @relation("InfoPageCreatedBy")
+  infoPagesUpdated                  InfoPage[]                  @relation("InfoPageUpdatedBy")
+  infoPageVersions                  InfoPageVersion[]           @relation("InfoPageVersionCreatedBy")
+  invitations                       Invitation[]                @relation("InvitationMember")
+  invitedByInvitations              Invitation[]                @relation("InvitationInvitedBy")
+  notificationDeliveries            NotificationDelivery[]
+  notificationPreferences           NotificationPreference?
+  notifications                     Notification[]
+  notificationConfigurationsUpdated NotificationConfiguration[] @relation("NotificationConfigurationUpdatedBy")
+  notificationRulesUpdated          NotificationRule[]          @relation("NotificationRuleUpdatedBy")
+  payslips                          Payslip[]                   @relation("PayslipEmployee")
+  publishedPayslips                 Payslip[]                   @relation("PayslipPublishedBy")
+  projectsCreated                   Project[]                   @relation("ProjectCreatedBy")
+  projectsUpdated                   Project[]                   @relation("ProjectUpdatedBy")
+  profilePeriods                    MemberProfilePeriod[]
+  projectAssignments                ProjectAssignment[]
+  reportExports                     ReportExport[]
+  runningTimer                      RunningTimer?
+  timeEntries                       TimeEntry[]
+  adminTimeEntryEdits               TimeEntry[]                 @relation("TimeEntryAdminModifiedBy")
+  timeEntryDrafts                   TimeEntryDraft[]
+  timesheets                        Timesheet[]                 @relation("TimesheetContractor")
+  periodLocks                       PeriodLock[]
+  timesheetSnapshotLines            TimesheetSnapshotLine[]
+  timesheetEvents                   TimesheetEvent[]
 
   @@index([status])
   @@index([currentProfile])

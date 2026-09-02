@@ -1,3 +1,4 @@
+import { defaultLocale, resolveLocale } from "@/src/i18n/locales";
 import {
   addDays,
   formatDateOnly,
@@ -93,14 +94,65 @@ export function reportSearchParamsFromFormData(formData: FormData): ReportSearch
   };
 }
 
+/**
+ * The serializable form of a filter set, shared by the export download (posted as hidden form
+ * fields) and the export preview (sent as a query string), so a preview can never describe a
+ * different slice of time than the file the same dialog downloads.
+ *
+ * Filters only: the export options chosen in the dialog itself — language, mode and title — are
+ * fields the dialog owns, so they must not be duplicated here.
+ */
+export type ReportExportFields = Record<string, string>;
+
+export function reportExportFieldsFromFilters(
+  filters: ParsedReportSearchParams,
+): ReportExportFields {
+  const fields: ReportExportFields = {
+    period: filters.period,
+    view: filters.view,
+  };
+
+  if (filters.period === "custom") {
+    fields.start = formatDateOnly(filters.periodStart);
+    fields.end = formatDateOnly(filters.periodEnd);
+  } else {
+    fields.anchor = filters.anchor;
+  }
+
+  if (filters.projectId) fields.project = filters.projectId;
+  if (filters.projectGroupId) fields.group = filters.projectGroupId;
+  if (filters.memberId) fields.member = filters.memberId;
+
+  return fields;
+}
+
 export function parseReportMode(value: FormDataEntryValue | string | null | undefined) {
   return value === "INTERNAL" ? "INTERNAL" : "COST_FREE";
+}
+
+/**
+ * The document language is picked in the export dialog rather than taken from the request cookie,
+ * so it arrives as untrusted input and gets validated like any other export field.
+ */
+export function parseReportExportLocale(value: FormDataEntryValue | string | null | undefined) {
+  return resolveLocale(value) ?? defaultLocale;
 }
 
 export function normalizeReportExportTitle(value: FormDataEntryValue | string | null | undefined) {
   const title = typeof value === "string" ? value.trim().replaceAll(/\s+/g, " ") : "";
 
   return title.slice(0, 120);
+}
+
+/**
+ * The download and the preview must agree on the title, including the fallback, or the preview
+ * would show a heading the exported file does not carry.
+ */
+export function resolveReportExportTitle(
+  value: FormDataEntryValue | string | null | undefined,
+  period: { start: string; end: string },
+) {
+  return normalizeReportExportTitle(value) || `Time report ${period.start} ${period.end}`;
 }
 
 function parsePeriodMode(value: string | undefined): ReportPeriodMode {

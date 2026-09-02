@@ -27,7 +27,7 @@ export const DropdownContent = React.forwardRef<
       ref={ref}
       sideOffset={sideOffset}
       className={cn(
-        "z-50 min-w-48 rounded-[var(--radius-lg)] border border-border bg-popover p-1 text-popover-foreground shadow-panel outline-none",
+        "z-50 min-w-48 rounded-[var(--radius-lg)] border border-border-strong bg-popover p-1 text-popover-foreground shadow-panel outline-none",
         className,
       )}
       {...props}
@@ -44,7 +44,8 @@ export const DropdownItem = React.forwardRef<
     ref={ref}
     className={cn(
       "flex cursor-default select-none items-center gap-2 rounded-[var(--radius-md)] px-3 py-2 text-sm outline-none transition focus:bg-secondary data-[disabled]:pointer-events-none data-[disabled]:opacity-45",
-      tone === "danger" && "text-destructive focus:bg-destructive/12 focus:text-destructive",
+      tone === "danger" &&
+        "text-destructive focus:bg-destructive-soft focus:text-destructive-bright",
       className,
     )}
     {...props}
@@ -60,7 +61,8 @@ export const DropdownCheckboxItem = React.forwardRef<
     ref={ref}
     className={cn(
       "relative flex cursor-default select-none items-center gap-2 rounded-[var(--radius-md)] py-2 pl-8 pr-3 text-sm outline-none transition focus:bg-secondary data-[disabled]:pointer-events-none data-[disabled]:opacity-45",
-      tone === "danger" && "text-destructive focus:bg-destructive/12 focus:text-destructive",
+      tone === "danger" &&
+        "text-destructive focus:bg-destructive-soft focus:text-destructive-bright",
       className,
     )}
     {...props}
@@ -85,7 +87,8 @@ export const DropdownRadioItem = React.forwardRef<
     ref={ref}
     className={cn(
       "relative flex cursor-default select-none items-center gap-2 rounded-[var(--radius-md)] py-2 pl-8 pr-3 text-sm outline-none transition focus:bg-secondary data-[disabled]:pointer-events-none data-[disabled]:opacity-45",
-      tone === "danger" && "text-destructive focus:bg-destructive/12 focus:text-destructive",
+      tone === "danger" &&
+        "text-destructive focus:bg-destructive-soft focus:text-destructive-bright",
       className,
     )}
     {...props}

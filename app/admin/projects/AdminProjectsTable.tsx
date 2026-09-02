@@ -10,20 +10,31 @@ import {
   PauseCircle,
   Save,
   Search,
-  SquareStack,
   UserPlus,
   WalletCards,
   X,
 } from "lucide-react";
 import Link from "next/link";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import type { Route } from "next";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { Children, type FormEvent, useState, useTransition, type ReactNode } from "react";
+import {
+  Children,
+  type FormEvent,
+  type ReactNode,
+  useCallback,
+  useState,
+  useTransition,
+} from "react";
 
 import { Badge } from "@/src/components/ui/Badge";
 import type { BadgeProps } from "@/src/components/ui/Badge";
 import { Button } from "@/src/components/ui/Button";
+import { FilterChips } from "@/src/components/sheet/FilterChips";
+import type { FilterChip } from "@/src/components/sheet/FilterChips";
+import { Combobox } from "@/src/components/ui/Combobox";
+import { DatePicker } from "@/src/components/ui/DatePicker";
+import { Select } from "@/src/components/ui/Select";
 import {
   Dialog,
   DialogClose,
@@ -49,9 +60,11 @@ import {
   DropdownTrigger,
 } from "@/src/components/ui/Dropdown";
 import { Field } from "@/src/components/ui/Field";
+import { focusChromeWithinClassName } from "@/src/components/ui/focusRing";
 import { IconButton } from "@/src/components/ui/IconButton";
 import { Input } from "@/src/components/ui/Input";
 import { Pager } from "@/src/components/ui/Pager";
+import { ResultBanner } from "@/src/components/ui/ResultBanner";
 import { SegmentedControl } from "@/src/components/ui/SegmentedControl";
 import { DataTable } from "@/src/components/ui/Table";
 import { Textarea } from "@/src/components/ui/Textarea";
@@ -60,6 +73,9 @@ import {
   isProjectColorToken,
   type ProjectColorToken,
 } from "@/src/lib/project-colors";
+import { usePickerLabels } from "@/src/i18n/picker-labels";
+import { formatTimestamp } from "@/src/lib/formatting/dates";
+import { useOverlayParam } from "@/src/lib/use-overlay-param";
 import { cn } from "@/src/lib/utils";
 import type {
   AdminProjectAssignmentRow,
@@ -93,7 +109,10 @@ import type {
   UpdateProjectAssignmentActionInput,
   UpdateProjectActionInput,
 } from "./actions.types";
-import { nativeCheckboxClassName, nativeSelectClassName } from "./formStyles";
+import { nativeCheckboxClassName } from "./formStyles";
+import { PROJECT_BULK_ASSIGN_OVERLAY_VALUE, PROJECT_OVERLAY_PARAM } from "./project-overlays";
+import { ProjectCreateButton } from "./ProjectCreateButton";
+import { ProjectCreateDrawer } from "./ProjectCreateDrawer";
 import { ProjectColorField, ProjectColorSwatch } from "./ProjectColorField";
 
 export type AdminProjectsTableProps = {
@@ -109,6 +128,9 @@ export type AdminProjectsTableProps = {
 type ProjectTableRow = AdminProjectRow & Record<string, unknown>;
 type PendingAction = "edit" | "status" | "archive";
 type AdminProjectsTranslator = ReturnType<typeof useTranslations>;
+/** The query-string names, which are also the chip keys. */
+type ProjectFilterKey = "q" | "status" | "type" | "timeline" | "group" | "assignment";
+
 type ProjectFilterFormState = {
   assignment: ProjectListResult["filters"]["assignment"];
   group: string;
@@ -146,6 +168,7 @@ export function AdminProjectsTable({
   todayDate,
 }: AdminProjectsTableProps) {
   const t = useTranslations("AdminProjects");
+  const locale = useLocale();
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -156,7 +179,10 @@ export function AdminProjectsTable({
   const [editState, setEditState] = useState<ProjectActionState | null>(null);
   const [archivingProject, setArchivingProject] = useState<AdminProjectRow | null>(null);
   const [detailProject, setDetailProject] = useState<AdminProjectRow | null>(null);
-  const [bulkDialogOpen, setBulkDialogOpen] = useState(false);
+  const [bulkDialogOpen, setBulkDialogOpen] = useOverlayParam(
+    PROJECT_OVERLAY_PARAM,
+    PROJECT_BULK_ASSIGN_OVERLAY_VALUE,
+  );
   const [bulkMessage, setBulkMessage] = useState<ProjectBulkAssignmentActionState | null>(null);
   const [assignmentMessage, setAssignmentMessage] = useState<ProjectAssignmentActionState | null>(
     null,
@@ -219,6 +245,37 @@ export function AdminProjectsTable({
     router.push(buildUrl(pathname, params) as Route);
   }
 
+  const isFiltered = Boolean(
+    result.filters.query ||
+    result.filters.status ||
+    result.filters.type ||
+    result.filters.timeline ||
+    result.filters.group ||
+    result.filters.assignment,
+  );
+
+  const handleCreated = useCallback(
+    (createdMessage: string) => {
+      setMessage({ status: "success", message: createdMessage });
+      router.refresh();
+    },
+    [router],
+  );
+
+  /**
+   * Takes one filter off, rather than re-applying the form. The form may hold edits the user
+   * has not applied yet, and pulling a chip should not smuggle those into the URL with it.
+   */
+  function removeFilter(key: ProjectFilterKey) {
+    const params = new URLSearchParams(searchParams.toString());
+
+    params.delete(key);
+    params.delete("page");
+    setMessage(null);
+
+    router.push(buildUrl(pathname, params) as Route);
+  }
+
   function clearFilters() {
     setMessage(null);
     router.push(pathname as Route);
@@ -262,32 +319,10 @@ export function AdminProjectsTable({
   return (
     <div className="grid gap-3">
       {message ? (
-        <p
-          role={message.status === "error" ? "alert" : "status"}
-          className={cn(
-            "rounded-[var(--radius-md)] border px-3 py-2 text-sm",
-            message.status === "error"
-              ? "border-destructive/40 bg-destructive/10 text-destructive"
-              : "border-success/40 bg-success/10 text-success",
-          )}
-        >
+        <ResultBanner tone={message.status === "error" ? "error" : "success"}>
           {message.message}
-        </p>
+        </ResultBanner>
       ) : null}
-
-      <div className="flex justify-end">
-        <Button
-          type="button"
-          variant="soft"
-          icon={SquareStack}
-          onClick={() => {
-            setBulkDialogOpen(true);
-            setBulkMessage(null);
-          }}
-        >
-          {t("actions.bulkAssign")}
-        </Button>
-      </div>
 
       <ProjectDirectoryFilters
         key={getProjectFilterKey(result.filters)}
@@ -295,13 +330,25 @@ export function AdminProjectsTable({
         groups={groups}
         onApply={applyFilters}
         onClear={clearFilters}
+        onRemove={removeFilter}
       />
 
       <DataTable
         caption={t("table.caption")}
         aria-label={t("table.ariaLabel")}
         rows={tableRows}
-        empty={rows.length ? t("table.emptyFiltered") : t("table.empty")}
+        empty={
+          <div className="grid justify-items-center gap-4">
+            <p>{isFiltered ? t("table.emptyFiltered") : t("table.empty")}</p>
+            {isFiltered ? (
+              <Button type="button" variant="ghost" icon={X} onClick={clearFilters}>
+                {t("filters.clear")}
+              </Button>
+            ) : (
+              <ProjectCreateButton variant="soft" />
+            )}
+          </div>
+        }
         getRowKey={(row) => row.id}
         displayMode="responsive"
         density="comfortable"
@@ -369,7 +416,7 @@ export function AdminProjectsTable({
             mobileLabel: t("table.columns.updated"),
             cell: (row) => (
               <span className="text-sm text-muted-foreground">
-                {formatTimestamp(row.updatedAt)}
+                {formatTimestamp(row.updatedAt, locale)}
               </span>
             ),
           },
@@ -520,6 +567,8 @@ export function AdminProjectsTable({
           });
         }}
       />
+
+      <ProjectCreateDrawer onCreated={handleCreated} />
     </div>
   );
 }
@@ -529,13 +578,16 @@ function ProjectDirectoryFilters({
   groups,
   onApply,
   onClear,
+  onRemove,
 }: {
   result: ProjectListResult;
   groups: AdminProjectGroupRow[];
   onApply: (filters: ProjectFilterFormState) => void;
   onClear: () => void;
+  onRemove: (key: ProjectFilterKey) => void;
 }) {
   const t = useTranslations("AdminProjects");
+  const pickerLabels = usePickerLabels();
   const [filterForm, setFilterForm] = useState<ProjectFilterFormState>(() => ({
     query: result.filters.query,
     status: result.filters.status,
@@ -562,147 +614,201 @@ function ProjectDirectoryFilters({
     onClear();
   }
 
+  // Built from the applied filters rather than the form, so a chip always describes what the
+  // table is actually showing.
+  const activeFilters: FilterChip<ProjectFilterKey>[] = [];
+
+  if (result.filters.query) {
+    activeFilters.push({
+      id: "q",
+      label: result.filters.query,
+      aria: `${t("filters.search")}: ${result.filters.query}`,
+      // The visible chip is the bare term: these pages label their search box with a whole
+      // phrase ("Search projects"), which makes a poor prefix once several chips are up.
+      leading: <Search className="size-3" aria-hidden="true" />,
+    });
+  }
+  if (result.filters.status) {
+    activeFilters.push({
+      id: "status",
+      label: `${t("filters.state")}: ${t(`states.${result.filters.status.toLowerCase()}`)}`,
+    });
+  }
+  if (result.filters.type) {
+    activeFilters.push({
+      id: "type",
+      label: `${t("filters.type")}: ${t(`states.${result.filters.type}`)}`,
+    });
+  }
+  if (result.filters.timeline) {
+    activeFilters.push({
+      id: "timeline",
+      label: `${t("filters.timeline")}: ${t(`filters.${result.filters.timeline}`)}`,
+    });
+  }
+  if (result.filters.group) {
+    const groupName =
+      result.filters.group === "ungrouped"
+        ? t("states.ungrouped")
+        : (groups.find((group) => group.id === result.filters.group)?.name ?? result.filters.group);
+
+    activeFilters.push({ id: "group", label: `${t("filters.group")}: ${groupName}` });
+  }
+  if (result.filters.assignment) {
+    activeFilters.push({
+      id: "assignment",
+      label: `${t("filters.assignment")}: ${t(`filters.${result.filters.assignment}`)}`,
+    });
+  }
+
   return (
-    <form
-      className="grid gap-3 rounded-[var(--radius-lg)] border border-border bg-background/45 p-4"
-      onSubmit={submitFilters}
-    >
-      <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-[minmax(16rem,1.4fr)_repeat(5,minmax(8.5rem,1fr))]">
-        <Field label={t("filters.search")} htmlFor="project-search">
+    <div className="grid gap-3">
+      <form
+        className="flex flex-wrap items-center gap-2 rounded-[var(--radius-lg)] border border-border bg-card p-3"
+        onSubmit={submitFilters}
+      >
+        <div className="min-w-[13rem] flex-1">
           <Input
-            id="project-search"
             name="q"
             type="search"
             value={filterForm.query}
+            aria-label={t("filters.search")}
             placeholder={t("filters.searchPlaceholder")}
             onChange={(event) => {
               const query = event.currentTarget.value;
+
               setFilterForm((current) => ({
                 ...current,
                 query,
               }));
             }}
           />
-        </Field>
-        <Field label={t("filters.state")} htmlFor="project-status">
-          <select
-            id="project-status"
-            name="status"
+        </div>
+        <div className="w-[calc(50%-0.25rem)] sm:w-auto sm:min-w-32 sm:max-w-64">
+          <Select
+            label={t("filters.state")}
+            placeholder={t("filters.allStates")}
             value={filterForm.status}
-            className={nativeSelectClassName}
-            onChange={(event) => {
-              const status = event.currentTarget.value as ProjectFilterFormState["status"];
+            labels={pickerLabels.combobox}
+            onValueChange={(value) => {
+              const status = value as ProjectFilterFormState["status"];
+
               setFilterForm((current) => ({
                 ...current,
                 status,
               }));
             }}
-          >
-            <option value="">{t("filters.all")}</option>
-            <option value="ACTIVE">{t("states.active")}</option>
-            <option value="INACTIVE">{t("states.inactive")}</option>
-          </select>
-        </Field>
-        <Field label={t("filters.type")} htmlFor="project-type">
-          <select
-            id="project-type"
-            name="type"
+            options={[
+              { value: "", label: t("filters.allStates") },
+              { value: "ACTIVE", label: t("states.active") },
+              { value: "INACTIVE", label: t("states.inactive") },
+            ]}
+          />
+        </div>
+        <div className="w-[calc(50%-0.25rem)] sm:w-auto sm:min-w-32 sm:max-w-64">
+          <Select
+            label={t("filters.type")}
+            placeholder={t("filters.allTypes")}
             value={filterForm.type}
-            className={nativeSelectClassName}
-            onChange={(event) => {
-              const type = event.currentTarget.value as ProjectFilterFormState["type"];
+            labels={pickerLabels.combobox}
+            onValueChange={(value) => {
+              const type = value as ProjectFilterFormState["type"];
+
               setFilterForm((current) => ({
                 ...current,
                 type,
               }));
             }}
-          >
-            <option value="">{t("filters.all")}</option>
-            <option value="external">{t("states.external")}</option>
-            <option value="internal">{t("states.internal")}</option>
-          </select>
-        </Field>
-        <Field label={t("filters.timeline")} htmlFor="project-timeline">
-          <select
-            id="project-timeline"
-            name="timeline"
+            options={[
+              { value: "", label: t("filters.allTypes") },
+              { value: "external", label: t("states.external") },
+              { value: "internal", label: t("states.internal") },
+            ]}
+          />
+        </div>
+        <div className="w-[calc(50%-0.25rem)] sm:w-auto sm:min-w-32 sm:max-w-64">
+          <Select
+            label={t("filters.timeline")}
+            placeholder={t("filters.allTimelines")}
             value={filterForm.timeline}
-            className={nativeSelectClassName}
-            onChange={(event) => {
-              const timeline = event.currentTarget.value as ProjectFilterFormState["timeline"];
+            labels={pickerLabels.combobox}
+            onValueChange={(value) => {
+              const timeline = value as ProjectFilterFormState["timeline"];
+
               setFilterForm((current) => ({
                 ...current,
                 timeline,
               }));
             }}
-          >
-            <option value="">{t("filters.all")}</option>
-            <option value="current">{t("filters.current")}</option>
-            <option value="future">{t("filters.future")}</option>
-            <option value="ended">{t("filters.ended")}</option>
-          </select>
-        </Field>
-        <Field label={t("filters.group")} htmlFor="project-group">
-          <select
-            id="project-group"
-            name="group"
+            options={[
+              { value: "", label: t("filters.allTimelines") },
+              { value: "current", label: t("filters.current") },
+              { value: "future", label: t("filters.future") },
+              { value: "ended", label: t("filters.ended") },
+            ]}
+          />
+        </div>
+        <div className="w-[calc(50%-0.25rem)] sm:w-auto sm:min-w-32 sm:max-w-64">
+          <Select
+            label={t("filters.group")}
+            placeholder={t("filters.allGroups")}
             value={filterForm.group}
-            className={nativeSelectClassName}
-            onChange={(event) => {
-              const group = event.currentTarget.value;
+            labels={pickerLabels.combobox}
+            onValueChange={(group) => {
               setFilterForm((current) => ({
                 ...current,
                 group,
               }));
             }}
-          >
-            <option value="">{t("filters.all")}</option>
-            <option value="ungrouped">{t("states.ungrouped")}</option>
-            {groups.map((group) => (
-              <option key={group.id} value={group.id}>
-                {group.name}
-              </option>
-            ))}
-          </select>
-        </Field>
-        <Field label={t("filters.assignment")} htmlFor="project-assignment">
-          <select
-            id="project-assignment"
-            name="assignment"
+            options={[
+              { value: "", label: t("filters.allGroups") },
+              { value: "ungrouped", label: t("states.ungrouped") },
+              ...groups.map((group) => ({ value: group.id, label: group.name })),
+            ]}
+          />
+        </div>
+        <div className="w-[calc(50%-0.25rem)] sm:w-auto sm:min-w-32 sm:max-w-64">
+          <Select
+            label={t("filters.assignment")}
+            placeholder={t("filters.allAssignments")}
             value={filterForm.assignment}
-            className={nativeSelectClassName}
-            onChange={(event) => {
-              const assignment = event.currentTarget.value as ProjectFilterFormState["assignment"];
+            labels={pickerLabels.combobox}
+            onValueChange={(value) => {
+              const assignment = value as ProjectFilterFormState["assignment"];
+
               setFilterForm((current) => ({
                 ...current,
                 assignment,
               }));
             }}
-          >
-            <option value="">{t("filters.all")}</option>
-            <option value="assigned">{t("filters.assigned")}</option>
-            <option value="unassigned">{t("filters.unassigned")}</option>
-          </select>
-        </Field>
-      </div>
-      <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
-        <p className="text-sm font-medium text-muted-foreground" aria-live="polite">
-          {t("filters.showing", {
-            start: result.pageStart,
-            end: result.pageEnd,
-            total: result.totalItems,
-          })}
-        </p>
-        <div className="flex flex-wrap gap-2 sm:justify-end">
-          <Button type="submit" icon={Search}>
-            {t("filters.apply")}
-          </Button>
-          <Button type="button" variant="ghost" icon={X} onClick={clearFilters}>
-            {t("filters.clear")}
-          </Button>
+            options={[
+              { value: "", label: t("filters.allAssignments") },
+              { value: "assigned", label: t("filters.assigned") },
+              { value: "unassigned", label: t("filters.unassigned") },
+            ]}
+          />
         </div>
-      </div>
-    </form>
+        <Button type="submit" icon={Search} className="ml-auto">
+          {t("filters.apply")}
+        </Button>
+      </form>
+
+      <FilterChips
+        chips={activeFilters}
+        labels={{
+          active: t("filters.active"),
+          clear: t("filters.clear"),
+          remove: (filter) => t("filters.removeFilter", { filter }),
+        }}
+        onRemove={onRemove}
+        onClear={clearFilters}
+        summary={t("filters.showing", {
+          start: result.pageStart,
+          end: result.pageEnd,
+          total: result.totalItems,
+        })}
+      />
+    </div>
   );
 }
 
@@ -811,6 +917,8 @@ function BulkAssignmentDialog({
   onSubmit: (input: BulkAssignProjectMembersActionInput) => void;
 }) {
   const t = useTranslations("AdminProjects");
+  const locale = useLocale();
+  const pickerLabels = usePickerLabels();
   const [mode, setMode] = useState<BulkAssignmentMode>("people-to-projects");
   const [memberQuery, setMemberQuery] = useState("");
   const [projectQuery, setProjectQuery] = useState("");
@@ -957,17 +1065,9 @@ function BulkAssignmentDialog({
 
         <div className="grid max-h-[74vh] gap-5 overflow-y-auto pr-1">
           {actionState?.message ? (
-            <p
-              role={actionState.status === "error" ? "alert" : "status"}
-              className={cn(
-                "rounded-[var(--radius-md)] border px-3 py-2 text-sm",
-                actionState.status === "error"
-                  ? "border-destructive/40 bg-destructive/10 text-destructive"
-                  : "border-success/40 bg-success/10 text-success",
-              )}
-            >
+            <ResultBanner tone={actionState.status === "error" ? "error" : "success"}>
               {actionState.message}
-            </p>
+            </ResultBanner>
           ) : null}
 
           <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
@@ -1002,14 +1102,16 @@ function BulkAssignmentDialog({
               error={actionState?.fieldErrors?.validFrom}
             >
               {({ id, describedBy, invalid, required }) => (
-                <Input
+                <DatePicker
                   id={id}
-                  type="date"
+                  label={t("assignment.validFrom")}
+                  locale={locale}
                   value={validFrom}
-                  onChange={(event) => setValidFrom(event.target.value)}
+                  onValueChange={(value) => setValidFrom(value ?? "")}
                   aria-describedby={describedBy}
                   invalid={invalid}
                   required={required}
+                  labels={pickerLabels.date}
                 />
               )}
             </Field>
@@ -1019,13 +1121,15 @@ function BulkAssignmentDialog({
               error={actionState?.fieldErrors?.validTo}
             >
               {({ id, describedBy, invalid }) => (
-                <Input
+                <DatePicker
                   id={id}
-                  type="date"
+                  label={t("assignment.validTo")}
+                  locale={locale}
                   value={validTo}
-                  onChange={(event) => setValidTo(event.target.value)}
+                  onValueChange={(value) => setValidTo(value ?? "")}
                   aria-describedby={describedBy}
                   invalid={invalid}
+                  labels={pickerLabels.date}
                 />
               )}
             </Field>
@@ -1066,7 +1170,7 @@ function BulkAssignmentDialog({
             </div>
             <p className="text-sm leading-6 text-muted-foreground">{t("bulk.rateHint")}</p>
             {summary.totalCount > 0 && summary.newCount === 0 ? (
-              <p className="rounded-[var(--radius-md)] border border-warning/35 bg-warning/12 px-3 py-2 text-sm text-warning">
+              <p className="rounded-[var(--radius-md)] border border-warning/35 bg-warning-soft px-3 py-2 text-sm text-warning">
                 {t("bulk.allDuplicates")}
               </p>
             ) : null}
@@ -1124,14 +1228,19 @@ function BulkSelectionPanel({
     <section className="grid min-h-80 gap-3 rounded-[var(--radius-lg)] border border-border bg-card p-3">
       <div className="grid gap-2">
         <h3 className="font-ui text-sm font-semibold text-foreground">{title}</h3>
-        <label className="flex h-9 items-center gap-2 rounded-[var(--radius-md)] border border-border bg-background px-3">
+        <label
+          className={cn(
+            "flex h-9 items-center gap-2 rounded-[var(--radius-md)] border border-border bg-background px-3",
+            focusChromeWithinClassName,
+          )}
+        >
           <Search className="size-4 text-muted-foreground" aria-hidden="true" />
           <span className="sr-only">{searchLabel}</span>
           <input
             value={searchValue}
             onChange={(event) => onSearchChange(event.target.value)}
             placeholder="Search..."
-            className="min-w-0 flex-1 bg-transparent text-sm text-foreground outline-none placeholder:text-muted-foreground"
+            className="min-w-0 flex-1 bg-transparent text-sm text-foreground outline-none placeholder:text-subtle-foreground"
           />
         </label>
       </div>
@@ -1166,9 +1275,9 @@ function BulkSelectionRow({
       type="button"
       onClick={onToggle}
       className={cn(
-        "grid gap-2 rounded-[var(--radius-md)] border px-3 py-3 text-left transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+        "grid gap-2 rounded-[var(--radius-md)] border px-3 py-3 text-left transition",
         checked
-          ? "border-primary bg-primary/10"
+          ? "border-primary bg-accent-soft"
           : "border-border bg-background hover:bg-secondary/45",
       )}
     >
@@ -1233,6 +1342,8 @@ function ProjectDetailDrawer({
   onClose: (input: CloseProjectAssignmentActionInput) => void;
 }) {
   const t = useTranslations("AdminProjects");
+  const locale = useLocale();
+  const pickerLabels = usePickerLabels();
   const [editingAssignmentId, setEditingAssignmentId] = useState<string | null>(null);
   const assignPending = project ? pendingKey === `${project.id}:assign` : false;
   const nextActive = project?.status !== "ACTIVE";
@@ -1302,23 +1413,15 @@ function ProjectDetailDrawer({
 
           <div className="grid max-h-[calc(100vh-9rem)] gap-6 overflow-y-auto px-5 py-5">
             {project.status !== "ACTIVE" ? (
-              <div className="rounded-[var(--radius-lg)] border border-warning/35 bg-warning/12 px-4 py-3 text-sm leading-6 text-warning">
+              <div className="rounded-[var(--radius-lg)] border border-warning/35 bg-warning-soft px-4 py-3 text-sm leading-6 text-warning">
                 {t("detail.inactiveWarning")}
               </div>
             ) : null}
 
             {actionState?.message ? (
-              <p
-                role={actionState.status === "error" ? "alert" : "status"}
-                className={cn(
-                  "rounded-[var(--radius-md)] border px-3 py-2 text-sm",
-                  actionState.status === "error"
-                    ? "border-destructive/40 bg-destructive/10 text-destructive"
-                    : "border-success/40 bg-success/10 text-success",
-                )}
-              >
+              <ResultBanner tone={actionState.status === "error" ? "error" : "success"}>
                 {actionState.message}
-              </p>
+              </ResultBanner>
             ) : null}
 
             <section className="grid gap-3">
@@ -1327,7 +1430,7 @@ function ProjectDetailDrawer({
                 <ProjectFact label={t("detail.groups")} value={String(project.groupCount)} />
                 <ProjectFact
                   label={t("detail.updated")}
-                  value={formatTimestamp(project.updatedAt)}
+                  value={formatTimestamp(project.updatedAt, locale)}
                 />
               </div>
               <div className="rounded-[var(--radius-lg)] border border-border bg-card p-4">
@@ -1370,25 +1473,23 @@ function ProjectDetailDrawer({
                   error={actionState?.fieldErrors?.memberId}
                 >
                   {({ id, describedBy, invalid, required }) => (
-                    <select
+                    <Combobox
                       id={id}
                       name="memberId"
-                      defaultValue=""
+                      label={t("assignment.member")}
+                      placeholder={t("assignment.chooseMember")}
                       aria-describedby={describedBy}
-                      aria-invalid={invalid}
+                      invalid={invalid}
                       required={required}
-                      className={nativeSelectClassName}
-                    >
-                      <option value="" disabled>
-                        {t("assignment.chooseMember")}
-                      </option>
-                      {assignableMembers.map((member) => (
-                        <option key={member.id} value={member.id}>
-                          {member.name} - {getAssignmentProfileLabel(member.profile, t)},{" "}
-                          {getAssignmentStatusLabel(member.status, t)}
-                        </option>
-                      ))}
-                    </select>
+                      labels={pickerLabels.combobox}
+                      options={assignableMembers.map((member) => ({
+                        value: member.id,
+                        label: member.name,
+                        // Profile and status drop to the second line so the trigger stays
+                        // readable, and both stay searchable.
+                        meta: `${getAssignmentProfileLabel(member.profile, t)}, ${getAssignmentStatusLabel(member.status, t)}`,
+                      }))}
+                    />
                   )}
                 </Field>
                 <Field
@@ -1398,14 +1499,16 @@ function ProjectDetailDrawer({
                   error={actionState?.fieldErrors?.validFrom}
                 >
                   {({ id, describedBy, invalid, required }) => (
-                    <Input
+                    <DatePicker
                       id={id}
                       name="validFrom"
-                      type="date"
+                      label={t("assignment.validFrom")}
+                      locale={locale}
                       defaultValue={todayDate}
                       aria-describedby={describedBy}
                       invalid={invalid}
                       required={required}
+                      labels={pickerLabels.date}
                     />
                   )}
                 </Field>
@@ -1415,12 +1518,14 @@ function ProjectDetailDrawer({
                   error={actionState?.fieldErrors?.validTo}
                 >
                   {({ id, describedBy, invalid }) => (
-                    <Input
+                    <DatePicker
                       id={id}
                       name="validTo"
-                      type="date"
+                      label={t("assignment.validTo")}
+                      locale={locale}
                       aria-describedby={describedBy}
                       invalid={invalid}
+                      labels={pickerLabels.date}
                     />
                   )}
                 </Field>
@@ -1607,6 +1712,8 @@ function ProjectAssignmentEditForm({
   onSubmit: (input: UpdateProjectAssignmentActionInput) => void;
 }) {
   const t = useTranslations("AdminProjects");
+  const locale = useLocale();
+  const pickerLabels = usePickerLabels();
 
   return (
     <form
@@ -1632,14 +1739,16 @@ function ProjectAssignmentEditForm({
           error={actionState?.fieldErrors?.validFrom}
         >
           {({ id, describedBy, invalid, required }) => (
-            <Input
+            <DatePicker
               id={id}
               name="validFrom"
-              type="date"
+              label={t("assignment.validFrom")}
+              locale={locale}
               defaultValue={assignment.validFrom}
               aria-describedby={describedBy}
               invalid={invalid}
               required={required}
+              labels={pickerLabels.date}
             />
           )}
         </Field>
@@ -1649,13 +1758,15 @@ function ProjectAssignmentEditForm({
           error={actionState?.fieldErrors?.validTo}
         >
           {({ id, describedBy, invalid }) => (
-            <Input
+            <DatePicker
               id={id}
               name="validTo"
-              type="date"
+              label={t("assignment.validTo")}
+              locale={locale}
               defaultValue={assignment.validTo ?? ""}
               aria-describedby={describedBy}
               invalid={invalid}
+              labels={pickerLabels.date}
             />
           )}
         </Field>
@@ -1707,6 +1818,8 @@ function ProjectEditDialog({
   onSubmit: (input: UpdateProjectActionInput) => void;
 }) {
   const t = useTranslations("AdminProjects");
+  const locale = useLocale();
+  const pickerLabels = usePickerLabels();
 
   return (
     <Dialog open={Boolean(project)} onOpenChange={onOpenChange}>
@@ -1787,13 +1900,15 @@ function ProjectEditDialog({
                 error={actionState?.fieldErrors?.startsOn}
               >
                 {({ id, describedBy, invalid }) => (
-                  <Input
+                  <DatePicker
                     id={id}
                     name="startsOn"
-                    type="date"
+                    label={t("form.startsOn")}
+                    locale={locale}
                     defaultValue={project.startsOn ?? ""}
                     aria-describedby={describedBy}
                     invalid={invalid}
+                    labels={pickerLabels.date}
                   />
                 )}
               </Field>
@@ -1803,13 +1918,15 @@ function ProjectEditDialog({
                 error={actionState?.fieldErrors?.endsOn}
               >
                 {({ id, describedBy, invalid }) => (
-                  <Input
+                  <DatePicker
                     id={id}
                     name="endsOn"
-                    type="date"
+                    label={t("form.endsOn")}
+                    locale={locale}
                     defaultValue={project.endsOn ?? ""}
                     aria-describedby={describedBy}
                     invalid={invalid}
+                    labels={pickerLabels.date}
                   />
                 )}
               </Field>
@@ -1850,12 +1967,7 @@ function ProjectEditDialog({
             </Field>
 
             {actionState?.status === "error" && actionState.message ? (
-              <p
-                role="alert"
-                className="rounded-[var(--radius-md)] border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive"
-              >
-                {actionState.message}
-              </p>
+              <ResultBanner tone="error">{actionState.message}</ResultBanner>
             ) : null}
 
             <DialogFooter>
@@ -1899,7 +2011,7 @@ function ArchiveProjectDialog({
           </DialogTitle>
           <DialogDescription>{t("archiveDialog.description")}</DialogDescription>
         </DialogHeader>
-        <div className="rounded-[var(--radius-md)] border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+        <div className="rounded-[var(--radius-md)] border border-destructive/30 bg-destructive-soft px-3 py-2 text-sm text-destructive">
           {t("archiveDialog.warning")}
         </div>
         <DialogFooter>
@@ -2149,14 +2261,6 @@ function formatRatePeriodAmount(
     : period.hourlyRate;
 
   return `${amount} ${period.currencyCode}/h`;
-}
-
-function formatTimestamp(value: string) {
-  const date = new Date(value);
-
-  if (Number.isNaN(date.getTime())) return value;
-
-  return date.toISOString().slice(0, 16).replace("T", " ");
 }
 
 function getProjectEditFormString(formData: FormData, name: keyof UpdateProjectActionInput) {

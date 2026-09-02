@@ -1,6 +1,31 @@
 import { describe, expect, it } from "vitest";
 
-import { parseDurationToMinutes } from "./duration";
+import { formatDurationForInput, parseDurationToMinutes } from "./duration";
+
+describe("formatDurationForInput", () => {
+  it("produces precise decimal values that parse back to the same minute", () => {
+    const value = formatDurationForInput(203, "DECIMAL_HOURS");
+
+    expect(value).toBe("3.38");
+    expect(parseDurationToMinutes(value)).toBe(203);
+  });
+
+  it("produces locale-neutral colon values that parse back to the same minute", () => {
+    const value = formatDurationForInput(203, "HOURS_MINUTES");
+
+    expect(value).toBe("3:23");
+    expect(parseDurationToMinutes(value)).toBe(203);
+  });
+
+  it("round-trips every minute of a day through both formats", () => {
+    for (let minutes = 0; minutes <= 1440; minutes += 1) {
+      for (const format of ["DECIMAL_HOURS", "HOURS_MINUTES"] as const) {
+        const value = formatDurationForInput(minutes, format);
+        expect(parseDurationToMinutes(value)).toBe(minutes);
+      }
+    }
+  });
+});
 
 describe("parseDurationToMinutes", () => {
   it.each([

@@ -3,18 +3,21 @@
 import { CheckCircle2, Fingerprint, Link2, Mail, ShieldCheck } from "lucide-react";
 import { useState, type FormEvent } from "react";
 
+// Deep imports rather than the `@/src/components/layout` barrel: the barrel re-exports `AppShell`,
+// which would drag the whole app shell — nav config, Drawer, UserMenu, notifications — into every
+// auth screen bundle.
 import {
   AuthButton,
   AuthField,
   AuthInput,
   AuthPasswordInput,
   AuthScreenHead,
-  AuthShell,
-} from "@/src/components/layout";
+} from "@/src/components/layout/AuthForm";
+import { AuthShell } from "@/src/components/layout/AuthShell";
 import { CodeInput } from "@/src/components/ui/CodeInput";
 import { SegmentedControl } from "@/src/components/ui/SegmentedControl";
 import { StrengthMeter, evaluatePasswordStrength } from "@/src/components/ui/StrengthMeter";
-import type { AuthShellMood } from "@/src/components/layout";
+import type { AuthShellMood } from "@/src/components/layout/AuthShell";
 import type {
   AuthPasswordSetupPayload,
   AuthScreenMode,
@@ -359,7 +362,7 @@ function PasskeyUpsell({
 function ResetSent({ email, onBackToSignIn }: { email: string; onBackToSignIn?: () => void }) {
   return (
     <div className="grid justify-items-center gap-4 text-center">
-      <span className="inline-flex size-14 items-center justify-center rounded-full bg-primary/16 text-accent">
+      <span className="inline-flex size-14 items-center justify-center rounded-full bg-accent-soft text-accent">
         <Mail className="size-6" aria-hidden="true" />
       </span>
       <p className="text-sm text-muted-foreground">We sent instructions to {email}.</p>
@@ -373,7 +376,7 @@ function ResetSent({ email, onBackToSignIn }: { email: string; onBackToSignIn?: 
 function DoneState({ onContinue }: { onContinue?: () => void }) {
   return (
     <div className="grid justify-items-center gap-4 text-center">
-      <span className="inline-flex size-16 items-center justify-center rounded-full bg-success/16 text-success">
+      <span className="inline-flex size-16 items-center justify-center rounded-full bg-success-soft text-success">
         <CheckCircle2 className="size-8" aria-hidden="true" />
       </span>
       <AuthButton type="button" variant="hero" onClick={onContinue}>

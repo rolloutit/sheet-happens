@@ -17,6 +17,7 @@ be lost and get explicit confirmation before running one.
 - Unstage without losing changes
 - Discard changes to one file (destructive)
 - Move commits to the right branch
+- Feature commits already pushed to develop
 - Find a lost commit or branch
 - Abort a rebase or merge in progress
 - Recover a dropped stash
@@ -88,7 +89,7 @@ git reset HEAD~2
 To remove a single commit from the middle of a local-only branch, rebuild the branch:
 
 ```bash
-git switch -c feature/topic-clean origin/develop
+git switch -c feature/topic-clean --no-track origin/develop
 git cherry-pick <keep-sha> <keep-sha>
 ```
 
@@ -120,11 +121,30 @@ git switch feature/<topic>
 Committed on the wrong feature branch:
 
 ```bash
-git switch -c feature/<right-topic> origin/develop
+git switch -c feature/<right-topic> --no-track origin/develop
 git cherry-pick <sha>
 git switch feature/<wrong-topic>
 git reset --hard HEAD~1                # destructive: confirm first
 ```
+
+## Feature commits already pushed to develop
+
+The commits are now on a branch other people pull, so hard rule 4 applies: do not force-push
+`develop` back. Undo it forward, as a reviewable change.
+
+```bash
+git fetch origin
+git switch -c fix/revert-<topic> --no-track origin/develop
+git revert --no-commit <oldest-sha>^..<newest-sha>
+git commit -m "fix(<scope>): back out <topic> from develop"
+```
+
+PR that into `develop`, and open the original feature branch as its own PR afterwards. A merge
+commit inside the range needs `git revert -m 1 <sha>` instead.
+
+Rewinding `develop` with `--force-with-lease` is only on the table when the push is minutes old and
+every other developer has confirmed they have not fetched it. That is the developer's call to make,
+never yours.
 
 ## Find a lost commit or branch
 

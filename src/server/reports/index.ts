@@ -9,15 +9,16 @@ export {
 } from "./reports";
 export {
   normalizeReportExportTitle,
+  parseReportExportLocale,
   parseReportMode,
   parseReportSearchParams,
+  reportExportFieldsFromFilters,
   reportSearchParamsFromFormData,
+  resolveReportExportTitle,
 } from "./report-filter-params";
-export {
-  buildReportExportTypstSource,
-  generateReportPdfExport,
-  ReportPdfExportError,
-} from "./report-pdf";
+export { generateReportPdfExport, ReportPdfExportError } from "./report-pdf";
+export { buildReportPdfPayload, normalizeReportPdfTitle } from "./report-pdf-payload";
+export { ReportLinePersistenceError, saveAdminReportLineEdits } from "./report-line-persistence";
 export type {
   BuildReportSnapshotInput,
   NormalizedReportFilters,
@@ -33,6 +34,7 @@ export type {
   ReportInternalGroup,
   ReportInternalLine,
   ReportInternalSnapshot,
+  ReportLineBase,
   ReportLineMember,
   ReportLineProject,
   ReportLineRate,
@@ -55,7 +57,20 @@ export type {
   ReportPdfExportFilters,
 } from "./report-pdf";
 export type {
+  ReportPdfCostFreeLine,
+  ReportPdfGroup,
+  ReportPdfInternalLine,
+  ReportPdfLabels,
+  ReportPdfPayload,
+  ReportPdfTranslator,
+} from "./report-pdf-payload";
+export type {
+  ReportLinePersistenceRequestMetadata,
+  SaveAdminReportLineEditsInput,
+} from "./report-line-persistence";
+export type {
   ParsedReportSearchParams,
+  ReportExportFields,
   ReportPeriodMode,
   ReportSearchParams,
 } from "./report-filter-params";

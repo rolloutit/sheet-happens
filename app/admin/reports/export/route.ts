@@ -1,13 +1,17 @@
 import { NextResponse } from "next/server";
+import { getTranslations } from "next-intl/server";
 
+import { applyReportLineEdits, parseReportLineEdits } from "@/src/lib/report-line-edits";
+import { isDurationDisplayFormat } from "@/src/lib/formatting";
 import { requireAdminAppMember } from "@/src/server/auth/app-access";
 import {
   generateReportPdfExport,
   getTimeEntryReportSnapshot,
-  normalizeReportExportTitle,
+  parseReportExportLocale,
   parseReportMode,
   parseReportSearchParams,
   reportSearchParamsFromFormData,
+  resolveReportExportTitle,
   type ReportPdfExportFilters,
 } from "@/src/server/reports";
 import { formatDateOnly } from "@/src/server/time-tracking";
@@ -18,10 +22,17 @@ export const runtime = "nodejs";
 export async function POST(request: Request) {
   const { member: admin } = await requireAdminAppMember("/admin/reports");
   const formData = await request.formData();
-  const locale = parseLocale(formString(formData, "locale"));
+  const locale = parseReportExportLocale(formData.get("locale"));
   const mode = parseReportMode(formData.get("mode"));
+  const requestedDurationDisplayFormat = formData.get("durationDisplayFormat");
+  const durationDisplayFormat = isDurationDisplayFormat(requestedDurationDisplayFormat)
+    ? requestedDurationDisplayFormat
+    : admin.durationDisplayFormat;
   const filters = parseReportSearchParams(reportSearchParamsFromFormData(formData), admin.timezone);
-  const snapshot = await getTimeEntryReportSnapshot({
+  // The export locale is chosen in the dialog, not taken from the request cookie, so it is passed
+  // explicitly and the interface language never decides what the document says.
+  const t = await getTranslations({ locale, namespace: "AdminReports" });
+  const sourceSnapshot = await getTimeEntryReportSnapshot({
     periodStart: filters.periodStart,
     periodEnd: filters.periodEnd,
     view: filters.view,
@@ -30,9 +41,11 @@ export async function POST(request: Request) {
     projectGroupId: filters.projectGroupId,
     memberId: filters.memberId,
   });
-  const title =
-    normalizeReportExportTitle(formData.get("title")) ||
-    `Time report ${snapshot.period.start} ${snapshot.period.end}`;
+  const snapshot = applyReportLineEdits(
+    sourceSnapshot,
+    parseReportLineEdits(formData.get("lineEdits")),
+  );
+  const title = resolveReportExportTitle(formData.get("title"), snapshot.period);
 
   if (snapshot.lines.length === 0) {
     return new Response("No tracked time matches these export filters.", {
@@ -50,7 +63,9 @@ export async function POST(request: Request) {
       locale,
       timezone: admin.timezone,
       generatedByMemberId: admin.id,
-      filters: buildExportFilters(filters),
+      durationDisplayFormat,
+      filters: buildExportFilters(filters, durationDisplayFormat),
+      t,
       requestMetadata: {
         ipAddress: request.headers.get("x-forwarded-for"),
         userAgent: request.headers.get("user-agent"),
@@ -80,6 +95,7 @@ export async function POST(request: Request) {
 
 function buildExportFilters(
   filters: ReturnType<typeof parseReportSearchParams>,
+  durationDisplayFormat: ReportPdfExportFilters["durationDisplayFormat"],
 ): ReportPdfExportFilters {
   return {
     period: filters.period,
@@ -89,17 +105,8 @@ function buildExportFilters(
     projectId: filters.projectId,
     projectGroupId: filters.projectGroupId,
     memberId: filters.memberId,
+    durationDisplayFormat,
   };
-}
-
-function parseLocale(value: string | undefined) {
-  return value === "en" ? "en" : "hu";
-}
-
-function formString(formData: FormData, key: string) {
-  const value = formData.get(key);
-
-  return typeof value === "string" ? value : undefined;
 }
 
 function sanitizeHeaderFilename(filename: string) {

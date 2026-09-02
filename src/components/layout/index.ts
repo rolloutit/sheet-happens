@@ -1,5 +1,6 @@
 export { AppShell } from "./AppShell";
-export type { AppShellProps } from "./AppShell";
+export type { AppShellProps, AppShellTimer, AppShellTimerActionResult } from "./AppShell";
+export { Atmosphere } from "./Atmosphere";
 export {
   AuthButton,
   AuthField,
@@ -20,6 +21,8 @@ export type {
 } from "./AuthForm";
 export { AuthShell } from "./AuthShell";
 export type { AuthShellMood, AuthShellProps } from "./AuthShell";
+export { BrandMark } from "./BrandMark";
+export type { BrandMarkProps, BrandMarkTone } from "./BrandMark";
 export { CommandPill } from "./CommandPill";
 export type { CommandPillProps } from "./CommandPill";
 export { CommandPalette } from "./CommandPalette";
@@ -39,7 +42,18 @@ export type {
   NotificationTone,
   ShellNotification,
 } from "./NotificationButton";
+export { RunningTimerPill } from "./RunningTimerPill";
+export type { RunningTimerPillLabels, RunningTimerPillProps } from "./RunningTimerPill";
+export { RunningTimerProvider, useRunningTimer } from "./RunningTimerProvider";
+export type {
+  RunningTimerContextValue,
+  RunningTimerProviderProps,
+  RunningTimerSnapshot,
+  RunningTimerStopResult,
+} from "./RunningTimerProvider";
 export { ThemeProvider, useTheme } from "./ThemeProvider";
-export type { ThemeContextValue, ThemeName, ThemeProviderProps } from "./ThemeProvider";
+export type { ThemeProviderProps, UseThemeResult } from "./ThemeProvider";
+export { ThemeToggle } from "./ThemeToggle";
+export type { ThemeToggleProps } from "./ThemeToggle";
 export { UserMenu } from "./UserMenu";
 export type { UserMenuAction, UserMenuActionTone, UserMenuProps, UserMenuUser } from "./UserMenu";

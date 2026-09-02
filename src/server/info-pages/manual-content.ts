@@ -2,7 +2,7 @@ export type HelpLocale = "en" | "hu";
 export type HelpRole = "ADMIN" | "MEMBER";
 export type HelpProfile = "EMPLOYEE" | "CONTRACTOR";
 
-export type ManualTopicAudience = "all" | "contractor" | "admin";
+export type ManualTopicAudience = "all" | "employee" | "contractor" | "admin";
 
 export type ManualTopic = {
   id: string;
@@ -87,6 +87,37 @@ const manualTopics: Record<HelpLocale, ManualTopic[]> = {
 
         - Missing role, profile, or member status: admin.
         - Wrong personal language, timezone, or security setup: the user can usually fix it in Settings.
+      `,
+    },
+    {
+      id: "my-rates",
+      audience: "all",
+      title: "My rates",
+      summary: "Read-only access to your own central and project-specific rates.",
+      bodyMarkdown: markdown`
+        ## My rates
+
+        Open **My rates** from the account menu in the top-right corner. This page is read-only and never exposes another member's rate.
+
+        ### Central rate
+
+        - Employees and contractors both see their complete central-rate timeline.
+        - The current period is marked explicitly.
+        - Future and previous periods remain visible with their date boundaries and currencies.
+        - If no central rate is configured, ask an administrator to set it.
+
+        ### Contractor project rates
+
+        - Contractors also see their currently assigned projects.
+        - **Project override** means that project's current override replaces the central rate.
+        - **Follows the central rate** means there is no current override for that project.
+        - Employees do not have project-specific rate overrides.
+
+        ### Troubleshooting
+
+        - Wrong amount or currency: ask an administrator to inspect the relevant rate period.
+        - Missing project: ask an administrator to check the project assignment and its validity dates.
+        - Missing current rate: an administrator must add a central rate or a current project override.
       `,
     },
     {
@@ -222,6 +253,36 @@ const manualTopics: Record<HelpLocale, ManualTopic[]> = {
       `,
     },
     {
+      id: "employee-payslips",
+      audience: "employee",
+      title: "Employee payslips",
+      summary: "Private monthly payslip access for employee profiles.",
+      bodyMarkdown: markdown`
+        ## Employee payslips
+
+        Payslips are private monthly PDF documents for employee profiles. They are separate from contractor timesheets and invoices.
+
+        ### View and download
+
+        - Open **Payslips** from the sidebar.
+        - The latest available document is shown first; earlier months remain available below it.
+        - Use Preview to inspect the PDF in the app, or Download to save it.
+        - Every view and download uses a short-lived private link. Do not share the resulting browser URL.
+
+        ### Access rules
+
+        - You can view only your own payslips.
+        - The page is read-only. You cannot upload, replace, or delete a payslip.
+        - Contractor profiles do not have this feature because contractor billing uses the Timesheets workflow instead.
+
+        ### Troubleshooting
+
+        - No payslip for a month: ask payroll or an admin to upload it.
+        - Preview or download fails: refresh once, then ask an admin to check object storage and the audit log.
+        - The document looks incorrect: do not edit it locally; ask an admin to replace the published PDF.
+      `,
+    },
+    {
       id: "settings",
       audience: "all",
       title: "Security settings",
@@ -247,16 +308,19 @@ const manualTopics: Record<HelpLocale, ManualTopic[]> = {
 
         ### Authenticator app and backup codes
 
-        - TOTP authenticator-app verification is the v1 second factor.
+        - Authenticator-app setup is required for admin accounts.
+        - Password, magic-link, and Google sign-in can require a TOTP challenge.
+        - Passkey sign-in satisfies the sign-in challenge without an extra TOTP code.
         - Scan the QR code during setup.
         - Save backup codes when they are generated.
         - Backup codes are one-time recovery codes; do not reuse them.
-        - Admin management screens require authenticator-app setup.
+        - Admin management screens require authenticator-app setup, even when passkey sign-in is used.
 
         ### Personal preferences
 
         - Locale controls the app language where translated text exists.
         - Timezone controls local work dates and day boundaries.
+        - Time display controls whether durations appear as decimal hours or exact hours and minutes. This changes presentation only; stored minutes and calculated amounts do not change.
         - Currency is used as the member default for billing and reporting setup.
 
         ### Troubleshooting
@@ -264,7 +328,78 @@ const manualTopics: Record<HelpLocale, ManualTopic[]> = {
         - Lost authenticator app and backup codes: ask an admin to reset your TOTP setup.
         - Passkey login does not work: try another sign-in method, then check or remove the passkey in Settings.
         - Magic link opens but no member profile is linked: sign in with the email that was activated from the invitation.
-        - Admin tools still blocked: set up authenticator-app verification; a passkey alone is not the v1 admin second factor.
+        - Admin tools still blocked: set up authenticator-app verification first, then passkey sign-in can skip the code prompt.
+      `,
+    },
+    {
+      id: "notifications",
+      audience: "all",
+      title: "Notifications",
+      summary: "In-app workflow updates, reminders, unread state, and notification actions.",
+      bodyMarkdown: markdown`
+        ## Notifications
+
+        The bell in the app header shows the latest notifications for your account. Open **All notifications** for the full paginated history.
+
+        ### Reading notifications
+
+        - An unread count appears on the bell when action is needed.
+        - Opening a notification marks it as read and takes you to the related screen when an action is available.
+        - Use **Mark all as read** in the notification center when no unread items need attention.
+        - The system keeps all unread notifications and the latest 15 notifications you have read.
+
+        ### What can arrive
+
+        - Missing weekly time reminders apply only when an active project has no time and no inactive-week mark.
+        - Contractors receive timesheet decisions, invoice decisions, payment updates, and invoice-upload reminders.
+        - Employees receive a notification when a new or replacement payslip is published.
+        - Members receive a notification when an admin permanently changes one of their time entries.
+        - Admins receive submitted-timesheet and uploaded-invoice review notifications.
+
+        ### Email and in-app delivery
+
+        An administrator controls email and in-app delivery separately for every product notification type. Sign-in, invitation, and password-reset emails are security mechanisms and are not disabled by these product settings.
+
+        ### Troubleshooting
+
+        - No weekly reminder: check that the project assignment is active and that the week has neither logged time nor an inactive marker.
+        - No email but an in-app item exists: ask an admin to check the channel setting, SMTP configuration, and notification dispatcher on the System page.
+        - A notification opens an outdated state: the underlying workflow may already have changed; refresh the target page.
+      `,
+    },
+    {
+      id: "admin-notifications",
+      audience: "admin",
+      title: "Notification administration",
+      summary: "Company schedule, delivery channels, manual reminders, and dispatcher monitoring.",
+      bodyMarkdown: markdown`
+        ## Notification administration
+
+        Open **Settings → Notifications** to configure system-wide product notifications.
+
+        ### Schedule
+
+        - The weekly missing-hours reminder uses the configured company timezone, weekday, and local time.
+        - Invoice reminders start after the configured number of elapsed hours from timesheet approval. The default is 72 hours.
+        - Repeats also use exact elapsed hours. Weekends are included.
+
+        ### Delivery rules
+
+        - Email and in-app channels can be enabled independently for every notification type.
+        - Turning both channels off disables that product notification type.
+        - Authentication emails remain independent of these settings.
+
+        ### Manual reminders
+
+        The admin dashboard lists active member/project assignments that have no time and no inactive-week mark. **Send reminder** rechecks the current state before delivery and refuses stale rows that are no longer flagged.
+
+        ### Operations
+
+        - The application runs the notification dispatcher sequentially every 15 seconds.
+        - A database lock prevents multiple application instances from dispatching concurrently.
+        - The System page shows the latest dispatcher status and warns when it has never run or is stale.
+        - Failed email deliveries retry with increasing delays, up to five attempts.
+        - Setting changes and manual reminders are written to the audit log.
       `,
     },
     {
@@ -315,6 +450,39 @@ const manualTopics: Record<HelpLocale, ManualTopic[]> = {
         - User logs in but sees no linked profile: confirm the auth email matches the member email and the invitation was activated.
         - User cannot access admin pages: confirm role is Admin and TOTP is set up.
         - Profile transition seems missing: check scheduled transition date and audit rows.
+      `,
+    },
+    {
+      id: "admin-payslips",
+      audience: "admin",
+      title: "Admin payslip management",
+      summary: "Monthly employee PDF upload, replacement, deletion, and access auditing.",
+      bodyMarkdown: markdown`
+        ## Admin payslip management
+
+        Payslips are private employee documents. They are not calculated from time entries and are independent from contractor timesheets and invoices.
+
+        ### Upload a monthly payslip
+
+        - Open **Payslips** in the Admin navigation.
+        - Select an employee profile and the payroll month.
+        - Upload a PDF no larger than 10 MB.
+        - The month overview lists active employees still missing a document; click a name to prefill an upload.
+        - One current payslip exists for each employee and month.
+
+        ### Replace or delete
+
+        - Use Replace on an existing row when payroll provides a corrected PDF.
+        - The replacement becomes the current document for that employee/month; the old document is removed from private storage.
+        - Use Delete only when the current document must be withdrawn. The month can then be uploaded again.
+        - Upload, replacement, deletion, preview, and download are recorded in the audit log.
+
+        ### Find records and investigate issues
+
+        - Search by employee name or email and filter by employee or month.
+        - Use pagination for older records; filters run on the server.
+        - An inactive employee can remain in historical records, but the monthly missing overview is based on active employees.
+        - If upload fails, check the System page for object-storage health and configuration.
       `,
     },
     {
@@ -604,6 +772,37 @@ const manualTopics: Record<HelpLocale, ManualTopic[]> = {
       `,
     },
     {
+      id: "my-rates",
+      audience: "all",
+      title: "Saját óradíjaim",
+      summary: "Csak olvasható hozzáférés a saját központi és projektspecifikus óradíjakhoz.",
+      bodyMarkdown: markdown`
+        ## Saját óradíjaim
+
+        A jobb felső sarokban lévő fiókmenüből nyisd meg a **Saját óradíjaim** oldalt. Az oldal csak olvasható, és soha nem mutatja más tag óradíját.
+
+        ### Központi óradíj
+
+        - Az alkalmazottak és a kontraktorok is látják a központi óradíjuk teljes idővonalát.
+        - A jelenlegi időszak külön jelölést kap.
+        - A jövőbeli és korábbi időszakok a dátumhatárokkal és pénznemmel együtt láthatók maradnak.
+        - Ha nincs központi óradíj, kérd meg az admint a beállítására.
+
+        ### Kontraktori projektóradíjak
+
+        - A kontraktorok az aktuálisan hozzájuk rendelt projekteket is látják.
+        - A **Projektfelülírás** azt jelenti, hogy az adott projekt jelenlegi felülírása helyettesíti a központi óradíjat.
+        - **A központi óradíjat követi** azt jelenti, hogy a projekthez nincs jelenlegi felülírás.
+        - Az alkalmazottaknak nincs projektspecifikus óradíj-felülírásuk.
+
+        ### Hibaelhárítás
+
+        - Hibás összeg vagy pénznem: kérd meg az admint a vonatkozó óradíjidőszak ellenőrzésére.
+        - Hiányzó projekt: kérd meg az admint a projekthozzárendelés és az érvényességi dátumok ellenőrzésére.
+        - Hiányzó jelenlegi óradíj: az adminnak központi óradíjat vagy jelenlegi projektfelülírást kell beállítania.
+      `,
+    },
+    {
       id: "time-tracking",
       audience: "all",
       title: "Időkövetés",
@@ -736,6 +935,36 @@ const manualTopics: Record<HelpLocale, ManualTopic[]> = {
       `,
     },
     {
+      id: "employee-payslips",
+      audience: "employee",
+      title: "Alkalmazotti bérjegyzékek",
+      summary: "Privát havi bérjegyzék-elérés alkalmazotti profilhoz.",
+      bodyMarkdown: markdown`
+        ## Alkalmazotti bérjegyzékek
+
+        A bérjegyzék alkalmazotti profilhoz tartozó privát havi PDF dokumentum. Nem része a kontraktori timesheet- és számlafolyamatnak.
+
+        ### Megtekintés és letöltés
+
+        - Nyisd meg a **Bérjegyzékek** oldalt az oldalsávból.
+        - A legfrissebb elérhető dokumentum látszik először, alatta a korábbi hónapok.
+        - Az Előnézettel az appban nézheted meg a PDF-et, a Letöltéssel mentheted le.
+        - Minden megtekintés és letöltés rövid élettartamú privát linket használ. A megnyíló böngésző URL-t ne oszd meg.
+
+        ### Hozzáférési szabályok
+
+        - Csak a saját bérjegyzékeidet tekintheted meg.
+        - Az oldal csak olvasható. Nem tölthetsz fel, cserélhetsz vagy törölhetsz bérjegyzéket.
+        - Kontraktori profilnál ez a funkció nem érhető el, mert a kontraktori elszámolás a Timesheet folyamatban történik.
+
+        ### Hibaelhárítás
+
+        - Hiányzik egy havi bérjegyzék: kérd a payroll vagy az admin segítségét a feltöltéshez.
+        - Nem működik az előnézet vagy letöltés: egyszer frissíts, majd kérd az admint az objektumtár és audit napló ellenőrzésére.
+        - Hibásnak tűnik a dokumentum: ne szerkeszd helyben; kérd az admint a közzétett PDF cseréjére.
+      `,
+    },
+    {
       id: "settings",
       audience: "all",
       title: "Biztonsági beállítások",
@@ -761,16 +990,19 @@ const manualTopics: Record<HelpLocale, ManualTopic[]> = {
 
         ### Authenticator app és tartalék kódok
 
-        - A v1 második faktor az authenticator-app alapú TOTP.
+        - Admin fiókoknál kötelező az authenticator alkalmazás beállítása.
+        - Jelszavas, mágikus linkes és Google belépésnél szükség lehet TOTP ellenőrzésre.
+        - A passkey belépés külön TOTP kód nélkül teljesíti a belépési ellenőrzést.
         - Beállításkor olvasd be a QR kódot.
         - A generált tartalék kódokat mentsd el.
         - A tartalék kódok egyszer használatos helyreállítási kódok.
-        - Az admin kezelőfelületekhez authenticator-app beállítás szükséges.
+        - Az admin kezelőfelületekhez authenticator-app beállítás szükséges akkor is, ha passkey-vel lépsz be.
 
         ### Személyes preferenciák
 
         - A nyelv az app lefordított szövegeit szabályozza.
         - Az időzóna határozza meg a helyi munkadátumot és napváltást.
+        - Az időtartam-megjelenítésnél tizedes órát vagy pontos óra-perc formátumot választhatsz. Ez csak a megjelenítést módosítja; a tárolt percek és a számított összegek nem változnak.
         - A pénznem a tag alapértelmezett billing és riport beállításaiban használt érték.
 
         ### Hibaelhárítás
@@ -778,7 +1010,79 @@ const manualTopics: Record<HelpLocale, ManualTopic[]> = {
         - Elveszett authenticator app és tartalék kódok: kérj admin TOTP resetet.
         - Passkey belépés nem működik: lépj be másik módszerrel, majd ellenőrizd vagy töröld a passkey-t a Beállításokban.
         - Mágikus link után nincs kapcsolt tagprofil: azzal az email címmel lépj be, amellyel a meghívót aktiváltad.
-        - Admin eszközök továbbra is blokkoltak: állíts be authenticator-app ellenőrzést; a passkey önmagában nem v1 admin második faktor.
+        - Admin eszközök továbbra is blokkoltak: először állíts be authenticator-app ellenőrzést, utána a passkey belépés átugorhatja a kódkérést.
+      `,
+    },
+    {
+      id: "notifications",
+      audience: "all",
+      title: "Értesítések",
+      summary:
+        "Appon belüli folyamatfrissítések, emlékeztetők, olvasatlan állapot és kapcsolódó műveletek.",
+      bodyMarkdown: markdown`
+        ## Értesítések
+
+        Az app fejlécében lévő csengő a fiókod legújabb értesítéseit mutatja. A teljes, lapozható előzményhez nyisd meg az **Összes értesítés** oldalt.
+
+        ### Értesítések olvasása
+
+        - A csengőn olvasatlan számláló jelenik meg, ha teendőd van.
+        - Az értesítés megnyitása olvasottnak jelöli azt, és kapcsolódó művelet esetén a megfelelő képernyőre visz.
+        - Ha nincs több teendő, az értesítési központban az **Összes olvasottnak jelölése** használható.
+        - A rendszer minden olvasatlan és a legutóbbi 15 olvasott értesítést megtartja.
+
+        ### Milyen értesítés érkezhet
+
+        - A hiányzó heti idő emlékeztető csak aktív projektre, időbejegyzés és inaktív heti jelölés hiányában érkezik.
+        - A kontraktor timesheet- és számladöntésekről, kifizetésről és hiányzó számlafeltöltésről kap értesítést.
+        - Az alkalmazott új vagy lecserélt bérjegyzék közzétételekor kap értesítést.
+        - A tag értesítést kap, ha egy admin tartósan módosítja valamelyik időbejegyzését.
+        - Az admin beküldött timesheetről és ellenőrzésre váró feltöltött számláról kap értesítést.
+
+        ### Email és appon belüli kézbesítés
+
+        Az admin minden termékértesítésnél külön kapcsolhatja az email és az appon belüli csatornát. A belépési, meghívó- és jelszó-helyreállító emailek biztonsági mechanizmusok, ezért ezektől a beállításoktól függetlenek.
+
+        ### Hibaelhárítás
+
+        - Nincs heti emlékeztető: ellenőrizd az aktív projekt-hozzárendelést, valamint hogy nincs-e időbejegyzés vagy inaktív heti jelölés.
+        - Van appon belüli értesítés, de nincs email: kérd az admint a csatornabeállítás, SMTP és a Rendszer oldalon az értesítésküldő folyamat ellenőrzésére.
+        - Az értesítés már nem aktuális állapotot nyit meg: a folyamat időközben változhatott; frissítsd a céloldalt.
+      `,
+    },
+    {
+      id: "admin-notifications",
+      audience: "admin",
+      title: "Értesítések adminisztrációja",
+      summary: "Céges ütemezés, kézbesítési csatornák, kézi emlékeztetők és folyamatfigyelés.",
+      bodyMarkdown: markdown`
+        ## Értesítések adminisztrációja
+
+        A rendszerszintű termékértesítéseket a **Beállítások → Értesítések** oldalon konfigurálhatod.
+
+        ### Ütemezés
+
+        - A hiányzó heti idő emlékeztető a beállított céges időzónát, hétköznapot és helyi időpontot használja.
+        - A számlaemlékeztető a timesheet jóváhagyásától számított beállított eltelt óra után indul. Az alapérték 72 óra.
+        - Az ismétlési időköz is pontosan eltelt órát jelent, a hétvégék is beleszámítanak.
+
+        ### Kézbesítési szabályok
+
+        - Minden értesítéstípusnál külön kapcsolható az email és az appon belüli csatorna.
+        - Mindkét csatorna kikapcsolása letiltja az adott termékértesítést.
+        - A hitelesítési emailek ettől függetlenek maradnak.
+
+        ### Kézi emlékeztetők
+
+        Az admin dashboard azokat az aktív tag/projekt párokat jelzi, ahol nincs idő és inaktív heti jelölés. Az **Emlékeztető küldése** kézbesítés előtt újra ellenőrzi az aktuális állapotot, és elutasítja a már nem flagged sort.
+
+        ### Üzemeltetés
+
+        - Az alkalmazás 15 másodpercenként, egymás után futtatja az értesítésküldő folyamatot.
+        - Egy adatbáziszár megakadályozza, hogy több alkalmazáspéldány egyszerre küldjön értesítést.
+        - A Rendszer oldal mutatja a legutóbbi futás állapotát, és figyelmeztet, ha még nem futott vagy elavult.
+        - A sikertelen email kézbesítések növekvő késleltetéssel, legfeljebb ötször próbálkoznak újra.
+        - A beállításmódosítások és kézi emlékeztetők bekerülnek az audit naplóba.
       `,
     },
     {
@@ -829,6 +1133,39 @@ const manualTopics: Record<HelpLocale, ManualTopic[]> = {
         - Belép, de nincs kapcsolt profil: ellenőrizd, hogy az auth email egyezik-e a tag emailjével, és aktiválták-e a meghívót.
         - Nem fér hozzá admin oldalakhoz: ellenőrizd, hogy Admin szerepköre van-e és be van-e állítva a TOTP.
         - Profilváltás nem látszik: ellenőrizd az ütemezett dátumot és az audit sorokat.
+      `,
+    },
+    {
+      id: "admin-payslips",
+      audience: "admin",
+      title: "Admin bérjegyzék kezelés",
+      summary: "Havi alkalmazotti PDF feltöltés, csere, törlés és hozzáférés-naplózás.",
+      bodyMarkdown: markdown`
+        ## Admin bérjegyzék kezelés
+
+        A bérjegyzék privát alkalmazotti dokumentum. Nem időbejegyzésekből számolódik, és független a kontraktori timesheetektől és számláktól.
+
+        ### Havi bérjegyzék feltöltése
+
+        - Nyisd meg az Admin navigáció **Bérjegyzékek** oldalát.
+        - Válassz alkalmazotti profilt és payroll hónapot.
+        - Legfeljebb 10 MB méretű PDF-et tölts fel.
+        - A havi áttekintés azokat az aktív alkalmazottakat mutatja, akiknek még hiányzik a dokumentum; a névre kattintva előre kitöltődik a feltöltés.
+        - Egy alkalmazotthoz és hónaphoz egy aktuális bérjegyzék tartozik.
+
+        ### Csere és törlés
+
+        - Javított PDF-hez használd a meglévő sor Csere műveletét.
+        - A csere az adott alkalmazott/hónap aktuális dokumentuma lesz; a korábbi PDF a privát tárból törlődik.
+        - Törlést csak akkor használj, ha az aktuális dokumentumot vissza kell vonni. A hónap később újra feltölthető.
+        - Feltöltés, csere, törlés, előnézet és letöltés audit naplóbejegyzést hoz létre.
+
+        ### Keresés és hibakezelés
+
+        - Keress név vagy email alapján, és szűrj alkalmazottra vagy hónapra.
+        - Régebbi rekordoknál lapozz; a szűrés a szerveren fut.
+        - Az inaktív alkalmazott a történeti listában maradhat, de a havi hiánylista csak aktív alkalmazottakból készül.
+        - Feltöltési hiba esetén a Rendszer oldalon ellenőrizd az objektumtár állapotát és konfigurációját.
       `,
     },
     {
@@ -1109,6 +1446,7 @@ export function resolveHelpLocale(locale: string): HelpLocale {
 function canAccessManualTopic(topic: ManualTopic, input: ManualAccessInput) {
   if (input.role === "ADMIN") return true;
   if (topic.audience === "all") return true;
+  if (topic.audience === "employee") return input.profile === "EMPLOYEE";
   if (topic.audience === "contractor") return input.profile === "CONTRACTOR";
   return false;
 }

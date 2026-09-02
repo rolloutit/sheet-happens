@@ -3,6 +3,22 @@
     "name": "Sheet Happens",
     "company": "Rollout IT"
   },
+  "Pickers": {
+    "search": "Keresés",
+    "searchPlaceholder": "Keresés...",
+    "noResults": "Nincs találat",
+    "clear": "Törlés",
+    "done": "Kész",
+    "today": "Ma",
+    "thisMonth": "Aktuális hónap",
+    "calendar": "Naptár",
+    "selectMonth": "Hónap kiválasztása",
+    "rangeEnd": "Záró dátum",
+    "previousMonth": "Előző hónap",
+    "nextMonth": "Következő hónap",
+    "previousYear": "Előző év",
+    "nextYear": "Következő év"
+  },
   "AppShell": {
     "brand": {
       "subtitle": "Rollout IT · belső"
@@ -19,7 +35,8 @@
       "label": "Ugrás bárhová..."
     },
     "scope": {
-      "all": "Mindenki"
+      "all": "Mindenki",
+      "profile": "Profil"
     },
     "roles": {
       "employee": "Alkalmazott",
@@ -34,6 +51,7 @@
       "dashboard": "Irányítópult",
       "time": "Időkövetés",
       "timesheets": "Timesheet",
+      "payslips": "Bérjegyzékek",
       "review": "Jóváhagyás",
       "reports": "Riportok",
       "projects": "Projektek",
@@ -63,12 +81,15 @@
     },
     "userMenu": {
       "label": "Felhasználói menü",
-      "profile": "Profil",
-      "settings": "Beállítások",
+      "myRates": "Saját óradíjaim",
+      "profileAndSettings": "Profil és beállítások",
       "signOut": "Kijelentkezés"
     },
     "timer": {
-      "stop": "Időmérő leállítása"
+      "stop": "Időmérő leállítása",
+      "open": "Időkövetés megnyitása",
+      "running": "Az időmérő fut",
+      "dismissError": "Bezárás"
     }
   },
   "AuthShell": {
@@ -76,8 +97,6 @@
     "panelFooter": "Időkövetés, timesheet és számlaellenőrzés — egy helyen.",
     "panelTip": "Tipp: passkey-vel két másodperc a belépés.",
     "language": "Nyelv",
-    "themeDark": "Sötét téma",
-    "themeLight": "Világos téma",
     "moods": {
       "back": {
         "title": "Üdv újra.",
@@ -96,6 +115,12 @@
         "subtitle": "Csak hogy biztosan te vagy az."
       }
     }
+  },
+  "ThemeToggle": {
+    "label": "Téma",
+    "light": "Világos",
+    "dark": "Sötét",
+    "system": "Rendszer"
   },
   "Login": {
     "brandSubtitle": "Rollout IT · belső",
@@ -137,6 +162,8 @@
       "passkeyIncomplete": "A passkey bejelentkezés nem fejeződött be.",
       "passwordRequired": "A jelszó megadása kötelező.",
       "emailPasswordIncorrect": "Az email vagy a jelszó hibás.",
+      "passwordSignInRateLimited": "Túl sok sikertelen jelszavas bejelentkezési próbálkozás történt. Próbáld újra később.",
+      "rateLimited": "Túl sok kérés érkezett. Próbáld újra később.",
       "passwordResetSendFailed": "Nem sikerült elküldeni a jelszó-visszaállító emailt.",
       "googleStartFailed": "Nem sikerült elindítani a Google bejelentkezést.",
       "emailRequired": "Az email megadása kötelező.",
@@ -357,18 +384,247 @@
     }
   },
   "Dashboard": {
-    "eyebrow": "Kezdőlap",
+    "eyebrow": "Mindenki",
     "title": "Irányítópult",
-    "subtitle": "Még nincs implementálva.",
-    "placeholder": {
-      "title": "Elérhető gyorslinkek",
-      "description": "Ezek a linkek használhatók, amíg a dashboard elkészül."
+    "greeting": "Szia, {name}!",
+    "member": {
+      "subtitle": "{status} · {month} · {week}",
+      "status": {
+        "no_projects": "Nincs aktív projekt",
+        "not_started": "Nincs rögzített idő",
+        "tracked": "Van rögzített idő",
+        "missing_rates": "Hiányzó óradíj"
+      },
+      "projectBreakdown": {
+        "title": "Havi munka",
+        "heading": "Projekt bontás",
+        "description": "Saját rögzített idő és belső költség a saját óradíj-időszakok alapján.",
+        "empty": "Nincs rögzített idő a kiválasztott hónapban.",
+        "mixedRates": "Vegyes óradíj",
+        "noRate": "Nincs óradíj",
+        "missingRates": "{count} bejegyzéshez nincs óradíj",
+        "table": {
+          "project": "Projekt",
+          "hours": "Óra",
+          "rate": "Óradíj",
+          "cost": "Belső költség",
+          "entries": "Bejegyzés"
+        }
+      },
+      "statusPanel": {
+        "title": "Havi státusz",
+        "current": "Aktuális",
+        "no_projects": "Erre a hónapra jelenleg nincs elvárt aktív projekt-hozzárendelés.",
+        "not_started": "Van aktív projekt, de ebben a hónapban még nincs rögzített idő.",
+        "tracked": "Ebben a hónapban van rögzített idő.",
+        "missing_rates": "Néhány rögzített bejegyzés dátumára nincs érvényes alkalmazotti óradíj.",
+        "totalCost": "Belső költség",
+        "missingRates": "Hiányzó óradíjas bejegyzés"
+      }
     },
-    "actions": {
-      "time": "Időkövetés megnyitása",
-      "settings": "Beállítások megnyitása",
-      "people": "Emberek megnyitása",
-      "projects": "Projektek megnyitása"
+    "contractor": {
+      "subtitle": "{status} · {month}",
+      "stepperTitle": "Havi timesheet",
+      "stepperAriaLabel": "Havi timesheet folyamat",
+      "stepper": {
+        "create": "Összeállítás",
+        "submit": "Beküldés",
+        "approve": "Jóváhagyás",
+        "invoice": "Számla",
+        "paid": "Kifizetés"
+      },
+      "stepperLocked": {
+        "submit": "Beküldés előtt ellenőrizd az összeállított hónapot.",
+        "approve": "Ez a lépés beküldés után válik elérhetővé, és egy admin végzi el.",
+        "invoice": "A számlafeltöltés admin jóváhagyás után válik elérhetővé.",
+        "paid": "Ezt a lépést egy admin zárja le a számla elfogadása és kifizetése után."
+      },
+      "nextAction": {
+        "eyebrow": "Következő teendő",
+        "record_time": {
+          "title": "Rögzíts időt erre a hónapra",
+          "description": "A kiválasztott hónapra még nincs rögzített idő.",
+          "cta": "Időkövetés megnyitása"
+        },
+        "resolve_rates": {
+          "title": "Kérd az admin segítségét az óradíjakhoz",
+          "description": "A hónap nem küldhető be, amíg az admin nem javítja a hiányzó vagy vegyes óradíjakat.",
+          "cta": "Timesheet részletek"
+        },
+        "review_and_submit": {
+          "title": "Ellenőrizd és küldd be a timesheetet",
+          "description": "A rögzített idő készen áll az átnézésre és a jóváhagyásra küldésre.",
+          "cta": "Timesheet ellenőrzése"
+        },
+        "correct_timesheet": {
+          "title": "Javítsd és küldd be újra a timesheetet",
+          "description": "Az admin visszaküldte a timesheetet. Nézd át a visszajelzést, javítsd a bejegyzéseket, majd küldd be újra.",
+          "cta": "Timesheet javítása"
+        },
+        "awaiting_approval": {
+          "title": "Admin jóváhagyásra vár",
+          "description": "A beküldött timesheet az admin ellenőrzése alatt zárolt.",
+          "cta": "Timesheet megtekintése"
+        },
+        "upload_invoice": {
+          "title": "Töltsd fel a számlát",
+          "description": "A timesheet jóváhagyott. Töltsd fel a jóváhagyott összeghez tartozó számla PDF-et.",
+          "cta": "Számla feltöltése"
+        },
+        "upload_cancellation_invoice": {
+          "title": "Töltsd fel a sztornó számlát",
+          "description": "Az előző számla elutasított. A helyesbítő számla kiállítása előtt töltsd fel az előző negatív sztornó számláját.",
+          "cta": "Sztornó számla feltöltése"
+        },
+        "upload_replacement_invoice": {
+          "title": "Töltsd fel a javított helyettesítő számlát",
+          "description": "A sztornó számla rögzítve van. Most töltsd fel a javított helyettesítő számlát.",
+          "cta": "Helyettesítő számla feltöltése"
+        },
+        "review_invoice_rejection": {
+          "title": "Nézd át az elutasított számlát",
+          "description": "A korrekciós folyamat folytatása előtt ezt a számlát át kell nézni.",
+          "cta": "Számlarészletek megtekintése"
+        },
+        "awaiting_invoice_review": {
+          "title": "Számlaellenőrzésre vár",
+          "description": "A számla feltöltve, és admin ellenőrzésre vár.",
+          "cta": "Számla megtekintése"
+        },
+        "awaiting_payment": {
+          "title": "Kifizetésre vár",
+          "description": "A számla elfogadott, és arra vár, hogy egy admin kifizetettnek jelölje.",
+          "cta": "Számla megtekintése"
+        },
+        "complete": {
+          "title": "A hónap lezárva",
+          "description": "A timesheet és a számla kifizetett. A havi folyamat lezárult.",
+          "cta": "Timesheet megtekintése"
+        }
+      }
+    },
+    "stats": {
+      "activeProjects": "Aktív projekt",
+      "hours": "Ledolgozott óra",
+      "averageWeek": "Heti átlag",
+      "internalCost": "Belső költség",
+      "expectedAmount": "Várható összeg",
+      "mixedCurrency": "Vegyes deviza",
+      "missingRate": "Hiányzó óradíj",
+      "noAmount": "Nincs összeg"
+    },
+    "weekly": {
+      "title": "Heti checklist",
+      "question": "Rögzítettél időt minden aktív projekten ezen a héten?",
+      "log": "Rögzítés",
+      "logged": "Rögzítve",
+      "inactive": "Inaktív",
+      "missing": "Hiányzik",
+      "empty": "Nincs aktív projekt erre a hétre.",
+      "allClear": "Minden teljesítve",
+      "allClearDescription": "Minden aktív projekten van rögzített idő vagy inaktív heti jelölés."
+    },
+    "admin": {
+      "subtitle": "{submitted} jóváhagyásra vár · {accepted} kifizetésre vár",
+      "priority": {
+        "submitted": "Jóváhagyásra vár",
+        "approved": "Jóváhagyva, számlára vár",
+        "invoiced": "Számla ellenőrzésre vár",
+        "accepted": "Kifizetésre vár",
+        "missing": "Hiányzó timesheet"
+      },
+      "flagged": {
+        "title": "Flagged felhasználók",
+        "description": "Van aktív projektjük, de nincs órájuk ezen a héten és nincs inaktív jelölés.",
+        "name": "Név",
+        "project": "Aktív projekt",
+        "lastLogged": "Utolsó óra",
+        "empty": "Nincs flagged felhasználó az aktuális hétre.",
+        "never": "Soha",
+        "lastWeek": "A múlt héten",
+        "twoWeeksAgo": "2 hete",
+        "viewDrilldown": "Részletek",
+        "remind": "Emlékeztető küldése",
+        "reminderSent": "Emlékeztető elküldve",
+        "reminderErrors": {
+          "member_unavailable": "A tag már nem aktív.",
+          "not_flagged": "A tagnak már nincs szüksége erre az emlékeztetőre.",
+          "delivery_disabled": "A heti emlékeztetők küldése ki van kapcsolva az értesítési beállításokban.",
+          "unauthorized": "Emlékeztetőt csak aktív admin küldhet.",
+          "failed": "Nem sikerült elküldeni az emlékeztetőt."
+        }
+      },
+      "drilldown": {
+        "eyebrow": "Részletezés",
+        "openFullList": "Teljes lista",
+        "openReport": "Riport megnyitása",
+        "close": "Bezárás",
+        "review": "Ellenőrzés",
+        "empty": "Nincs elem ebben a listában.",
+        "limited": "{shown} / {total} megjelenítve. A teljes lista külön megnyitható.",
+        "notAvailable": "Nincs adat",
+        "activeProjectCount": "{count} aktív",
+        "submitted": {
+          "title": "{count} jóváhagyásra váró timesheet",
+          "description": "{month} hónapban beküldött, admin jóváhagyásra váró timesheetek."
+        },
+        "approved": {
+          "title": "{count} jóváhagyott, számlára váró timesheet",
+          "description": "{month} hónapban jóváhagyott timesheetek, amelyekhez a kontraktornak még számlát kell feltöltenie."
+        },
+        "invoiced": {
+          "title": "{count} ellenőrzésre váró számla",
+          "description": "{month} hónapban feltöltött számlával rendelkező timesheetek, amelyek számlaellenőrzésre várnak."
+        },
+        "accepted": {
+          "title": "{count} kifizetésre váró elfogadott számla",
+          "description": "{month} hónapban elfogadott számlák, amelyek kifizetés jelölésére várnak."
+        },
+        "missing": {
+          "title": "{count} hiányzó timesheet",
+          "description": "Kontraktorok, akiktől {month} hónapra timesheet várható, de még nincs timesheetjük."
+        },
+        "flagged": {
+          "title": "{count} flagged tag/projekt pár",
+          "description": "Aktív tag/projekt hozzárendelések rögzített idő nélkül erre a hétre: {week}; inaktív heti jelölés sincs."
+        },
+        "table": {
+          "contractor": "Kontraktor",
+          "month": "Hónap",
+          "status": "Státusz",
+          "hours": "Óra",
+          "amount": "Összeg",
+          "updated": "Frissítve",
+          "activeProjects": "Aktív projektek",
+          "lastLogged": "Utolsó óra",
+          "action": "Művelet"
+        }
+      },
+      "status": {
+        "title": "Idő- és számlázáskövetés",
+        "caption": "havi timesheet állapot",
+        "segment": {
+          "submitted": "Beküldve",
+          "rejected": "Elutasítva",
+          "approved": "Jóváhagyva",
+          "invoiced": "Számla feltöltve",
+          "invoice_rejected": "Számla elutasítva",
+          "accepted": "Kifizetésre vár",
+          "paid": "Kifizetve",
+          "missing": "Hiányzó"
+        }
+      }
+    },
+    "timesheetStatus": {
+      "not_created": "Nincs létrehozva",
+      "submitted": "Beküldve",
+      "rejected": "Elutasítva",
+      "approved": "Jóváhagyva",
+      "invoiced": "Számla feltöltve",
+      "invoice_rejected": "Számla elutasítva",
+      "accepted": "Kifizetésre vár",
+      "paid": "Kifizetve",
+      "missing": "Hiányzó"
     }
   },
   "Timesheets": {
@@ -381,8 +637,26 @@
       "amount": "Összeg",
       "entries": "Bejegyzés"
     },
+    "workflow": {
+      "title": "Havi folyamat",
+      "description": "A hónap aktuális állapota és a hátralévő lépések.",
+      "ariaLabel": "Havi timesheet- és számlafolyamat",
+      "steps": {
+        "created": "Összeállítva",
+        "submitted": "Beküldve",
+        "approved": "Jóváhagyva",
+        "invoiced": "Számla",
+        "paid": "Kifizetve"
+      },
+      "locked": {
+        "submitted": "Beküldés előtt ellenőrizd az összeállított hónapot.",
+        "approved": "Ez a lépés beküldés után válik elérhetővé, és egy admin végzi el.",
+        "invoiced": "A számlafeltöltés admin jóváhagyás után válik elérhetővé.",
+        "paid": "Ezt a lépést egy admin zárja le a számla elfogadása és kifizetése után."
+      }
+    },
     "status": {
-      "not_created": "Nincs beküldve",
+      "not_created": "Nincs létrehozva",
       "submitted": "Beküldve",
       "rejected": "Elutasítva",
       "approved": "Jóváhagyva",
@@ -473,6 +747,9 @@
     "invoice": {
       "title": "Kontraktori számla",
       "description": "A számla PDF-et admin jóváhagyás után lehet feltölteni.",
+      "lockedTitle": "A számlafeltöltés még nem elérhető",
+      "lockedDescription": "A számlafeltöltés a beküldött timesheet jóváhagyása után válik elérhetővé.",
+      "lockedReason": "A számla feltöltése előtt egy adminnak jóvá kell hagynia a timesheetet.",
       "uploadedDescription": "A jóváhagyott timesheet revízióhoz feltöltött számla.",
       "cancellationDescription": "Először töltsd fel az elutasított számla sztornó számláját.",
       "replacementDescription": "A sztornó számla feltöltve. Töltsd fel a javított számlát.",
@@ -559,17 +836,7 @@
       "accepted": "Elfogadva",
       "paid": "Kifizetve"
     },
-    "stats": {
-      "matching": "Találat",
-      "matchingCaption": "A jelenlegi szűrőknek megfelelő timesheetek.",
-      "page": "Aktuális oldal",
-      "pageCaption": "Ezen az oldalon látható tartomány.",
-      "pageSize": "Oldalméret",
-      "pageSizeCaption": "Betöltött sorok száma oldalanként."
-    },
     "filters": {
-      "title": "Szűrők",
-      "description": "Keresés kontraktor név vagy e-mail alapján, majd szűkítés státusz, kontraktor, projekt vagy hónap szerint.",
       "search": "Keresés",
       "searchPlaceholder": "Név vagy e-mail...",
       "status": "Státusz",
@@ -579,8 +846,11 @@
       "project": "Projekt",
       "allProjects": "Minden projekt",
       "month": "Hónap",
+      "allMonths": "Összes hónap",
       "apply": "Szűrők alkalmazása",
-      "clear": "Törlés"
+      "clear": "Törlés",
+      "active": "Aktív szűrők",
+      "removeFilter": "Szűrő eltávolítása: {filter}"
     },
     "list": {
       "title": "Beküldött timesheetek",
@@ -590,6 +860,16 @@
       "review": "Ellenőrzés",
       "entries": "{count} bejegyzés",
       "projects": "{count} projekt"
+    },
+    "bulk": {
+      "selected": "{count} kijelölve",
+      "eligibilityHint": "Csak beküldött timesheetek hagyhatók jóvá tömegesen.",
+      "approve": "Jóváhagyás ({count})",
+      "approving": "Jóváhagyás...",
+      "clear": "Törlés",
+      "selectAll": "Az oldalon lévő összes beküldött timesheet kijelölése",
+      "selectRow": "{name} timesheetjének kijelölése",
+      "notSelectable": "{name} timesheetje a jelenlegi állapotában nem jelölhető ki"
     },
     "table": {
       "contractor": "Kontraktor",
@@ -713,6 +993,8 @@
     },
     "actionResults": {
       "approved": "A timesheet jóváhagyva.",
+      "bulkApproved": "{count} timesheet jóváhagyva.",
+      "bulkChanged": "A kijelölés a jóváhagyás előtt megváltozott. Egy timesheet sem lett jóváhagyva; frissítsd az oldalt, és ellenőrizd újra a beküldött sorokat.",
       "rejected": "A timesheet elutasítva és feloldva.",
       "invoiceAccepted": "A számla elfogadva.",
       "invoiceRejected": "A számla elutasítva.",
@@ -787,11 +1069,12 @@
     },
     "invite": {
       "title": "Tag meghívása",
-      "description": "Küldj meghívólinket, és hozd létre az alkalmazásban használt tagprofilt."
-    },
-    "directory": {
-      "title": "Taglista",
-      "description": "Kezeld a meghívott, aktív, inaktív és archivált tagokat."
+      "description": "Küldj meghívólinket, és hozd létre az alkalmazásban használt tagprofilt.",
+      "detailsTitle": "Tag adatai",
+      "emailHint": "Erre a címre küldjük a meghívólinket.",
+      "defaultsTitle": "Szerepkör és alapértelmezések",
+      "defaultsHint": "A szokásos csapatbeállításokkal kitöltve. Csak akkor módosítsd, ha ez a tag eltér ezektől.",
+      "inviteAnother": "Küldés után újabb meghívó"
     },
     "filters": {
       "search": "Keresés",
@@ -804,7 +1087,9 @@
       "allProfiles": "Minden profil",
       "showing": "{start}-{end} / {total} tag megjelenítve",
       "apply": "Szűrés",
-      "clear": "Törlés"
+      "clear": "Törlés",
+      "active": "Aktív szűrők",
+      "removeFilter": "Szűrő eltávolítása: {filter}"
     },
     "pager": {
       "navigation": "Taglista oldalak",
@@ -860,6 +1145,8 @@
       }
     },
     "actions": {
+      "inviteMember": "Tag meghívása",
+      "close": "Bezárás",
       "sendInvitation": "Meghívó küldése",
       "openFor": "{name} műveleteinek megnyitása",
       "menuLabel": "Műveletek",
@@ -903,6 +1190,12 @@
       "effectiveDate": "Hatálybalépés dátuma",
       "reason": "Indoklás",
       "reasonHint": "Adj meg indoklást ehhez a profilváltáshoz."
+    },
+    "discardDialog": {
+      "title": "Elveted ezt a meghívót?",
+      "description": "A kitöltött adatok nem lesznek elmentve.",
+      "confirm": "Elvetés",
+      "cancel": "Szerkesztés folytatása"
     }
   },
   "AdminPeopleActions": {
@@ -969,7 +1262,11 @@
     },
     "create": {
       "title": "Projekt létrehozása",
-      "description": "A projektek a hozzárendelések és időbejegyzések munkacéljai."
+      "description": "A projektek a hozzárendelések és időbejegyzések munkacéljai.",
+      "detailsTitle": "Projekt adatai",
+      "timelineTitle": "Idővonal és jegyzetek",
+      "timelineHint": "Nem kötelező. Hagyd üresen a dátumokat, ha a projektnek nincs rögzített vége.",
+      "createAnother": "Mentés után újabb létrehozása"
     },
     "directory": {
       "title": "Projektlista",
@@ -1021,7 +1318,14 @@
       "unassigned": "Ma nincs hozzárendelve",
       "showing": "{start}-{end} / {total} projekt megjelenítve",
       "apply": "Szűrés",
-      "clear": "Törlés"
+      "clear": "Törlés",
+      "active": "Aktív szűrők",
+      "removeFilter": "Szűrő eltávolítása: {filter}",
+      "allStates": "Minden állapot",
+      "allTypes": "Minden típus",
+      "allTimelines": "Bármely időszak",
+      "allGroups": "Minden csoport",
+      "allAssignments": "Bármely hozzárendelés"
     },
     "pager": {
       "navigation": "Projektlista oldalak",
@@ -1048,6 +1352,18 @@
         "updated": "Frissítve"
       }
     },
+    "groupsTable": {
+      "caption": "Projektcsoportok táblázata",
+      "ariaLabel": "Projektcsoportok táblázata",
+      "openGroup": "{name} megnyitása",
+      "moreProjects": "+{count} további",
+      "columns": {
+        "group": "Csoport",
+        "projects": "Projektek",
+        "state": "Állapot",
+        "updated": "Frissítve"
+      }
+    },
     "groupsPanel": {
       "groupName": "Csoport neve",
       "generatedSlug": "Névből generálva",
@@ -1057,9 +1373,6 @@
       "emptyFiltered": "Nincs a jelenlegi szűrőknek megfelelő projektcsoport.",
       "projectCount": "{count, plural, one {# projekt} other {# projekt}}",
       "noProjects": "Nincs projekt ebben a csoportban.",
-      "removeProjectLabel": "{project} eltávolítása innen: {group}",
-      "chooseProject": "Projekt kiválasztása",
-      "allProjectsLinked": "Minden projekt ebben a csoportban van",
       "editTitle": "{name} szerkesztése",
       "editDescription": "A csoportmódosítások a szűrést és a projektek szervezését érintik. Nem módosítják a projekthozzárendeléseket vagy számlázási szabályokat.",
       "archiveTitle": "Projektcsoport archiválása?",
@@ -1074,12 +1387,36 @@
         "withProjects": "Projektekkel",
         "empty": "Üres",
         "showing": "{count} / {total} csoport megjelenítve"
+      },
+      "createTitle": "Projektcsoport létrehozása",
+      "createDescription": "A csoportok szűréshez és riportoláshoz rendezik a projekteket. A hozzárendeléseket és a számlázást nem érintik.",
+      "manageTitle": "{name} kezelése",
+      "done": "Kész",
+      "discardDialog": {
+        "title": "Elveted ezt a csoportot?",
+        "description": "A kitöltött adatok nem lesznek elmentve.",
+        "confirm": "Elvetés",
+        "cancel": "Szerkesztés folytatása"
+      },
+      "membership": {
+        "filterLabel": "Projektszűrő",
+        "all": "Összes",
+        "inGroup": "Csoportban",
+        "available": "Elérhető",
+        "searchLabel": "Projektek keresése",
+        "searchPlaceholder": "Projektek keresése...",
+        "noMatches": "Nincs a keresésnek megfelelő projekt.",
+        "noneAvailable": "Minden projekt már ebben a csoportban van.",
+        "toggleLabel": "{project} váltása"
       }
     },
     "actions": {
+      "newProject": "Új projekt",
+      "newGroup": "Új csoport",
+      "close": "Bezárás",
       "createProject": "Projekt létrehozása",
       "createGroup": "Csoport létrehozása",
-      "addProject": "Projekt hozzáadása",
+      "manageProjects": "Projektek kezelése",
       "cancel": "Mégse",
       "saveGroup": "Csoport mentése",
       "archiveGroup": "Csoport archiválása",
@@ -1165,6 +1502,12 @@
       "scheduledOverride": "Ütemezett felülírás",
       "scheduledOverrideDetail": "{count, plural, one {# felülírási időszak ütemezve.} other {# felülírási időszak ütemezve.}}",
       "contractorCentralRate": "A kontraktor-hozzárendelés jelenleg a tag központi óradíját használja."
+    },
+    "discardDialog": {
+      "title": "Elveted ezt a projektet?",
+      "description": "A kitöltött adatok nem lesznek elmentve.",
+      "confirm": "Elvetés",
+      "cancel": "Szerkesztés folytatása"
     }
   },
   "AdminProjectsActions": {
@@ -1376,6 +1719,109 @@
       "title": "Eseményfigyelő",
       "description": "Biztonsági, tag-, projekt-, óradíj- és időkövetési események szereplővel, célponttal és request kontextussal."
     },
+    "events": {
+      "actions": {
+        "inactive_project_week__marked": "Inaktívnak jelölve",
+        "inactive_project_week__unmarked": "Inaktív jelölés törölve",
+        "info_pages__publish": "Közzétéve",
+        "invoice__accepted": "Elfogadva",
+        "invoice__rejected": "Elutasítva",
+        "invoice__uploaded": "Feltöltve",
+        "member__activated": "Aktiválva",
+        "member__avatar_deleted": "Profilkép törölve",
+        "member__avatar_updated": "Profilkép frissítve",
+        "member__duration_display_format_updated": "Időtartam-megjelenítés frissítve",
+        "member__bootstrap_invited": "Kezdeti admin meghívva",
+        "member__deactivated": "Deaktiválva",
+        "member__deleted": "Archiválva",
+        "member__invitation_resent": "Meghívó újraküldve",
+        "member__invitation_revoked": "Meghívó visszavonva",
+        "member__invited": "Meghívva",
+        "member__pending_invitations_revoked": "Meghívók visszavonva",
+        "member__profile_changed": "Profil módosítva",
+        "member__profile_transition_scheduled": "Profilváltás ütemezve",
+        "member__reactivated": "Újraaktiválva",
+        "member__restored": "Visszaállítva",
+        "member__role_changed": "Szerepkör módosítva",
+        "member__session_revoked": "Munkamenet visszavonva",
+        "member__timezone_updated": "Időzóna frissítve",
+        "member__updated": "Módosítva",
+        "notification__settings_updated": "Beállítások frissítve",
+        "notification__weekly_reminder_sent": "Heti emlékeztető elküldve",
+        "payslip__deleted": "Törölve",
+        "payslip__downloaded": "Letöltve",
+        "payslip__previewed": "Megtekintve",
+        "payslip__replaced": "Lecserélve",
+        "payslip__uploaded": "Feltöltve",
+        "project__archived": "Archiválva",
+        "project__created": "Létrehozva",
+        "project__status_changed": "Státusz módosítva",
+        "project__updated": "Módosítva",
+        "project_assignment__closed": "Lezárva",
+        "project_assignment__created": "Hozzárendelve",
+        "project_assignment__updated": "Módosítva",
+        "project_group__archived": "Archiválva",
+        "project_group__created": "Létrehozva",
+        "project_group__project_added": "Projekt hozzáadva",
+        "project_group__project_removed": "Projekt eltávolítva",
+        "project_group__updated": "Módosítva",
+        "rate__assignment_override__closed_for_replacement": "Csere miatt lezárva",
+        "rate__assignment_override__closed_for_successor": "Lezárva",
+        "rate__assignment_override__created": "Létrehozva",
+        "rate__assignment_override__replaced_in_place": "Lecserélve",
+        "rate__assignment_override__replacement_created": "Új időszak létrehozva",
+        "rate__member_default__closed_for_replacement": "Csere miatt lezárva",
+        "rate__member_default__closed_for_successor": "Lezárva",
+        "rate__member_default__created": "Létrehozva",
+        "rate__member_default__replaced_in_place": "Lecserélve",
+        "rate__member_default__replacement_created": "Új időszak létrehozva",
+        "report__exported": "Exportálva",
+        "running_timer__discarded_daily_limit": "Napi limit miatt elvetve",
+        "running_timer__started": "Elindítva",
+        "running_timer__stopped": "Leállítva",
+        "security__backup_codes_regenerated": "Tartalék kódok megújítva",
+        "security__passkey_added": "Passkey hozzáadva",
+        "security__passkey_deleted": "Passkey törölve",
+        "security__passkey_renamed": "Passkey átnevezve",
+        "security__password_lockout": "Fiók zárolva",
+        "security__password_lockout_recovered": "Zárolás feloldva",
+        "security__password_reset": "Jelszó visszaállítva",
+        "security__totp_disabled": "2FA kikapcsolva",
+        "security__totp_enabled": "2FA bekapcsolva",
+        "security__totp_reset": "2FA visszaállítva",
+        "time_entries__copy_previous_day": "Előző nap másolva",
+        "time_entries__duplicate_previous_week": "Előző hét másolva",
+        "time_entry__created": "Létrehozva",
+        "time_entry__deleted": "Törölve",
+        "time_entry__updated": "Módosítva",
+        "time_entry__admin_updated": "Admin által javítva",
+        "timesheet__approved": "Jóváhagyva",
+        "timesheet__paid": "Kifizetettnek jelölve",
+        "timesheet__rejected": "Elutasítva",
+        "timesheet__resubmitted": "Újraküldve",
+        "timesheet__submitted": "Beküldve"
+      },
+      "targets": {
+        "assignment_rate_period": "Projektóradíj",
+        "contractor_invoice": "Számla",
+        "inactive_project_week": "Inaktív hét",
+        "info_page": "Információs oldal",
+        "member": "Munkatárs",
+        "member_default_rate_period": "Központi óradíj",
+        "notification_configuration": "Értesítési beállítások",
+        "passkey": "Passkey",
+        "payslip": "Bérjegyzék",
+        "project": "Projekt",
+        "project_assignment": "Projekt-hozzárendelés",
+        "project_group": "Projektcsoport",
+        "project_group_project": "Csoporttagság",
+        "report_export": "Riportexport",
+        "running_timer": "Időmérő",
+        "time_entries": "Időbejegyzések",
+        "time_entry": "Időbejegyzés",
+        "timesheet": "Timesheet"
+      }
+    },
     "client": {
       "showing": "{start}-{end} / {total} esemény megjelenítve",
       "lastRefreshed": "Utolsó frissítés: {time}",
@@ -1389,8 +1835,8 @@
       "allTargets": "Összes célpont",
       "actor": "Szereplő",
       "allActors": "Összes szereplő",
-      "from": "Ettől",
-      "to": "Eddig",
+      "period": "Időszak",
+      "allDates": "Összes dátum",
       "apply": "Alkalmaz",
       "clear": "Törlés",
       "empty": "Nincs a szűrőknek megfelelő naplóesemény.",
@@ -1399,7 +1845,9 @@
       "time": "Idő",
       "request": "Request",
       "noIp": "Nincs IP",
+      "system": "Rendszer",
       "auditEvent": "Audit esemény",
+      "eventCode": "Technikai eseménykód",
       "dialogDescription": "Append-only eseményrészletek. Az érzékenynek tűnő kulcsok megjelenítés előtt maszkolva vannak.",
       "noRequestId": "Nincs request id",
       "ipAddress": "IP cím",
@@ -1450,6 +1898,9 @@
         },
         "typst": {
           "title": "Typst PDF renderelő"
+        },
+        "notificationDispatcher": {
+          "title": "Értesítésküldő folyamat"
         }
       }
     },
@@ -1465,7 +1916,10 @@
       "emailSmtpDefaultFrom": "Az SMTP be van állítva, de az AUTH_EMAIL_FROM még a lokális alapértelmezett feladót használja.",
       "googleDisabled": "A Google OAuth nincs beállítva. Ez csak akkor elfogadható, ha ebben a környezetben szándékosan ki van kapcsolva a Google belépés.",
       "googlePartialConfig": "A Google OAuth csak részben van beállítva. Client id, client secret és engedélyezett domainek mind szükségesek.",
-      "typstProbeFailed": "A Typst nem tudta lefordítani a PDF próbadokumentumot. A riport PDF export nem fog működni, amíg a renderelő nem elérhető."
+      "typstProbeFailed": "A Typst nem tudta lefordítani a PDF próbadokumentumot. A riport PDF export nem fog működni, amíg a renderelő nem elérhető.",
+      "notificationDispatcherNeverRun": "Az alkalmazás indulása óta még nem fejeződött be az alkalmazáson belüli értesítésküldő folyamat.",
+      "notificationDispatcherStale": "Az alkalmazáson belüli értesítésküldő folyamat az elmúlt egy percben nem fejeződött be.",
+      "notificationDispatcherFailed": "Az értesítésküldő folyamat legutóbbi futása sikertelen."
     },
     "details": {
       "checkedAt": "Ellenőrizve",
@@ -1474,7 +1928,10 @@
       "provider": "Provider",
       "allowedDomains": "Engedélyezett domainek",
       "probeObject": "Próba objektum",
-      "probePdf": "PDF próba"
+      "probePdf": "PDF próba",
+      "lastRun": "Utolsó futás",
+      "jobStatus": "Folyamat állapota",
+      "ageSeconds": "Eltelt másodperc"
     },
     "duration": "{durationMs} ms",
     "missingEnv": "Hiányzik: {names}"
@@ -1508,11 +1965,13 @@
       "edit": "Szerkesztés",
       "close": "Bezárás",
       "cancel": "Mégse",
-      "save": "Mentés"
+      "save": "Mentés",
+      "newTimer": "Új időmérő"
     },
     "tooltips": {
       "copyPreviousDay": "Bejegyzések másolása a(z) {date} előtti napról.",
-      "duplicatePreviousWeek": "Az előző hét bejegyzéseinek másolása erre a hétre."
+      "duplicatePreviousWeek": "Az előző hét bejegyzéseinek másolása erre a hétre.",
+      "stopTimerFirst": "Új időmérő indítása előtt állítsd le a futó időmérőt."
     },
     "quickActionConfirm": {
       "confirm": "Bejegyzések másolása",
@@ -1563,14 +2022,26 @@
     "timer": {
       "trackedWithTimer": "Időmérővel rögzítve",
       "placeholder": "Min dolgozol?",
+      "projectLabel": "Időmérő projekt",
       "start": "Indítás",
       "stop": "Leállítás"
+    },
+    "timerModal": {
+      "title": "Új időmérő",
+      "description": "Válassz projektet, és írd le, min dolgozol. Az időmérő azonnal elindul."
     },
     "entryModal": {
       "newTitle": "Új időbejegyzés",
       "editTitle": "Időbejegyzés szerkesztése",
       "prefillHint": "Adj meg egy rövid leírást, majd mentsd.",
       "requiredHint": "A projekt és a leírás kötelező. A jövőbeli dátumok és hosszú napok figyelmeztetéssel menthetők."
+    },
+    "adminModification": {
+      "weekTitle": "Egy adminisztrátor {count} bejegyzést módosított ezen a héten.",
+      "weekDescription": "Nyisd meg az érintett bejegyzést a javítás részleteiért.",
+      "adminFallback": "Adminisztrátor",
+      "changedBy": "Módosította: {name}, {date}.",
+      "reason": "Indok: {reason}"
     },
     "fields": {
       "description": "Leírás",
@@ -1594,12 +2065,12 @@
       "futureDate": "Jövőbeli dátum",
       "futureDateAllowed": "Ez jövőbeli dátum. A bejegyzés engedélyezett, de jelölve marad.",
       "dailyTotalOver8": "A napi összesen több mint 8 óra.",
-      "dailyTotalExact": "Ez {hours} óra egy nap alatt.",
+      "dailyTotalExact": "Ez {hours} egy nap alatt.",
       "dailyTotalOver24Blocked": "A napi összesen nem lehet több 24 óránál.",
-      "dailyTotalOver24Projected": "A napi összesen nem lehet több 24 óránál, az összesen {hours} óra lenne.",
+      "dailyTotalOver24Projected": "A napi összesen nem lehet több 24 óránál, az összesen {hours} lenne.",
       "dayHasOverlaps": "A napon átfedő bejegyzések vannak.",
       "dayOver8": "A kiválasztott napon több mint 8 óra van rögzítve.",
-      "dayOver8Projected": "A kiválasztott napon több mint 8 óra van rögzítve, az összesen {hours} óra.",
+      "dayOver8Projected": "A kiválasztott napon több mint 8 óra van rögzítve, az összesen {hours}.",
       "longContinuousSession": "Hosszú egybefüggő munka",
       "overlapsAnotherEntry": "Átfed egy másik bejegyzéssel",
       "durationOver24Blocked": "Az időtartam nem lehet több 24 óránál.",
@@ -1699,11 +2170,174 @@
       }
     }
   },
+  "MyRates": {
+    "eyebrow": "Profil",
+    "title": "Saját óradíjaim",
+    "subtitle": {
+      "employee": "A saját belső óradíjad időszakonként. Csak a saját óradíjadat látod.",
+      "contractor": "A központi és projektenkénti óradíjaid időszakonként. Csak a saját óradíjaidat látod."
+    },
+    "profiles": {
+      "employee": "Alkalmazott",
+      "contractor": "Kontraktor"
+    },
+    "central": {
+      "title": "Központi óradíj",
+      "employeeDescription": "A saját belső óradíjad. Ha nincs beállítva, a számításokhoz nem tartozik feloldott óradíj.",
+      "contractorDescription": "Az alapértelmezett óradíjad minden projekten. A projektfelülírások ezt helyettesíthetik.",
+      "emptyTitle": "Nincs beállított központi óradíj",
+      "emptyDescription": "Kérd meg az admint az óradíjad beállítására."
+    },
+    "period": {
+      "to": "–",
+      "open": "nyitott",
+      "current": "Jelenlegi"
+    },
+    "projects": {
+      "title": "Projektenként",
+      "override": "Projektfelülírás",
+      "followsCentral": "A központi óradíjat követi",
+      "missing": "Nincs projektfelülírás vagy központi óradíj",
+      "notSet": "Nincs beállítva",
+      "current": "Jelenlegi óradíj"
+    },
+    "privacy": "Ez az oldal csak a saját óradíjaidat mutatja. Mások óradíjai nem láthatók."
+  },
+  "NotificationsPage": {
+    "eyebrow": "Fiók",
+    "title": "Értesítések",
+    "subtitle": "A fiókodhoz kapcsolódó munkafolyamatok, emlékeztetők és teendők.",
+    "all": "Összes",
+    "unread": "Olvasatlan",
+    "empty": "Nincs ennek a nézetnek megfelelő értesítés.",
+    "markAllRead": "Összes olvasottnak jelölése",
+    "pagination": "Értesítési oldalak",
+    "previous": "Előző",
+    "next": "Következő",
+    "page": "{page}. oldal / {total}"
+  },
   "Settings": {
     "page": {
-      "eyebrow": "Fiók",
-      "title": "Biztonsági beállítások",
-      "subtitle": "Kezeld a bejelentkezési módokat, passkey-ket és authenticator alkalmazásos ellenőrzést a Sheet Happens fiókodhoz."
+      "eyebrow": "Profil",
+      "title": "Profil és beállítások",
+      "subtitle": "Kezeld a fiókodat, a bejelentkezés biztonságát, a megjelenést és az időzónát."
+    },
+    "sections": {
+      "label": "Profilbeállítások szakaszai",
+      "profile": "Profil",
+      "security": "Biztonság és belépés",
+      "preferences": "Beállítások",
+      "notifications": "Értesítések"
+    },
+    "profile": {
+      "title": "Profil",
+      "description": "Az alapadataidat az admin kezeli, ezért itt csak olvashatók.",
+      "readOnly": "Csak olvasható",
+      "name": "Név",
+      "email": "E-mail",
+      "profile": "Profil",
+      "profiles": {
+        "employee": "Alkalmazott",
+        "contractor": "Kontraktor"
+      },
+      "adminManaged": "Módosítás kell? Kérd meg az admint a neved, e-mail-címed vagy profilod frissítésére."
+    },
+    "securitySection": {
+      "title": "Biztonság és belépés",
+      "description": "Kezeld a bejelentkezési módokat, passkey-ket és az authenticator alkalmazást."
+    },
+    "preferences": {
+      "title": "Beállítások",
+      "description": "Kezeld a profilképedet, az időzónádat és az időtartamok megjelenítését.",
+      "avatar": {
+        "label": "Profilkép",
+        "description": "Tölts fel legfeljebb 2 MB-os, négyzetes PNG- vagy JPEG-képet, vagy használd a monogramodat.",
+        "upload": "Feltöltés",
+        "change": "Csere",
+        "save": "Kép mentése",
+        "view": "Megtekintés",
+        "delete": "Törlés",
+        "close": "Bezárás",
+        "previewTitle": "Profilkép"
+      },
+      "timezone": {
+        "label": "Időzóna",
+        "description": "Ez szabályozza a helyi naphatárokat és a dátumok megjelenését az időkövetésben és a riportokban.",
+        "search": "Időzóna keresése",
+        "searchPlaceholder": "Keresés város vagy régió szerint...",
+        "empty": "Nincs találat",
+        "save": "Időzóna mentése"
+      },
+      "durationDisplay": {
+        "label": "Időtartamok megjelenítése",
+        "description": "Válaszd ki, hogyan jelenjenek meg a munkaidők az alkalmazásban.",
+        "decimal": "Tizedes óra",
+        "hoursMinutes": "Óra és perc",
+        "decimalExample": "Példa: 3 óra 23 perc így jelenik meg: 3,38 h.",
+        "hoursMinutesExample": "Példa: 3 óra 23 perc így jelenik meg: 3:23.",
+        "save": "Megjelenítés mentése"
+      }
+    },
+    "notifications": {
+      "title": "Értesítések",
+      "description": "A rendszerszintű emlékeztetők és munkafolyamatok kézbesítési módjai.",
+      "systemWide": "Ezek a beállítások minden tagra vonatkoznak, és általában 15 másodpercen belül életbe lépnek.",
+      "companyTimezone": "Céges időzóna",
+      "deliveryMethods": "Kézbesítési módok",
+      "email": "Email",
+      "inApp": "Alkalmazáson belül",
+      "save": "Értesítési beállítások mentése",
+      "hoursAsDays": "{days} nap ({hours} óra)",
+      "hoursUnit": "Eltelt órák",
+      "weekdays": {
+        "1": "Hétfő",
+        "2": "Kedd",
+        "3": "Szerda",
+        "4": "Csütörtök",
+        "5": "Péntek",
+        "6": "Szombat",
+        "7": "Vasárnap"
+      },
+      "weekly": {
+        "title": "Heti hiányzóóra-emlékeztető",
+        "description": "Az aktív hozzárendeléssel rendelkező tagokat értesíti, ha nincs rögzített idejük és inaktív hét jelölésük.",
+        "day": "Küldés napja",
+        "time": "Időpont"
+      },
+      "invoice": {
+        "title": "Számlafeltöltési emlékeztető",
+        "description": "A timesheet jóváhagyása után indul, és a számla feltöltésekor azonnal leáll.",
+        "initialDelay": "Első emlékeztető jóváhagyás után",
+        "repeat": "Ismétlési időköz",
+        "exactHours": "Az időköz pontosan eltelt órát jelent: három nap 72 óra a jóváhagyástól, hétvégén is."
+      },
+      "workflow": {
+        "title": "Munkafolyamat-értesítések",
+        "description": "Minden termékeseményhez külön választható kézbesítési mód. A hitelesítési emailek ettől függetlenek.",
+        "moreInfo": "További információ erről: {notification}"
+      },
+      "types": {
+        "TIMESHEET_SUBMITTED": "Timesheet beküldve",
+        "TIMESHEET_APPROVED": "Timesheet jóváhagyva",
+        "TIMESHEET_REJECTED": "Timesheet elutasítva",
+        "INVOICE_UPLOADED": "Számla feltöltve",
+        "INVOICE_REJECTED": "Számla elutasítva",
+        "INVOICE_ACCEPTED": "Számla elfogadva",
+        "TIMESHEET_PAID": "Kifizetés rögzítve",
+        "PAYSLIP_AVAILABLE": "Bérjegyzék elérhető",
+        "TIME_ENTRY_ADMIN_MODIFIED": "Admin módosította az időbejegyzést"
+      },
+      "typeDescriptions": {
+        "TIMESHEET_SUBMITTED": "Az aktív adminokat értesíti, amikor egy kontraktor beküld vagy újraküld egy timesheetet jóváhagyásra.",
+        "TIMESHEET_APPROVED": "A kontraktort értesíti, amikor egy admin jóváhagyja a timesheetet, és elérhetővé válik a számlázási lépés.",
+        "TIMESHEET_REJECTED": "A kontraktort értesíti, amikor egy admin elutasítja a timesheetet, és javítás szükséges.",
+        "INVOICE_UPLOADED": "Az aktív adminokat értesíti, amikor egy kontraktor eredeti, javított vagy sztornó számlát tölt fel.",
+        "INVOICE_REJECTED": "A kontraktort értesíti, amikor egy admin elutasít egy számlát, és további teendő szükséges.",
+        "INVOICE_ACCEPTED": "A kontraktort értesíti, amikor egy admin elfogadja a számlát, és az kifizetésre vár.",
+        "TIMESHEET_PAID": "A kontraktort értesíti, amikor egy admin kifizetettként rögzíti a folyamatot.",
+        "PAYSLIP_AVAILABLE": "Az alkalmazottat értesíti, amikor egy admin feltölti vagy lecseréli a bérjegyzékét.",
+        "TIME_ENTRY_ADMIN_MODIFIED": "Az érintett munkatársat értesíti, amikor egy admin véglegesen módosítja valamelyik rögzített időbejegyzését."
+      }
     },
     "setupBanner": {
       "securityReady": "Biztonság kész",
@@ -1713,7 +2347,7 @@
       "adminTotpDescription": "Az admin eszközökhöz authenticator alkalmazásos ellenőrzés szükséges. Kapcsold be, mielőtt visszatérsz a kezelőfelületekre.",
       "memberDescription": "Adj hozzá passkey-t vagy kapcsold be az authenticator alkalmazást a folytatás előtt.",
       "noFurtherAction": "Most nincs további biztonsági teendő.",
-      "adminTotpHint": "Az alábbi authenticator alkalmazásos vezérlőkkel teljesítheted az admin 2FA követelményt. A passkey továbbra is elérhető bejelentkezéshez, de v1-ben nem váltja ki az admin TOTP-t.",
+      "adminTotpHint": "Az alábbi authenticator alkalmazásos vezérlőkkel teljesítheted az admin beállítási követelményt. Ha ez kész, a passkey belépés külön kódkérés nélkül használható.",
       "memberHint": "Az alábbi passkey vagy authenticator alkalmazásos vezérlőkkel teljesítheted ezt a követelményt."
     },
     "states": {
@@ -1828,7 +2462,7 @@
       "codeHint": "Add meg az authenticator alkalmazás aktuális kódját.",
       "codeInputLabel": "Authenticator kód",
       "verifyAndEnable": "Ellenőrzés és bekapcsolás",
-      "footer": "A TOTP a v1 admin második faktor. Az emailes jelszó és a passkey bejelentkezési módok maradnak, nem váltják ki az admin 2FA-t."
+      "footer": "Admin fiókoknál kötelező az authenticator alkalmazás beállítása. A passkey belépés külön kódkérés nélkül teljesíti a belépési ellenőrzést."
     },
     "backupCodes": {
       "title": "Tartalék kódok",
@@ -1868,14 +2502,42 @@
     "export": {
       "action": "PDF export",
       "defaultTitle": "Időriport",
+      "dialogTitle": "Export beállítása",
+      "dialogDescription": "Add meg az export címét, válaszd ki a tartalmát, és ellenőrizd az előnézetet a PDF letöltése előtt.",
       "titleLabel": "Export címe",
+      "titlePlaceholder": "pl. Diapro — júniusi óra-összesítő",
+      "languageLabel": "PDF nyelve",
+      "durationFormatLabel": "Időtartamok megjelenítése",
+      "durationFormatDecimal": "Tizedes óra",
+      "durationFormatHoursMinutes": "Óra és perc",
+      "durationFormatInternalHint": "A belső exportok mindig tizedes órában jelennek meg, hogy összevethetők maradjanak a mellettük szereplő összegekkel.",
       "modeLabel": "Tartalom",
       "modeCostFree": "Költségmentes",
-      "modeInternal": "Belső"
+      "modeCostFreeHint": "Csak órák és leírások — kifelé biztonságosan megosztható.",
+      "modeInternal": "Belső",
+      "modeInternalHint": "Óradíjakkal és projektköltséggel — csak belső használatra.",
+      "internalWarningTitle": "Költségadatok láthatók",
+      "internalWarningBody": "Ez az export belső óradíjakat és költséget tartalmaz. Soha ne küldd ügyfélnek vagy külső félnek.",
+      "formatLabel": "Formátum",
+      "formatPdf": "PDF dokumentum",
+      "previewLabel": "Előnézet",
+      "previewLoading": "Előnézet készítése…",
+      "previewError": "Az előnézet nem készült el. Az export ettől függetlenül működhet.",
+      "previewRetry": "Újra",
+      "previewTruncated": "Az előnézet az első {count} oldalt mutatja. A letöltés minden oldalt tartalmaz.",
+      "timezoneLabel": "Időzóna",
+      "cancel": "Mégse",
+      "close": "Bezárás",
+      "download": "PDF letöltése"
     },
     "filters": {
       "start": "Kezdő",
       "end": "Záró",
+      "periodStart": "Időszak kezdete",
+      "periodEnd": "Időszak vége",
+      "anchorMonth": "Hónap",
+      "anchorDate": "Dátum",
+      "anchorYear": "Év",
       "project": "Projekt",
       "group": "Projektcsoport",
       "member": "Tag",
@@ -1918,7 +2580,42 @@
     "detail": {
       "title": "Tételes bontás",
       "description": "Költségmentes riportadat az időbejegyzésekből. Az óradíjak és költségek a belső export módba kerülnek.",
-      "internalProject": "Belső"
+      "internalProject": "Belső",
+      "profileContractor": "Kontraktor",
+      "profileEmployee": "Alkalmazott",
+      "edit": "Szerkesztés",
+      "editingDone": "Szerkesztés kész",
+      "editHint": "A módosítások ebben a riportban és az exportban maradnak, amíg külön nem mented őket a rögzített időbe.",
+      "descriptionInput": "{name} bejegyzésének leírása",
+      "hoursInput": "{name} bejegyzésének óraszáma",
+      "hoursInputHint": "Időt így adhatsz meg: 3.5, 3:30, 3h 20m vagy 200m."
+    },
+    "persistence": {
+      "unsavedTitle": "{count} mentetlen riportmódosítás",
+      "unsavedDescription": "Ezek az értékek csak a riportot és az exportot módosítják, amíg külön nem mented őket a rögzített időbe.",
+      "save": "Mentés a rögzített időbe",
+      "discard": "Módosítások eldobása",
+      "cancel": "Mégse",
+      "dialogTitle": "Mented a riport módosításait a rögzített időbe?",
+      "dialogDescription": "Ez véglegesen módosít {count} időbejegyzést. A zárolt timesheet-időszakok nem módosíthatók.",
+      "reasonLabel": "Javítás indoka",
+      "reasonPlaceholder": "Írd le, miért kell módosítani a rögzített időt",
+      "memberVisibility": "Az érintett munkatársak látni fogják, ki és mikor módosította a bejegyzést, valamint ezt az indokot is.",
+      "confirm": "Végleges módosítások mentése",
+      "exportOption": "Módosítások mentése a rögzített időbe",
+      "exportOptionHint": "A PDF letöltése előtt {count} szerkesztett bejegyzés végleges módosítása.",
+      "exportOptionEmpty": "A végleges mentéshez előbb szerkessz legalább egy riportsort.",
+      "success": "{count} időbejegyzés véglegesen módosítva.",
+      "errors": {
+        "invalid": "Ellenőrizd a módosított értékeket, és add meg a javítás indokát.",
+        "EMPTY_REASON": "Mentés előtt add meg a javítás indokát.",
+        "ENTRY_NOT_FOUND": "Egy vagy több módosított időbejegyzés már nem létezik. Frissítsd a riportot, majd próbáld újra.",
+        "ENTRY_LOCKED": "Egy vagy több módosított bejegyzés zárolt timesheet-időszakhoz tartozik, ezért nem módosítható.",
+        "INVALID_DESCRIPTION": "Minden mentett időbejegyzéshez legfeljebb 1000 karakteres leírás szükséges.",
+        "INVALID_DURATION": "A mentett időtartamnak 1 perc és 24 óra között kell lennie.",
+        "DAILY_LIMIT_EXCEEDED": "A módosítások miatt legalább egy nap meghaladná a 24 órás korlátot.",
+        "generic": "A riport módosításait nem sikerült menteni."
+      }
     },
     "table": {
       "date": "Dátum",
@@ -1931,16 +2628,54 @@
     "empty": {
       "title": "Nincs rögzített idő ezekkel a szűrőkkel.",
       "description": "Módosítsd az időszakot vagy törölj egy szűrőt."
+    },
+    "pdf": {
+      "brand": "Sheet Happens",
+      "confidential": "Bizalmas",
+      "page": "Oldal",
+      "generatedAt": "Generálva",
+      "breakdown": "Bontás",
+      "breakdownDescription": "Összesített idő és bejegyzésszám a kiválasztott nézet szerint.",
+      "details": "Részletek",
+      "detailsDescription": "A riport alapjául szolgáló időbejegyzések.",
+      "attention": "Figyelmeztetés",
+      "name": "Név",
+      "share": "Arány",
+      "entries": "Bejegyzés",
+      "rate": "Óradíj",
+      "amount": "Összeg",
+      "total": "Összesen",
+      "missingRate": "Hiányzó óradíj",
+      "missingRateNote": "{marker} jelöli azokat a bejegyzéseket, amelyekhez nincs érvényes óradíj.",
+      "warnings": {
+        "missingRates": "{count, plural, one {# bejegyzéshez hiányzik az óradíj.} other {# bejegyzéshez hiányzik az óradíj.}}",
+        "mixedCurrency": "A riport több pénznemet tartalmaz: {currencies}."
+      }
     }
   },
   "SettingsActions": {
     "success": {
+      "avatarUpdated": "Profilkép frissítve.",
+      "avatarDeleted": "Profilkép törölve.",
+      "timezoneUpdated": "Időzóna frissítve.",
+      "durationDisplayUpdated": "Időtartam-megjelenítés frissítve.",
       "passkeyRenamed": "Passkey átnevezve.",
       "passkeyRemoved": "Passkey eltávolítva.",
       "totpDisabledAudited": "Authenticator kikapcsolás naplózva.",
-      "backupCodesRegeneratedAudited": "Tartalék kód generálás naplózva."
+      "backupCodesRegeneratedAudited": "Tartalék kód generálás naplózva.",
+      "notificationSettingsUpdated": "Értesítési beállítások frissítve."
     },
     "errors": {
+      "avatarRequired": "Válassz profilképet.",
+      "avatarTooLarge": "A profilkép legfeljebb 2 MB lehet.",
+      "avatarInvalidType": "A profilkép érvényes PNG vagy JPEG legyen.",
+      "avatarUploadFailed": "Nem sikerült feltölteni a profilképet.",
+      "avatarDeleteFailed": "Nem sikerült törölni a profilképet.",
+      "timezoneInvalid": "Válassz támogatott időzónát.",
+      "timezoneUpdateFailed": "Nem sikerült frissíteni az időzónát.",
+      "durationDisplayInvalid": "Válassz támogatott időtartam-megjelenítést.",
+      "durationDisplayUpdateFailed": "Nem sikerült frissíteni az időtartamok megjelenítését.",
+      "memberNotFound": "A tagprofil nem található.",
       "passkeyIdMissing": "Hiányzik a passkey azonosítója.",
       "passkeyNameRequired": "A passkey neve kötelező.",
       "passkeyNotFound": "A passkey nem található.",
@@ -1948,7 +2683,124 @@
       "passkeyRemoveFailed": "Nem sikerült eltávolítani a passkey-t.",
       "totpDisableAuditFailed": "Az authenticator alkalmazás kikapcsolt, de a naplóeseményt nem sikerült rögzíteni.",
       "backupCodesAuditFailed": "A tartalék kódok újragenerálva, de a naplóeseményt nem sikerült rögzíteni.",
-      "noAuthAccount": "Ehhez a taghoz nincs kapcsolt auth fiók."
+      "noAuthAccount": "Ehhez a taghoz nincs kapcsolt auth fiók.",
+      "notificationSettingsUpdateFailed": "Nem sikerült frissíteni az értesítési beállításokat.",
+      "notificationSettingsInvalid": "Ellenőrizd az értesítési ütemezést és a kézbesítési beállításokat."
+    }
+  },
+  "Payslips": {
+    "actions": {
+      "preview": "Előnézet",
+      "download": "Letöltés",
+      "close": "Bezárás",
+      "upload": "Bérjegyzék feltöltése",
+      "replace": "Csere",
+      "delete": "Törlés",
+      "cancel": "Mégse",
+      "confirmUpload": "Feltöltés",
+      "confirmReplace": "Csere és feltöltés",
+      "confirmDelete": "Bérjegyzék törlése",
+      "clear": "Szűrők törlése"
+    },
+    "employee": {
+      "eyebrow": "Alkalmazotti dokumentumok",
+      "title": "Bérjegyzékeim",
+      "subtitle": "A havi bérjegyzékeid, a legfrissebbtől visszafelé.",
+      "latest": "Legfrissebb",
+      "history": "Korábbi hónapok",
+      "available": "Elérhető",
+      "privateNote": "Csak a saját bérjegyzékeidet tekintheted meg. A dokumentumok rövid élettartamú, privát linken nyílnak meg.",
+      "filters": {
+        "year": "Év",
+        "allYears": "Minden év",
+        "order": "Sorrend",
+        "newest": "Legújabb elöl",
+        "oldest": "Legrégebbi elöl",
+        "pageSize": "Oldalanként",
+        "clear": "Törlés",
+        "empty": "Nincs a szűrőknek megfelelő korábbi bérjegyzék."
+      },
+      "empty": {
+        "title": "Még nincs bérjegyzéked",
+        "description": "Az adminod minden havi bérjegyzéket itt tesz közzé, amikor elérhetővé válik."
+      }
+    },
+    "viewer": {
+      "signedLink": "Privát fájl · rövid élettartamú link",
+      "title": "{filename} előnézete"
+    },
+    "admin": {
+      "eyebrow": "Admin",
+      "title": "Bérjegyzékek",
+      "subtitle": "Havi bérjegyzékek feltöltése és kezelése alkalmazottanként. A Sheet Happens nem számol bért.",
+      "filters": {
+        "employee": "Alkalmazott",
+        "allEmployees": "Minden alkalmazott",
+        "month": "Hónap",
+        "allMonths": "Minden hónap",
+        "search": "Keresés név vagy email alapján",
+        "apply": "Szűrők alkalmazása",
+        "active": "Aktív szűrők",
+        "removeFilter": "Szűrő eltávolítása: {filter}"
+      },
+      "overview": {
+        "title": "Havi áttekintés",
+        "posted": "{posted} / {expected} feltöltve",
+        "complete": "Minden aktív alkalmazotthoz elérhető a havi bérjegyzék.",
+        "missing": "Hiányzik",
+        "uploadFor": "Bérjegyzék feltöltése: {name}"
+      },
+      "list": {
+        "title": "Bérjegyzék előzmények",
+        "description": "A kiválasztott szűrőknek megfelelő aktuális bérjegyzék-dokumentumok.",
+        "empty": "Nincs a kiválasztott szűrőknek megfelelő bérjegyzék.",
+        "showing": "{start}-{end} / {total}",
+        "employee": "Alkalmazott",
+        "month": "Hónap",
+        "file": "Fájl",
+        "published": "Feltöltve",
+        "actions": "Műveletek",
+        "inactive": "Inaktív",
+        "uploadedBy": "Feltöltötte: {name}"
+      },
+      "upload": {
+        "title": "Bérjegyzék feltöltése",
+        "description": "Válassz alkalmazottat és hónapot, majd töltsd fel a PDF-et. Foglalt hónap esetén a feltöltés lecseréli az aktuális dokumentumot.",
+        "employee": "Alkalmazott",
+        "employeePlaceholder": "Válassz alkalmazottat",
+        "month": "Hónap",
+        "monthNavigation": "Bérjegyzék éve",
+        "previousYear": "Az előző év megjelenítése",
+        "nextYear": "A következő év megjelenítése",
+        "file": "PDF-fájl",
+        "dropzone": "Húzd ide a bérjegyzék PDF-et",
+        "dropzoneDescription": "Csak PDF, legfeljebb 10 MB.",
+        "existing": "Ehhez az alkalmazotthoz és hónaphoz már van bérjegyzék. A feltöltött PDF lecseréli azt.",
+        "success": "Bérjegyzék feltöltve.",
+        "replaced": "Bérjegyzék lecserélve."
+      },
+      "delete": {
+        "title": "Törlöd ezt a bérjegyzéket?",
+        "description": "{name} · {month}. A dokumentum törlődik. Ehhez a hónaphoz később új bérjegyzék tölthető fel.",
+        "success": "Bérjegyzék törölve."
+      }
+    },
+    "errors": {
+      "notAllowed": "Nincs jogosultságod a bérjegyzékek kezeléséhez.",
+      "employeeRequired": "Válassz alkalmazotti profilt.",
+      "monthRequired": "Válassz érvényes hónapot.",
+      "fileRequired": "Válassz bérjegyzék PDF-et.",
+      "fileTooLarge": "A bérjegyzék PDF legfeljebb 10 MB lehet.",
+      "pdfRequired": "Csak PDF-fájl tölthető fel.",
+      "storageMissing": "A bérjegyzék-tárolás nincs konfigurálva.",
+      "uploadFailed": "Nem sikerült feltölteni a bérjegyzéket.",
+      "deleteFailed": "Nem sikerült törölni a bérjegyzéket."
+    },
+    "pager": {
+      "navigation": "Bérjegyzék oldalak",
+      "summary": "{page}. oldal / {totalPages}, {totalItems} bérjegyzék",
+      "previous": "Előző",
+      "next": "Következő"
     }
   },
   "TwoFactorActions": {

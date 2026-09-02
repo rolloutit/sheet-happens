@@ -1,16 +1,22 @@
 import { passkey } from "@better-auth/passkey";
 import { prismaAdapter } from "@better-auth/prisma-adapter";
-import { betterAuth } from "better-auth";
+import { APIError, betterAuth } from "better-auth";
 import { nextCookies } from "better-auth/next-js";
 import { magicLink, twoFactor } from "better-auth/plugins";
 
-import { canCreateAuthUser, canSendAuthLink } from "@/src/server/auth/invite-policy";
+import {
+  canCreateAuthUser,
+  canCreateInvitationSession,
+  canSendAuthLink,
+} from "@/src/server/auth/invite-policy";
+import { canCreateMemberSession } from "@/src/server/auth/member-session-policy";
 import { sendMagicLinkEmail, sendPasswordResetEmail } from "@/src/server/auth/auth-emails";
 import {
   decodeJwtPayload,
   getGoogleAuthSettings,
   isAllowedGoogleWorkspaceProfile,
 } from "@/src/server/auth/sign-in-methods";
+import { createPasskeySecondFactorSessionMarker } from "@/src/server/auth/passkey-second-factor";
 import { prisma } from "@/src/server/db/client";
 
 const appName = "Sheet Happens";
@@ -54,6 +60,18 @@ type PasskeyAuditRecord = {
   transports?: unknown;
 };
 
+type AuthSessionRecord = {
+  userId?: unknown;
+  token?: unknown;
+  expiresAt?: unknown;
+};
+
+type AuthHookContext = {
+  path?: string;
+} | null;
+
+const authRateLimitWindowSeconds = 15 * 60;
+
 export const auth = betterAuth({
   appName,
   baseURL: authBaseURLConfig,
@@ -62,6 +80,21 @@ export const auth = betterAuth({
   database: prismaAdapter(prisma, {
     provider: "postgresql",
   }),
+  rateLimit: {
+    enabled: true,
+    storage: "database",
+    window: 60,
+    max: 100,
+    customRules: {
+      "/sign-in/email": { window: authRateLimitWindowSeconds, max: 20 },
+      "/sign-in/magic-link": { window: authRateLimitWindowSeconds, max: 5 },
+      "/request-password-reset": { window: authRateLimitWindowSeconds, max: 5 },
+      "/sign-in/social": { window: authRateLimitWindowSeconds, max: 10 },
+      "/passkey/generate-authenticate-options": { window: authRateLimitWindowSeconds, max: 10 },
+      "/passkey/verify-authentication": { window: authRateLimitWindowSeconds, max: 10 },
+      "/two-factor/*": { window: authRateLimitWindowSeconds, max: 10 },
+    },
+  },
   databaseHooks: {
     user: {
       create: {
@@ -78,6 +111,34 @@ export const auth = betterAuth({
       create: {
         after: async (passkey: PasskeyAuditRecord) => {
           await auditPasskeyAdded(passkey);
+        },
+      },
+    },
+    session: {
+      create: {
+        before: async (session: AuthSessionRecord) => {
+          if (typeof session.userId !== "string") {
+            return false;
+          }
+
+          const member = await prisma.member.findUnique({
+            where: {
+              authUserId: session.userId,
+            },
+            select: {
+              deletedAt: true,
+              status: true,
+            },
+          });
+
+          if (canCreateMemberSession(member)) {
+            return true;
+          }
+
+          return canCreateInvitationSession(session.userId);
+        },
+        after: async (session: AuthSessionRecord, context: AuthHookContext) => {
+          await markPasskeySessionAsSecondFactor(session, context);
         },
       },
     },
@@ -159,6 +220,18 @@ export const auth = betterAuth({
       ...(passkeyRpID ? { rpID: passkeyRpID } : {}),
       rpName: appName,
       origin: passkeyOrigins,
+      authentication: {
+        afterVerification: ({ verification }) => {
+          if (verification.authenticationInfo.userVerified) {
+            return;
+          }
+
+          throw new APIError("UNAUTHORIZED", {
+            code: "PASSKEY_USER_VERIFICATION_REQUIRED",
+            message: "Passkey user verification is required.",
+          });
+        },
+      },
     }),
     twoFactor({
       allowPasswordless: true,
@@ -212,6 +285,41 @@ async function auditPasskeyAdded(passkey: PasskeyAuditRecord) {
       },
     },
   });
+}
+
+async function markPasskeySessionAsSecondFactor(
+  session: AuthSessionRecord,
+  context: AuthHookContext,
+) {
+  if (!context?.path?.includes("/passkey/verify-authentication")) return;
+
+  const expiresAt = getSessionExpiresAt(session.expiresAt);
+
+  if (typeof session.userId !== "string" || typeof session.token !== "string" || !expiresAt) {
+    return;
+  }
+
+  await createPasskeySecondFactorSessionMarker({
+    userId: session.userId,
+    sessionToken: session.token,
+    expiresAt,
+  });
+}
+
+function getSessionExpiresAt(expiresAt: unknown) {
+  if (expiresAt instanceof Date && Number.isFinite(expiresAt.getTime())) {
+    return expiresAt;
+  }
+
+  if (typeof expiresAt === "string" || typeof expiresAt === "number") {
+    const parsed = new Date(expiresAt);
+
+    if (Number.isFinite(parsed.getTime())) {
+      return parsed;
+    }
+  }
+
+  return null;
 }
 
 async function auditPasswordReset(authUserId: string, request?: Request) {

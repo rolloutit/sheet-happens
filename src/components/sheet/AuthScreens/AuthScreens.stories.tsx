@@ -32,10 +32,10 @@ export const SignIn: Story = {
       password: "CorrectHorse7!",
     });
 
-    await userEvent.click(canvas.getByRole("button", { name: /send magic link/i }));
+    await userEvent.click(canvas.getByRole("button", { name: /email me a sign-in link/i }));
     await expect(args.onMagicLink).toHaveBeenCalledWith("lena@example.com");
 
-    await userEvent.click(canvas.getByRole("button", { name: /reset password/i }));
+    await userEvent.click(canvas.getByRole("button", { name: /^forgot\?$/i }));
     await expect(args.onResetPassword).toHaveBeenCalledWith("lena@example.com");
   },
 };

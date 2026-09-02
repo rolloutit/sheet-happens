@@ -14,6 +14,7 @@ import { getLocale, getTranslations } from "next-intl/server";
 
 import { AppShell } from "@/src/components/layout/AppShell";
 import { StatusPill } from "@/src/components/sheet/StatusPill";
+import { TimesheetStepper } from "@/src/components/sheet/TimesheetStepper";
 import { Badge } from "@/src/components/ui/Badge";
 import { Button } from "@/src/components/ui/Button";
 import {
@@ -25,7 +26,17 @@ import {
 } from "@/src/components/ui/Card";
 import { Field } from "@/src/components/ui/Field";
 import { Input } from "@/src/components/ui/Input";
+import { LockedState } from "@/src/components/ui/LockedState";
 import { SectionHead } from "@/src/components/ui/SectionHead";
+import {
+  formatCount,
+  formatDecimalHours,
+  formatMonthLabel,
+  formatMoney as formatMoneyBase,
+  formatPeriodRange as formatPeriodRangeBase,
+  formatRate as formatRateBase,
+  formatTimestamp as formatTimestampBase,
+} from "@/src/lib/formatting";
 import {
   accountStatusRoute,
   mapMemberToShellProfile,
@@ -95,8 +106,8 @@ export default async function TimesheetsPage({ searchParams }: TimesheetsPagePro
           <div
             className={
               actionResult.tone === "success"
-                ? "flex items-start gap-3 rounded-[var(--radius-lg)] border border-success/35 bg-success/10 px-4 py-3 text-sm text-success"
-                : "flex items-start gap-3 rounded-[var(--radius-lg)] border border-destructive/35 bg-destructive/10 px-4 py-3 text-sm text-destructive"
+                ? "flex items-start gap-3 rounded-[var(--radius-lg)] border border-success/35 bg-success-soft px-4 py-3 text-sm text-success"
+                : "flex items-start gap-3 rounded-[var(--radius-lg)] border border-destructive/35 bg-destructive-soft px-4 py-3 text-sm text-destructive"
             }
           >
             {actionResult.tone === "success" ? (
@@ -128,7 +139,9 @@ export default async function TimesheetsPage({ searchParams }: TimesheetsPagePro
                 <SummaryMetric
                   icon={Clock3}
                   label={t("summary.hours")}
-                  value={formatHours(preview.totalMinutes, locale)}
+                  // The amount metric sits right beside this one, so hours are pinned decimal
+                  // regardless of the member's display preference — see `formatDecimalHours`.
+                  value={formatDecimalHours(preview.totalMinutes, locale)}
                 />
                 <SummaryMetric
                   icon={WalletCards}
@@ -159,6 +172,32 @@ export default async function TimesheetsPage({ searchParams }: TimesheetsPagePro
               />
             </div>
           </div>
+        </Card>
+
+        <Card density="lg">
+          <CardHeader className="block">
+            <CardTitle>{t("workflow.title")}</CardTitle>
+            <CardDescription>{t("workflow.description")}</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <TimesheetStepper
+              status={preview.status}
+              aria-label={t("workflow.ariaLabel")}
+              labels={{
+                created: t("workflow.steps.created"),
+                submitted: t("workflow.steps.submitted"),
+                approved: t("workflow.steps.approved"),
+                invoiced: t("workflow.steps.invoiced"),
+                paid: t("workflow.steps.paid"),
+              }}
+              lockedDescriptions={{
+                submitted: t("workflow.locked.submitted"),
+                approved: t("workflow.locked.approved"),
+                invoiced: t("workflow.locked.invoiced"),
+                paid: t("workflow.locked.paid"),
+              }}
+            />
+          </CardContent>
         </Card>
 
         <PreviewWarnings preview={preview} t={t} />
@@ -248,7 +287,7 @@ function PreviewWarnings({
       {warnings.map((warning) => (
         <div
           key={warning}
-          className="flex items-start gap-3 rounded-[var(--radius-lg)] border border-warning/35 bg-warning/10 px-4 py-3 text-sm text-warning"
+          className="flex items-start gap-3 rounded-[var(--radius-lg)] border border-warning/35 bg-warning-soft px-4 py-3 text-sm text-warning"
         >
           <AlertTriangle className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
           <p>{warning}</p>
@@ -297,7 +336,9 @@ function ProjectBreakdownTable({
                   </div>
                 </td>
                 <td className="px-4 py-4 font-ui text-sm font-semibold text-foreground">
-                  {formatHours(project.totalMinutes, locale)}
+                  {/* Rate and amount sit in the same row, so hours are pinned decimal
+                      (formatDecimalHours) regardless of the member's display preference. */}
+                  {formatDecimalHours(project.totalMinutes, locale)}
                 </td>
                 <td className="px-4 py-4 text-sm text-muted-foreground">
                   <RateCell project={project} locale={locale} t={t} />
@@ -328,10 +369,6 @@ function InvoicePanel({
 }) {
   const workflow = getInvoiceWorkflow(preview);
 
-  if (workflow.kind === "hidden") {
-    return null;
-  }
-
   return (
     <Card variant="elevated" density="lg">
       <CardHeader className="block">
@@ -346,12 +383,14 @@ function InvoicePanel({
         </div>
       </CardHeader>
       <CardContent>
-        {workflow.kind === "summary" ? (
+        {workflow.kind === "locked" ? (
+          <LockedState title={t("invoice.lockedTitle")} reason={t("invoice.lockedReason")} />
+        ) : workflow.kind === "summary" ? (
           <InvoiceSummary invoice={workflow.invoice} locale={locale} t={t} />
         ) : (
           <div className="grid gap-4">
             {workflow.kind === "cancellation" || workflow.kind === "replacement" ? (
-              <div className="flex items-start gap-3 rounded-[var(--radius-lg)] border border-destructive/35 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+              <div className="flex items-start gap-3 rounded-[var(--radius-lg)] border border-destructive/35 bg-destructive-soft px-4 py-3 text-sm text-destructive">
                 <AlertTriangle className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
                 <p>
                   {t("invoice.rejectedReason", {
@@ -382,7 +421,7 @@ type TimesheetInvoicePreview = ContractorTimesheetMonthlyPreview["invoices"][num
 
 type InvoiceWorkflow =
   | {
-      kind: "hidden";
+      kind: "locked";
     }
   | {
       kind: "summary";
@@ -537,7 +576,7 @@ function getInvoiceWorkflow(preview: ContractorTimesheetMonthlyPreview): Invoice
     if (!rejectedInvoice) {
       return latestMainInvoice
         ? { kind: "summary", invoice: latestMainInvoice }
-        : { kind: "hidden" };
+        : { kind: "locked" };
     }
 
     const cancellationInvoice = preview.invoices.find(
@@ -575,11 +614,12 @@ function getInvoiceWorkflow(preview: ContractorTimesheetMonthlyPreview): Invoice
   }
 
   return {
-    kind: "hidden",
+    kind: "locked",
   };
 }
 
 function getInvoiceWorkflowDescription(workflow: InvoiceWorkflow, t: TimesheetsTranslator) {
+  if (workflow.kind === "locked") return t("invoice.lockedDescription");
   if (workflow.kind === "summary") return t("invoice.uploadedDescription");
   if (workflow.kind === "cancellation") return t("invoice.cancellationDescription");
   if (workflow.kind === "replacement") return t("invoice.replacementDescription");
@@ -707,60 +747,20 @@ function formatProjectAmount(
 }
 
 function formatRate(rate: TimesheetPreviewRate, locale: string) {
-  const formattedRate = new Intl.NumberFormat(locale, {
-    maximumFractionDigits: 2,
-  }).format(Number(rate.hourlyRate));
-
-  return `${formattedRate} ${rate.currencyCode}/h`;
+  return formatRateBase(rate.hourlyRate, rate.currencyCode, locale);
 }
 
+/** Contractor-facing amounts spell the currency out to match the invoices they reconcile against. */
 function formatMoney(amount: string, currencyCode: string, locale: string) {
-  return new Intl.NumberFormat(locale, {
-    style: "currency",
-    currency: currencyCode,
-    currencyDisplay: "code",
-    maximumFractionDigits: 2,
-  }).format(Number(amount));
+  return formatMoneyBase(amount, currencyCode, locale, { display: "code" });
 }
 
 function formatDateTime(value: string, locale: string) {
-  return new Intl.DateTimeFormat(locale, {
-    dateStyle: "medium",
-    timeStyle: "short",
-    timeZone: "UTC",
-  }).format(new Date(value));
-}
-
-function formatHours(minutes: number, locale: string) {
-  const hours = minutes / 60;
-
-  return new Intl.NumberFormat(locale, {
-    maximumFractionDigits: 2,
-  }).format(hours);
-}
-
-function formatCount(value: number, locale: string) {
-  return new Intl.NumberFormat(locale).format(value);
-}
-
-function formatMonthLabel(value: string, locale: string) {
-  return new Intl.DateTimeFormat(locale, {
-    month: "long",
-    year: "numeric",
-    timeZone: "UTC",
-  }).format(new Date(`${value}T00:00:00.000Z`));
+  return formatTimestampBase(value, locale, { timeZone: "UTC" });
 }
 
 function formatPeriodRange(start: string, end: string, locale: string) {
-  const formatter = new Intl.DateTimeFormat(locale, {
-    month: "short",
-    day: "numeric",
-    timeZone: "UTC",
-  });
-
-  return `${formatter.format(new Date(`${start}T00:00:00.000Z`))} - ${formatter.format(
-    new Date(`${end}T00:00:00.000Z`),
-  )}`;
+  return formatPeriodRangeBase(start, end, locale, { style: "short" });
 }
 
 function getStatusLabel(status: TimesheetPreviewStatus, t: TimesheetsTranslator) {

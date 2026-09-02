@@ -1,245 +1,223 @@
 "use client";
 
-import { Check, ChevronsUpDown, Search } from "lucide-react";
-import { useEffect, useId, useMemo, useRef, useState } from "react";
+import { Check, ChevronsUpDown } from "lucide-react";
+import { useId, useRef, useState } from "react";
 
 import { cn } from "@/src/lib/utils";
-import { Button } from "../Button";
+import { Command, CommandEmpty, CommandInput, CommandItem, CommandList } from "../Command";
 import { Popover, PopoverContent, PopoverTrigger } from "../Popover";
+import { controlPanelClassName, controlTriggerClassName } from "../controlSurface";
 import type { ComboboxProps } from "./Combobox.types";
+import { useFormReset } from "./useFormReset";
 
+/**
+ * A searchable single-select.
+ *
+ * Deliberately has no clear button. Every call site is either a filter, which carries an
+ * explicit "All …" option, or a required field; adding one would mean a second button
+ * inside the trigger button, which is invalid markup, or a floating overlay that collides
+ * with the chevron. `DatePicker` keeps its clear affordance, where optional end dates make
+ * it earn its place.
+ */
 export function Combobox({
   options,
   value,
+  defaultValue,
   onValueChange,
+  name,
+  form,
   label,
-  placeholder = "Select...",
-  searchPlaceholder = "Search...",
-  emptyLabel = "No results",
+  placeholder,
+  labels,
   disabled,
+  required,
   invalid,
+  modal = true,
   className,
+  triggerClassName,
+  contentClassName,
   id,
   "aria-describedby": ariaDescribedBy,
   ...props
 }: ComboboxProps) {
   const generatedId = useId();
   const triggerId = id ?? `combobox-${generatedId}`;
-  const listboxId = `${triggerId}-listbox`;
-  const searchId = `${triggerId}-search`;
+  const [trigger, setTrigger] = useState<HTMLButtonElement | null>(null);
   const searchRef = useRef<HTMLInputElement>(null);
-  const optionRefs = useRef(new Map<string, HTMLButtonElement>());
   const [open, setOpen] = useState(false);
-  const [query, setQuery] = useState("");
-  const [activeValue, setActiveValue] = useState<string>();
-  const selected = options.find((option) => option.value === value);
-  const visibleOptions = useMemo(() => {
-    const needle = query.trim().toLowerCase();
-    if (!needle) return options;
-    return options.filter((option) => option.label.toLowerCase().includes(needle));
-  }, [options, query]);
-  const enabledOptions = useMemo(
-    () => visibleOptions.filter((option) => !option.disabled),
-    [visibleOptions],
-  );
-  const activeValueIsEnabled = activeValue
-    ? enabledOptions.some((option) => option.value === activeValue)
-    : false;
-  const selectedValueIsEnabled = selected
-    ? enabledOptions.some((option) => option.value === selected.value)
-    : false;
-  const resolvedActiveValue = activeValueIsEnabled
-    ? activeValue
-    : selectedValueIsEnabled
-      ? selected?.value
-      : enabledOptions[0]?.value;
-  const activeOptionIndex = visibleOptions.findIndex(
-    (option) => option.value === resolvedActiveValue,
-  );
-  const activeOptionId =
-    activeOptionIndex >= 0 ? `${listboxId}-option-${activeOptionIndex}` : undefined;
+  const [internalValue, setInternalValue] = useState(defaultValue ?? "");
+  const [activeItem, setActiveItem] = useState<string>();
 
-  useEffect(() => {
-    if (!resolvedActiveValue) return;
-    optionRefs.current.get(resolvedActiveValue)?.scrollIntoView({ block: "nearest" });
-  }, [resolvedActiveValue]);
+  const currentValue = value ?? internalValue;
+  const selectedIndex = options.findIndex((option) => option.value === currentValue);
+  const selected = selectedIndex >= 0 ? options[selectedIndex] : undefined;
 
-  function focusSearch(optionValue?: string) {
-    setActiveValue(optionValue);
-    window.requestAnimationFrame(() => searchRef.current?.focus());
-  }
+  useFormReset(trigger, () => setInternalValue(defaultValue ?? ""));
 
-  function firstEnabledOption() {
-    return enabledOptions[0];
-  }
+  /**
+   * cmdk identifies items by value and lowercases them, so an option whose real value is an
+   * empty string (every "All …" filter) or one that differs from a sibling only by case
+   * would break. Index surrogates sidestep both; search runs on keywords regardless.
+   */
+  const itemValue = (index: number) => `option-${index}`;
 
-  function moveActiveOption(direction: 1 | -1) {
-    if (enabledOptions.length === 0) return;
-    const currentIndex = enabledOptions.findIndex((option) => option.value === resolvedActiveValue);
-    const nextIndex =
-      currentIndex >= 0
-        ? (currentIndex + direction + enabledOptions.length) % enabledOptions.length
-        : 0;
-    setActiveValue(enabledOptions[nextIndex]?.value);
-  }
-
-  function selectOption(optionValue: string) {
-    if (options.find((option) => option.value === optionValue)?.disabled) return;
-    onValueChange?.(optionValue);
+  function selectOption(next: string) {
+    if (value === undefined) setInternalValue(next);
+    onValueChange?.(next);
     setOpen(false);
-    setQuery("");
-    window.requestAnimationFrame(() => document.getElementById(triggerId)?.focus());
   }
 
   return (
-    <div className={className} {...props}>
+    <div className={cn("relative min-w-0", className)} {...props}>
       <Popover
         open={open}
+        modal={modal}
         onOpenChange={(nextOpen) => {
           setOpen(nextOpen);
-          if (!nextOpen) {
-            setQuery("");
-            setActiveValue(undefined);
-          }
+          // Highlight the current choice when opening, rather than the first row.
+          if (nextOpen) setActiveItem(selectedIndex >= 0 ? itemValue(selectedIndex) : undefined);
         }}
       >
         <PopoverTrigger asChild>
-          <Button
+          {/*
+            PopoverTrigger merges in `aria-controls` at runtime, pointing at the panel id it
+            generates. The rule only sees this JSX, not what Radix adds to it.
+          */}
+          {/* eslint-disable jsx-a11y/role-has-required-aria-props */}
+          <button
+            ref={setTrigger}
             id={triggerId}
             type="button"
-            variant="soft"
-            className="w-full justify-between"
-            disabled={disabled}
-            aria-label={label}
             role="combobox"
             aria-haspopup="listbox"
             aria-expanded={open}
-            aria-controls={listboxId}
+            aria-label={label}
             aria-describedby={ariaDescribedBy}
             aria-invalid={invalid || undefined}
-            onKeyDown={(event) => {
-              if (event.key === "ArrowDown") {
-                event.preventDefault();
-                setOpen(true);
-                focusSearch(
-                  selected && !selected.disabled ? selected.value : firstEnabledOption()?.value,
-                );
-              }
-            }}
+            disabled={disabled}
+            className={cn(controlTriggerClassName, triggerClassName)}
           >
-            <span className={cn(!selected && "text-muted-foreground")}>
-              {selected?.label ?? placeholder}
+            <span
+              title={selected?.label}
+              className={cn(
+                "min-w-0 flex-1 truncate text-left",
+                !selected && "text-muted-foreground",
+              )}
+            >
+              {selected?.label ?? placeholder ?? label}
             </span>
-            <ChevronsUpDown className="size-4 opacity-70" aria-hidden="true" />
-          </Button>
+            <ChevronsUpDown className="size-4 shrink-0 text-muted-foreground" aria-hidden="true" />
+          </button>
+          {/* eslint-enable jsx-a11y/role-has-required-aria-props */}
         </PopoverTrigger>
-        <PopoverContent align="start" className="w-[min(22rem,calc(100vw-2rem))] p-2">
-          <div className="flex h-9 items-center gap-2 rounded-[var(--radius-md)] border border-input bg-card px-3">
-            <Search className="size-4 text-muted-foreground" aria-hidden="true" />
-            <input
-              id={searchId}
-              ref={searchRef}
-              role="searchbox"
-              aria-label={searchPlaceholder}
-              aria-controls={listboxId}
-              aria-activedescendant={activeOptionId}
-              value={query}
-              onChange={(event) => {
-                setQuery(event.target.value);
-                setActiveValue(undefined);
-              }}
-              onKeyDown={(event) => {
-                if (event.key === "ArrowDown") {
-                  event.preventDefault();
-                  moveActiveOption(1);
-                }
-                if (event.key === "ArrowUp") {
-                  event.preventDefault();
-                  moveActiveOption(-1);
-                }
-                if (event.key === "Enter" && resolvedActiveValue) {
-                  event.preventDefault();
-                  selectOption(resolvedActiveValue);
-                }
-                if (event.key === "Escape") {
-                  event.preventDefault();
-                  setOpen(false);
-                  window.requestAnimationFrame(() => document.getElementById(triggerId)?.focus());
-                }
-              }}
-              placeholder={searchPlaceholder}
-              className="min-w-0 flex-1 bg-transparent font-ui text-sm outline-none placeholder:text-muted-foreground"
-            />
-          </div>
-          <div
-            id={listboxId}
-            role="listbox"
-            aria-label={label}
-            className="mt-2 grid max-h-64 gap-1 overflow-auto"
+        <PopoverContent
+          align="start"
+          className={cn(controlPanelClassName, contentClassName)}
+          /**
+           * Focus the search field explicitly rather than letting Radix focus the panel or
+           * relying on `autoFocus`. Inside a Dialog or Drawer the surrounding focus scope
+           * reclaims focus right after the panel opens and strands it on the trigger, so
+           * the move has to happen on the next frame to land after that.
+           */
+          onOpenAutoFocus={(event) => {
+            event.preventDefault();
+            window.requestAnimationFrame(() => searchRef.current?.focus());
+          }}
+        >
+          {/* `label` names cmdk's input, which hardcodes role="combobox" like the trigger. */}
+          <Command
+            label={labels?.search ?? "Search"}
+            value={activeItem}
+            onValueChange={setActiveItem}
           >
-            {visibleOptions.length === 0 ? (
-              <p className="px-2 py-6 text-center text-sm text-muted-foreground">{emptyLabel}</p>
-            ) : (
-              visibleOptions.map((option, index) => {
-                const isSelected = option.value === value;
-                const isActive = option.value === resolvedActiveValue;
-                return (
-                  <button
-                    key={option.value}
-                    id={`${listboxId}-option-${index}`}
-                    ref={(node) => {
-                      if (node) optionRefs.current.set(option.value, node);
-                      else optionRefs.current.delete(option.value);
-                    }}
-                    type="button"
-                    tabIndex={-1}
-                    role="option"
-                    aria-selected={isSelected}
-                    aria-disabled={option.disabled || undefined}
-                    disabled={option.disabled}
-                    onMouseEnter={() => {
-                      if (!option.disabled) setActiveValue(option.value);
-                    }}
-                    onClick={() => {
-                      selectOption(option.value);
-                    }}
-                    onKeyDown={(event) => {
-                      if (event.key === "ArrowDown") {
-                        event.preventDefault();
-                        moveActiveOption(1);
-                      }
-                      if (event.key === "ArrowUp") {
-                        event.preventDefault();
-                        moveActiveOption(-1);
-                      }
-                      if (event.key === "Escape") {
-                        event.preventDefault();
-                        setOpen(false);
-                        window.requestAnimationFrame(() =>
-                          document.getElementById(triggerId)?.focus(),
-                        );
-                      }
-                    }}
-                    className={cn(
-                      "flex items-center justify-between gap-3 rounded-[var(--radius-md)] px-3 py-2 text-left text-sm transition hover:bg-secondary disabled:pointer-events-none disabled:opacity-45",
-                      isActive && "bg-secondary text-foreground",
-                      isSelected && "bg-primary/14 text-accent",
-                    )}
-                  >
-                    <span className="grid gap-0.5">
-                      <span className="font-medium">{option.label}</span>
-                      {option.meta ? (
-                        <span className="text-xs text-muted-foreground">{option.meta}</span>
-                      ) : null}
+            <CommandInput ref={searchRef} placeholder={labels?.searchPlaceholder ?? "Search..."} />
+            <CommandList>
+              <CommandEmpty>{labels?.empty ?? "No results"}</CommandEmpty>
+              {options.map((option, index) => (
+                <CommandItem
+                  key={option.value}
+                  value={itemValue(index)}
+                  keywords={[
+                    option.label,
+                    typeof option.meta === "string" ? option.meta : undefined,
+                    ...(option.keywords ?? []),
+                  ].filter((keyword): keyword is string => Boolean(keyword))}
+                  disabled={option.disabled}
+                  // cmdk hands back its lowercased copy, so close over the real value.
+                  onSelect={() => selectOption(option.value)}
+                >
+                  <span className="grid min-w-0 flex-1 gap-0.5">
+                    <span className="truncate font-medium" title={option.label}>
+                      {option.label}
                     </span>
-                    {isSelected ? <Check className="size-4" aria-hidden="true" /> : null}
-                  </button>
-                );
-              })
-            )}
-          </div>
+                    {option.meta ? (
+                      <span className="truncate text-xs text-muted-foreground">{option.meta}</span>
+                    ) : null}
+                  </span>
+                  {option.value === currentValue ? (
+                    <Check className="size-4 shrink-0 text-accent" aria-hidden="true" />
+                  ) : null}
+                </CommandItem>
+              ))}
+            </CommandList>
+          </Command>
         </PopoverContent>
       </Popover>
+
+      {name ? (
+        <ComboboxFormValue
+          {...{ name, form, required, disabled, options }}
+          value={currentValue}
+          onFocus={() => trigger?.focus()}
+        />
+      ) : null}
     </div>
+  );
+}
+
+/**
+ * Mirrors Radix Select's hidden native select rather than using `<input type="hidden">`.
+ *
+ * Hidden inputs are barred from constraint validation, so `required` on one is silently
+ * inert. A visually hidden but still laid-out `<select>` keeps native validation, native
+ * form participation, and `form.reset()`.
+ */
+function ComboboxFormValue({
+  name,
+  form,
+  required,
+  disabled,
+  options,
+  value,
+  onFocus,
+}: {
+  name: string;
+  form?: string;
+  required?: boolean;
+  disabled?: boolean;
+  options: ComboboxProps["options"];
+  value: string;
+  onFocus: () => void;
+}) {
+  return (
+    <select
+      aria-hidden="true"
+      tabIndex={-1}
+      name={name}
+      form={form}
+      required={required}
+      disabled={disabled}
+      value={value}
+      onChange={() => {}}
+      onFocus={onFocus}
+      className="pointer-events-none absolute size-px overflow-hidden opacity-0"
+    >
+      {options.some((option) => option.value === "") ? null : <option value="" />}
+      {options.map((option) => (
+        <option key={option.value} value={option.value}>
+          {option.label}
+        </option>
+      ))}
+    </select>
   );
 }

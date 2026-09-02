@@ -1,6 +1,6 @@
 import type { HTMLAttributes } from "react";
 
-export type CardVariant = "flat" | "elevated" | "featured" | "warning" | "selected";
+export type CardVariant = "flat" | "elevated" | "featured" | "warning" | "danger" | "selected";
 export type CardDensity = "sm" | "md" | "lg";
 
 export type CardProps = HTMLAttributes<HTMLDivElement> & {

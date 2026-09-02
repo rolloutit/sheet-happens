@@ -44,6 +44,47 @@ const storyCases: StoryVisualCase[] = [
     projects: ["desktop"],
   },
   {
+    id: "layout-atmosphere--over-canvas",
+    slug: "atmosphere-over-canvas-dark",
+    theme: "dark",
+    locale: "en",
+    projects: ["desktop"],
+  },
+  /**
+   * The three light cases below mirror the dark ones directly above and in the block after.
+   * Until the light relight there was no full-screen light baseline at all — the ten light
+   * snapshots were single components — so the chassis, the sidebar plane and the whole
+   * atmosphere layer shipped with no visual regression cover on the side of the theme where
+   * they differ most.
+   *
+   * Two of them point at a `*Light` story rather than reusing the dark story's id with a
+   * different `theme` here. `AppShell` and `DashboardCards` pin `globals: { theme: "dark" }` on
+   * their meta, and a story-level global outranks the URL — so the `globals` this file writes
+   * are silently ignored for those two and the screenshot comes back dark. The `theme` field is
+   * still set to `light` below because it also drives the locale/theme pair the story loads with;
+   * it simply is not what selects the theme in those two cases.
+   */
+  {
+    id: "layout-appshell--foundation-page-light",
+    slug: "app-shell-desktop-light",
+    theme: "light",
+    locale: "hu",
+    projects: ["desktop"],
+  },
+  {
+    id: "layout-atmosphere--over-canvas",
+    slug: "atmosphere-over-canvas-light",
+    theme: "light",
+    locale: "en",
+    projects: ["desktop"],
+  },
+  {
+    id: "sheet-dashboardcards--data-driven-admin-light",
+    slug: "dashboard-admin-light",
+    theme: "light",
+    locale: "hu",
+  },
+  {
     id: "layout-appshell--mobile-navigation",
     slug: "app-shell-mobile-drawer-dark",
     theme: "dark",
@@ -89,6 +130,32 @@ const storyCases: StoryVisualCase[] = [
     },
   },
   {
+    id: "layout-runningtimerpill--running",
+    slug: "running-timer-pill-dark",
+    theme: "dark",
+    locale: "en",
+    projects: ["desktop"],
+  },
+  {
+    /*
+      Points at the `*Light` story rather than flipping `theme` here, for the same reason the
+      AppShell cases above do: the meta pins `theme: "dark"` and a story-level global outranks the
+      URL. The pill sits on the header plane, which is the surface the two themes differ on most.
+    */
+    id: "layout-runningtimerpill--running-light",
+    slug: "running-timer-pill-light",
+    theme: "light",
+    locale: "en",
+    projects: ["desktop"],
+  },
+  {
+    id: "layout-runningtimerpill--compact-mobile",
+    slug: "running-timer-pill-compact-mobile",
+    theme: "dark",
+    locale: "en",
+    projects: ["mobile"],
+  },
+  {
     id: "layout-mobilebottombar--default",
     slug: "mobile-bottom-bar-dark",
     theme: "dark",
@@ -120,6 +187,26 @@ const storyCases: StoryVisualCase[] = [
     projects: ["desktop"],
   },
   {
+    id: "sheet-timerstartdialog--open",
+    slug: "timer-start-dialog-dark",
+    theme: "dark",
+    locale: "en",
+    projects: ["desktop"],
+    prepare: async (page) => {
+      await expect(page.getByRole("dialog")).toBeVisible();
+    },
+  },
+  {
+    id: "sheet-timerstartdialog--open-light",
+    slug: "timer-start-dialog-light",
+    theme: "light",
+    locale: "en",
+    projects: ["desktop"],
+    prepare: async (page) => {
+      await expect(page.getByRole("dialog")).toBeVisible();
+    },
+  },
+  {
     id: "sheet-timebreakdowndialog--default",
     slug: "time-breakdown-dialog-dark",
     theme: "dark",
@@ -149,6 +236,70 @@ const storyCases: StoryVisualCase[] = [
     theme: "light",
     locale: "en",
     projects: ["desktop"],
+  },
+  /**
+   * The brand form controls. The interesting pixels are all inside a popover, so each of
+   * these has to be captured open.
+   *
+   * The two below ride on their story's own `play` function, which Storybook runs on load
+   * and which already leaves the control open. Clicking again from `prepare` cannot work:
+   * these popovers are modal, so while one is open the trigger sits in an `aria-hidden`
+   * subtree and no role query will find it.
+   */
+  {
+    id: "ui-select--threshold-boundary",
+    slug: "select-search-dark",
+    theme: "dark",
+    locale: "en",
+    projects: ["desktop"],
+    prepare: async (page) => {
+      await expect(page.getByRole("combobox", { name: /search/i })).toBeVisible();
+    },
+  },
+  {
+    id: "ui-combobox--empty-results",
+    slug: "combobox-empty-light",
+    theme: "light",
+    locale: "en",
+    projects: ["desktop"],
+    prepare: async (page) => {
+      await expect(page.getByText(/no projects found/i)).toBeVisible();
+    },
+  },
+  {
+    // Hungarian weekday abbreviations and month name are the highest-risk locale detail
+    // in the calendar, and mobile is where the popover width is tightest.
+    id: "ui-datepicker--hungarian",
+    slug: "date-picker-open-dark-hu",
+    theme: "dark",
+    locale: "hu",
+    projects: ["desktop", "mobile"],
+    prepare: async (page) => {
+      await page.getByRole("button", { name: /entry date/i }).click();
+      await expect(page.getByRole("grid")).toBeVisible();
+    },
+  },
+  {
+    id: "ui-daterangepicker--default",
+    slug: "date-range-picker-open-dark",
+    theme: "dark",
+    locale: "en",
+    projects: ["desktop"],
+    prepare: async (page) => {
+      await page.getByRole("button", { name: /period/i }).click();
+      await expect(page.getByRole("grid").first()).toBeVisible();
+    },
+  },
+  {
+    id: "ui-monthpicker--default",
+    slug: "month-picker-open-light",
+    theme: "light",
+    locale: "en",
+    projects: ["desktop"],
+    prepare: async (page) => {
+      await page.getByRole("button", { name: /^month$/i }).click();
+      await expect(page.getByRole("grid", { name: /select month/i })).toBeVisible();
+    },
   },
 ];
 

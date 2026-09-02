@@ -3,13 +3,19 @@ import { randomUUID } from "node:crypto";
 import { getGoogleAuthSettings } from "@/src/server/auth/sign-in-methods";
 import { prisma } from "@/src/server/db/client";
 import { getEmailDeliveryMode } from "@/src/server/email/mailer";
-import { renderTypstPdf } from "@/src/server/pdf/typst";
+import { renderTypstDocument } from "@/src/server/pdf";
 import { getObjectStorage, type ObjectStorage } from "@/src/server/storage";
 
 export type SystemCheckStatus = "pass" | "warning" | "fail";
 
 export type SystemCheckId =
-  "application" | "database" | "objectStorage" | "email" | "googleOAuth" | "typst";
+  | "application"
+  | "database"
+  | "objectStorage"
+  | "email"
+  | "googleOAuth"
+  | "typst"
+  | "notificationDispatcher";
 
 export type SystemCheckCode =
   | "ok"
@@ -23,7 +29,10 @@ export type SystemCheckCode =
   | "emailSmtpDefaultFrom"
   | "googleDisabled"
   | "googlePartialConfig"
-  | "typstProbeFailed";
+  | "typstProbeFailed"
+  | "notificationDispatcherNeverRun"
+  | "notificationDispatcherStale"
+  | "notificationDispatcherFailed";
 
 export type SystemCheckDetail = {
   label: string;
@@ -50,8 +59,9 @@ export type SystemCheckSummary = {
 export type RunSystemChecksDeps = {
   env?: SystemCheckEnv;
   db?: Pick<typeof prisma, "$queryRawUnsafe">;
+  notificationJobs?: Pick<typeof prisma.jobRun, "findFirst">;
   storage?: ObjectStorage;
-  typstRenderer?: typeof renderTypstPdf;
+  typstRenderer?: typeof renderTypstDocument;
   now?: Date;
 };
 
@@ -80,12 +90,6 @@ const SECRET_ENV_NAMES = [
   "S3_SECRET_ACCESS_KEY",
 ] as const;
 
-const TYPST_SYSTEM_CHECK_SOURCE = [
-  "#set page(width: 90mm, height: 40mm, margin: 8mm)",
-  "#set text(size: 10pt)",
-  "Sheet Happens Typst check",
-].join("\n");
-
 export async function runSystemChecks(deps: RunSystemChecksDeps = {}): Promise<SystemCheckSummary> {
   const env = deps.env ?? process.env;
   const now = deps.now ?? new Date();
@@ -98,6 +102,11 @@ export async function runSystemChecks(deps: RunSystemChecksDeps = {}): Promise<S
     runEmailCheck({ env, checkedAt, now }),
     runGoogleOAuthCheck({ env, checkedAt, now }),
     runTypstCheck({ env, checkedAt, typstRenderer: deps.typstRenderer }),
+    runNotificationDispatcherCheck({
+      checkedAt,
+      now,
+      notificationJobs: deps.notificationJobs,
+    }),
   ]);
 
   return {
@@ -105,6 +114,58 @@ export async function runSystemChecks(deps: RunSystemChecksDeps = {}): Promise<S
     status: getOverallStatus(checks),
     checks,
   };
+}
+
+export async function runNotificationDispatcherCheck(input: {
+  checkedAt: string;
+  now: Date;
+  notificationJobs?: Pick<typeof prisma.jobRun, "findFirst">;
+}): Promise<SystemCheckResult> {
+  return timeCheck("notificationDispatcher", input.checkedAt, async () => {
+    const jobs = input.notificationJobs ?? prisma.jobRun;
+    const latest = await jobs.findFirst({
+      where: { jobName: "notification_dispatch" },
+      orderBy: { startedAt: "desc" },
+      select: { status: true, startedAt: true, finishedAt: true, error: true },
+    });
+
+    if (!latest) {
+      return {
+        status: "warning",
+        code: "notificationDispatcherNeverRun",
+        details: [{ label: "lastRun", value: "never" }],
+      };
+    }
+
+    const ageSeconds = Math.max(
+      0,
+      Math.floor((input.now.getTime() - latest.startedAt.getTime()) / 1_000),
+    );
+    const details = [
+      { label: "lastRun", value: latest.startedAt.toISOString() },
+      { label: "jobStatus", value: latest.status },
+      { label: "ageSeconds", value: String(ageSeconds) },
+    ];
+
+    if (latest.status === "FAILED") {
+      return {
+        status: "fail",
+        code: "notificationDispatcherFailed",
+        error: latest.error ?? undefined,
+        details,
+      };
+    }
+
+    if (latest.status !== "SUCCESS" || ageSeconds > 60) {
+      return {
+        status: "warning",
+        code: "notificationDispatcherStale",
+        details,
+      };
+    }
+
+    return { status: "pass", code: "ok", details };
+  });
 }
 
 export async function runApplicationConfigCheck(input: {
@@ -357,17 +418,19 @@ export async function runGoogleOAuthCheck(input: {
 export async function runTypstCheck(input: {
   env: SystemCheckEnv;
   checkedAt: string;
-  typstRenderer?: typeof renderTypstPdf;
+  typstRenderer?: typeof renderTypstDocument;
 }): Promise<SystemCheckResult> {
   return timeCheck("typst", input.checkedAt, async () => {
     const binary = input.env.TYPST_BIN?.trim() || "typst";
     const details = [envValueDetail("TYPST_BIN", binary)];
 
     try {
-      const renderer = input.typstRenderer ?? renderTypstPdf;
+      const renderer = input.typstRenderer ?? renderTypstDocument;
+      // Compiling from the template directory also proves the templates and bundled fonts
+      // reached the deployed image, not just that the binary runs.
       const pdf = await renderer(
         {
-          source: TYPST_SYSTEM_CHECK_SOURCE,
+          template: "system-check",
           filename: "system-check",
         },
         {

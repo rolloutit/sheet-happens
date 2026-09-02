@@ -7,6 +7,7 @@ import { AdminInfoEditorClient } from "./AdminInfoEditorClient";
 import { AppShell } from "@/src/components/layout/AppShell";
 import { Button } from "@/src/components/ui/Button";
 import { SectionHead } from "@/src/components/ui/SectionHead";
+import { formatTimestamp } from "@/src/lib/formatting";
 import {
   mapMemberToShellProfile,
   mapMemberToShellUser,
@@ -31,7 +32,9 @@ export default async function AdminInfoPage() {
     bodyMarkdown: editablePage?.bodyMarkdown || defaultWelcome.bodyMarkdown,
     status: editablePage?.status ?? ("draft" as const),
     version: editablePage?.version ?? null,
-    updatedAtLabel: editablePage?.updatedAt ? formatDateTime(editablePage.updatedAt, locale) : null,
+    updatedAtLabel: editablePage?.updatedAt
+      ? formatTimestamp(editablePage.updatedAt.toISOString(), locale)
+      : null,
   };
 
   return (
@@ -80,11 +83,4 @@ export default async function AdminInfoPage() {
       </section>
     </AppShell>
   );
-}
-
-function formatDateTime(date: Date, locale: string) {
-  return new Intl.DateTimeFormat(locale, {
-    dateStyle: "medium",
-    timeStyle: "short",
-  }).format(date);
 }

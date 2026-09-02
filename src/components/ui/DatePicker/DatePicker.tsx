@@ -1,289 +1,114 @@
 "use client";
 
-import { ChevronLeft, ChevronRight, CalendarDays } from "lucide-react";
-import { useEffect, useId, useMemo, useRef, useState } from "react";
+import { CalendarDays } from "lucide-react";
+import { useId, useState } from "react";
 
+import { clampDateValue, todayDateValue } from "@/src/lib/date-values";
+import { formatDateLabel } from "@/src/lib/formatting";
 import { cn } from "@/src/lib/utils";
 import { Button } from "../Button";
+import { Calendar } from "../Calendar";
+import { useFormReset } from "../Combobox";
 import { Popover, PopoverContent, PopoverTrigger } from "../Popover";
+import { controlTriggerClassName } from "../controlSurface";
 import type { DatePickerProps } from "./DatePicker.types";
 
-const weekDays = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
-
-function startOfMonth(date: Date) {
-  return new Date(date.getFullYear(), date.getMonth(), 1);
-}
-
-function addMonths(date: Date, amount: number) {
-  return new Date(date.getFullYear(), date.getMonth() + amount, 1);
-}
-
-function addMonthsPreservingDay(date: Date, amount: number) {
-  const targetYear = date.getFullYear();
-  const targetMonth = date.getMonth() + amount;
-  const lastDay = new Date(targetYear, targetMonth + 1, 0).getDate();
-  return new Date(targetYear, targetMonth, Math.min(date.getDate(), lastDay));
-}
-
-function addDays(date: Date, amount: number) {
-  const next = new Date(date);
-  next.setDate(date.getDate() + amount);
-  return next;
-}
-
-function startOfWeek(date: Date) {
-  const mondayOffset = (date.getDay() + 6) % 7;
-  return addDays(date, -mondayOffset);
-}
-
-function endOfWeek(date: Date) {
-  return addDays(startOfWeek(date), 6);
-}
-
-function sameDay(a?: Date, b?: Date) {
-  return Boolean(
-    a &&
-    b &&
-    a.getFullYear() === b.getFullYear() &&
-    a.getMonth() === b.getMonth() &&
-    a.getDate() === b.getDate(),
-  );
-}
-
-function toDateKey(date: Date) {
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const day = String(date.getDate()).padStart(2, "0");
-  return `${year}-${month}-${day}`;
-}
-
-function formatDate(date: Date | undefined, locale: string) {
-  if (!date) return "";
-  return new Intl.DateTimeFormat(locale, {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-  }).format(date);
-}
-
-function getCalendarDays(month: Date) {
-  const first = startOfMonth(month);
-  const mondayOffset = (first.getDay() + 6) % 7;
-  const start = new Date(first);
-  start.setDate(first.getDate() - mondayOffset);
-
-  return Array.from({ length: 42 }, (_, index) => {
-    const date = new Date(start);
-    date.setDate(start.getDate() + index);
-    return date;
-  });
-}
-
+/**
+ * A single calendar date, as a `YYYY-MM-DD` string.
+ *
+ * The value is a string rather than a `Date` on purpose. Every form, URL param and Zod
+ * schema in this app already speaks that format, and a `Date`-shaped API invites the
+ * local-midnight bug that `src/lib/formatting/dates.ts` exists to document — construct
+ * `new Date("2026-06-24")` in Budapest, read it back with local accessors, and it is the
+ * 23rd. Conversion happens once, inside `Calendar`.
+ */
 export function DatePicker({
   value,
+  defaultValue,
   onValueChange,
+  name,
+  form,
   label,
-  placeholder = "Select date",
-  locale = "en",
+  placeholder,
+  locale,
+  min,
+  max,
+  disabledDates,
+  labels,
   disabled,
-  disabledDate,
+  required,
+  invalid,
   clearable = true,
+  modal = true,
   className,
+  triggerClassName,
+  contentClassName,
   id,
   "aria-describedby": ariaDescribedBy,
   ...props
 }: DatePickerProps) {
   const generatedId = useId();
-  const triggerId = id ?? `date-picker-${generatedId}-trigger`;
-  const gridId = `date-picker-${generatedId}-grid`;
-  const dayRefs = useRef(new Map<string, HTMLButtonElement>());
+  const triggerId = id ?? `date-picker-${generatedId}`;
+  const [trigger, setTrigger] = useState<HTMLButtonElement | null>(null);
   const [open, setOpen] = useState(false);
-  const [month, setMonth] = useState(startOfMonth(value ?? new Date()));
-  const [pendingFocusKey, setPendingFocusKey] = useState<string>();
-  const days = useMemo(() => getCalendarDays(month), [month]);
-  const today = new Date();
+  const [internalValue, setInternalValue] = useState(defaultValue ?? "");
 
-  useEffect(() => {
-    if (!pendingFocusKey) return;
-    const frame = window.requestAnimationFrame(() => {
-      const target = dayRefs.current.get(pendingFocusKey);
-      target?.focus();
-      if (target) setPendingFocusKey(undefined);
-    });
+  const currentValue = value ?? internalValue;
 
-    return () => window.cancelAnimationFrame(frame);
-  }, [days, pendingFocusKey]);
+  useFormReset(trigger, () => setInternalValue(defaultValue ?? ""));
 
-  function isDateDisabled(date: Date) {
-    return disabledDate?.(date) ?? false;
-  }
-
-  function findFocusableDate(date: Date, direction: 1 | -1) {
-    if (!isDateDisabled(date)) return date;
-
-    let next = date;
-    for (let attempt = 0; attempt < 366; attempt += 1) {
-      next = addDays(next, direction);
-      if (!isDateDisabled(next)) return next;
-    }
-
-    return date;
-  }
-
-  function focusDate(date: Date, direction: 1 | -1 = 1) {
-    const next = findFocusableDate(date, direction);
-    setMonth(startOfMonth(next));
-    setPendingFocusKey(toDateKey(next));
-  }
-
-  function moveFocus(date: Date, amount: number) {
-    focusDate(addDays(date, amount), amount < 0 ? -1 : 1);
-  }
-
-  function selectDate(date: Date) {
-    if (isDateDisabled(date)) return;
-    onValueChange?.(date);
-    setOpen(false);
+  function commit(next: string | undefined) {
+    if (value === undefined) setInternalValue(next ?? "");
+    onValueChange?.(next);
   }
 
   return (
-    <div className={className} {...props}>
-      <Popover open={open} onOpenChange={setOpen}>
+    <div className={cn("relative", className)} {...props}>
+      <Popover open={open} modal={modal} onOpenChange={setOpen}>
         <PopoverTrigger asChild>
-          <Button
+          <button
+            ref={setTrigger}
             id={triggerId}
             type="button"
-            variant="soft"
-            className="w-full justify-start"
             aria-label={label}
             aria-describedby={ariaDescribedBy}
-            aria-expanded={open}
-            aria-controls={gridId}
+            // ARIA has no aria-invalid for a plain button; Field carries the message.
+            data-invalid={invalid || undefined}
             disabled={disabled}
+            className={cn(controlTriggerClassName, "justify-start gap-2", triggerClassName)}
           >
-            <CalendarDays className="size-4" aria-hidden="true" />
-            <span className={cn(!value && "text-muted-foreground")}>
-              {value ? formatDate(value, locale) : placeholder}
+            <CalendarDays className="size-4 shrink-0 text-muted-foreground" aria-hidden="true" />
+            <span className={cn("truncate", !currentValue && "text-muted-foreground")}>
+              {currentValue ? formatDateLabel(currentValue, locale) : (placeholder ?? label)}
             </span>
-          </Button>
+          </button>
         </PopoverTrigger>
-        <PopoverContent align="start" className="w-80">
-          <div className="mb-4 flex items-center justify-between">
-            <IconMonthButton
-              label="Previous month"
-              onClick={() => setMonth((current) => addMonths(current, -1))}
-            >
-              <ChevronLeft className="size-4" aria-hidden="true" />
-            </IconMonthButton>
-            <div className="font-ui text-sm font-semibold">
-              {new Intl.DateTimeFormat(locale, { month: "long", year: "numeric" }).format(month)}
-            </div>
-            <IconMonthButton
-              label="Next month"
-              onClick={() => setMonth((current) => addMonths(current, 1))}
-            >
-              <ChevronRight className="size-4" aria-hidden="true" />
-            </IconMonthButton>
-          </div>
-          <div
-            id={gridId}
-            role="grid"
-            aria-label={label}
-            className="grid grid-cols-7 gap-1 text-center"
-          >
-            {weekDays.map((day) => (
-              <div
-                key={day}
-                role="columnheader"
-                className="py-1 font-ui text-[11px] font-semibold text-muted-foreground"
-              >
-                {day}
-              </div>
-            ))}
-            {days.map((date) => {
-              const disabled = isDateDisabled(date);
-              const selected = sameDay(date, value);
-              const inMonth = date.getMonth() === month.getMonth();
-              return (
-                <button
-                  key={date.toISOString()}
-                  ref={(node) => {
-                    if (node) dayRefs.current.set(toDateKey(date), node);
-                    else dayRefs.current.delete(toDateKey(date));
-                  }}
-                  type="button"
-                  role="gridcell"
-                  aria-label={new Intl.DateTimeFormat(locale, {
-                    dateStyle: "full",
-                  }).format(date)}
-                  aria-selected={selected}
-                  aria-current={sameDay(date, today) ? "date" : undefined}
-                  disabled={disabled}
-                  onClick={() => {
-                    selectDate(date);
-                  }}
-                  onKeyDown={(event) => {
-                    if (event.key === "ArrowRight") {
-                      event.preventDefault();
-                      moveFocus(date, 1);
-                    }
-                    if (event.key === "ArrowLeft") {
-                      event.preventDefault();
-                      moveFocus(date, -1);
-                    }
-                    if (event.key === "ArrowDown") {
-                      event.preventDefault();
-                      moveFocus(date, 7);
-                    }
-                    if (event.key === "ArrowUp") {
-                      event.preventDefault();
-                      moveFocus(date, -7);
-                    }
-                    if (event.key === "Home") {
-                      event.preventDefault();
-                      focusDate(startOfWeek(date), 1);
-                    }
-                    if (event.key === "End") {
-                      event.preventDefault();
-                      focusDate(endOfWeek(date), -1);
-                    }
-                    if (event.key === "PageDown") {
-                      event.preventDefault();
-                      focusDate(addMonthsPreservingDay(date, event.shiftKey ? 12 : 1), 1);
-                    }
-                    if (event.key === "PageUp") {
-                      event.preventDefault();
-                      focusDate(addMonthsPreservingDay(date, event.shiftKey ? -12 : -1), -1);
-                    }
-                    if (event.key === "Escape") {
-                      event.preventDefault();
-                      setOpen(false);
-                      window.requestAnimationFrame(() =>
-                        document.getElementById(triggerId)?.focus(),
-                      );
-                    }
-                  }}
-                  className={cn(
-                    "flex aspect-square items-center justify-center rounded-[var(--radius-md)] font-ui text-sm transition hover:bg-secondary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-30",
-                    !inMonth && "text-muted-foreground/50",
-                    sameDay(date, today) && "border border-primary/35 text-accent",
-                    selected && "bg-primary text-primary-foreground hover:bg-primary",
-                  )}
-                >
-                  {date.getDate()}
-                </button>
-              );
-            })}
-          </div>
-          <div className="mt-4 flex justify-between gap-2">
-            {clearable ? (
+        <PopoverContent align="start" className={cn("w-auto p-3", contentClassName)}>
+          <Calendar
+            locale={locale}
+            value={currentValue || undefined}
+            min={min}
+            max={max}
+            disabledDates={disabledDates}
+            labels={labels}
+            autoFocus
+            onValueChange={(next) => {
+              commit(next);
+              setOpen(false);
+            }}
+          />
+          <div className="mt-3 flex justify-between gap-2 border-t border-border pt-3">
+            {clearable && !required ? (
               <Button
                 type="button"
                 variant="ghost"
                 size="sm"
-                onClick={() => onValueChange?.(undefined)}
+                onClick={() => {
+                  commit(undefined);
+                  setOpen(false);
+                }}
               >
-                Clear
+                {labels?.clear ?? "Clear"}
               </Button>
             ) : (
               <span />
@@ -293,37 +118,18 @@ export function DatePicker({
               variant="soft"
               size="sm"
               onClick={() => {
-                onValueChange?.(today);
-                setMonth(startOfMonth(today));
+                // Clamped so "Today" can never place a value outside the allowed window.
+                commit(clampDateValue(todayDateValue(), min, max));
                 setOpen(false);
               }}
             >
-              Today
+              {labels?.today ?? "Today"}
             </Button>
           </div>
         </PopoverContent>
       </Popover>
-    </div>
-  );
-}
 
-function IconMonthButton({
-  label,
-  children,
-  onClick,
-}: {
-  label: string;
-  children: React.ReactNode;
-  onClick: () => void;
-}) {
-  return (
-    <button
-      type="button"
-      aria-label={label}
-      onClick={onClick}
-      className="inline-flex size-8 items-center justify-center rounded-full text-muted-foreground transition hover:bg-secondary hover:text-foreground"
-    >
-      {children}
-    </button>
+      {name ? <input type="hidden" name={name} form={form} value={currentValue} readOnly /> : null}
+    </div>
   );
 }

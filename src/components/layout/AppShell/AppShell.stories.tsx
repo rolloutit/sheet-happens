@@ -1,7 +1,8 @@
 import type { Meta, StoryObj } from "@storybook/nextjs-vite";
 import { Clock3, FileCheck2 } from "lucide-react";
-import { expect, screen, waitFor } from "storybook/test";
+import { expect, fn, mocked, screen, waitFor, within } from "storybook/test";
 
+import { setLocaleAction } from "@/src/i18n/actions";
 import { EmptyState } from "@/src/components/sheet/EmptyState";
 import { StatusPill } from "@/src/components/sheet/StatusPill";
 import { Button } from "@/src/components/ui/Button";
@@ -37,9 +38,11 @@ export const FoundationPage: Story = {
             <StatusPill status="paid" />
           </div>
           <h1 className="mt-4 text-3xl font-bold">Alkalmazás váz</h1>
+          {/* Theme-neutral wording on purpose: `FoundationPageLight` reuses this render, so the
+              copy may not claim to be showing "dark surfaces". */}
           <p className="mt-3 max-w-2xl text-sm leading-6 text-muted-foreground">
-            A layout story láthatóvá teszi a navigációt, a fejléc ritmusát és a sötét felületeket a
-            komponenskönyvtárban.
+            A layout story láthatóvá teszi a navigációt, a fejléc ritmusát és az alkalmazás
+            felületeit a komponenskönyvtárban.
           </p>
           <div className="mt-5 flex flex-wrap gap-3">
             <Button icon={Clock3}>Idő rögzítése</Button>
@@ -56,12 +59,51 @@ export const FoundationPage: Story = {
   ),
 };
 
+/**
+ * The same shell in the light theme, and it has to be its own export rather than a toolbar or URL
+ * setting: the meta pins `theme: "dark"`, and a story-level global outranks both. This is the only
+ * full-screen light view in the library — the sidebar's receded plane, the widened surface ladder
+ * and the light atmosphere all live here and nowhere else.
+ */
+export const FoundationPageLight: Story = {
+  ...FoundationPage,
+  globals: {
+    theme: "light",
+    locale: "hu",
+  },
+};
+
+/**
+ * `setLocaleAction` is a `"use server"` module, replaced in Storybook by `src/i18n/__mocks__` (see
+ * `.storybook/preview.tsx`). That mock is an `fn()` spy, so the language toggle's real side effect
+ * is finally assertable here.
+ */
+export const LanguageSwitch: Story = {
+  args: {
+    children: null,
+  },
+  render: () => (
+    <AppShell>
+      <div className="px-4 py-6" />
+    </AppShell>
+  ),
+  play: async ({ canvas, userEvent }) => {
+    mocked(setLocaleAction).mockClear();
+
+    await userEvent.click(canvas.getByRole("radio", { name: "EN" }));
+
+    await waitFor(() => expect(setLocaleAction).toHaveBeenCalledWith("en"));
+  },
+};
+
 export const MobileNavigation: Story = {
   args: {
     children: null,
   },
   render: () => (
-    <AppShell current="time" profile="contractor" mobileNavigationMode="always">
+    // `onNavigate` is required here, not decorative: without it `handleNavigate` falls through to
+    // `window.location.href`, which navigates the test iframe out from under the runner.
+    <AppShell current="time" profile="contractor" mobileNavigationMode="always" onNavigate={fn()}>
       <div className="grid gap-4 px-4 py-6">
         <h1 className="text-2xl font-semibold">Mobil váz</h1>
         <p className="text-sm text-muted-foreground">
@@ -72,9 +114,16 @@ export const MobileNavigation: Story = {
   ),
   play: async ({ canvas, userEvent }) => {
     await userEvent.click(canvas.getByRole("button", { name: /navigáció megnyitása/i }));
-    await expect(screen.getByRole("dialog")).toBeVisible();
-    await expect(screen.getByRole("navigation", { name: /mobile navigation/i })).toBeVisible();
-    await userEvent.click(screen.getByRole("link", { name: /timesheet/i }));
+
+    const drawer = await screen.findByRole("dialog");
+    await expect(drawer).toBeVisible();
+
+    // Scoped to the drawer: `mobileNavigationMode="always"` also renders the bottom bar, and both
+    // landmarks carry the same "Mobil navigáció" label under this story's `hu` locale.
+    await expect(
+      within(drawer).getByRole("navigation", { name: /mobil navigáció/i }),
+    ).toBeVisible();
+    await userEvent.click(within(drawer).getByRole("link", { name: /timesheet/i }));
     await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
   },
 };

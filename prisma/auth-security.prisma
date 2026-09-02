@@ -1,0 +1,16 @@
+/// Application-owned temporary password lockouts. This is deliberately
+/// separate from a member's lifecycle status (ACTIVE / INACTIVE / DELETED).
+model PasswordSignInLockout {
+  id                     String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  subjectHash            String    @unique @map("subject_hash")
+  memberId               String?   @map("member_id") @db.Uuid
+  failedAttemptCount     Int       @default(0) @map("failed_attempt_count")
+  failureWindowStartedAt DateTime  @map("failure_window_started_at") @db.Timestamptz(6)
+  lockedUntil            DateTime? @map("locked_until") @db.Timestamptz(6)
+  createdAt              DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt              DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@index([memberId])
+  @@index([lockedUntil])
+  @@map("password_sign_in_lockouts")
+}

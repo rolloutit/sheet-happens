@@ -16,9 +16,9 @@ import {
   Moon,
   Pencil,
   Play,
-  PlayCircle,
   Plus,
   RotateCcw,
+  ShieldCheck,
   Square,
   Trash2,
   X,
@@ -26,17 +26,24 @@ import {
 import type { Route } from "next";
 import { useRouter } from "next/navigation";
 import {
+  createContext,
+  useCallback,
+  useContext,
   useEffect,
+  useId,
   useRef,
   useMemo,
   useState,
-  useSyncExternalStore,
   useTransition,
   type ReactNode,
 } from "react";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 
 import { Button } from "@/src/components/ui/Button";
+import { Combobox } from "@/src/components/ui/Combobox";
+import { DatePicker } from "@/src/components/ui/DatePicker";
+import { focusChromeClassName } from "@/src/components/ui/focusRing";
+import { TimeInput } from "@/src/components/ui/TimeInput";
 import {
   Dialog,
   DialogContent,
@@ -45,8 +52,16 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/src/components/ui/Dialog";
-import { parseDurationToMinutes } from "@/src/lib/duration";
+import { formatDurationForInput, parseDurationToMinutes } from "@/src/lib/duration";
+import {
+  formatHours as formatDurationHours,
+  formatHoursWithUnit as formatDurationHoursWithUnit,
+  type DurationDisplayFormat,
+} from "@/src/lib/formatting";
 import { DAILY_HARD_LIMIT_MINUTES, DAILY_SOFT_WARNING_MINUTES } from "@/src/lib/time-entry-limits";
+import { usePickerLabels } from "@/src/i18n/picker-labels";
+import { useElapsedLabel } from "@/src/lib/use-elapsed-label";
+import { useOverlayParam } from "@/src/lib/use-overlay-param";
 import { cn } from "@/src/lib/utils";
 import type {
   TimeGridAssignedProject,
@@ -63,7 +78,6 @@ import {
   duplicatePreviousWeekAction,
   markInactiveProjectWeekAction,
   saveTimeEntryDraftAction,
-  startRunningTimerAction,
   stopRunningTimerAction,
   unmarkInactiveProjectWeekAction,
   updateTimeEntryAction,
@@ -73,6 +87,8 @@ import {
   type TimeEntryTimingMode,
   type TimeTrackingActionState,
 } from "./actions.types";
+import { TimerCreateDialog } from "./TimerCreateDialog";
+import { TIME_OVERLAY_PARAM, TIMER_OVERLAY_VALUE } from "./time-overlays";
 
 const GRID_ENTRY_IDLE_OPEN_DELAY_MS = 900;
 
@@ -123,13 +139,25 @@ type PendingQuickAction =
 
 type TimeGridClientProps = {
   week: TimeGridWeek;
+  durationDisplayFormat: DurationDisplayFormat;
 };
 
 type TimeTrackingTranslator = ReturnType<typeof useTranslations>;
 
-export function TimeGridClient({ week }: TimeGridClientProps) {
+const DurationDisplayContext = createContext<DurationDisplayFormat>("DECIMAL_HOURS");
+
+export function TimeGridClient({ week, durationDisplayFormat }: TimeGridClientProps) {
+  return (
+    <DurationDisplayContext.Provider value={durationDisplayFormat}>
+      <TimeGridContent week={week} />
+    </DurationDisplayContext.Provider>
+  );
+}
+
+function TimeGridContent({ week }: { week: TimeGridWeek }) {
   const router = useRouter();
   const t = useTranslations("TimeTracking");
+  const { formatMinutesAsHours, formatMinutesWithUnit } = useDurationFormatting();
   const [isPending, startTransition] = useTransition();
   const [view, setView] = useState<"grid" | "day">("grid");
   const [selectedDayIso, setSelectedDayIso] = useState(() =>
@@ -141,6 +169,7 @@ export function TimeGridClient({ week }: TimeGridClientProps) {
   const [entryModal, setEntryModal] = useState<EntryModalState>(null);
   const [breakdown, setBreakdown] = useState<BreakdownState>(null);
   const [pendingQuickAction, setPendingQuickAction] = useState<PendingQuickAction | null>(null);
+  const [, setTimerOpen] = useOverlayParam(TIME_OVERLAY_PARAM, TIMER_OVERLAY_VALUE);
 
   const inactiveProjectIds = useMemo(
     () => new Set(week.inactiveWeeks.map((inactiveWeek) => inactiveWeek.projectId)),
@@ -149,6 +178,7 @@ export function TimeGridClient({ week }: TimeGridClientProps) {
   const entriesByCell = useMemo(() => groupEntriesByCell(week.entries), [week.entries]);
   const entriesByDay = useMemo(() => groupEntriesByDay(week.entries), [week.entries]);
   const weekHasLockedPeriod = week.lockedMonthStarts.length > 0;
+  const adminModifiedEntryCount = week.entries.filter((entry) => entry.adminModification).length;
 
   const projectRows = week.projects;
   const projectsById = useMemo(
@@ -347,32 +377,58 @@ export function TimeGridClient({ week }: TimeGridClientProps) {
           </button>
         </div>
 
-        <button
-          type="button"
-          className="inline-flex items-center gap-2 rounded-[var(--radius-pill)] bg-cta px-4 py-2.5 text-sm font-semibold text-cta-foreground shadow-soft transition hover:bg-[color-mix(in_srgb,var(--cta)_88%,white)] disabled:cursor-not-allowed disabled:opacity-60"
-          disabled={!projectRows.length || isPending}
-          onClick={() => {
-            const project = projectRows[0];
-            if (!project) return;
+        <div className="flex items-center gap-2">
+          {/* `Button` carries `disabled:pointer-events-none`, so a title on the button itself would
+              never fire — the wrapper is what makes the disabled reason reachable on hover. */}
+          <span title={week.runningTimer ? t("tooltips.stopTimerFirst") : undefined}>
+            <Button
+              type="button"
+              variant="soft"
+              icon={Play}
+              disabled={Boolean(week.runningTimer) || !projectRows.length || isPending}
+              onClick={() => setTimerOpen(true)}
+            >
+              {t("actions.newTimer")}
+            </Button>
+          </span>
+          <Button
+            type="button"
+            variant="cta"
+            icon={Plus}
+            disabled={!projectRows.length || isPending}
+            onClick={() => {
+              const project = projectRows[0];
+              if (!project) return;
 
-            setEntryModal({
-              mode: "create",
-              source: "FORM",
-              projectId: project.projectId,
-              localDate:
-                view === "day" && selectedDay
-                  ? selectedDay.isoDate
-                  : week.todayIso >= week.weekStart && week.todayIso <= week.weekEnd
-                    ? week.todayIso
-                    : week.weekStart,
-              durationMinutes: 60,
-            });
-          }}
-        >
-          <Plus className="size-4" aria-hidden="true" />
-          {t("actions.newEntry")}
-        </button>
+              setEntryModal({
+                mode: "create",
+                source: "FORM",
+                projectId: project.projectId,
+                localDate:
+                  view === "day" && selectedDay
+                    ? selectedDay.isoDate
+                    : week.todayIso >= week.weekStart && week.todayIso <= week.weekEnd
+                      ? week.todayIso
+                      : week.weekStart,
+                durationMinutes: 60,
+              });
+            }}
+          >
+            {t("actions.newEntry")}
+          </Button>
+        </div>
       </div>
+
+      {/* Above the week navigation and outside the view branch below, so a running timer is on
+          screen in the grid as well as the day list. */}
+      {week.runningTimer ? (
+        <RunningTimerCard
+          disabled={isPending}
+          runningTimer={week.runningTimer}
+          onStop={() => runAction(stopRunningTimerAction)}
+          t={t}
+        />
+      ) : null}
 
       <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
         <div className="flex flex-wrap items-center gap-3">
@@ -397,7 +453,7 @@ export function TimeGridClient({ week }: TimeGridClientProps) {
           </div>
 
           {week.weekStart === week.thisWeek ? (
-            <span className="rounded-[var(--radius-pill)] bg-accent/15 px-3 py-1.5 font-ui text-[11px] font-semibold uppercase tracking-[0.08em] text-accent">
+            <span className="rounded-[var(--radius-pill)] bg-accent-soft px-3 py-1.5 font-ui text-[11px] font-semibold uppercase tracking-[0.08em] text-accent">
               {t("labels.thisWeek")}
             </span>
           ) : (
@@ -417,8 +473,7 @@ export function TimeGridClient({ week }: TimeGridClientProps) {
             {t("labels.weekTotal")}
           </span>
           <span className="text-[26px] font-semibold text-foreground">
-            {formatMinutesAsHours(weekTotal)}
-            <span className="ml-1 text-[15px] text-muted-foreground">h</span>
+            {formatMinutesWithUnit(weekTotal)}
           </span>
         </div>
       </div>
@@ -485,7 +540,7 @@ export function TimeGridClient({ week }: TimeGridClientProps) {
               <button
                 key={project.projectId}
                 type="button"
-                className="inline-flex items-center gap-2 rounded-[var(--radius-pill)] border border-border bg-card px-3 py-2 text-sm font-medium text-foreground transition hover:border-accent/35 hover:bg-accent/10"
+                className="inline-flex items-center gap-2 rounded-[var(--radius-pill)] border border-border bg-card px-3 py-2 text-sm font-medium text-foreground transition hover:border-accent-line hover:bg-accent-soft"
                 onClick={() =>
                   setEntryModal({
                     mode: "create",
@@ -513,8 +568,8 @@ export function TimeGridClient({ week }: TimeGridClientProps) {
           className={cn(
             "flex items-center gap-2 rounded-[var(--radius-md)] border px-4 py-3 text-sm font-medium",
             notice.tone === "success"
-              ? "border-success/35 bg-success/12 text-success"
-              : "border-destructive/35 bg-destructive/12 text-destructive",
+              ? "border-success/35 bg-success-soft text-success"
+              : "border-destructive/35 bg-destructive-soft text-destructive",
           )}
         >
           {notice.tone === "success" ? (
@@ -526,8 +581,20 @@ export function TimeGridClient({ week }: TimeGridClientProps) {
         </div>
       ) : null}
 
+      {adminModifiedEntryCount > 0 ? (
+        <div className="flex items-start gap-3 rounded-[var(--radius-md)] border border-accent-line bg-accent-soft px-4 py-3 text-sm text-foreground">
+          <ShieldCheck className="mt-0.5 size-4 shrink-0 text-accent" aria-hidden="true" />
+          <div>
+            <span className="font-semibold">
+              {t("adminModification.weekTitle", { count: adminModifiedEntryCount })}
+            </span>{" "}
+            <span className="text-muted-foreground">{t("adminModification.weekDescription")}</span>
+          </div>
+        </div>
+      ) : null}
+
       {weekHasLockedPeriod ? (
-        <div className="flex items-start gap-3 rounded-[var(--radius-md)] border border-warning/30 bg-warning/12 px-4 py-3 text-sm text-warning">
+        <div className="flex items-start gap-3 rounded-[var(--radius-md)] border border-warning/30 bg-warning-soft px-4 py-3 text-sm text-warning">
           <AlertTriangle className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
           <div>
             <span className="font-semibold">{t("locked.title")}</span> {t("locked.description")}
@@ -552,10 +619,7 @@ export function TimeGridClient({ week }: TimeGridClientProps) {
             entries={selectedDayEntries}
             entriesByDay={entriesByDay}
             isPending={isPending}
-            projects={projectRows}
             projectsById={projectsById}
-            recentProjects={recentProjects}
-            runningTimer={week.runningTimer}
             onAddEntry={(localDate) => {
               const project = projectRows[0];
               if (!project) return;
@@ -573,10 +637,6 @@ export function TimeGridClient({ week }: TimeGridClientProps) {
             }
             onEditEntry={(entry) => setEntryModal({ mode: "edit", entry })}
             onSelectDay={setSelectedDayIso}
-            onStartTimer={(projectId, description) =>
-              runAction(() => startRunningTimerAction({ projectId, description }))
-            }
-            onStopTimer={() => runAction(stopRunningTimerAction)}
             t={t}
           />
         ) : (
@@ -673,7 +733,7 @@ export function TimeGridClient({ week }: TimeGridClientProps) {
                               />
                             ))}
                             <div className="flex min-h-14 items-center justify-center border-b border-border text-base font-semibold">
-                              {formatMinutesAsHours(rowTotal) || "0"}
+                              {formatMinutesAsHours(rowTotal)}
                             </div>
                           </>
                         )}
@@ -693,7 +753,7 @@ export function TimeGridClient({ week }: TimeGridClientProps) {
                         key={day.isoDate}
                         className={cn(
                           "relative flex min-h-[52px] items-center justify-center gap-1 border-r border-border bg-secondary text-sm font-semibold",
-                          day.state === "today" && "bg-accent/8",
+                          day.state === "today" && "bg-accent-soft",
                           over
                             ? "text-warning"
                             : total
@@ -701,11 +761,11 @@ export function TimeGridClient({ week }: TimeGridClientProps) {
                               : "text-muted-foreground",
                         )}
                       >
-                        {formatMinutesAsHours(total) || "0"}
+                        {formatMinutesAsHours(total)}
                         {over ? (
                           <WarningTip
                             text={t("warnings.dailyTotalExact", {
-                              hours: formatMinutesAsHours(total),
+                              hours: formatMinutesWithUnit(total),
                             })}
                           />
                         ) : null}
@@ -713,7 +773,7 @@ export function TimeGridClient({ week }: TimeGridClientProps) {
                     );
                   })}
                   <div className="flex min-h-[52px] items-center justify-center bg-secondary text-[17px] font-semibold text-accent">
-                    {formatMinutesAsHours(weekTotal) || "0"}
+                    {formatMinutesAsHours(weekTotal)}
                   </div>
                 </div>
               </div>
@@ -726,7 +786,7 @@ export function TimeGridClient({ week }: TimeGridClientProps) {
                     key={day.isoDate}
                     className={cn(
                       "rounded-[var(--radius-md)] border border-border bg-card px-1 py-2 text-center",
-                      day.state === "today" && "border-accent bg-accent/12 text-accent",
+                      day.state === "today" && "border-accent bg-accent-soft text-accent",
                     )}
                   >
                     <span className="block font-ui text-[10px] font-semibold uppercase tracking-[0.04em] text-muted-foreground">
@@ -788,7 +848,7 @@ export function TimeGridClient({ week }: TimeGridClientProps) {
                                 className={cn(
                                   "rounded-[var(--radius-sm)] border border-border bg-background px-1 py-2 text-sm font-semibold disabled:opacity-35",
                                   cell.totalMinutes > 0 &&
-                                    "border-accent/35 bg-accent/12 text-accent",
+                                    "border-accent-line bg-accent-soft text-accent",
                                 )}
                                 onClick={() => {
                                   if (cell.entries.length === 0) {
@@ -808,7 +868,7 @@ export function TimeGridClient({ week }: TimeGridClientProps) {
                                   }
                                 }}
                               >
-                                {formatMinutesAsHours(cell.totalMinutes) || "0"}
+                                {formatMinutesAsHours(cell.totalMinutes)}
                               </button>
                             );
                           })}
@@ -837,6 +897,12 @@ export function TimeGridClient({ week }: TimeGridClientProps) {
           </p>
         </div>
       )}
+
+      <TimerCreateDialog
+        projects={projectRows}
+        recentProjects={recentProjects}
+        onStarted={refreshWithResult}
+      />
 
       {entryModal ? (
         <EntryModal
@@ -932,6 +998,7 @@ function TimeGridCell({
   onOpenBreakdown,
   t,
 }: TimeGridCellProps) {
+  const { formatMinutesAsHours, formatMinutesForInput } = useDurationFormatting();
   const simpleEntry =
     cell.entries.length === 1 && isSimpleDurationEntry(cell.entries[0]) ? cell.entries[0] : null;
   const canInlineEdit = !disabled && !cell.locked && (cell.entries.length === 0 || simpleEntry);
@@ -1007,13 +1074,13 @@ function TimeGridCell({
         type="button"
         disabled={disabled}
         className={cn(
-          "relative flex min-h-14 items-center justify-center gap-1 border-b border-r border-border text-base font-semibold transition hover:bg-secondary disabled:cursor-not-allowed disabled:opacity-60",
-          day.state === "today" && "bg-accent/8",
+          "relative flex min-h-14 items-center justify-center gap-1 border-b border-r border-border text-[13px] font-semibold transition hover:bg-secondary disabled:cursor-not-allowed disabled:opacity-60",
+          day.state === "today" && "bg-accent-soft",
           warningTexts.length > 0 && "text-warning",
         )}
         onClick={onOpenBreakdown}
       >
-        {formatMinutesAsHours(cell.totalMinutes) || "0"}
+        {formatMinutesAsHours(cell.totalMinutes)}
         {cell.entries.length > 1 ? (
           <span className="inline-flex items-center gap-0.5 text-muted-foreground">
             <Layers className="size-3" aria-hidden="true" />
@@ -1031,18 +1098,21 @@ function TimeGridCell({
     <div
       className={cn(
         "relative min-h-14 border-b border-r border-border transition hover:bg-secondary",
-        day.state === "today" && "bg-accent/8",
+        day.state === "today" && "bg-accent-soft",
       )}
     >
       <input
         key={`${cell.totalMinutes}:${cell.entries.map((entry) => entry.updatedAt).join(":")}`}
-        inputMode="decimal"
-        defaultValue={formatMinutesAsHours(cell.totalMinutes)}
+        inputMode="text"
+        defaultValue={formatMinutesForInput(cell.totalMinutes)}
         placeholder="0"
         disabled={disabled}
         aria-label={`${project.name}, ${day.label}`}
+        // An inset ring rather than the global outline or a border brighten: the cell's own edge is
+        // only the shared bottom/right hairline of the grid, so there is no full border to brighten,
+        // and an outward outline would spill over the neighbouring cells.
         className={cn(
-          "h-full min-h-14 w-full border-0 bg-transparent px-2 text-center text-base font-medium text-foreground outline-none focus:shadow-[inset_0_0_0_2px_var(--ring)] disabled:cursor-not-allowed disabled:text-muted-foreground",
+          "h-full min-h-14 w-full border-0 bg-transparent px-1 text-center text-[13px] font-medium text-foreground outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring disabled:cursor-not-allowed disabled:text-muted-foreground",
           warningTexts.length > 0 && "text-warning",
         )}
         onChange={(event) => scheduleIdleEditorOpen(event.currentTarget)}
@@ -1102,7 +1172,7 @@ function DraftRestoreBanner({
   const t = useTranslations("TimeTracking");
 
   return (
-    <div className="flex flex-col gap-3 rounded-[var(--radius-md)] border border-accent/30 bg-accent/10 px-4 py-3 text-sm text-foreground sm:flex-row sm:items-center sm:justify-between">
+    <div className="flex flex-col gap-3 rounded-[var(--radius-md)] border border-accent/30 bg-accent-soft px-4 py-3 text-sm text-foreground sm:flex-row sm:items-center sm:justify-between">
       <div className="flex items-start gap-3">
         <span className="grid size-8 shrink-0 place-items-center rounded-full bg-card text-accent">
           <Info className="size-4" aria-hidden="true" />
@@ -1175,7 +1245,7 @@ function QuickActionConfirmDialog({
           <DialogTitle>{title}</DialogTitle>
           <DialogDescription>{description}</DialogDescription>
         </DialogHeader>
-        <div className="rounded-[var(--radius-md)] border border-warning/35 bg-warning/10 px-3 py-2 text-sm text-warning">
+        <div className="rounded-[var(--radius-md)] border border-warning/35 bg-warning-soft px-3 py-2 text-sm text-warning">
           {t("quickActionConfirm.skipExisting")}
         </div>
         <DialogFooter>
@@ -1198,16 +1268,11 @@ type DayViewProps = {
   entries: TimeGridEntry[];
   entriesByDay: Map<string, TimeGridEntry[]>;
   isPending: boolean;
-  projects: TimeGridAssignedProject[];
   projectsById: Map<string, TimeGridAssignedProject>;
-  recentProjects: TimeGridAssignedProject[];
-  runningTimer: TimeGridWeek["runningTimer"];
   onAddEntry: (localDate: string) => void;
   onDeleteEntry: (entry: TimeGridEntry) => void;
   onEditEntry: (entry: TimeGridEntry) => void;
   onSelectDay: (localDate: string) => void;
-  onStartTimer: (projectId: string, description: string) => void;
-  onStopTimer: () => void;
   t: TimeTrackingTranslator;
 };
 
@@ -1218,18 +1283,14 @@ function DayView({
   entries,
   entriesByDay,
   isPending,
-  projects,
   projectsById,
-  recentProjects,
-  runningTimer,
   onAddEntry,
   onDeleteEntry,
   onEditEntry,
   onSelectDay,
-  onStartTimer,
-  onStopTimer,
   t,
 }: DayViewProps) {
+  const { formatMinutesWithUnit } = useDurationFormatting();
   const sortedEntries = [...entries].sort((a, b) => {
     const aTime = a.startTime ?? "99:99";
     const bTime = b.startTime ?? "99:99";
@@ -1238,16 +1299,6 @@ function DayView({
 
   return (
     <div className="grid gap-4">
-      <TimerComposer
-        disabled={isPending || !projects.length}
-        projects={projects}
-        recentProjects={recentProjects}
-        runningTimer={runningTimer}
-        onStart={onStartTimer}
-        onStop={onStopTimer}
-        t={t}
-      />
-
       <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
         <div className="grid grid-cols-7 gap-1.5 sm:w-auto">
           {days.map((option) => (
@@ -1255,8 +1306,8 @@ function DayView({
               key={option.isoDate}
               type="button"
               className={cn(
-                "rounded-[var(--radius-md)] border border-border bg-card px-3 py-2 text-center transition hover:border-accent/45 hover:bg-accent/10",
-                option.isoDate === day.isoDate && "border-accent bg-accent/12 text-accent",
+                "rounded-[var(--radius-md)] border border-border bg-card px-3 py-2 text-center transition hover:border-accent/45 hover:bg-accent-soft",
+                option.isoDate === day.isoDate && "border-accent bg-accent-soft text-accent",
                 option.state === "future" && "opacity-65",
               )}
               onClick={() => onSelectDay(option.isoDate)}
@@ -1279,21 +1330,20 @@ function DayView({
               dailyTotalMinutes > DAILY_SOFT_WARNING_MINUTES ? "text-warning" : "text-foreground",
             )}
           >
-            {formatMinutesAsHours(dailyTotalMinutes) || "0"}
-            <span className="ml-1 text-[15px] text-muted-foreground">h</span>
+            {formatMinutesWithUnit(dailyTotalMinutes)}
           </span>
         </div>
       </div>
 
       {day.state === "future" ? (
-        <div className="flex items-start gap-3 rounded-[var(--radius-md)] border border-warning/30 bg-warning/12 px-4 py-3 text-sm text-warning">
+        <div className="flex items-start gap-3 rounded-[var(--radius-md)] border border-warning/30 bg-warning-soft px-4 py-3 text-sm text-warning">
           <AlertTriangle className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
           {t("warnings.futureDateAllowed")}
         </div>
       ) : null}
 
       {dailyTotalMinutes > DAILY_SOFT_WARNING_MINUTES ? (
-        <div className="flex items-start gap-3 rounded-[var(--radius-md)] border border-warning/30 bg-warning/12 px-4 py-3 text-sm text-warning">
+        <div className="flex items-start gap-3 rounded-[var(--radius-md)] border border-warning/30 bg-warning-soft px-4 py-3 text-sm text-warning">
           <AlertTriangle className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
           {t("warnings.dayOver8")}
         </div>
@@ -1312,7 +1362,7 @@ function DayView({
                 key={entry.id}
                 className={cn(
                   "grid gap-3 border-b border-border p-4 last:border-b-0 sm:grid-cols-[5.5rem_1fr_auto]",
-                  warnings.length && "bg-warning/5",
+                  warnings.length && "bg-warning-soft",
                 )}
               >
                 <div className="font-ui text-xs font-semibold uppercase tracking-[0.06em] text-muted-foreground">
@@ -1344,9 +1394,12 @@ function DayView({
                     </span>
                     <span>·</span>
                     <span className="font-semibold text-foreground">
-                      {formatMinutesAsHours(entry.durationMinutes)}h
+                      {formatMinutesWithUnit(entry.durationMinutes)}
                     </span>
                   </div>
+                  {entry.adminModification ? (
+                    <AdminModificationNotice modification={entry.adminModification} compact t={t} />
+                  ) : null}
                   {warnings.length ? (
                     <div className="mt-2 flex flex-wrap gap-2">
                       {warnings.map((warning) => (
@@ -1375,7 +1428,7 @@ function DayView({
                   <button
                     type="button"
                     disabled={entry.locked || isPending}
-                    className="grid size-9 place-items-center rounded-[var(--radius-sm)] text-muted-foreground transition hover:bg-destructive/12 hover:text-destructive disabled:cursor-not-allowed disabled:opacity-40"
+                    className="grid size-9 place-items-center rounded-[var(--radius-sm)] text-muted-foreground transition hover:bg-destructive-soft hover:text-destructive disabled:cursor-not-allowed disabled:opacity-40"
                     aria-label={t("actions.deleteEntry")}
                     onClick={() => onDeleteEntry(entry)}
                   >
@@ -1402,7 +1455,7 @@ function DayView({
         <button
           type="button"
           disabled={isPending}
-          className="inline-flex items-center gap-2 rounded-[var(--radius-md)] border border-dashed border-accent/45 bg-card px-4 py-2.5 text-sm font-semibold text-accent transition hover:bg-accent/10 disabled:cursor-not-allowed disabled:opacity-50"
+          className="inline-flex items-center gap-2 rounded-[var(--radius-md)] border border-dashed border-accent/45 bg-card px-4 py-2.5 text-sm font-semibold text-accent transition hover:bg-accent-soft disabled:cursor-not-allowed disabled:opacity-50"
           onClick={() => onAddEntry(day.isoDate)}
         >
           <Plus className="size-4" aria-hidden="true" />
@@ -1413,125 +1466,55 @@ function DayView({
   );
 }
 
-function TimerComposer({
+/**
+ * The running timer, in full size, on the page where time gets tracked.
+ *
+ * The header pill covers every other route; this exists because `/time` is where you want the
+ * elapsed reading big enough to glance at and the stop button where your hand already is. It has no
+ * idle state any more — starting a timer is the `New timer` overlay.
+ */
+function RunningTimerCard({
   disabled,
-  projects,
-  recentProjects,
   runningTimer,
-  onStart,
   onStop,
   t,
 }: {
   disabled: boolean;
-  projects: TimeGridAssignedProject[];
-  recentProjects: TimeGridAssignedProject[];
-  runningTimer: TimeGridWeek["runningTimer"];
-  onStart: (projectId: string, description: string) => void;
+  runningTimer: NonNullable<TimeGridWeek["runningTimer"]>;
   onStop: () => void;
   t: TimeTrackingTranslator;
 }) {
-  const [description, setDescription] = useState("");
-  const [projectId, setProjectId] = useState(projects[0]?.projectId ?? "");
-  const selectedProjectId = projectId || (projects[0]?.projectId ?? "");
-  const elapsed = useElapsedLabel(runningTimer?.startedAt ?? null);
-  const ready = Boolean(selectedProjectId && description.trim());
-
-  if (runningTimer) {
-    return (
-      <div className="flex flex-col gap-3 rounded-[var(--radius-lg)] border border-accent/35 bg-accent/12 p-4 sm:flex-row sm:items-center">
-        <span className="relative flex size-3 shrink-0">
-          <span className="absolute inline-flex size-full animate-ping rounded-full bg-accent opacity-45" />
-          <span className="relative inline-flex size-3 rounded-full bg-accent" />
-        </span>
-        <div className="min-w-0 flex-1">
-          <p className="truncate text-sm font-semibold text-foreground">
-            {runningTimer.description || t("timer.trackedWithTimer")}
-          </p>
-          <p className="mt-1 flex items-center gap-2 text-sm text-muted-foreground">
-            <span
-              className="size-2 rounded-full"
-              style={{ backgroundColor: runningTimer.projectColor }}
-              aria-hidden="true"
-            />
-            {runningTimer.projectName}
-          </p>
-        </div>
-        <span className="text-2xl font-semibold text-accent">{elapsed}</span>
-        <button
-          type="button"
-          disabled={disabled}
-          className="inline-flex items-center justify-center gap-2 rounded-[var(--radius-md)] bg-destructive px-4 py-2.5 text-sm font-semibold text-destructive-foreground transition hover:bg-destructive/90 disabled:cursor-not-allowed disabled:opacity-50"
-          onClick={onStop}
-        >
-          <Square className="size-3.5 fill-current" aria-hidden="true" />
-          {t("timer.stop")}
-        </button>
-      </div>
-    );
-  }
+  const elapsed = useElapsedLabel(runningTimer.startedAt);
 
   return (
-    <div className="grid gap-3 rounded-[var(--radius-lg)] border border-border bg-card p-4">
-      <div className="grid gap-3 lg:grid-cols-[auto_1fr_16rem_auto] lg:items-center">
-        <PlayCircle className="hidden size-5 text-muted-foreground lg:block" aria-hidden="true" />
-        <input
-          value={description}
-          placeholder={t("timer.placeholder")}
-          className={inputClassName(false)}
-          onChange={(event) => setDescription(event.target.value)}
-        />
-        <select
-          value={selectedProjectId}
-          className={inputClassName(false)}
-          onChange={(event) => setProjectId(event.target.value)}
-        >
-          {projects.map((project) => (
-            <option key={project.projectId} value={project.projectId}>
-              {project.name}
-            </option>
-          ))}
-        </select>
-        <button
-          type="button"
-          disabled={disabled || !ready}
-          className="inline-flex items-center justify-center gap-2 rounded-[var(--radius-md)] bg-gradient-to-br from-primary to-accent px-4 py-2.5 text-sm font-semibold text-accent-foreground transition disabled:cursor-not-allowed disabled:opacity-50"
-          onClick={() => {
-            onStart(selectedProjectId, description);
-            setDescription("");
-          }}
-        >
-          <Play className="size-4 fill-current" aria-hidden="true" />
-          {t("timer.start")}
-        </button>
+    <div className="flex flex-col gap-3 rounded-[var(--radius-lg)] border border-accent-line bg-accent-soft p-4 sm:flex-row sm:items-center">
+      <span className="relative flex size-3 shrink-0">
+        <span className="absolute inline-flex size-full animate-ping rounded-full bg-accent opacity-45" />
+        <span className="relative inline-flex size-3 rounded-full bg-accent" />
+      </span>
+      <div className="min-w-0 flex-1">
+        <p className="truncate text-sm font-semibold text-foreground">
+          {runningTimer.description || t("timer.trackedWithTimer")}
+        </p>
+        <p className="mt-1 flex items-center gap-2 text-sm text-muted-foreground">
+          <span
+            className="size-2 rounded-full"
+            style={{ backgroundColor: runningTimer.projectColor }}
+            aria-hidden="true"
+          />
+          {runningTimer.projectName}
+        </p>
       </div>
-
-      {recentProjects.length ? (
-        <div className="flex flex-wrap items-center gap-2">
-          <span className="font-ui text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
-            {t("labels.recent")}
-          </span>
-          {recentProjects.slice(0, 4).map((project) => (
-            <button
-              key={project.projectId}
-              type="button"
-              className={cn(
-                "inline-flex items-center gap-2 rounded-[var(--radius-pill)] border px-3 py-1.5 text-sm font-medium transition",
-                selectedProjectId === project.projectId
-                  ? "border-accent bg-accent/12 text-accent"
-                  : "border-border bg-background text-foreground hover:border-accent/35 hover:bg-accent/10",
-              )}
-              onClick={() => setProjectId(project.projectId)}
-            >
-              <span
-                className="size-2 rounded-full"
-                style={{ backgroundColor: project.color }}
-                aria-hidden="true"
-              />
-              {project.name}
-            </button>
-          ))}
-        </div>
-      ) : null}
+      <span className="text-2xl font-semibold text-accent">{elapsed}</span>
+      <button
+        type="button"
+        disabled={disabled}
+        className="inline-flex items-center justify-center gap-2 rounded-[var(--radius-md)] bg-destructive px-4 py-2.5 text-sm font-semibold text-destructive-foreground transition hover:bg-destructive/90 disabled:cursor-not-allowed disabled:opacity-50"
+        onClick={onStop}
+      >
+        <Square className="size-3.5 fill-current" aria-hidden="true" />
+        {t("timer.stop")}
+      </button>
     </div>
   );
 }
@@ -1546,6 +1529,9 @@ type EntryModalProps = {
 };
 
 function EntryModal({ state, week, projects, onClose, onDone, t }: EntryModalProps) {
+  const locale = useLocale();
+  const { formatMinutesForInput, formatMinutesWithUnit } = useDurationFormatting();
+  const pickerLabels = usePickerLabels();
   const [isPending, startTransition] = useTransition();
   const initialProjectId = state.mode === "edit" ? state.entry.projectId : state.projectId;
   const initialLocalDate = state.mode === "edit" ? state.entry.localDate : state.localDate;
@@ -1560,7 +1546,7 @@ function EntryModal({ state, week, projects, onClose, onDone, t }: EntryModalPro
   const initialDurationText =
     state.mode === "create" && state.durationText
       ? state.durationText
-      : formatMinutesAsHours(initialDuration) || "1";
+      : formatMinutesForInput(initialDuration) || "1";
   const [projectId, setProjectId] = useState(initialProjectId);
   const [localDate, setLocalDate] = useState(initialLocalDate);
   const [timingMode, setTimingMode] = useState<TimeEntryTimingMode>(initialTimingMode);
@@ -1778,7 +1764,7 @@ function EntryModal({ state, week, projects, onClose, onDone, t }: EntryModalPro
 
         <div className="grid gap-5 px-6 py-6">
           {state.mode === "create" && state.prefill && project ? (
-            <div className="flex items-center gap-3 rounded-[var(--radius-md)] border border-accent/35 bg-accent/12 p-3">
+            <div className="flex items-center gap-3 rounded-[var(--radius-md)] border border-accent-line bg-accent-soft p-3">
               <span className="grid size-9 place-items-center rounded-[var(--radius-sm)] bg-card text-accent">
                 <Grid3X3 className="size-4" aria-hidden="true" />
               </span>
@@ -1794,8 +1780,8 @@ function EntryModal({ state, week, projects, onClose, onDone, t }: EntryModalPro
                   </span>
                   <span className="text-muted-foreground">·</span>
                   <span className="text-muted-foreground">{localDate}</span>
-                  <span className="rounded-[var(--radius-pill)] border border-accent/35 bg-card px-2 py-0.5 font-ui text-[11px] font-bold text-accent">
-                    {formatMinutesAsHours(state.durationMinutes)}h
+                  <span className="rounded-[var(--radius-pill)] border border-accent-line bg-card px-2 py-0.5 font-ui text-[11px] font-bold text-accent">
+                    {formatMinutesWithUnit(state.durationMinutes)}
                   </span>
                 </div>
                 <div className="mt-1 flex items-center gap-1.5 text-xs text-muted-foreground">
@@ -1809,11 +1795,15 @@ function EntryModal({ state, week, projects, onClose, onDone, t }: EntryModalPro
           {submitError ? (
             <div
               role="alert"
-              className="flex items-start gap-2 rounded-[var(--radius-md)] border border-destructive/35 bg-destructive/12 px-3 py-2 text-sm font-medium text-destructive"
+              className="flex items-start gap-2 rounded-[var(--radius-md)] border border-destructive/35 bg-destructive-soft px-3 py-2 text-sm font-medium text-destructive"
             >
               <AlertTriangle className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
               <span>{submitError}</span>
             </div>
+          ) : null}
+
+          {state.mode === "edit" && state.entry.adminModification ? (
+            <AdminModificationNotice modification={state.entry.adminModification} t={t} />
           ) : null}
 
           <Field label={t("fields.description")} required error={fieldErrors?.description}>
@@ -1831,37 +1821,51 @@ function EntryModal({ state, week, projects, onClose, onDone, t }: EntryModalPro
           </Field>
 
           <Field label={t("fields.project")} required error={fieldErrors?.projectId}>
-            <select
-              value={projectId}
-              className={inputClassName(Boolean(fieldErrors?.projectId))}
-              onChange={(event) => {
-                clearSubmitFeedback();
-                setProjectId(event.target.value);
-                markDraftDirty();
-              }}
-            >
-              {projects.map((option) => (
-                <option key={option.projectId} value={option.projectId}>
-                  {option.name}
-                </option>
-              ))}
-            </select>
+            {({ id, describedBy, invalid, required }) => (
+              <Combobox
+                id={id}
+                label={t("fields.project")}
+                value={projectId}
+                aria-describedby={describedBy}
+                invalid={invalid}
+                required={required}
+                labels={pickerLabels.combobox}
+                options={projects.map((option) => ({
+                  value: option.projectId,
+                  label: option.name,
+                }))}
+                onValueChange={(value) => {
+                  clearSubmitFeedback();
+                  setProjectId(value);
+                  markDraftDirty();
+                }}
+              />
+            )}
           </Field>
 
           <div className="grid gap-4 sm:grid-cols-[1fr_160px]">
             <Field label={t("fields.date")} required error={fieldErrors?.localDate}>
-              <input
-                type="date"
-                value={localDate}
-                min={week.weekStart}
-                max={week.weekEnd}
-                className={inputClassName(Boolean(fieldErrors?.localDate))}
-                onChange={(event) => {
-                  clearSubmitFeedback();
-                  setLocalDate(event.target.value);
-                  markDraftDirty();
-                }}
-              />
+              {({ id, describedBy, invalid, required }) => (
+                <DatePicker
+                  id={id}
+                  label={t("fields.date")}
+                  locale={locale}
+                  value={localDate}
+                  min={week.weekStart}
+                  max={week.weekEnd}
+                  aria-describedby={describedBy}
+                  invalid={invalid}
+                  required={required}
+                  // The action rejects an empty date, so there is nothing to clear to.
+                  clearable={false}
+                  labels={pickerLabels.date}
+                  onValueChange={(value) => {
+                    clearSubmitFeedback();
+                    setLocalDate(value ?? "");
+                    markDraftDirty();
+                  }}
+                />
+              )}
             </Field>
             <Field label={t("fields.mode")} required>
               <div className="inline-flex rounded-[var(--radius-pill)] border border-border bg-secondary p-1">
@@ -1918,31 +1922,39 @@ function EntryModal({ state, week, projects, onClose, onDone, t }: EntryModalPro
           ) : (
             <div className="grid gap-4 sm:grid-cols-[1fr_1fr_auto] sm:items-end">
               <Field label={t("fields.start")} required error={fieldErrors?.startTime}>
-                <input
-                  type="time"
-                  value={startTime}
-                  className={inputClassName(Boolean(fieldErrors?.startTime))}
-                  onChange={(event) => {
-                    clearSubmitFeedback();
-                    setStartTime(event.target.value);
-                    markDraftDirty();
-                  }}
-                />
+                {({ id, describedBy, invalid, required }) => (
+                  <TimeInput
+                    id={id}
+                    value={startTime}
+                    aria-describedby={describedBy}
+                    invalid={invalid}
+                    required={required}
+                    onChange={(event) => {
+                      clearSubmitFeedback();
+                      setStartTime(event.target.value);
+                      markDraftDirty();
+                    }}
+                  />
+                )}
               </Field>
               <Field label={t("fields.end")} required error={fieldErrors?.endTime}>
-                <input
-                  type="time"
-                  value={endTime}
-                  className={inputClassName(Boolean(fieldErrors?.endTime))}
-                  onChange={(event) => {
-                    clearSubmitFeedback();
-                    setEndTime(event.target.value);
-                    markDraftDirty();
-                  }}
-                />
+                {({ id, describedBy, invalid, required }) => (
+                  <TimeInput
+                    id={id}
+                    value={endTime}
+                    aria-describedby={describedBy}
+                    invalid={invalid}
+                    required={required}
+                    onChange={(event) => {
+                      clearSubmitFeedback();
+                      setEndTime(event.target.value);
+                      markDraftDirty();
+                    }}
+                  />
+                )}
               </Field>
               <div className="pb-2 text-xl font-semibold text-accent">
-                {formatMinutesAsHours(intervalMinutes)}h
+                {formatMinutesWithUnit(intervalMinutes)}
               </div>
             </div>
           )}
@@ -1958,7 +1970,7 @@ function EntryModal({ state, week, projects, onClose, onDone, t }: EntryModalPro
             <div className="flex items-center gap-2 text-sm text-destructive">
               <AlertTriangle className="size-4" aria-hidden="true" />
               {t("warnings.dailyTotalOver24Projected", {
-                hours: formatMinutesAsHours(projectedDayTotalMinutes),
+                hours: formatMinutesWithUnit(projectedDayTotalMinutes),
               })}
             </div>
           ) : null}
@@ -1967,7 +1979,7 @@ function EntryModal({ state, week, projects, onClose, onDone, t }: EntryModalPro
             <div className="flex items-center gap-2 text-sm text-warning">
               <AlertTriangle className="size-4" aria-hidden="true" />
               {t("warnings.dayOver8Projected", {
-                hours: formatMinutesAsHours(projectedDayTotalMinutes),
+                hours: formatMinutesWithUnit(projectedDayTotalMinutes),
               })}
             </div>
           ) : null}
@@ -2047,6 +2059,7 @@ function BreakdownDialog({
   onEdit,
   t,
 }: BreakdownDialogProps) {
+  const { formatMinutesWithUnit } = useDurationFormatting();
   const total = entries.reduce((sum, entry) => sum + entry.durationMinutes, 0);
   const dialogRef = useModalFocusTrap<HTMLDivElement>(onClose);
 
@@ -2075,7 +2088,7 @@ function BreakdownDialog({
               {project.name} · {day.shortLabel} {day.dayNumber}
             </div>
             <h2 id="time-entry-breakdown-title" className="mt-1 text-lg font-semibold">
-              {t("breakdown.entries")} · {formatMinutesAsHours(total)}h
+              {t("breakdown.entries")} · {formatMinutesWithUnit(total)}
             </h2>
           </div>
           <button
@@ -2102,7 +2115,7 @@ function BreakdownDialog({
                 >
                   <div className="w-20 shrink-0 text-center">
                     <div className="text-lg font-semibold">
-                      {formatMinutesAsHours(entry.durationMinutes)}h
+                      {formatMinutesWithUnit(entry.durationMinutes)}
                     </div>
                     <div className="font-ui text-[10px] font-semibold uppercase tracking-[0.05em] text-muted-foreground">
                       {entry.startedAt ? t("source.timed") : t("source.hours")}
@@ -2112,6 +2125,13 @@ function BreakdownDialog({
                     <p className="text-sm font-medium">
                       {entry.description || t("labels.noDescription")}
                     </p>
+                    {entry.adminModification ? (
+                      <AdminModificationNotice
+                        modification={entry.adminModification}
+                        compact
+                        t={t}
+                      />
+                    ) : null}
                     {warnings.length ? (
                       <div className="mt-2 flex flex-wrap gap-2">
                         {warnings.map((warning) => (
@@ -2137,7 +2157,7 @@ function BreakdownDialog({
                     <button
                       type="button"
                       disabled={entry.locked}
-                      className="grid size-8 place-items-center rounded-[var(--radius-sm)] text-muted-foreground hover:bg-destructive/12 hover:text-destructive disabled:cursor-not-allowed disabled:opacity-40"
+                      className="grid size-8 place-items-center rounded-[var(--radius-sm)] text-muted-foreground hover:bg-destructive-soft hover:text-destructive disabled:cursor-not-allowed disabled:opacity-40"
                       onClick={() => onDelete(entry)}
                       aria-label={t("actions.deleteEntry")}
                     >
@@ -2161,7 +2181,7 @@ function BreakdownDialog({
           </span>
           <button
             type="button"
-            className="inline-flex items-center gap-2 rounded-[var(--radius-md)] border border-dashed border-accent/45 px-3 py-2 text-sm font-semibold text-accent hover:bg-accent/10"
+            className="inline-flex items-center gap-2 rounded-[var(--radius-md)] border border-dashed border-accent/45 px-3 py-2 text-sm font-semibold text-accent hover:bg-accent-soft"
             onClick={onAdd}
           >
             <Plus className="size-4" aria-hidden="true" />
@@ -2173,6 +2193,63 @@ function BreakdownDialog({
   );
 }
 
+function AdminModificationNotice({
+  modification,
+  compact = false,
+  t,
+}: {
+  modification: NonNullable<TimeGridEntry["adminModification"]>;
+  compact?: boolean;
+  t: TimeTrackingTranslator;
+}) {
+  const locale = useLocale();
+  const modifiedAt = new Intl.DateTimeFormat(locale, {
+    dateStyle: "medium",
+    timeStyle: "short",
+    timeZone: modification.timezone,
+  }).format(new Date(modification.modifiedAt));
+
+  return (
+    <div
+      className={cn(
+        "mt-2 flex items-start gap-2 rounded-[var(--radius-sm)] border border-accent-line bg-accent-soft text-xs leading-relaxed",
+        compact ? "px-2.5 py-2" : "px-3 py-2.5",
+      )}
+    >
+      <ShieldCheck className="mt-0.5 size-3.5 shrink-0 text-accent" aria-hidden="true" />
+      <span>
+        <span className="font-semibold text-foreground">
+          {t("adminModification.changedBy", {
+            name: modification.modifiedByName ?? t("adminModification.adminFallback"),
+            date: modifiedAt,
+          })}
+        </span>{" "}
+        <span className="text-muted-foreground">
+          {t("adminModification.reason", { reason: modification.reason })}
+        </span>
+      </span>
+    </div>
+  );
+}
+
+type TimeFieldRenderProps = {
+  id: string;
+  describedBy?: string;
+  invalid: boolean;
+  required?: boolean;
+};
+
+const timeFieldLabelClassName =
+  "font-ui text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground";
+
+/**
+ * The entry modal's own field wrapper, kept local because its label is smaller and
+ * uppercase compared with `src/components/ui/Field`.
+ *
+ * Takes either a plain node — wrapped in a `<label>`, which implicitly labels a single
+ * input — or a render prop, which is what the popover-based controls need: a `<label>`
+ * cannot wrap a button trigger, so those get an explicit `htmlFor` instead.
+ */
 function Field({
   label,
   required,
@@ -2182,22 +2259,44 @@ function Field({
   label: string;
   required?: boolean;
   error?: string;
-  children: ReactNode;
+  children: ReactNode | ((field: TimeFieldRenderProps) => ReactNode);
 }) {
+  const generatedId = useId();
+
+  if (typeof children !== "function") {
+    return (
+      <label className="grid gap-2">
+        <span className={timeFieldLabelClassName}>
+          {label} {required ? <span className="text-destructive">*</span> : null}
+        </span>
+        {children}
+        {error ? <span className="text-xs font-medium text-destructive">{error}</span> : null}
+      </label>
+    );
+  }
+
+  const controlId = `time-field-${generatedId}`;
+  const errorId = error ? `${controlId}-error` : undefined;
+
   return (
-    <label className="grid gap-2">
-      <span className="font-ui text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
+    <div className="grid gap-2">
+      <label htmlFor={controlId} className={timeFieldLabelClassName}>
         {label} {required ? <span className="text-destructive">*</span> : null}
-      </span>
-      {children}
-      {error ? <span className="text-xs font-medium text-destructive">{error}</span> : null}
-    </label>
+      </label>
+      {children({ id: controlId, describedBy: errorId, invalid: Boolean(error), required })}
+      {error ? (
+        <span id={errorId} className="text-xs font-medium text-destructive">
+          {error}
+        </span>
+      ) : null}
+    </div>
   );
 }
 
 function inputClassName(error: boolean) {
   return cn(
-    "w-full rounded-[var(--radius-md)] border bg-card px-3 py-2.5 text-sm text-foreground outline-none transition focus:border-accent focus:shadow-[0_0_0_3px_rgb(55_227_222/0.14)]",
+    "w-full rounded-[var(--radius-md)] border bg-card px-3 py-2.5 text-sm text-foreground outline-none transition",
+    focusChromeClassName,
     error ? "border-destructive" : "border-border",
   );
 }
@@ -2451,49 +2550,25 @@ function getFocusableElements(container: HTMLElement | null) {
   ).filter((element) => element.offsetParent !== null);
 }
 
-function useElapsedLabel(startedAt: string | null) {
-  const nowSeconds = useClientClock();
-
-  if (!startedAt || nowSeconds === null) return "0:00";
-
-  return formatElapsed(Math.max(0, nowSeconds * 1000 - Date.parse(startedAt)));
-}
-
-function useClientClock() {
-  return useSyncExternalStore(subscribeToClock, getClockSnapshot, getServerClockSnapshot);
-}
-
-function subscribeToClock(onStoreChange: () => void) {
-  const timerId = window.setInterval(onStoreChange, 1000);
-  return () => window.clearInterval(timerId);
-}
-
-function getClockSnapshot() {
-  return Math.floor(Date.now() / 1000);
-}
-
-function getServerClockSnapshot() {
-  return null;
-}
-
-function formatElapsed(milliseconds: number) {
-  const totalSeconds = Math.floor(milliseconds / 1000);
-  const hours = Math.floor(totalSeconds / 3600);
-  const minutes = Math.floor((totalSeconds % 3600) / 60);
-  const seconds = totalSeconds % 60;
-
-  if (hours > 0) {
-    return `${hours}:${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
-  }
-
-  return `${minutes}:${String(seconds).padStart(2, "0")}`;
-}
-
 function formatDraftTimestamp(value: string) {
   return value.replace("T", " ").slice(0, 16);
 }
 
-function formatMinutesAsHours(minutes: number) {
-  if (!minutes) return "";
-  return Number((minutes / 60).toFixed(2)).toString();
+function useDurationFormatting() {
+  const locale = useLocale();
+  const durationDisplayFormat = useContext(DurationDisplayContext);
+  const formatMinutesAsHours = useCallback(
+    (minutes: number) => formatDurationHours(minutes, locale, durationDisplayFormat),
+    [durationDisplayFormat, locale],
+  );
+  const formatMinutesWithUnit = useCallback(
+    (minutes: number) => formatDurationHoursWithUnit(minutes, locale, durationDisplayFormat),
+    [durationDisplayFormat, locale],
+  );
+  const formatMinutesForInput = useCallback(
+    (minutes: number) => formatDurationForInput(minutes, durationDisplayFormat),
+    [durationDisplayFormat],
+  );
+
+  return { formatMinutesAsHours, formatMinutesForInput, formatMinutesWithUnit };
 }

@@ -2,7 +2,7 @@
 name: git-workflow
 description: Git workflow for this repo — feature branches off develop, Conventional Commit messages, staging and reviewing a diff, integrating develop, PR handoff, and local history repair. Never pushes to a remote.
 when_to_use: Use when creating or switching branches, staging changes, writing a commit message, splitting or amending commits, rebasing on develop, resolving conflicts, preparing a pull request, or recovering from a bad git state.
-allowed-tools: Bash(git status:*) Bash(git diff:*) Bash(git log:*) Bash(git show:*) Bash(git branch:*) Bash(git rev-parse:*) Bash(git add:*) Bash(git commit:*)
+allowed-tools: Bash(git add:*) Bash(git branch:*) Bash(git commit:*) Bash(git fetch:*) Bash(git switch:*)
 ---
 
 # Git workflow
@@ -48,8 +48,13 @@ Start a branch from up-to-date `develop`:
 
 ```bash
 git fetch origin                                  # read-only, allowed
-git switch -c feature/<topic> origin/develop
+git switch -c feature/<topic> --no-track origin/develop
 ```
+
+`--no-track` is not optional. Branching off a remote-tracking ref otherwise makes `origin/develop`
+the new branch's upstream, and a later push with no refspec resolves its destination from that
+upstream — sending the feature commits straight to `develop`. The flag overrides it per command, so
+it holds even in a clone where `pnpm setup:git` has not been run.
 
 If the developer already has uncommitted work on the wrong branch, carry it over with
 `git stash push -m "wip"` → `git switch -c …` → `git stash pop` rather than committing it in place.
@@ -84,30 +89,66 @@ Copy this checklist and tick items off:
 
 ```
 - [ ] 1. Inspect state: git status --short, git branch --show-current
-- [ ] 2. On a feature branch off origin/develop (create one if not)
+- [ ] 2. On a feature branch off origin/develop, created with --no-track (create one if not)
 - [ ] 3. Implement, then run the gates the change touches
 - [ ] 4. Stage explicit paths, read git diff --cached
 - [ ] 5. Commit with a Conventional Commit subject
-- [ ] 6. Report branch + commits, hand push/PR to the developer
+- [ ] 6. Run /code-review on the branch diff, fix what it finds
+- [ ] 7. Report branch + commits, hand push/PR to the developer
 ```
 
-Step 3 gates, matched to the change (full chain is `pnpm ci`):
+Step 3 gates, matched to the change (full chain is `pnpm verify` — `pnpm ci` is a pnpm built-in that
+runs a clean install, not the gates):
 
 - any code: `pnpm typecheck` · `pnpm lint` · `pnpm format`
 - logic under `src/`: `pnpm test`
 - component or story changes: `pnpm test-storybook`, and `pnpm test:visual` if visuals moved
 - route or flow changes: `pnpm e2e`
 
-Step 6 output — give the developer exactly this, do not run it:
+Step 7 output — give the developer exactly this, do not run it:
 
 ```bash
 git push -u origin <branch>
 gh pr create --base develop --title "<subject>" --body "<what changed, why, how to test>"
 ```
 
+Always that exact push form — see "Pushing and upstreams" below before handing it over.
+
 PR body: what changed, why, how to verify. Link the `docs/manual-qa-test-plan.md` scenarios for
 user-visible changes. Maintainers merge with the repo's `merge: #<PR>` subject and a short title in
 the body; release PRs into `main` use `merge: #<PR> - release`.
+
+## Pushing and upstreams
+
+A feature branch pushes to a remote branch of its own name, always. It reaches `develop` through a
+pull request, never through a push:
+
+```bash
+git push -u origin <branch>        # the only push form for a feature branch
+```
+
+Never hand over a bare `git push`, and never a `HEAD:<other-branch>` refspec. When git refuses with
+_"The upstream branch of your current branch does not match the name of your current branch"_, its
+**first** suggestion — `git push origin HEAD:develop` — is the wrong one for this repo: it puts the
+feature commits directly on `develop`. Clear the bad upstream instead, then push with `-u`:
+
+```bash
+git branch --unset-upstream
+```
+
+Check this before handing off. It must either fail with "no upstream configured" or print
+`origin/<current branch>`:
+
+```bash
+git rev-parse --abbrev-ref --symbolic-full-name @{upstream}
+```
+
+If it prints `origin/develop` on a feature branch, unset it and say so in the handoff.
+
+`scripts/githooks/pre-push` (installed by `pnpm setup:git`) refuses a push from a branch onto a
+differently-named `develop` or `main`, and refuses a non-fast-forward push to either. It is a
+backstop, not a substitute for the check above — it only runs in clones where `pnpm setup:git` has
+been run.
 
 ## Integrating develop
 

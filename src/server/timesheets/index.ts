@@ -11,6 +11,7 @@ export {
 export {
   acceptInvoiceForAdmin,
   approveTimesheetForAdmin,
+  approveTimesheetsForAdmin,
   getTimesheetReviewForAdmin,
   listTimesheetsForAdmin,
   markTimesheetPaidForAdmin,
@@ -23,6 +24,7 @@ export type {
   AdminTimesheetFilterOption,
   AdminTimesheetFilters,
   AdminTimesheetListResult,
+  BulkTimesheetReviewActionInput,
   AdminTimesheetReview,
   AdminTimesheetReviewEvent,
   AdminTimesheetReviewInvoice,

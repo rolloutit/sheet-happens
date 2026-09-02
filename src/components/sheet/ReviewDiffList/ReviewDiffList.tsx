@@ -6,9 +6,9 @@ import { StatusPill } from "../StatusPill";
 import type { ReviewDiffItem, ReviewDiffListProps, ReviewDiffTotal } from "./ReviewDiffList.types";
 
 function totalClasses(tone: ReviewDiffTotal["tone"]) {
-  if (tone === "warning") return "border-warning/35 bg-warning/10";
-  if (tone === "danger") return "border-destructive/35 bg-destructive/10";
-  if (tone === "success") return "border-success/30 bg-success/10";
+  if (tone === "warning") return "border-warning/35 bg-warning-soft";
+  if (tone === "danger") return "border-destructive/35 bg-destructive-soft";
+  if (tone === "success") return "border-success/30 bg-success-soft";
   return "border-border bg-secondary";
 }
 
@@ -19,12 +19,12 @@ function DiffBadge({ state, label, delta }: Pick<ReviewDiffItem, "state" | "labe
       className={cn(
         "flex items-center gap-3 rounded-[var(--radius-lg)] border p-3",
         state === "match"
-          ? "border-success/30 bg-success/10"
-          : "border-destructive/35 bg-destructive/10",
+          ? "border-success/30 bg-success-soft"
+          : "border-destructive/35 bg-destructive-soft",
       )}
     >
       <Icon
-        className={cn("size-5", state === "match" ? "text-success" : "text-destructive")}
+        className={cn("size-5", state === "match" ? "text-success" : "text-destructive-bright")}
         aria-hidden="true"
       />
       <div>

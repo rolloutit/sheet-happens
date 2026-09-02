@@ -4,6 +4,7 @@ import { Eye, EyeOff } from "lucide-react";
 import * as React from "react";
 
 import { cn } from "@/src/lib/utils";
+import { focusChromeClassName } from "../focusRing";
 import type { PasswordInputProps } from "./PasswordInput.types";
 
 export const PasswordInput = React.forwardRef<HTMLInputElement, PasswordInputProps>(
@@ -28,7 +29,8 @@ export const PasswordInput = React.forwardRef<HTMLInputElement, PasswordInputPro
           type={resolvedVisible ? "text" : "password"}
           aria-invalid={invalid || props["aria-invalid"]}
           className={cn(
-            "flex h-10 w-full rounded-[var(--radius-md)] border border-input bg-background/50 px-3 py-2 pr-11 text-sm text-foreground shadow-sm transition placeholder:text-muted-foreground focus-visible:border-ring focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/35 disabled:cursor-not-allowed disabled:opacity-50 aria-[invalid=true]:border-destructive aria-[invalid=true]:ring-destructive/30",
+            "flex h-10 w-full rounded-[var(--radius-md)] border border-input bg-surface-inset px-3 py-2 pr-11 text-sm text-foreground shadow-sm transition placeholder:text-subtle-foreground disabled:cursor-not-allowed disabled:opacity-50 aria-[invalid=true]:border-destructive",
+            focusChromeClassName,
             className,
           )}
           {...props}
@@ -39,7 +41,7 @@ export const PasswordInput = React.forwardRef<HTMLInputElement, PasswordInputPro
           aria-pressed={resolvedVisible}
           disabled={props.disabled}
           onClick={() => updateVisibility(!resolvedVisible)}
-          className="absolute right-1.5 top-1/2 inline-flex size-7 -translate-y-1/2 items-center justify-center rounded-[var(--radius-pill)] text-muted-foreground transition hover:bg-secondary hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50"
+          className="absolute right-1.5 top-1/2 inline-flex size-7 -translate-y-1/2 items-center justify-center rounded-[var(--radius-pill)] text-muted-foreground transition hover:bg-secondary hover:text-foreground disabled:pointer-events-none disabled:opacity-50"
         >
           {resolvedVisible ? (
             <EyeOff className="size-4" aria-hidden="true" />

@@ -12,7 +12,7 @@ import {
   AuthPasswordInput,
   AuthScreenHead,
 } from "@/src/components/layout/AuthForm";
-import { authClient } from "@/src/lib/auth-client";
+import { authClient, getSecondFactorChallengeURL } from "@/src/lib/auth-client";
 
 export type LoginPanelProps = {
   callbackURL: string;
@@ -27,6 +27,17 @@ type LoginStatus = {
 };
 
 type PendingAction = "google" | "magic-link" | "passkey" | "password" | "password-reset";
+
+type PasswordSignInData = {
+  twoFactorRedirect?: boolean;
+  url?: string;
+};
+
+type AuthClientError = {
+  code?: string;
+  message?: string;
+  status?: number;
+};
 
 export function LoginPanel({
   callbackURL,
@@ -76,7 +87,7 @@ export function LoginPanel({
     if (result.error) {
       setStatus({
         tone: "error",
-        message: result.error.message ?? t("errors.magicLinkSendFailed"),
+        message: resolveAuthClientError(result.error, t, "errors.magicLinkSendFailed"),
       });
       return;
     }
@@ -98,7 +109,7 @@ export function LoginPanel({
     if (result.error) {
       setStatus({
         tone: "error",
-        message: result.error.message ?? t("errors.passkeyIncomplete"),
+        message: resolveAuthClientError(result.error, t, "errors.passkeyIncomplete"),
       });
       return;
     }
@@ -127,7 +138,6 @@ export function LoginPanel({
     const result = await authClient.signIn.email({
       email: normalizedEmail,
       password,
-      callbackURL,
     });
 
     setPendingAction(null);
@@ -135,12 +145,19 @@ export function LoginPanel({
     if (result.error) {
       setStatus({
         tone: "error",
-        message: result.error.message ?? t("errors.emailPasswordIncorrect"),
+        message: resolvePasswordSignInError(result.error, t),
       });
       return;
     }
 
-    window.location.assign(result.data?.url ?? callbackURL);
+    const data = result.data as PasswordSignInData | null | undefined;
+
+    if (data?.twoFactorRedirect) {
+      window.location.assign(getSecondFactorChallengeURL(callbackURL));
+      return;
+    }
+
+    window.location.assign(data?.url ?? callbackURL);
   }
 
   async function requestPasswordReset() {
@@ -163,7 +180,7 @@ export function LoginPanel({
     if (result.error) {
       setStatus({
         tone: "error",
-        message: result.error.message ?? t("errors.passwordResetSendFailed"),
+        message: resolveAuthClientError(result.error, t, "errors.passwordResetSendFailed"),
       });
       return;
     }
@@ -190,7 +207,9 @@ export function LoginPanel({
     if (result.error || !result.data?.url) {
       setStatus({
         tone: "error",
-        message: result.error?.message ?? t("errors.googleStartFailed"),
+        message: result.error
+          ? resolveAuthClientError(result.error, t, "errors.googleStartFailed")
+          : t("errors.googleStartFailed"),
       });
       return;
     }
@@ -341,6 +360,30 @@ export function LoginPanel({
 
 function getNormalizedEmail(value: string) {
   return value.trim().toLowerCase();
+}
+
+function resolvePasswordSignInError(error: AuthClientError, t: ReturnType<typeof useTranslations>) {
+  if (error.status === 429 || error.code === "PASSWORD_SIGN_IN_LOCKED") {
+    return t("errors.passwordSignInRateLimited");
+  }
+
+  return error.message ?? t("errors.emailPasswordIncorrect");
+}
+
+function resolveAuthClientError(
+  error: AuthClientError,
+  t: ReturnType<typeof useTranslations>,
+  fallback:
+    | "errors.magicLinkSendFailed"
+    | "errors.passkeyIncomplete"
+    | "errors.passwordResetSendFailed"
+    | "errors.googleStartFailed",
+) {
+  if (error.status === 429) {
+    return t("errors.rateLimited");
+  }
+
+  return error.message ?? t(fallback);
 }
 
 function LoginStatusMessage({ status }: { status: LoginStatus }) {

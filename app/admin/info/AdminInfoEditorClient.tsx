@@ -1,7 +1,8 @@
 "use client";
 
 import { RotateCcw, Send } from "lucide-react";
-import { useActionState, useEffect, useState } from "react";
+import { useLocale } from "next-intl";
+import { useActionState, useState } from "react";
 
 import { MarkdownArticle } from "@/src/components/sheet/MarkdownArticle";
 import { Button } from "@/src/components/ui/Button";
@@ -16,6 +17,7 @@ import { Field } from "@/src/components/ui/Field";
 import { FormMessage } from "@/src/components/ui/FormMessage";
 import { Input } from "@/src/components/ui/Input";
 import { Textarea } from "@/src/components/ui/Textarea";
+import { formatTimestamp } from "@/src/lib/formatting";
 import { publishHelpWelcomeInfoPageAction, type AdminInfoActionState } from "./actions";
 
 type AdminInfoEditorValue = {
@@ -73,23 +75,26 @@ export function AdminInfoEditorClient({
     publishHelpWelcomeInfoPageAction,
     initialActionState,
   );
+  const locale = useLocale();
 
-  useEffect(() => {
-    if (state.status !== "success" || !state.value) return;
+  // A successful publish returns the persisted (trimmed) values under a fresh version number.
+  // Adopting them during render rather than in an effect keeps the extra render off-screen — React
+  // re-runs the component before committing, so nothing cascades. `publishedMeta.version` doubles
+  // as the applied marker; `publishInfoPage` always increments the version.
+  // https://react.dev/learn/you-might-not-need-an-effect#adjusting-some-state-when-a-prop-changes
+  const publishedValue = state.status === "success" ? state.value : undefined;
 
+  if (publishedValue && publishedValue.version !== publishedMeta.version) {
     setDraft({
-      title: state.value.title,
-      bodyMarkdown: state.value.bodyMarkdown,
+      title: publishedValue.title,
+      bodyMarkdown: publishedValue.bodyMarkdown,
     });
     setPublishedMeta({
       status: "published",
-      version: state.value.version,
-      updatedAtLabel: new Intl.DateTimeFormat(undefined, {
-        dateStyle: "medium",
-        timeStyle: "short",
-      }).format(new Date(state.value.updatedAt)),
+      version: publishedValue.version,
+      updatedAtLabel: formatTimestamp(publishedValue.updatedAt, locale),
     });
-  }, [state]);
+  }
 
   const statusLabel =
     publishedMeta.status === "published" ? labels.statusPublished : labels.statusDraft;

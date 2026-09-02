@@ -1,16 +1,16 @@
 "use client";
 
-import { useId, type CSSProperties } from "react";
+import { useId } from "react";
 
 import { FormMessage } from "@/src/components/ui/FormMessage";
-import { cn } from "@/src/lib/utils";
-import {
-  DEFAULT_PROJECT_COLOR_TOKEN,
-  getProjectColorLabel,
-  projectColorOptions,
-  projectColorValues,
-  type ProjectColorToken,
-} from "@/src/lib/project-colors";
+import { ProjectColorSwatch } from "@/src/components/ui/ProjectColorSwatch";
+import { DEFAULT_PROJECT_COLOR_TOKEN, projectColorOptions } from "@/src/lib/project-colors";
+import type { ProjectColorToken } from "@/src/lib/project-colors";
+
+// Re-exported so the existing `import { ProjectColorSwatch } from "./ProjectColorField"` call
+// sites keep working. New code — anything under src/components — should import it directly from
+// @/src/components/ui/ProjectColorSwatch instead, since components there can't reach into app/.
+export { ProjectColorSwatch };
 
 export type ProjectColorFieldProps = {
   name?: string;
@@ -44,7 +44,10 @@ export function ProjectColorField({
               className="peer sr-only"
               aria-label={option.label}
             />
-            <span className="inline-flex min-h-10 items-center gap-2 rounded-full border border-border bg-background px-3 py-1.5 text-sm font-semibold text-foreground transition peer-checked:border-primary peer-checked:bg-primary/10 peer-focus-visible:ring-2 peer-focus-visible:ring-ring">
+            {/* The radio is `sr-only`, so the global focus outline would land on a clipped 1px box.
+                This span is its visible proxy and carries the same outline instead — as an outline
+                rather than a border brighten, so it cannot collide with `peer-checked:border-*`. */}
+            <span className="inline-flex min-h-10 items-center gap-2 rounded-full border border-border bg-background px-3 py-1.5 text-sm font-semibold text-foreground transition peer-checked:border-primary peer-checked:bg-accent-soft peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-ring">
               <ProjectColorSwatch colorToken={option.value} />
               {option.label}
             </span>
@@ -61,34 +64,5 @@ export function ProjectColorField({
         </FormMessage>
       ) : null}
     </fieldset>
-  );
-}
-
-export function ProjectColorSwatch({
-  colorToken,
-  size = "md",
-  className,
-}: {
-  colorToken: ProjectColorToken;
-  size?: "sm" | "md" | "lg";
-  className?: string;
-}) {
-  return (
-    <span
-      aria-hidden="true"
-      className={cn(
-        "inline-block shrink-0 rounded-full border border-foreground/10 shadow-[inset_0_0_0_1px_rgb(255_255_255/0.22)]",
-        size === "sm" && "size-2.5",
-        size === "md" && "size-3.5",
-        size === "lg" && "size-9",
-        className,
-      )}
-      title={getProjectColorLabel(colorToken)}
-      style={
-        {
-          backgroundColor: projectColorValues[colorToken],
-        } satisfies CSSProperties
-      }
-    />
   );
 }

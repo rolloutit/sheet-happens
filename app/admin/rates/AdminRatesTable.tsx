@@ -1,13 +1,16 @@
 "use client";
 
 import { BadgeDollarSign, ChevronRight, MinusCircle, Plus, RefreshCw, Search } from "lucide-react";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { useMemo, useState, useTransition } from "react";
 
 import { Badge } from "@/src/components/ui/Badge";
 import type { BadgeProps } from "@/src/components/ui/Badge";
 import { Button } from "@/src/components/ui/Button";
+import { Combobox } from "@/src/components/ui/Combobox";
+import { DatePicker } from "@/src/components/ui/DatePicker";
+import { Select } from "@/src/components/ui/Select";
 import {
   Drawer,
   DrawerContent,
@@ -17,9 +20,11 @@ import {
   DrawerTitle,
 } from "@/src/components/ui/Drawer";
 import { Field } from "@/src/components/ui/Field";
+import { focusChromeWithinClassName } from "@/src/components/ui/focusRing";
 import { Input } from "@/src/components/ui/Input";
 import { SegmentedControl } from "@/src/components/ui/SegmentedControl";
 import type { SelectOption } from "@/src/lib/member-preferences";
+import { usePickerLabels } from "@/src/i18n/picker-labels";
 import { cn } from "@/src/lib/utils";
 import type { AdminProjectRow } from "@/src/server/projects";
 import type {
@@ -43,7 +48,6 @@ import type {
   ReplaceAssignmentOverrideRateActionInput,
   ReplaceMemberDefaultRateActionInput,
 } from "./actions.types";
-import { nativeSelectClassName } from "./formStyles";
 
 export type AdminRatesTableProps = {
   rows: AdminMemberRateRow[];
@@ -74,6 +78,7 @@ export function AdminRatesTable({
   todayDate,
 }: AdminRatesTableProps) {
   const t = useTranslations("AdminRates");
+  const pickerLabels = usePickerLabels();
   const router = useRouter();
   const profileLabels: Record<RateMemberProfile, string> = {
     CONTRACTOR: t("profiles.contractor"),
@@ -216,14 +221,19 @@ export function AdminRatesTable({
 
       <div className="grid gap-3">
         <div className="flex flex-wrap items-center gap-3">
-          <label className="flex h-10 min-w-[min(16rem,100%)] flex-[1_1_18rem] items-center gap-2 rounded-[var(--radius-md)] border border-border bg-card px-3 shadow-soft">
+          <label
+            className={cn(
+              "flex h-10 min-w-[min(16rem,100%)] flex-[1_1_18rem] items-center gap-2 rounded-[var(--radius-md)] border border-border bg-card px-3 shadow-soft",
+              focusChromeWithinClassName,
+            )}
+          >
             <Search className="size-4 text-muted-foreground" aria-hidden="true" />
             <span className="sr-only">{t("filters.search")}</span>
             <input
               value={query}
               onChange={(event) => setQuery(event.target.value)}
               placeholder={t("filters.searchPlaceholder")}
-              className="min-w-0 flex-1 bg-transparent text-sm text-foreground outline-none placeholder:text-muted-foreground"
+              className="min-w-0 flex-1 bg-transparent text-sm text-foreground outline-none placeholder:text-subtle-foreground"
             />
           </label>
           <div className="min-w-0 max-w-full overflow-x-auto">
@@ -254,40 +264,48 @@ export function AdminRatesTable({
               ]}
             />
           </div>
-          <label className="grid h-10 min-w-[min(14rem,100%)] flex-[1_1_14rem] grid-cols-[auto_minmax(0,1fr)] items-center gap-2 rounded-[var(--radius-md)] border border-border bg-card px-3 shadow-soft sm:max-w-72">
+          <label
+            className={cn(
+              "grid h-10 min-w-[min(14rem,100%)] flex-[1_1_14rem] grid-cols-[auto_minmax(0,1fr)] items-center gap-2 rounded-[var(--radius-md)] border border-border bg-card px-3 shadow-soft sm:max-w-72",
+              focusChromeWithinClassName,
+            )}
+          >
             <span className="font-ui text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
               {t("filters.project")}
             </span>
-            <select
+            <Combobox
+              label={t("filters.project")}
               value={projectFilter}
-              onChange={(event) => setProjectFilter(event.target.value)}
-              className="min-w-0 bg-transparent text-sm font-semibold text-foreground outline-none"
-            >
-              <option value="all">{t("filters.all")}</option>
-              {projects.map((project) => (
-                <option key={project.id} value={project.id}>
-                  {project.name}
-                </option>
-              ))}
-            </select>
+              onValueChange={setProjectFilter}
+              labels={pickerLabels.combobox}
+              triggerClassName="h-auto border-0 bg-transparent px-0 font-semibold shadow-none"
+              options={[
+                { value: "all", label: t("filters.all") },
+                ...projects.map((project) => ({ value: project.id, label: project.name })),
+              ]}
+            />
           </label>
-          <label className="grid h-10 min-w-[min(14rem,100%)] flex-[1_1_14rem] grid-cols-[auto_minmax(0,1fr)] items-center gap-2 rounded-[var(--radius-md)] border border-border bg-card px-3 shadow-soft sm:max-w-72">
+          <label
+            className={cn(
+              "grid h-10 min-w-[min(14rem,100%)] flex-[1_1_14rem] grid-cols-[auto_minmax(0,1fr)] items-center gap-2 rounded-[var(--radius-md)] border border-border bg-card px-3 shadow-soft sm:max-w-72",
+              focusChromeWithinClassName,
+            )}
+          >
             <span className="font-ui text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
               {t("filters.group")}
             </span>
-            <select
+            <Combobox
+              label={t("filters.group")}
               value={groupFilter}
-              onChange={(event) => setGroupFilter(event.target.value)}
-              className="min-w-0 bg-transparent text-sm font-semibold text-foreground outline-none"
-            >
-              <option value="all">{t("filters.all")}</option>
-              <option value="ungrouped">{t("filters.ungrouped")}</option>
-              {groupOptions.map((group) => (
-                <option key={group.id} value={group.id}>
-                  {group.name}
-                </option>
-              ))}
-            </select>
+              onValueChange={setGroupFilter}
+              labels={pickerLabels.combobox}
+              triggerClassName="h-auto border-0 bg-transparent px-0 font-semibold shadow-none"
+              options={[
+                { value: "all", label: t("filters.all") },
+                { value: "ungrouped", label: t("filters.ungrouped") },
+                ...groupOptions.map((group) => ({ value: group.id, label: group.name })),
+              ]}
+            />
           </label>
         </div>
       </div>
@@ -336,7 +354,7 @@ export function AdminRatesTable({
                         setActionState(initialActionState);
                       }
                     }}
-                    className="cursor-pointer border-b border-border transition hover:bg-secondary/45 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring last:border-b-0"
+                    className="cursor-pointer border-b border-border transition hover:bg-secondary/45 last:border-b-0"
                   >
                     <td className="px-4 py-3">
                       <div className="flex min-w-0 items-center gap-3">
@@ -362,7 +380,7 @@ export function AdminRatesTable({
                           {formatRateValue(row.currentRate)}
                         </p>
                       ) : (
-                        <span className="inline-flex items-center gap-1 rounded-[var(--radius-pill)] bg-warning/12 px-2.5 py-1 text-xs font-semibold text-warning">
+                        <span className="inline-flex items-center gap-1 rounded-[var(--radius-pill)] bg-warning-soft px-2.5 py-1 text-xs font-semibold text-warning">
                           <MinusCircle className="size-3" aria-hidden="true" />
                           {t("labels.missing")}
                         </span>
@@ -371,7 +389,7 @@ export function AdminRatesTable({
                     <td className="hidden px-4 py-3 md:table-cell">
                       {row.memberProfile === "CONTRACTOR" && overrideCount > 0 ? (
                         <span className="inline-flex items-center gap-1 text-sm text-foreground">
-                          <span className="rounded-[var(--radius-pill)] bg-primary/12 px-2 py-0.5 font-ui text-xs font-semibold text-accent">
+                          <span className="rounded-[var(--radius-pill)] bg-accent-soft px-2 py-0.5 font-ui text-xs font-semibold text-accent">
                             {overrideCount}
                           </span>
                           {t("table.overrideCount", { count: overrideCount })}
@@ -532,7 +550,7 @@ function RateManagementDrawer({
                   <p className="text-xs text-muted-foreground">{t("labels.currentRate")}</p>
                 </>
               ) : (
-                <span className="inline-flex items-center gap-1 rounded-[var(--radius-pill)] bg-warning/12 px-2.5 py-1 text-xs font-semibold text-warning">
+                <span className="inline-flex items-center gap-1 rounded-[var(--radius-pill)] bg-warning-soft px-2.5 py-1 text-xs font-semibold text-warning">
                   <MinusCircle className="size-3" aria-hidden="true" />
                   {t("labels.missing")}
                 </span>
@@ -547,8 +565,8 @@ function RateManagementDrawer({
                 className={cn(
                   "rounded-[var(--radius-md)] border px-3 py-2 text-sm",
                   actionState.status === "error"
-                    ? "border-destructive/40 bg-destructive/10 text-destructive"
-                    : "border-success/40 bg-success/10 text-success",
+                    ? "border-destructive/40 bg-destructive-soft text-destructive"
+                    : "border-success/40 bg-success-soft text-success",
                 )}
               >
                 {actionState.message}
@@ -816,6 +834,7 @@ function OverrideRateForm({
   onSubmit: (input: CreateAssignmentOverrideRateActionInput) => void;
 }) {
   const t = useTranslations("AdminRates");
+  const pickerLabels = usePickerLabels();
   const [assignmentId, setAssignmentId] = useState(
     initialAssignmentId ?? assignments[0]?.assignmentId ?? "",
   );
@@ -824,20 +843,19 @@ function OverrideRateForm({
     <div className="grid gap-4">
       <Field label={t("fields.project")} required reserveMessageSpace>
         {({ id, describedBy, required }) => (
-          <select
+          <Combobox
             id={id}
+            label={t("fields.project")}
             value={assignmentId}
-            onChange={(event) => setAssignmentId(event.target.value)}
+            onValueChange={setAssignmentId}
             aria-describedby={describedBy}
             required={required}
-            className={nativeSelectClassName}
-          >
-            {assignments.map((assignment) => (
-              <option key={assignment.assignmentId} value={assignment.assignmentId}>
-                {assignment.projectName}
-              </option>
-            ))}
-          </select>
+            labels={pickerLabels.combobox}
+            options={assignments.map((assignment) => ({
+              value: assignment.assignmentId,
+              label: assignment.projectName,
+            }))}
+          />
         )}
       </Field>
       <RatePeriodForm
@@ -947,6 +965,8 @@ function RatePeriodForm({
   onSubmit: (input: Omit<CreateMemberDefaultRateActionInput, "memberId">) => void;
 }) {
   const t = useTranslations("AdminRates");
+  const locale = useLocale();
+  const pickerLabels = usePickerLabels();
 
   return (
     <form
@@ -972,14 +992,16 @@ function RatePeriodForm({
           error={actionState.fieldErrors?.validFrom}
         >
           {({ id, describedBy, invalid, required }) => (
-            <Input
+            <DatePicker
               id={id}
               name="validFrom"
-              type="date"
+              label={t("fields.validFrom")}
+              locale={locale}
               defaultValue={todayDate}
               aria-describedby={describedBy}
               invalid={invalid}
               required={required}
+              labels={pickerLabels.date}
             />
           )}
         </Field>
@@ -989,12 +1011,14 @@ function RatePeriodForm({
           error={actionState.fieldErrors?.validTo}
         >
           {({ id, describedBy, invalid }) => (
-            <Input
+            <DatePicker
               id={id}
               name="validTo"
-              type="date"
+              label={t("fields.validTo")}
+              locale={locale}
               aria-describedby={describedBy}
               invalid={invalid}
+              labels={pickerLabels.date}
             />
           )}
         </Field>
@@ -1026,21 +1050,17 @@ function RatePeriodForm({
           error={actionState.fieldErrors?.currencyCode}
         >
           {({ id, describedBy, invalid, required }) => (
-            <select
+            <Select
               id={id}
               name="currencyCode"
+              label={t("fields.currency")}
               defaultValue={defaultCurrency}
               aria-describedby={describedBy}
-              aria-invalid={invalid}
+              invalid={invalid}
               required={required}
-              className={nativeSelectClassName}
-            >
-              {currencyOptions.map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
+              labels={pickerLabels.combobox}
+              options={currencyOptions}
+            />
           )}
         </Field>
       </div>
@@ -1096,6 +1116,8 @@ function RateReplacementForm({
   onSubmit: (input: RateReplacementFormInput) => void;
 }) {
   const t = useTranslations("AdminRates");
+  const locale = useLocale();
+  const pickerLabels = usePickerLabels();
 
   return (
     <form
@@ -1124,16 +1146,18 @@ function RateReplacementForm({
           error={actionState.fieldErrors?.validFrom}
         >
           {({ id, describedBy, invalid, required }) => (
-            <Input
+            <DatePicker
               id={id}
               name="validFrom"
-              type="date"
+              label={t("fields.replaceFrom")}
+              locale={locale}
               min={period.validFrom}
               max={period.validTo ?? undefined}
               defaultValue={getDefaultReplacementStart(period, todayDate)}
               aria-describedby={describedBy}
               invalid={invalid}
               required={required}
+              labels={pickerLabels.date}
             />
           )}
         </Field>
@@ -1166,21 +1190,17 @@ function RateReplacementForm({
           error={actionState.fieldErrors?.currencyCode}
         >
           {({ id, describedBy, invalid, required }) => (
-            <select
+            <Select
               id={id}
               name="currencyCode"
+              label={t("fields.currency")}
               defaultValue={defaultCurrency}
               aria-describedby={describedBy}
-              aria-invalid={invalid}
+              invalid={invalid}
               required={required}
-              className={nativeSelectClassName}
-            >
-              {currencyOptions.map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
+              labels={pickerLabels.combobox}
+              options={currencyOptions}
+            />
           )}
         </Field>
         <Field label={t("fields.reason")} reserveMessageSpace error={actionState.fieldErrors?.note}>

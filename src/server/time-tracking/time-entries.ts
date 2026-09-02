@@ -54,6 +54,12 @@ export type TimeGridEntry = {
   endTime: string | null;
   locked: boolean;
   updatedAt: string;
+  adminModification: {
+    modifiedAt: string;
+    modifiedByName: string | null;
+    reason: string;
+    timezone: string;
+  } | null;
 };
 
 export type RunningTimerView = {
@@ -246,6 +252,11 @@ type EntryRecord = {
   timezone: string;
   lockedByTimesheetRevisionId: string | null;
   updatedAt: Date;
+  adminModifiedAt: Date | null;
+  adminModificationReason: string | null;
+  adminModifiedBy: {
+    displayName: string;
+  } | null;
 };
 
 type EntryForCopy = {
@@ -279,6 +290,40 @@ export class TimeTrackingError extends Error {
     super(message);
     this.name = "TimeTrackingError";
   }
+}
+
+/**
+ * Shared by the week grid and the app-shell pill so both read the timer through one select and one
+ * mapper. `memberId` is `@unique` on `RunningTimer`, so this is a single indexed lookup — cheap
+ * enough for the root layout to run on every request.
+ */
+const runningTimerSelect = {
+  id: true,
+  projectId: true,
+  projectAssignmentId: true,
+  description: true,
+  startedAt: true,
+  projectAssignment: {
+    select: {
+      project: {
+        select: {
+          name: true,
+          colorToken: true,
+        },
+      },
+    },
+  },
+} as const;
+
+export async function getRunningTimerForMember(memberId: string): Promise<RunningTimerView | null> {
+  const timer = await prisma.runningTimer.findUnique({
+    where: {
+      memberId,
+    },
+    select: runningTimerSelect,
+  });
+
+  return timer ? mapRunningTimer(timer) : null;
 }
 
 export async function getMemberWeeklyTimeGrid(input: {
@@ -378,6 +423,13 @@ export async function getMemberWeeklyTimeGrid(input: {
           timezone: true,
           lockedByTimesheetRevisionId: true,
           updatedAt: true,
+          adminModifiedAt: true,
+          adminModificationReason: true,
+          adminModifiedBy: {
+            select: {
+              displayName: true,
+            },
+          },
         },
       }),
       prisma.timeEntry.findMany({
@@ -395,28 +447,7 @@ export async function getMemberWeeklyTimeGrid(input: {
           projectId: true,
         },
       }),
-      prisma.runningTimer.findUnique({
-        where: {
-          memberId: member.id,
-        },
-        select: {
-          id: true,
-          projectId: true,
-          projectAssignmentId: true,
-          description: true,
-          startedAt: true,
-          projectAssignment: {
-            select: {
-              project: {
-                select: {
-                  name: true,
-                  colorToken: true,
-                },
-              },
-            },
-          },
-        },
-      }),
+      getRunningTimerForMember(member.id),
       prisma.inactiveProjectWeek.findMany({
         where: {
           memberId: member.id,
@@ -469,7 +500,7 @@ export async function getMemberWeeklyTimeGrid(input: {
     projects: projectRows,
     recentProjects,
     entries: entries.map(mapTimeEntry),
-    runningTimer: runningTimer ? mapRunningTimer(runningTimer) : null,
+    runningTimer,
     inactiveWeeks: inactiveWeeks.map((inactiveWeek) => ({
       projectId: inactiveWeek.projectId,
       weekStartDate: formatDateOnly(inactiveWeek.weekStartDate),
@@ -1710,6 +1741,15 @@ function mapTimeEntry(entry: EntryRecord): TimeGridEntry {
     endTime: entry.endedAt ? formatTimeInTimezone(entry.endedAt, entry.timezone) : null,
     locked: Boolean(entry.lockedByTimesheetRevisionId),
     updatedAt: entry.updatedAt.toISOString(),
+    adminModification:
+      entry.adminModifiedAt && entry.adminModificationReason
+        ? {
+            modifiedAt: entry.adminModifiedAt.toISOString(),
+            modifiedByName: entry.adminModifiedBy?.displayName ?? null,
+            reason: entry.adminModificationReason,
+            timezone: entry.timezone,
+          }
+        : null,
   };
 }
 

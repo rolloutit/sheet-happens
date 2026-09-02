@@ -1,6 +1,7 @@
 import { ArrowDown, ArrowUp, ArrowUpDown } from "lucide-react";
 
 import { cn } from "@/src/lib/utils";
+import { focusChromeClassName } from "../focusRing";
 import type { DataTableProps, TableColumn, TableSortDirection } from "./Table.types";
 
 function getCellValue<T extends Record<string, unknown>>(row: T, column: TableColumn<T>) {
@@ -79,7 +80,9 @@ export function DataTable<T extends Record<string, unknown>>({
         <div className={cn("overflow-x-auto", responsiveMode && "hidden md:block")}>
           <table className="min-w-full border-collapse text-sm" aria-label={ariaLabel}>
             {caption ? <caption className="sr-only">{caption}</caption> : null}
-            <thead className="bg-secondary/80 text-left font-ui text-xs uppercase tracking-wide text-muted-foreground">
+            {/* `.rv-th`: no fill of its own — the header sits on the table's surface, separated
+                only by a hairline, in the subtle text tier. */}
+            <thead className="border-b border-border text-left font-ui text-[10.5px] font-semibold uppercase tracking-[0.06em] text-subtle-foreground">
               <tr>
                 {columns.map((column) => {
                   const currentDirection =
@@ -106,7 +109,7 @@ export function DataTable<T extends Record<string, unknown>>({
                         <button
                           type="button"
                           className={cn(
-                            "inline-flex items-center gap-1.5 rounded-[var(--radius-sm)] transition hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                            "inline-flex items-center gap-1.5 rounded-[var(--radius-sm)] transition hover:text-foreground",
                             column.align === "right" && "justify-end",
                             column.align === "center" && "justify-center",
                           )}
@@ -161,9 +164,12 @@ export function DataTable<T extends Record<string, unknown>>({
                         role={interactive ? "button" : undefined}
                         aria-label={interactive ? rowActionLabel?.(row, index) : undefined}
                         aria-selected={selected || undefined}
+                        // The one control that does not take the global focus outline: a row sits
+                        // flush inside a card that clips overflow, so an outward outline would be
+                        // cut off on the first and last rows. An inset ring draws inside instead.
                         className={cn(
                           "border-t border-border transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring",
-                          selected && "bg-primary/10",
+                          selected && "bg-accent-soft",
                           onRowClick && "cursor-pointer hover:bg-secondary/60",
                         )}
                         onClick={() => onRowClick?.(row)}
@@ -253,8 +259,9 @@ export function DataTable<T extends Record<string, unknown>>({
                   </>
                 );
                 const cardClasses = cn(
-                  "grid w-full gap-3 rounded-[var(--radius-md)] border border-border bg-background/40 p-3 text-left transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-                  selected && "border-primary/55 bg-primary/12",
+                  "grid w-full gap-3 rounded-[var(--radius-md)] border border-border bg-background/40 p-3 text-left transition",
+                  focusChromeClassName,
+                  selected && "border-primary/55 bg-accent-soft",
                   interactive && "hover:bg-secondary/70",
                 );
 

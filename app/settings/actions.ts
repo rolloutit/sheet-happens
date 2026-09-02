@@ -6,18 +6,194 @@ import { getTranslations } from "next-intl/server";
 
 import {
   requireActiveAppMemberForAction,
+  requireAdminAppMemberForAction,
   requireSecuritySettingsAppMember,
 } from "@/src/server/auth/app-access";
 import { clearSecondFactorCookie } from "@/src/server/auth/second-factor";
 import { AuthenticationError, AuthorizationError } from "@/src/server/auth/session";
 import { prisma } from "@/src/server/db/client";
+import {
+  deleteMemberAvatar,
+  MemberPreferenceError,
+  updateMemberDurationDisplayFormat,
+  updateMemberTimezone,
+  uploadMemberAvatar,
+} from "@/src/server/settings";
+import {
+  configurableNotificationTypes,
+  NotificationConfigurationError,
+  updateNotificationConfiguration,
+} from "@/src/server/notifications";
 import type {
   DeletePasskeyActionInput,
+  MemberPreferenceActionState,
+  NotificationSettingsActionState,
   RenamePasskeyActionInput,
   SecuritySettingsActionState,
 } from "./actions.types";
 
 type SettingsActionsTranslator = Awaited<ReturnType<typeof getTranslations>>;
+
+export async function updateNotificationSettingsAction(
+  _state: NotificationSettingsActionState,
+  formData: FormData,
+): Promise<NotificationSettingsActionState> {
+  const t = await getTranslations("SettingsActions");
+
+  try {
+    const { member } = await requireAdminAppMemberForAction();
+    const requestHeaders = await headers();
+    await updateNotificationConfiguration({
+      actorMemberId: member.id,
+      value: {
+        companyTimezone: String(formData.get("companyTimezone") ?? ""),
+        weeklyWeekday: Number(formData.get("weeklyWeekday")),
+        weeklyTime: String(formData.get("weeklyTime") ?? ""),
+        invoiceInitialDelayHours: Number(formData.get("invoiceInitialDelayHours")),
+        invoiceRepeatIntervalHours: Number(formData.get("invoiceRepeatIntervalHours")),
+        rules: configurableNotificationTypes.map((type) => ({
+          type,
+          emailEnabled: formData.get(`email_${type}`) === "on",
+          inAppEnabled: formData.get(`inApp_${type}`) === "on",
+        })),
+      },
+      requestMetadata: getRequestMetadata(requestHeaders),
+    });
+    revalidatePath("/settings");
+    return { status: "success", message: t("success.notificationSettingsUpdated") };
+  } catch (error) {
+    return {
+      status: "error",
+      message:
+        error instanceof NotificationConfigurationError
+          ? t("errors.notificationSettingsInvalid")
+          : error instanceof AuthenticationError || error instanceof AuthorizationError
+            ? translateSettingsActionMessage(error.message, t)
+            : t("errors.notificationSettingsUpdateFailed"),
+    };
+  }
+}
+
+export async function uploadMemberAvatarAction(
+  _state: MemberPreferenceActionState,
+  formData: FormData,
+): Promise<MemberPreferenceActionState> {
+  const t = await getTranslations("SettingsActions");
+  const file = formData.get("avatar");
+
+  if (!(file instanceof File) || file.size === 0) {
+    return { status: "error", message: t("errors.avatarRequired") };
+  }
+
+  try {
+    const { member } = await requireActiveAppMemberForAction();
+    const requestHeaders = await headers();
+    const bytes = Buffer.from(await file.arrayBuffer());
+
+    await uploadMemberAvatar({
+      memberId: member.id,
+      file: {
+        bytes,
+        originalFilename: file.name,
+        contentType: file.type,
+        byteSize: file.size,
+      },
+      requestMetadata: getRequestMetadata(requestHeaders),
+    });
+    revalidatePath("/", "layout");
+    revalidatePath("/settings");
+    return { status: "success", message: t("success.avatarUpdated") };
+  } catch (error) {
+    return {
+      status: "error",
+      message:
+        error instanceof MemberPreferenceError
+          ? translateMemberPreferenceError(error.message, t)
+          : t("errors.avatarUploadFailed"),
+    };
+  }
+}
+
+export async function deleteMemberAvatarAction(): Promise<MemberPreferenceActionState> {
+  const t = await getTranslations("SettingsActions");
+
+  try {
+    const { member } = await requireActiveAppMemberForAction();
+    const requestHeaders = await headers();
+    await deleteMemberAvatar({
+      memberId: member.id,
+      requestMetadata: getRequestMetadata(requestHeaders),
+    });
+    revalidatePath("/", "layout");
+    revalidatePath("/settings");
+    return { status: "success", message: t("success.avatarDeleted") };
+  } catch (error) {
+    return {
+      status: "error",
+      message:
+        error instanceof MemberPreferenceError
+          ? translateMemberPreferenceError(error.message, t)
+          : t("errors.avatarDeleteFailed"),
+    };
+  }
+}
+
+export async function updateMemberTimezoneAction(
+  _state: MemberPreferenceActionState,
+  formData: FormData,
+): Promise<MemberPreferenceActionState> {
+  const t = await getTranslations("SettingsActions");
+
+  try {
+    const { member } = await requireActiveAppMemberForAction();
+    const requestHeaders = await headers();
+    await updateMemberTimezone({
+      memberId: member.id,
+      timezone: String(formData.get("timezone") ?? ""),
+      requestMetadata: getRequestMetadata(requestHeaders),
+    });
+    revalidatePath("/", "layout");
+    revalidatePath("/settings");
+    return { status: "success", message: t("success.timezoneUpdated") };
+  } catch (error) {
+    return {
+      status: "error",
+      message:
+        error instanceof MemberPreferenceError
+          ? translateMemberPreferenceError(error.message, t)
+          : t("errors.timezoneUpdateFailed"),
+    };
+  }
+}
+
+export async function updateMemberDurationDisplayFormatAction(
+  _state: MemberPreferenceActionState,
+  formData: FormData,
+): Promise<MemberPreferenceActionState> {
+  const t = await getTranslations("SettingsActions");
+
+  try {
+    const { member } = await requireActiveAppMemberForAction();
+    const requestHeaders = await headers();
+    await updateMemberDurationDisplayFormat({
+      memberId: member.id,
+      durationDisplayFormat: String(formData.get("durationDisplayFormat") ?? "") as
+        "DECIMAL_HOURS" | "HOURS_MINUTES",
+      requestMetadata: getRequestMetadata(requestHeaders),
+    });
+    revalidatePath("/", "layout");
+    revalidatePath("/settings");
+    return { status: "success", message: t("success.durationDisplayUpdated") };
+  } catch (error) {
+    return {
+      status: "error",
+      message:
+        error instanceof MemberPreferenceError
+          ? translateMemberPreferenceError(error.message, t)
+          : t("errors.durationDisplayUpdateFailed"),
+    };
+  }
+}
 
 export async function renamePasskeyAction(
   input: RenamePasskeyActionInput,
@@ -314,4 +490,24 @@ function translateSettingsActionMessage(message: string, t: SettingsActionsTrans
   }
 
   return message;
+}
+
+function getRequestMetadata(requestHeaders: Headers) {
+  return {
+    ipAddress: requestHeaders.get("x-forwarded-for"),
+    userAgent: requestHeaders.get("user-agent"),
+  };
+}
+
+function translateMemberPreferenceError(message: string, t: SettingsActionsTranslator) {
+  const keyByMessage: Record<string, string> = {
+    "Avatar image is required.": "errors.avatarRequired",
+    "Avatar image is too large.": "errors.avatarTooLarge",
+    "Avatar must be a PNG or JPEG image.": "errors.avatarInvalidType",
+    "Unsupported timezone.": "errors.timezoneInvalid",
+    "Unsupported duration display format.": "errors.durationDisplayInvalid",
+    "Member not found.": "errors.memberNotFound",
+  };
+  const key = keyByMessage[message];
+  return key ? t(key) : message;
 }

@@ -1,7 +1,9 @@
 import { cn } from "@/src/lib/utils";
 import type { SkeletonProps } from "./Skeleton.types";
 
-const shimmer = "animate-pulse bg-muted/70";
+// The prototype's `.sk` sweeps a sheen across the skeleton rather than pulsing its opacity.
+// `.sheet-shimmer` carries the gradient and keyframes (app/globals.css).
+const shimmer = "sheet-shimmer";
 
 export function Skeleton({ variant = "line", lines = 3, className, ...props }: SkeletonProps) {
   if (variant === "table") {

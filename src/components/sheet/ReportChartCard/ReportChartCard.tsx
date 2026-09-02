@@ -39,7 +39,7 @@ export function ReportChartCard({
                   labelClassName="font-ui"
                   formatter={(value) => [value, valueLabel]}
                 />
-                <Bar dataKey="value" fill="var(--primary)" radius={[8, 8, 0, 0]} />
+                <Bar dataKey="value" fill="var(--chart-1)" radius={[8, 8, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </div>

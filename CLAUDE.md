@@ -8,24 +8,29 @@ Prisma/Postgres, Better Auth, Tailwind v4, next-intl (HU/EN), Storybook.
 
 pnpm only — `packageManager: pnpm@11.5.3`, Node `24.14.0` (`.nvmrc`). Never npm or yarn.
 
+- `pnpm setup:git` — run once per clone: installs the pre-push guard and the push defaults that
+  keep a feature branch off `develop`. Local git config only, never global.
 - `pnpm dev` — Next dev server (Turbopack) on `:3000`
 - `pnpm db:dev` — start Postgres 17 + MinIO in Docker, migrate, seed. Also `db:dev:reset`,
   `db:dev:seed`, `db:dev:stop`. Requires Docker running.
 - `pnpm db:generate` — regenerate Prisma client after any schema edit
 - `pnpm typecheck` · `pnpm lint` · `pnpm format` (check only; `pnpm format:write` fixes)
-- `pnpm test` — Vitest/jsdom, picks up `src/**/*.test.{ts,tsx}` only. Filter while iterating:
+- `pnpm test` — Vitest/jsdom, picks up `src/**/*.test.{ts,tsx}` and `app/**/*.test.{ts,tsx}`
+  (browser tests excluded). Filter while iterating:
   `pnpm test src/lib/duration.test.ts`
 - `pnpm test:browser` — Vitest browser mode, `src/**/*.browser.{test,spec}.{ts,tsx}`
 - `pnpm storybook` · `pnpm test-storybook`
 - `pnpm test:visual` — rebuilds Storybook, compares checked-in screenshots
 - `pnpm e2e` — Playwright; boots `pnpm dev` itself, no separate server needed
-- `pnpm ci` — the full gate chain. Run it before calling a feature done.
+- `pnpm verify` — the full gate chain. Run it before calling a feature done. (Not `pnpm ci`: pnpm
+  has a built-in `ci` that shadows package scripts and silently runs a clean install instead.)
 
 ## Environment
 
 - Copy `.env.example` → `.env.local`. Never edit or commit `.env`/`.env*.local`.
-- PDF export (`src/server/pdf`) shells out to Typst: needs `typst` on PATH or `TYPST_BIN` set.
-  Production runs it from the Dockerfile image.
+- PDF export (`src/server/pdf`) shells out to Typst: needs `typst` on PATH or `TYPST_BIN` set
+  (pin 0.15.1 to match the Dockerfile). Production runs it from the Dockerfile image.
+  `pnpm test:pdf` renders the templates for real; plain `pnpm test` never invokes Typst.
 - Object storage is S3-compatible; local dev uses MinIO on `:9000` (console `:9001`).
 
 ## Architecture rules
@@ -39,6 +44,12 @@ pnpm only — `packageManager: pnpm@11.5.3`, Node `24.14.0` (`.nvmrc`). Never np
 - **Server Actions stay thin**: authenticate → authorize → validate with Zod → call
   `src/server/<domain>` → return a typed result. Domain and DB logic lives in `src/server/*`,
   never in components or route files.
+- **PDF documents are Typst templates, never generated markup.** Layout lives in
+  `src/server/pdf/templates/*.typ` (`lib/theme.typ` for tokens, `lib/components.typ` for blocks);
+  TypeScript only builds a display-ready JSON payload (`report-pdf-payload.ts`) that the template
+  reads via `json("/data.json")`. Never concatenate values into Typst markup — that is what the old
+  hand-rolled escaping existed for. Do all number/money/date formatting in TS via
+  `src/lib/formatting` so `Intl` stays the single authority; templates contain no locale logic.
 - No Redux, Zustand, or TanStack Query in v1. Local React state for component UI state; URL search
   params for shareable table/filter state.
 - Import alias `@/*` resolves to the repo root.
@@ -63,11 +74,14 @@ Follow `src/components/README.md`. In short:
   `status`), not boolean clusters like `primary`/`danger`/`small`.
 - Reusable components need Storybook coverage for variants, disabled/loading/error/empty, dark and
   light theme, and mobile states. Behavior needs a Storybook `play` test or a Vitest test.
-- Dark is the default theme (next-themes); check both.
+- Theme is a light/dark/**system** preference (next-themes, `system` by default). `:root` is the
+  dark palette, `.light` overrides it — check both.
 
 ## Testing conventions
 
-- Unit and domain tests colocate as `*.test.ts` beside the source under `src/`.
+- Unit and domain tests colocate as `*.test.ts` beside the source under `src/`. Route handler
+  tests colocate beside the handler in `app/` (e.g. `app/api/notifications/route.test.ts`) — Next
+  routes only `route`/`page` basenames, so they are never served.
 - Visual baselines in `visual/storybook.spec.ts-snapshots/` are checked in and platform-suffixed
   (`-darwin`). Refresh with `pnpm test:visual:update` **only** for an intentional visual change, and
   say so in the commit.
@@ -80,6 +94,8 @@ Detailed workflow lives in the `/git-workflow` skill (`.claude/skills/git-workfl
 
 - Branch off `develop`; never commit directly on `develop` or `main`. Names: `feature/<topic>`,
   `fix/<topic>`, `chore/<topic>`, `docs/<topic>`.
+- Create branches with `git switch -c <name> --no-track origin/develop`; push with
+  `git push -u origin <branch>`, never a `HEAD:<other-branch>` refspec.
 - Conventional Commits: `type(scope): imperative subject`, lowercase, no trailing period.
 - **YOU MUST NEVER push to a remote** and never rewrite history that exists on `origin`. Commit
   locally, then hand the push and PR to the developer. `git push` is blocked by a deny rule in
@@ -106,3 +122,13 @@ Detailed workflow lives in the `/git-workflow` skill (`.claude/skills/git-workfl
   without asking first.
 - Timesheet revisions are immutable financial snapshots — never make submitted revisions recompute
   from live time entries (see `docs/domain-model.md`).
+
+<!-- BEGIN:nextjs-agent-rules -->
+
+# This is NOT the Next.js you know
+
+This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` (resolved from this file's directory; in monorepos the `next` package may not be visible from the repo root) before writing any code. Heed deprecation notices.
+
+This block is written and re-added by `next dev` — verify at `node_modules/next/dist/server/lib/generate-agent-files.js`. Removing it from a diff only re-creates the uncommitted change; committing it with your work keeps the tree clean.
+
+<!-- END:nextjs-agent-rules -->

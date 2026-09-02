@@ -1,7 +1,9 @@
 import type { Route } from "next";
 import { redirect } from "next/navigation";
+import { cache } from "react";
 
 import { AuthenticationError, AuthorizationError, getSession } from "./session";
+import { hasPasskeySatisfiedSecondFactor } from "./passkey-second-factor";
 import { hasSatisfiedSecondFactor } from "./second-factor";
 import { prisma } from "@/src/server/db/client";
 
@@ -54,6 +56,12 @@ export type AppMember = {
   status: "INVITED" | "ACTIVE" | "INACTIVE" | "DELETED";
   currentProfile: "CONTRACTOR" | "EMPLOYEE";
   timezone: string;
+  durationDisplayFormat: "DECIMAL_HOURS" | "HOURS_MINUTES";
+  avatarStorageBucket: string | null;
+  avatarStorageKey: string | null;
+  avatarContentType: string | null;
+  avatarByteSize: bigint | null;
+  avatarUpdatedAt: Date | null;
   deletedAt: Date | null;
 };
 
@@ -65,7 +73,13 @@ export type AppAuthUser = {
   passkeyCount: number;
 };
 
-export async function getAppAccessState(): Promise<AppAccessState> {
+/**
+ * Wrapped in React's request-scoped `cache` because the root layout now resolves the shell's
+ * running timer from it while the page underneath resolves its own member — two calls in one
+ * request that would otherwise be two session lookups and two member queries. The function only
+ * reads `headers()` and the database, so memoizing it per request changes nothing observable.
+ */
+export const getAppAccessState = cache(async function getAppAccessState(): Promise<AppAccessState> {
   const session = await getSession();
 
   if (!session) {
@@ -93,6 +107,12 @@ export async function getAppAccessState(): Promise<AppAccessState> {
         status: true,
         currentProfile: true,
         timezone: true,
+        durationDisplayFormat: true,
+        avatarStorageBucket: true,
+        avatarStorageKey: true,
+        avatarContentType: true,
+        avatarByteSize: true,
+        avatarUpdatedAt: true,
         deletedAt: true,
       },
     }),
@@ -176,7 +196,7 @@ export async function getAppAccessState(): Promise<AppAccessState> {
 
   if (
     resolvedAuthUser.twoFactorEnabled &&
-    !(await hasSatisfiedSecondFactor({
+    !(await hasSatisfiedStrongAuthentication({
       userId: session.user.id,
       sessionToken: session.session.token,
     }))
@@ -189,7 +209,7 @@ export async function getAppAccessState(): Promise<AppAccessState> {
     };
   }
 
-  if (!hasCompletedSecuritySetup(resolvedAuthUser)) {
+  if (!isSecuritySetupOptionalInDev() && !hasCompletedSecuritySetup(resolvedAuthUser)) {
     return {
       status: "security_setup_required",
       session,
@@ -204,6 +224,14 @@ export async function getAppAccessState(): Promise<AppAccessState> {
     member,
     authUser: resolvedAuthUser,
   };
+});
+
+async function hasSatisfiedStrongAuthentication(input: { userId: string; sessionToken: string }) {
+  if (await hasSatisfiedSecondFactor(input)) {
+    return true;
+  }
+
+  return hasPasskeySatisfiedSecondFactor(input);
 }
 
 export async function requireActiveAppMember(callbackURL: string): Promise<ActiveAppAccess> {
@@ -235,7 +263,7 @@ export async function requireAdminAppMember(callbackURL: string): Promise<Active
     redirect(accountStatusRoute(callbackURL, "admin-required"));
   }
 
-  if (!state.authUser.twoFactorEnabled) {
+  if (!isSecuritySetupOptionalInDev() && !state.authUser.twoFactorEnabled) {
     redirect(securitySetupRoute(callbackURL, "admin-totp-required"));
   }
 
@@ -291,7 +319,7 @@ export async function requireAdminAppMemberForAction(): Promise<ActiveAppAccess>
     throw new AuthorizationError("Admin access required.");
   }
 
-  if (!state.authUser.twoFactorEnabled) {
+  if (!isSecuritySetupOptionalInDev() && !state.authUser.twoFactorEnabled) {
     throw new AuthorizationError("Authenticator app setup is required for admin actions.");
   }
 
@@ -349,7 +377,16 @@ export function mapMemberToShellProfile(member: Pick<AppMember, "currentProfile"
 }
 
 export function mapMemberToShellUser(
-  member: Pick<AppMember, "displayName" | "firstName" | "lastName" | "email" | "role">,
+  member: Pick<
+    AppMember,
+    | "displayName"
+    | "firstName"
+    | "lastName"
+    | "email"
+    | "role"
+    | "avatarStorageKey"
+    | "avatarUpdatedAt"
+  >,
 ) {
   const name =
     member.displayName.trim() ||
@@ -361,6 +398,9 @@ export function mapMemberToShellUser(
     email: member.email,
     role: member.role === "ADMIN" ? "Admin" : "Member",
     initials: getInitials(name),
+    avatarSrc: member.avatarStorageKey
+      ? `/api/profile/avatar?v=${member.avatarUpdatedAt?.getTime() ?? 0}`
+      : undefined,
   };
 }
 
@@ -375,4 +415,12 @@ function getInitials(name: string) {
 
 function hasCompletedSecuritySetup(authUser: AppAuthUser) {
   return authUser.twoFactorEnabled || authUser.passkeyCount > 0;
+}
+
+// Dockerfile hardcodes NODE_ENV=production for every deploy (prod and PR previews), so this can
+// only ever be true for a local `pnpm dev`/`next start` run, never a deployed environment.
+function isSecuritySetupOptionalInDev() {
+  return (
+    process.env.NODE_ENV !== "production" && process.env.AUTH_SECURITY_SETUP_MODE === "optional"
+  );
 }

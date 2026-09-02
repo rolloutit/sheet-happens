@@ -13,7 +13,6 @@ import {
 } from "@/src/server/time-tracking";
 
 import { TimeGridClient } from "./TimeGridClient";
-import { stopRunningTimerAction } from "./actions";
 
 export const dynamic = "force-dynamic";
 
@@ -38,21 +37,9 @@ export default async function TimePage({ searchParams }: TimePageProps) {
       role={mapMemberToShellRole(member)}
       profile={mapMemberToShellProfile(member)}
       user={mapMemberToShellUser(member)}
-      timer={
-        week.runningTimer
-          ? {
-              description: week.runningTimer.description,
-              projectName: week.runningTimer.projectName,
-              projectColor: week.runningTimer.projectColor,
-              startedAt: week.runningTimer.startedAt,
-              href: "/time",
-            }
-          : null
-      }
-      onStopTimer={stopRunningTimerAction}
     >
       <section className="mx-auto w-full max-w-[73.75rem] px-4 py-8 sm:px-6 lg:px-8">
-        <TimeGridClient week={week} />
+        <TimeGridClient week={week} durationDisplayFormat={member.durationDisplayFormat} />
       </section>
     </AppShell>
   );

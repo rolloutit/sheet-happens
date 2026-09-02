@@ -1,16 +1,18 @@
 import { cva } from "class-variance-authority";
 
+// Matches the prototype's `.mg-badge` / `.diff-badge`: soft fill, tone-coloured text, no ring.
+// Neutral keeps its border since `--surface-2` alone gives it no edge.
 export const badgeVariants = cva(
-  "inline-flex items-center gap-1.5 rounded-[var(--radius-pill)] border px-2.5 py-1 font-ui text-xs font-semibold",
+  "inline-flex items-center gap-1.5 rounded-[var(--radius-pill)] px-2.5 py-1 font-ui text-xs font-semibold",
   {
     variants: {
       tone: {
-        neutral: "border-border bg-secondary text-muted-foreground",
-        info: "border-primary/30 bg-primary/12 text-accent",
-        success: "border-success/30 bg-success/12 text-success",
-        warning: "border-warning/35 bg-warning/12 text-warning",
-        danger: "border-destructive/35 bg-destructive/12 text-destructive",
-        cta: "border-cta/35 bg-cta/14 text-cta",
+        neutral: "border border-border bg-secondary text-muted-foreground",
+        info: "bg-accent-soft text-accent",
+        success: "bg-success-soft text-success",
+        warning: "bg-warning-soft text-warning",
+        danger: "bg-destructive-soft text-destructive-bright",
+        cta: "bg-cta/16 text-cta",
       },
     },
     defaultVariants: {

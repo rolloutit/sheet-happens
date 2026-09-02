@@ -1,0 +1,110 @@
+#!/bin/sh
+#
+# Refuse to push a branch onto a protected branch of a different name.
+#
+# This exists because a branch created from a remote-tracking ref
+# (`git switch -c feature/x origin/develop`) inherits `merge = refs/heads/develop`
+# as its upstream, and a push with no explicit refspec then resolves its
+# destination from that upstream — putting feature commits straight on develop.
+#
+# Installed by `pnpm setup:git`, which points core.hooksPath at scripts/githooks.
+#
+# POSIX sh on purpose: this hook mainly exists to catch pushes from GUI clients,
+# which launch with a minimal PATH that often has no node on it. A node hook
+# would silently fail to run in exactly the case it is here for.
+#
+# stdin, one line per ref (see githooks(5)):
+#   <local-ref> SP <local-object-name> SP <remote-ref> SP <remote-object-name>
+
+set -u
+
+remote_name=${1:-origin}
+
+# Branches that only ever receive same-named, fast-forward pushes.
+PROTECTED="develop main"
+
+status=0
+
+is_zero_oid() {
+	case "$1" in
+	"" | *[!0]*) return 1 ;;
+	*) return 0 ;;
+	esac
+}
+
+is_protected() {
+	for _branch in $PROTECTED; do
+		if [ "$1" = "$_branch" ]; then
+			return 0
+		fi
+	done
+	return 1
+}
+
+# refuse <source> <destination> [message line...] — an empty line argument prints a blank line.
+refuse() {
+	_src=$1
+	_dst=$2
+	shift 2
+	printf "\nrefusing to push %s -> %s (%s)\n\n" "$_src" "$_dst" "$remote_name" >&2
+	for _line in "$@"; do
+		if [ -n "$_line" ]; then
+			printf "  %s\n" "$_line" >&2
+		else
+			printf "\n" >&2
+		fi
+	done
+	printf "\n  Override (rarely correct): git push --no-verify\n\n" >&2
+	status=1
+}
+
+while read -r local_ref local_oid remote_ref remote_oid; do
+	# Ignore blank input and anything that is not a branch on the far side.
+	[ -n "${remote_ref:-}" ] || continue
+	case "$remote_ref" in
+	refs/heads/*) remote_branch=${remote_ref#refs/heads/} ;;
+	*) continue ;;
+	esac
+
+	is_protected "$remote_branch" || continue
+
+	if [ "$local_ref" = "(delete)" ]; then
+		refuse "(delete)" "$remote_branch" \
+			"Deleting $remote_branch on the remote is never part of this repo's workflow."
+		continue
+	fi
+
+	case "$local_ref" in
+	refs/heads/*)
+		local_branch=${local_ref#refs/heads/}
+		;;
+	*)
+		refuse "$local_ref" "$remote_branch" \
+			"Push a named branch, not a bare commit, to $remote_branch."
+		continue
+		;;
+	esac
+
+	if [ "$local_branch" != "$remote_branch" ]; then
+		refuse "$local_branch" "$remote_branch" \
+			"A branch may only push to a remote branch of the same name." \
+			"Feature work reaches $remote_branch through a pull request." \
+			"" \
+			"Did you mean:" \
+			"  git push -u $remote_name $local_branch"
+		continue
+	fi
+
+	# Same name from here on: creating the branch is fine, so is a fast-forward.
+	if is_zero_oid "$remote_oid"; then
+		continue
+	fi
+
+	if ! git merge-base --is-ancestor "$remote_oid" "$local_oid" 2>/dev/null; then
+		refuse "$local_branch" "$remote_branch" \
+			"This rewrites history that already exists on $remote_name." \
+			"Land the correction as a new commit instead."
+	fi
+done
+
+exit $status

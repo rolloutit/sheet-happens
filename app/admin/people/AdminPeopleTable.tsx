@@ -16,11 +16,14 @@ import {
 import { useTranslations } from "next-intl";
 import type { Route } from "next";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { type FormEvent, useState, useTransition } from "react";
+import { type FormEvent, useCallback, useState, useTransition } from "react";
 
 import { PeopleTable } from "@/src/components/sheet/PeopleTable";
 import type { PersonRoleValue, PersonTableRow } from "@/src/components/sheet/PeopleTable";
 import { Button } from "@/src/components/ui/Button";
+import { FilterChips } from "@/src/components/sheet/FilterChips";
+import type { FilterChip } from "@/src/components/sheet/FilterChips";
+import { Select } from "@/src/components/ui/Select";
 import {
   Dialog,
   DialogClose,
@@ -38,11 +41,11 @@ import {
   DropdownSeparator,
   DropdownTrigger,
 } from "@/src/components/ui/Dropdown";
-import { Field } from "@/src/components/ui/Field";
 import { IconButton } from "@/src/components/ui/IconButton";
 import { Input } from "@/src/components/ui/Input";
 import { Pager } from "@/src/components/ui/Pager";
 import type { MemberPreferenceOptions } from "@/src/lib/member-preferences";
+import { usePickerLabels } from "@/src/i18n/picker-labels";
 import { cn } from "@/src/lib/utils";
 import type { AdminPersonRow, PeopleListResult } from "@/src/server/users";
 import {
@@ -57,6 +60,8 @@ import {
   softDeleteMemberAction,
 } from "./actions";
 import type { AdminPeopleActionState } from "./actions.types";
+import { InviteMemberButton } from "./InviteMemberButton";
+import { InviteMemberDrawer } from "./InviteMemberDrawer";
 import { MemberEditDrawer } from "./MemberEditDrawer";
 
 export type AdminPeopleTableProps = {
@@ -77,15 +82,15 @@ type PendingAction =
   | "role"
   | "archive";
 
+/** The query-string names, which are also the chip keys. */
+type PeopleFilterKey = "q" | "state" | "role" | "profile";
+
 type FilterFormState = {
   profile: PeopleListResult["filters"]["profile"];
   query: string;
   role: PeopleListResult["filters"]["role"];
   state: PeopleListResult["filters"]["state"];
 };
-
-const selectClassName =
-  "flex h-10 w-full rounded-[var(--radius-md)] border border-input bg-background/50 px-3 py-2 text-sm text-foreground shadow-sm transition focus-visible:border-ring focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/35";
 
 export function AdminPeopleTable({
   result,
@@ -157,6 +162,32 @@ export function AdminPeopleTable({
     router.push(pathname as Route);
   }
 
+  /**
+   * Takes one filter off, rather than re-applying the form. The form may hold edits the user
+   * has not applied yet, and pulling a chip should not smuggle those into the URL with it.
+   */
+  function removeFilter(key: PeopleFilterKey) {
+    const params = new URLSearchParams(searchParams.toString());
+
+    params.delete(key);
+    params.delete("page");
+    setMessage(null);
+
+    router.push(buildUrl(pathname, params) as Route);
+  }
+
+  const isFiltered = Boolean(
+    result.filters.query || result.filters.state || result.filters.role || result.filters.profile,
+  );
+
+  const handleInvited = useCallback(
+    (invitationMessage: string) => {
+      setMessage({ status: "success", message: invitationMessage });
+      router.refresh();
+    },
+    [router],
+  );
+
   return (
     <div className="grid gap-4">
       {message ? (
@@ -165,8 +196,8 @@ export function AdminPeopleTable({
           className={cn(
             "rounded-[var(--radius-md)] border px-3 py-2 text-sm",
             message.status === "error"
-              ? "border-destructive/40 bg-destructive/10 text-destructive"
-              : "border-success/40 bg-success/10 text-success",
+              ? "border-destructive/40 bg-destructive-soft text-destructive"
+              : "border-success/40 bg-success-soft text-success",
           )}
         >
           {message.message}
@@ -177,6 +208,7 @@ export function AdminPeopleTable({
         result={result}
         onApply={applyFilters}
         onClear={clearFilters}
+        onRemove={removeFilter}
       />
       <PeopleTable
         rows={rows}
@@ -184,7 +216,18 @@ export function AdminPeopleTable({
           caption: t("table.caption"),
           ariaLabel: t("table.ariaLabel"),
           rowActionsLabel: t("table.rowActions"),
-          empty: t("table.emptyFiltered"),
+          empty: (
+            <div className="grid justify-items-center gap-4">
+              <p>{isFiltered ? t("table.emptyFiltered") : t("table.emptyInvited")}</p>
+              {isFiltered ? (
+                <Button type="button" variant="ghost" icon={X} onClick={clearFilters}>
+                  {t("filters.clear")}
+                </Button>
+              ) : (
+                <InviteMemberButton variant="soft" />
+              )}
+            </div>
+          ),
           columns: {
             person: t("table.columns.person"),
             profile: t("table.columns.profile"),
@@ -302,6 +345,7 @@ export function AdminPeopleTable({
         onResult={setMessage}
         onSaved={() => router.refresh()}
       />
+      <InviteMemberDrawer preferenceOptions={preferenceOptions} onInvited={handleInvited} />
     </div>
   );
 }
@@ -314,12 +358,15 @@ function PeopleFiltersForm({
   result,
   onApply,
   onClear,
+  onRemove,
 }: {
   result: PeopleListResult;
   onApply: (filters: FilterFormState) => void;
   onClear: () => void;
+  onRemove: (key: PeopleFilterKey) => void;
 }) {
   const t = useTranslations("AdminPeople");
+  const pickerLabels = usePickerLabels();
   const [filterForm, setFilterForm] = useState<FilterFormState>(() => ({
     query: result.filters.query,
     state: result.filters.state,
@@ -342,18 +389,51 @@ function PeopleFiltersForm({
     onClear();
   }
 
+  // Built from the applied filters rather than the form, so a chip always describes what the
+  // table is actually showing.
+  const activeFilters: FilterChip<PeopleFilterKey>[] = [];
+
+  if (result.filters.query) {
+    activeFilters.push({
+      id: "q",
+      label: result.filters.query,
+      aria: `${t("filters.search")}: ${result.filters.query}`,
+      // The visible chip is the bare term: these pages label their search box with a whole
+      // phrase ("Search projects"), which makes a poor prefix once several chips are up.
+      leading: <Search className="size-3" aria-hidden="true" />,
+    });
+  }
+  if (result.filters.state) {
+    activeFilters.push({
+      id: "state",
+      label: `${t("filters.state")}: ${t(`states.${result.filters.state}`)}`,
+    });
+  }
+  if (result.filters.role) {
+    activeFilters.push({
+      id: "role",
+      label: `${t("filters.role")}: ${t(`roles.${result.filters.role.toLowerCase()}`)}`,
+    });
+  }
+  if (result.filters.profile) {
+    activeFilters.push({
+      id: "profile",
+      label: `${t("filters.profile")}: ${t(`profiles.${result.filters.profile.toLowerCase()}`)}`,
+    });
+  }
+
   return (
-    <form
-      className="grid gap-3 rounded-[var(--radius-lg)] border border-border bg-card p-4"
-      onSubmit={submitFilters}
-    >
-      <div className="grid gap-3 lg:grid-cols-[minmax(16rem,1fr)_repeat(3,minmax(9rem,12rem))]">
-        <Field label={t("filters.search")} htmlFor="people-search">
+    <div className="grid gap-3">
+      <form
+        className="flex flex-wrap items-center gap-2 rounded-[var(--radius-lg)] border border-border bg-card p-3"
+        onSubmit={submitFilters}
+      >
+        <div className="min-w-[13rem] flex-1">
           <Input
-            id="people-search"
             name="q"
             type="search"
             value={filterForm.query}
+            aria-label={t("filters.search")}
             placeholder={t("filters.searchPlaceholder")}
             onChange={(event) => {
               const query = event.currentTarget.value;
@@ -364,88 +444,93 @@ function PeopleFiltersForm({
               }));
             }}
           />
-        </Field>
-        <Field label={t("filters.state")} htmlFor="people-state">
-          <select
-            id="people-state"
-            name="state"
+        </div>
+        <div className="w-[calc(50%-0.25rem)] sm:w-auto sm:min-w-32 sm:max-w-64">
+          <Select
+            label={t("filters.state")}
+            placeholder={t("filters.allStates")}
             value={filterForm.state}
-            className={selectClassName}
-            onChange={(event) => {
-              const state = event.currentTarget.value as FilterFormState["state"];
+            labels={pickerLabels.combobox}
+            onValueChange={(value) => {
+              const state = value as FilterFormState["state"];
 
               setFilterForm((current) => ({
                 ...current,
                 state,
               }));
             }}
-          >
-            <option value="">{t("filters.allStates")}</option>
-            <option value="active">{t("states.active")}</option>
-            <option value="inactive">{t("states.inactive")}</option>
-            <option value="invited">{t("states.invited")}</option>
-            <option value="locked">{t("states.locked")}</option>
-          </select>
-        </Field>
-        <Field label={t("filters.role")} htmlFor="people-role">
-          <select
-            id="people-role"
-            name="role"
+            options={[
+              { value: "", label: t("filters.allStates") },
+              { value: "active", label: t("states.active") },
+              { value: "inactive", label: t("states.inactive") },
+              { value: "invited", label: t("states.invited") },
+              { value: "locked", label: t("states.locked") },
+            ]}
+          />
+        </div>
+        <div className="w-[calc(50%-0.25rem)] sm:w-auto sm:min-w-32 sm:max-w-64">
+          <Select
+            label={t("filters.role")}
+            placeholder={t("filters.allRoles")}
             value={filterForm.role}
-            className={selectClassName}
-            onChange={(event) => {
-              const role = event.currentTarget.value as FilterFormState["role"];
+            labels={pickerLabels.combobox}
+            onValueChange={(value) => {
+              const role = value as FilterFormState["role"];
 
               setFilterForm((current) => ({
                 ...current,
                 role,
               }));
             }}
-          >
-            <option value="">{t("filters.allRoles")}</option>
-            <option value="ADMIN">{t("roles.admin")}</option>
-            <option value="MEMBER">{t("roles.member")}</option>
-          </select>
-        </Field>
-        <Field label={t("filters.profile")} htmlFor="people-profile">
-          <select
-            id="people-profile"
-            name="profile"
+            options={[
+              { value: "", label: t("filters.allRoles") },
+              { value: "ADMIN", label: t("roles.admin") },
+              { value: "MEMBER", label: t("roles.member") },
+            ]}
+          />
+        </div>
+        <div className="w-[calc(50%-0.25rem)] sm:w-auto sm:min-w-32 sm:max-w-64">
+          <Select
+            label={t("filters.profile")}
+            placeholder={t("filters.allProfiles")}
             value={filterForm.profile}
-            className={selectClassName}
-            onChange={(event) => {
-              const profile = event.currentTarget.value as FilterFormState["profile"];
+            labels={pickerLabels.combobox}
+            onValueChange={(value) => {
+              const profile = value as FilterFormState["profile"];
 
               setFilterForm((current) => ({
                 ...current,
                 profile,
               }));
             }}
-          >
-            <option value="">{t("filters.allProfiles")}</option>
-            <option value="CONTRACTOR">{t("profiles.contractor")}</option>
-            <option value="EMPLOYEE">{t("profiles.employee")}</option>
-          </select>
-        </Field>
-      </div>
-      <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
-        <p className="text-sm font-medium text-muted-foreground" aria-live="polite">
-          {t("filters.showing", {
-            start: result.pageStart,
-            end: result.pageEnd,
-            total: result.totalItems,
-          })}
-        </p>
-        <div className="flex flex-wrap gap-2 sm:justify-end">
-          <Button type="submit" icon={Search}>
-            {t("filters.apply")}
-          </Button>
-          <Button type="button" variant="ghost" icon={X} onClick={clearFilters}>
-            {t("filters.clear")}
-          </Button>
+            options={[
+              { value: "", label: t("filters.allProfiles") },
+              { value: "CONTRACTOR", label: t("profiles.contractor") },
+              { value: "EMPLOYEE", label: t("profiles.employee") },
+            ]}
+          />
         </div>
-      </div>
-    </form>
+        <Button type="submit" icon={Search} className="ml-auto">
+          {t("filters.apply")}
+        </Button>
+      </form>
+
+      <FilterChips
+        chips={activeFilters}
+        labels={{
+          active: t("filters.active"),
+          clear: t("filters.clear"),
+          remove: (filter) => t("filters.removeFilter", { filter }),
+        }}
+        onRemove={onRemove}
+        onClear={clearFilters}
+        summary={t("filters.showing", {
+          start: result.pageStart,
+          end: result.pageEnd,
+          total: result.totalItems,
+        })}
+      />
+    </div>
   );
 }
 
@@ -618,7 +703,7 @@ function ArchiveMemberDialog({
           </DialogTitle>
           <DialogDescription>{t("archiveDialog.description")}</DialogDescription>
         </DialogHeader>
-        <div className="rounded-[var(--radius-md)] border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+        <div className="rounded-[var(--radius-md)] border border-destructive/30 bg-destructive-soft px-3 py-2 text-sm text-destructive">
           {t("archiveDialog.warning")}
         </div>
         <DialogFooter>
@@ -668,7 +753,7 @@ function ResetTotpDialog({
           </DialogTitle>
           <DialogDescription>{t("resetTotpDialog.description")}</DialogDescription>
         </DialogHeader>
-        <div className="rounded-[var(--radius-md)] border border-warning/40 bg-warning/10 px-3 py-2 text-sm text-warning">
+        <div className="rounded-[var(--radius-md)] border border-warning/40 bg-warning-soft px-3 py-2 text-sm text-warning">
           {t("resetTotpDialog.warning")}
         </div>
         <DialogFooter>

@@ -15,6 +15,7 @@ import {
   CardTitle,
 } from "@/src/components/ui/Card";
 import { SectionHead } from "@/src/components/ui/SectionHead";
+import { getMemberPreferenceOptions } from "@/src/lib/member-preferences";
 import {
   mapMemberToShellProfile,
   mapMemberToShellRole,
@@ -24,7 +25,8 @@ import {
 } from "@/src/server/auth/app-access";
 import { getGoogleAuthSettings } from "@/src/server/auth/sign-in-methods";
 import { prisma } from "@/src/server/db/client";
-import { SecuritySettingsClient } from "./SecuritySettingsClient";
+import { getNotificationConfiguration } from "@/src/server/notifications";
+import { SettingsWorkspace } from "./SettingsWorkspace";
 
 export const dynamic = "force-dynamic";
 
@@ -33,6 +35,7 @@ type SettingsPageProps = {
     callbackURL?: string | string[];
     reason?: string | string[];
     setup?: string | string[];
+    section?: string | string[];
   }>;
 };
 
@@ -41,11 +44,14 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
   const callbackURL = sanitizeCallbackURL(getSingleParam(params.callbackURL));
   const setupParam = getSingleParam(params.setup);
   const setupReason = getSingleParam(params.reason);
+  const requestedSection = getSingleParam(params.section);
   const access = await requireSecuritySettingsAppMember("/settings");
   const t = await getTranslations("Settings");
   const { member, authUser } = access;
   const securityState = await getSecurityState(authUser.id);
   const googleAuthSettings = getGoogleAuthSettings();
+  const notificationConfiguration =
+    member.role === "ADMIN" ? await getNotificationConfiguration() : undefined;
   const hasSecurityMethod = securityState.twoFactorEnabled || securityState.passkeys.length > 0;
   const adminTotpRequired = member.role === "ADMIN" && !securityState.twoFactorEnabled;
   const showSetupBanner =
@@ -54,13 +60,22 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
     setupReason === "admin-totp-required" ||
     adminTotpRequired;
   const setupStillRequired = !hasSecurityMethod || adminTotpRequired;
+  const shellUser = mapMemberToShellUser(member);
+  const preferenceOptions = getMemberPreferenceOptions();
+  const defaultSection = showSetupBanner
+    ? "security"
+    : requestedSection === "security" ||
+        requestedSection === "preferences" ||
+        (requestedSection === "notifications" && member.role === "ADMIN")
+      ? requestedSection
+      : "profile";
 
   return (
     <AppShell
       current="settings"
       role={mapMemberToShellRole(member)}
       profile={mapMemberToShellProfile(member)}
-      user={mapMemberToShellUser(member)}
+      user={shellUser}
     >
       <section className="mx-auto grid w-full max-w-[86rem] gap-6 px-4 py-8 sm:px-6 lg:px-8">
         <SectionHead
@@ -76,37 +91,53 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
             t={t}
           />
         ) : null}
-        <SecuritySettingsClient
-          user={{
-            id: authUser.id,
-            email: authUser.email,
-            name: authUser.name,
-            twoFactorEnabled: securityState.twoFactorEnabled,
-            passwordEnabled: securityState.accounts.some(
-              (account) => account.providerId === "credential",
-            ),
-            googleLinked: securityState.accounts.some((account) => account.providerId === "google"),
-            googleAvailable: googleAuthSettings.enabled,
+        <SettingsWorkspace
+          defaultSection={defaultSection}
+          member={{
+            name: shellUser.name,
+            initials: shellUser.initials,
+            email: member.email,
+            profile: member.currentProfile === "EMPLOYEE" ? "employee" : "contractor",
+            timezone: member.timezone,
+            durationDisplayFormat: member.durationDisplayFormat,
+            avatarSrc: shellUser.avatarSrc,
           }}
-          passkeys={securityState.passkeys.map((passkey) => ({
-            id: passkey.id,
-            name: passkey.name,
-            deviceType: passkey.deviceType,
-            backedUp: passkey.backedUp,
-            transports: passkey.transports,
-            createdAt: passkey.createdAt?.toISOString() ?? null,
-          }))}
-          twoFactor={{
-            enabled: securityState.twoFactorEnabled,
-            verified: securityState.twoFactors.some((twoFactor) => twoFactor.verified),
-            lockedUntil:
-              securityState.twoFactors
-                .find((twoFactor) => twoFactor.lockedUntil)
-                ?.lockedUntil?.toISOString() ?? null,
-            failedVerificationCount:
-              securityState.twoFactors.find((twoFactor) => twoFactor.failedVerificationCount > 0)
-                ?.failedVerificationCount ?? 0,
+          timezoneOptions={preferenceOptions.timezones}
+          security={{
+            user: {
+              id: authUser.id,
+              email: authUser.email,
+              name: authUser.name,
+              twoFactorEnabled: securityState.twoFactorEnabled,
+              passwordEnabled: securityState.accounts.some(
+                (account) => account.providerId === "credential",
+              ),
+              googleLinked: securityState.accounts.some(
+                (account) => account.providerId === "google",
+              ),
+              googleAvailable: googleAuthSettings.enabled,
+            },
+            passkeys: securityState.passkeys.map((passkey) => ({
+              id: passkey.id,
+              name: passkey.name,
+              deviceType: passkey.deviceType,
+              backedUp: passkey.backedUp,
+              transports: passkey.transports,
+              createdAt: passkey.createdAt?.toISOString() ?? null,
+            })),
+            twoFactor: {
+              enabled: securityState.twoFactorEnabled,
+              verified: securityState.twoFactors.some((twoFactor) => twoFactor.verified),
+              lockedUntil:
+                securityState.twoFactors
+                  .find((twoFactor) => twoFactor.lockedUntil)
+                  ?.lockedUntil?.toISOString() ?? null,
+              failedVerificationCount:
+                securityState.twoFactors.find((twoFactor) => twoFactor.failedVerificationCount > 0)
+                  ?.failedVerificationCount ?? 0,
+            },
           }}
+          notificationConfiguration={notificationConfiguration}
         />
       </section>
     </AppShell>

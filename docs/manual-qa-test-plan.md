@@ -25,6 +25,7 @@ Replace placeholder values before sharing a concrete test run:
 - `{INVITED_TIMEZONE}`: timezone selected for a new invited member.
 - `{INVITED_LOCALE}`: locale selected for a new invited member.
 - `{UNKNOWN_EMAIL}`: email address that is not a Sheet Happens member or pending invite.
+- `{LOCKOUT_TEST_EMAIL}`: active test account with a known password, reserved for sign-in lockout testing.
 - `{COMPANY_GOOGLE_DOMAIN}`: allowed Google Workspace domain configured for company Google login.
 - `{COMPANY_GOOGLE_EMAIL}`: activated member email in `{COMPANY_GOOGLE_DOMAIN}`.
 - `{PRIVATE_GOOGLE_EMAIL}`: Google email outside `{COMPANY_GOOGLE_DOMAIN}`.
@@ -73,6 +74,10 @@ Replace placeholder values before sharing a concrete test run:
 - `{INTERNAL_REPORT_EXPORT_TITLE}`: title used for an internal report PDF export.
 - `{HELP_WELCOME_TITLE}`: title used when testing admin-edited Help welcome content.
 - `{HELP_WELCOME_MARKDOWN}`: markdown body used when testing admin-edited Help welcome content.
+- `{PAYSLIP_MONTH}`: employee payslip month formatted as `YYYY-MM`.
+- `{PAYSLIP_PDF_FILE}`: valid PDF file, no larger than 10 MB, used for payslip upload.
+- `{PAYSLIP_REPLACEMENT_PDF_FILE}`: different valid PDF file used to replace a payslip.
+- `{NON_PDF_FILE}`: non-PDF file used to test payslip file validation.
 
 ## General Rules
 
@@ -204,7 +209,8 @@ Expected result:
 
 Expected result:
 
-- If 2FA is enabled, the user lands on `https://{DOMAIN_NAME}/two-factor?...`.
+- If 2FA is enabled and the browser is not trusted, the user lands on
+  `https://{DOMAIN_NAME}/two-factor?...`.
 - If the user has no passkey and no TOTP yet, the user lands on `/settings?setup=required...`.
 - Otherwise, the user lands on `https://{DOMAIN_NAME}/dashboard`.
 
@@ -249,9 +255,46 @@ Expected result:
 
 Expected result:
 
-- If 2FA is enabled, the user lands on `https://{DOMAIN_NAME}/two-factor?...`.
+- If 2FA is enabled and the browser is not trusted, the user lands on
+  `https://{DOMAIN_NAME}/two-factor?...`.
 - Otherwise, the user lands on `https://{DOMAIN_NAME}/dashboard`.
 - Public sign-up is not available from the login screen.
+
+### Password Sign-In Lockout And Recovery
+
+1. Start signed out in a clean browser profile.
+2. Open `https://{DOMAIN_NAME}/login`.
+3. Enter `{LOCKOUT_TEST_EMAIL}` and a deliberately incorrect password.
+4. Submit the password form five times within 15 minutes.
+5. Confirm the fifth response says that there have been too many password sign-in attempts.
+6. Enter the correct password before the 15-minute lock expires and submit it.
+7. Wait until 15 minutes have elapsed from the fifth failed attempt.
+8. Enter the correct password again and complete any required second factor.
+9. Open `{AUDIT_LOG_VIEW}` and search for the tested member.
+
+Expected result:
+
+- The first four failed attempts show the same neutral invalid-credentials message.
+- The fifth failed attempt and every password attempt during the temporary lock show a rate-limit message.
+- A correct password does not bypass the active temporary lock.
+- The lock expires automatically after 15 minutes; no administrator action is required.
+- The account can sign in normally after expiry.
+- The audit log contains `security.password_lockout` and, after the successful recovery sign-in,
+  `security.password_lockout_recovered`.
+
+### Authentication Endpoint Rate Limits
+
+1. Start signed out in a clean browser profile.
+2. Open `https://{DOMAIN_NAME}/login`.
+3. Enter `{UNKNOWN_EMAIL}` and click `Email sign-in link` six times within 15 minutes.
+4. Confirm the sixth request is refused with a rate-limit message.
+5. Wait 15 minutes, then repeat the request once.
+
+Expected result:
+
+- The first five requests retain the neutral response and do not reveal whether the email exists.
+- The sixth request shows a localized rate-limit message.
+- The request is accepted again after the 15-minute rate-limit window.
 
 ### Password Reset For Unknown Email Is Neutral
 
@@ -281,7 +324,8 @@ Expected result:
 - Google sign-in succeeds only for the configured company Workspace domain.
 - If this is the first Google sign-in for the activated account, the Google account is linked
   automatically.
-- The user is then routed through the normal app gates: `/two-factor`, `/settings`, or `/dashboard`.
+- The user is then routed through the normal app gates: `/two-factor` when TOTP is enabled and the
+  browser is not trusted, `/settings`, or `/dashboard`.
 
 ### Private Google Login Is Blocked
 
@@ -297,6 +341,22 @@ Expected result:
 - Google sign-in is rejected or returns to the login screen.
 - No Sheet Happens auth account is created.
 - No domain member is activated or linked to the private Google account.
+
+### Inactive Member Cannot Create A New Session
+
+1. Sign in as `{ADMIN_EMAIL}` and deactivate an active, non-admin test member from the People page.
+2. Confirm that the member's existing browser session no longer opens protected pages.
+3. In a clean browser profile, attempt password sign-in for the inactive member using a correct password.
+4. Request a magic-link sign-in for the inactive member and confirm no email arrives.
+5. If the inactive member has a passkey, attempt passkey sign-in.
+6. If company Google sign-in is configured for the member, complete the Google provider flow.
+
+Expected result:
+
+- Deactivation revokes existing sessions.
+- Password, passkey, and Google authentication do not create an application session for an inactive member.
+- Magic-link requests stay neutral and do not deliver a usable sign-in link.
+- The inactive member cannot open `/dashboard`, `/time`, `/timesheets`, `/settings`, or any admin route.
 
 ## Protected Routes
 
@@ -395,19 +455,56 @@ Expected result:
 
 ### Timer Start And Stop
 
-1. Open `https://{DOMAIN_NAME}/time?week={TIME_TRACKING_WEEK_START}`.
-2. Switch to `Day` view.
-3. Enter `{TIME_ENTRY_DESCRIPTION}` in the timer description field.
+1. Open `https://{DOMAIN_NAME}/time?week={TIME_TRACKING_WEEK_START}` and stay in `Grid` view.
+2. Click `New timer`.
+3. Enter `{TIME_ENTRY_DESCRIPTION}` in the description field.
 4. Choose `{TIME_TRACKING_PROJECT_A}`.
 5. Click `Start`.
-6. Confirm the running timer appears in the day view and app header.
-7. Stop the timer from the header or day view.
+6. Confirm the running timer appears on the page and in the app header, in `Grid` view as well as
+   in `Day` view.
+7. Confirm `New timer` is now disabled, and that hovering it explains that the running timer has to
+   be stopped first.
+8. Stop the timer from the card on the page.
 
 Expected result:
 
 - Only one timer can run for the user.
 - The elapsed timer label changes while running without hydration errors.
 - Stopping the timer creates a time entry on the timer start date.
+- Reopening `https://{DOMAIN_NAME}/time?new=timer` directly opens the dialog with empty fields.
+- Cancelling the dialog, or pressing `Escape`, leaves no timer running and no entry behind.
+
+### Running Timer Is Visible And Stoppable From Every Page
+
+1. Open `https://{DOMAIN_NAME}/time` and start a timer for `{TIME_TRACKING_PROJECT_A}`.
+2. Navigate to `Dashboard`, then `Timesheets`, then an admin page such as `Projects`.
+3. Confirm on each page that the header shows the running timer and that the elapsed reading keeps
+   counting up rather than restarting at `0:00`.
+4. Narrow the window to a mobile width and confirm the timer is still in the header — the elapsed
+   time and the stop button remain, the project name gives way.
+5. Stop the timer from the header while on the admin page.
+6. Confirm the timer disappears from the header immediately, without a page reload.
+7. Open `https://{DOMAIN_NAME}/time` and confirm the entry was saved on the day the timer started.
+
+Expected result:
+
+- The timer follows the user across every signed-in page and both breakpoints.
+- Moving between pages neither hides the timer nor resets its elapsed reading.
+- Stopping from any page clears the timer everywhere and writes the time entry.
+- A page reload on any route still shows the running timer.
+
+### Timer Discarded At The Daily Limit Says So
+
+1. Log entries totalling close to 24 hours on one day for the test user.
+2. Start a timer that would push that day past 24 hours, and let it run.
+3. Navigate away from `Time`, then stop the timer from the app header.
+
+Expected result:
+
+- The timer disappears from the header rather than lingering as a phantom.
+- The reason the time was discarded is shown next to where the timer was, and stays on screen until
+  it is dismissed.
+- No time entry is created for that day.
 
 ### Same As Yesterday Does Not Duplicate Existing Cells
 
@@ -517,7 +614,68 @@ Expected result:
 - Contractors can access `/timesheets`.
 - The preview is calculated from current time entries when no submitted snapshot exists.
 - Projects show total hours, rate state, currency, and amount.
+- Hours in the summary and the project breakdown render decimal at two fraction digits (e.g.
+  `9.50 h`) next to the amount, regardless of the `Time display` preference set in Settings.
 - Missing rates or mixed currencies are shown as warnings instead of hidden.
+
+### Contractor Workflow Stepper Follows The Monthly Status
+
+Use a month that can be taken through the complete workflow. Check both
+`https://{DOMAIN_NAME}/dashboard` and
+`https://{DOMAIN_NAME}/timesheets?month={TIMESHEET_MONTH}` after every status change.
+
+1. Before submitting the month, open both pages as `{CONTRACTOR_EMAIL}`.
+2. Confirm the status is `Not created` and the first workflow node is current.
+3. Hover over each locked node and then reach each locked node using only the keyboard.
+4. Submit the month and reopen both pages.
+5. As `{ADMIN_EMAIL}`, reject the submitted timesheet using `{TIMESHEET_REJECTION_REASON}`.
+6. Reopen both contractor pages as `{CONTRACTOR_EMAIL}`.
+7. Correct the time entries, resubmit the month, and approve it as `{ADMIN_EMAIL}`.
+8. Reopen both contractor pages and upload `{INVOICE_PDF_FILE}` with `{INVOICE_NUMBER}` and
+   `{INVOICE_AMOUNT}`.
+9. As `{ADMIN_EMAIL}`, reject the invoice using `{INVOICE_REJECTION_REASON}`.
+10. Reopen both contractor pages.
+11. Upload `{CANCELLATION_INVOICE_PDF_FILE}` and then `{CORRECTED_INVOICE_PDF_FILE}` through the
+    correction flow.
+12. As `{ADMIN_EMAIL}`, accept the corrected invoice.
+13. Reopen both contractor pages and then mark the invoice as paid as `{ADMIN_EMAIL}`.
+14. Reopen both contractor pages one final time.
+
+Expected result:
+
+- `Not created` shows the first node as current and all later nodes as locked.
+- Submitted shows the submitted node as current and the next-action panel says admin approval is
+  pending.
+- Timesheet rejection marks the submitted node red with an X, shows the rejection reason, and
+  offers the correction path.
+- Approved shows the approved node as current and enables the invoice upload form.
+- Invoice upload shows the invoice node as current and the next-action panel says invoice review
+  is pending.
+- Invoice rejection marks the invoice node red with an X and offers the cancellation/corrected
+  invoice flow.
+- Invoice acceptance shows payment as the current step and identifies payment as the remaining
+  admin action.
+- Paid shows all five nodes as completed and no workflow action can be repeated.
+- Every locked-node explanation is readable with both pointer hover and keyboard focus.
+- The dashboard next-action CTA always opens the page where the stated action can be completed.
+
+### Workflow Stepper Localization And Narrow Screens
+
+1. Open `https://{DOMAIN_NAME}/timesheets?month={TIMESHEET_MONTH}` in English.
+2. Record the status, five workflow labels, locked explanations, invoice section, and next-action
+   wording.
+3. Change the language to Hungarian without changing the selected month.
+4. Confirm the same workflow state remains selected and all recorded text is Hungarian.
+5. Test the page at a narrow mobile viewport.
+6. Move through the workflow nodes horizontally and focus each locked node.
+
+Expected result:
+
+- Changing language does not change the selected month or workflow state.
+- Statuses, workflow labels, tooltips, locked-state explanations, and CTAs are bilingual.
+- The five nodes remain readable on a narrow screen through horizontal scrolling.
+- The stepper does not widen the whole page or overlap adjacent content.
+- Keyboard focus remains visible and locked explanations are not hover-only.
 
 ### Contractor Can Submit Monthly Timesheet
 
@@ -569,9 +727,47 @@ Expected result:
 - The admin review list is reachable from the sidebar approval menu.
 - The submitted timesheet appears in the filtered admin list.
 - The detail page reviews the immutable submitted snapshot, not live editable entries.
+- Hours in the admin list, the review summary, the project snapshot, and every source line render
+  decimal at two fraction digits (e.g. `9.50 h`) next to their amount, regardless of the admin's
+  `Time display` preference.
 - Approval changes the status to approved.
 - Source time entries remain locked after approval.
 - The audit log contains a `timesheet.approved` row.
+
+### Admin Can Bulk Approve Submitted Timesheets
+
+1. Prepare at least two submitted contractor timesheets and one timesheet in another status.
+2. Sign in as `{ADMIN_EMAIL}`.
+3. Open `https://{DOMAIN_NAME}/admin/timesheets`.
+4. Filter the list so the prepared timesheets appear on the same page.
+5. Confirm that only submitted rows have enabled selection checkboxes.
+6. Select one submitted row and confirm the bulk action bar appears with the correct count.
+7. Clear the selection and confirm the action bar disappears.
+8. Use the header checkbox to select every submitted row on the current page.
+9. Click the bulk approval action.
+10. Reopen the approved rows and inspect the audit log.
+
+Expected result:
+
+- Non-submitted rows cannot be selected for bulk approval.
+- Select all affects only submitted rows on the current page, not other pages or filtered-out rows.
+- The action bar shows the selected count and keeps the current filters after approval.
+- Every selected timesheet changes to approved, while non-selected rows remain unchanged.
+- Each approved timesheet has its own approved workflow event and `timesheet.approved` audit row.
+- Source time entries remain locked after bulk approval.
+
+### Bulk Approval Rejects A Stale Selection
+
+1. Open the same submitted timesheet list as `{ADMIN_EMAIL}` in two browser windows.
+2. Select the same submitted timesheet in both windows.
+3. Approve it from the first window.
+4. In the second window, include that stale selection in a bulk approval attempt.
+
+Expected result:
+
+- The second bulk action reports that the selection changed and asks the admin to refresh.
+- The entire second batch is rejected; it does not partially approve the other selected rows.
+- No duplicate approval event or audit row is created for the already approved timesheet.
 
 ### Contractor Can Upload Invoice For Approved Timesheet
 
@@ -605,7 +801,8 @@ Expected result:
 
 1. Sign in as `{CONTRACTOR_EMAIL}`.
 2. Open `https://{DOMAIN_NAME}/timesheets?month={TIMESHEET_MONTH}` for a month that is not yet approved.
-3. Confirm there is no invoice upload form.
+3. Confirm the invoice section is visible in a locked state, explains that admin approval is
+   required, and does not show an upload form.
 4. Submit and approve the month through the normal contractor and admin flow.
 5. Return to `https://{DOMAIN_NAME}/timesheets?month={TIMESHEET_MONTH}`.
 6. Try uploading without an invoice file.
@@ -617,6 +814,7 @@ Expected result:
 Expected result:
 
 - The contractor cannot upload an invoice before approval.
+- The unavailable invoice step remains visible and explains how it becomes available.
 - Invalid file, amount, and invoice number attempts show clear error messages.
 - Invalid attempts do not change the timesheet status.
 - Invalid attempts do not create invoice or document records.
@@ -798,6 +996,75 @@ Expected result:
 
 - The employee is shown an account-status message that contractor profile is required.
 - The Timesheets navigation item is not visible for the employee.
+
+## Payslips
+
+Run admin scenarios as `{ADMIN_EMAIL}`. Run employee scenarios as `{EMPLOYEE_EMAIL}`. The employee
+must have an active employee profile; contractor profiles must not be used for these tests.
+
+### Admin Can Upload A Payslip
+
+1. Sign in as `{ADMIN_EMAIL}` and open `https://{DOMAIN_NAME}/admin/payslips`.
+2. In the month overview, click `{EMPLOYEE_EMAIL}` or choose `Upload payslip`.
+3. Confirm the month selector shows January through December of the current year and initially selects the current month.
+4. Use the previous-year and next-year buttons. Confirm each step replaces the grid with all 12 months of the adjacent calendar year, then return to the year containing `{PAYSLIP_MONTH}`.
+5. Select `{EMPLOYEE_EMAIL}` and `{PAYSLIP_MONTH}`.
+6. Upload `{PAYSLIP_PDF_FILE}` and submit.
+7. Confirm the row appears in the history list with the employee, month, filename, upload date, and publisher.
+8. Open Preview and confirm the embedded PDF renders.
+9. Download the PDF and confirm the downloaded file is the uploaded document.
+
+Expected result:
+
+- Only employee profiles can be selected for upload.
+- Month navigation is calendar-year based and does not limit older or future years.
+- The PDF is private: preview and download work only through authenticated application access.
+- The month overview increments its posted count and removes the employee from the missing list when applicable.
+- Audit log entries exist for `payslip.uploaded`, `payslip.previewed`, and `payslip.downloaded`.
+
+### Payslip File Validation And Replacement
+
+1. On `https://{DOMAIN_NAME}/admin/payslips`, start an upload and select `{NON_PDF_FILE}`.
+2. Confirm the form rejects the file before upload.
+3. Upload `{PAYSLIP_PDF_FILE}` for `{EMPLOYEE_EMAIL}` and `{PAYSLIP_MONTH}` if no payslip exists yet.
+4. Use Replace on that row.
+5. Upload `{PAYSLIP_REPLACEMENT_PDF_FILE}` and confirm the replacement action.
+6. Preview and download the row again.
+
+Expected result:
+
+- Non-PDF files, missing files, and files over 10 MB are blocked with a clear error.
+- Replacement leaves exactly one current payslip for the selected employee/month.
+- Preview and download use the replacement PDF, not the old PDF.
+- Audit rows exist for `payslip.replaced` and the subsequent preview/download actions.
+
+### Admin Can Delete And Reupload A Payslip
+
+1. Find the `{EMPLOYEE_EMAIL}` / `{PAYSLIP_MONTH}` row in the admin payslip history.
+2. Click Delete and confirm the destructive action.
+3. Confirm the row is no longer in the current history list and the employee is shown as missing for the selected month when active.
+4. Upload `{PAYSLIP_PDF_FILE}` for the same employee and month again.
+
+Expected result:
+
+- Deletion removes the current document and permits a later reupload for the same employee/month.
+- An audit row exists for `payslip.deleted`.
+
+### Employee Can Access Only Their Own Payslips
+
+1. Sign in as `{EMPLOYEE_EMAIL}` and open `https://{DOMAIN_NAME}/payslips`.
+2. Confirm the newest payslip is shown first and older months remain available below it.
+3. Preview and download `{PAYSLIP_MONTH}`.
+4. When the test employee has at least 14 historical payslips, use the history pager and confirm the older documents load on the next page while the newest payslip remains featured.
+5. Copy the preview URL path from the browser network tools, sign in as a different employee or contractor, and open that same application URL.
+6. As a contractor, confirm the Payslips navigation item is absent and open `https://{DOMAIN_NAME}/payslips` directly.
+
+Expected result:
+
+- The employee sees only their own documents and cannot upload, replace, or delete them.
+- The employee history is retrieved in pages of 12 rather than loading every historical document.
+- Another member cannot preview or download the employee's payslip through the application endpoint.
+- Contractor profiles cannot access the payslip page and do not see it in navigation.
 
 ## Admin Projects
 
@@ -1008,6 +1275,49 @@ Expected result:
 - The summary shows created and skipped counts.
 - Bulk assignment is limited to the configured maximum number of selected pairs.
 - Audit rows are recorded for created assignments.
+
+## Member Own Rates
+
+### Employee Central Rate Timeline
+
+1. Sign in as `{EMPLOYEE_EMAIL}`.
+2. Open the avatar menu and select **My rates** / **Saját óradíjaim**.
+3. Review the central-rate timeline.
+
+Expected result:
+
+- The header identifies the Employee profile.
+- Only the employee's own central-rate periods are visible, newest first.
+- The effective period is marked as current.
+- Project-specific rate rows are not shown.
+- Profile and settings remains a separate account-menu action.
+
+### Contractor Effective Project Rates
+
+1. Sign in as `{CONTRACTOR_EMAIL}`.
+2. Open the avatar menu and select **My rates** / **Saját óradíjaim**.
+3. Review the central timeline and project rows.
+4. Use one assigned project with a current override and one assigned project without an override.
+
+Expected result:
+
+- The header identifies the Contractor profile.
+- The contractor's complete central-rate timeline is visible.
+- The overridden project shows the current override amount and **Project override**.
+- The other project shows the current central amount and **Follows the central rate**.
+- No other member's name, email, rate, or project assignment is visible.
+
+### Missing Own Rate
+
+1. Use a member with no current central rate.
+2. For a contractor, ensure at least one current assignment also has no current override.
+3. Open **My rates** / **Saját óradíjaim**.
+
+Expected result:
+
+- The page explains that no central rate is configured and tells the member to ask an admin.
+- A contractor project without either rate shows **Not set**, not a manufactured zero value.
+- The page remains read-only.
 
 ## Admin Rates
 
@@ -1393,6 +1703,35 @@ Expected result:
 - Company Google is shown when Google auth is configured.
 - Passkey and authenticator-app sections are visible.
 
+### Duration Display Preference
+
+1. Sign in as any active user and open `https://{DOMAIN_NAME}/settings`.
+2. Open `Preferences` and select `Decimal hours` under time display.
+3. Save, then open the dashboard, time tracking, and any available timesheet screen.
+4. Confirm a 3-hour 23-minute duration appears as `3.38 h` where an hour unit is shown — never more
+   than two decimal digits anywhere.
+5. On `/time`, log a 55-minute entry (e.g. start `09:00`, end `09:55`) and confirm the live duration
+   badge, the grid cell, and the week total all read `0.92 h` / `0.92` / a total consistent with the
+   other entries logged that week — not `0.9167 h`.
+6. Return to Preferences, select `Hours and minutes`, and save.
+7. Reopen the same screens and refresh the browser.
+8. On `/time`, type `3:23` directly into an empty grid cell and confirm it saves as 203 minutes and
+   redisplays as `3:23`.
+9. Switch the interface language to Hungarian and repeat step 7.
+
+Expected result:
+
+- The preference survives refresh and a new sign-in.
+- The same 203 stored minutes appear as `3:23` under the hours-and-minutes preference — identical in
+  Hungarian and English, since this format is locale-neutral (no `ó`/`p` split).
+- Changing the display does not alter time entries, totals, rates, or calculated amounts.
+- The audit log records `member.duration_display_format_updated`.
+- On the contractor's own timesheet summary, the admin timesheet review screen, and the line-level
+  hours edit field on `/admin/reports`, hours always render as decimal (e.g. `9.50 h`) next to the
+  amount they were billed at, regardless of which display preference is selected — these screens
+  intentionally do not follow the preference because the amount beside them must stay checkable
+  against hours × rate.
+
 ## Passkeys
 
 ### Add Device Passkey
@@ -1419,8 +1758,10 @@ Expected result:
 
 Expected result:
 
-- The user lands on `/dashboard`, unless 2FA is enabled.
-- If 2FA is enabled, the user lands on `/two-factor`.
+- The user lands on `/dashboard`, even when authenticator-app 2FA is enabled.
+- The app does not show `/two-factor` after a user-verified passkey login.
+- If the passkey belongs to an admin account without authenticator-app setup, normal pages open but
+  admin screens still redirect to `/settings?setup=required&...reason=admin-totp-required...`.
 
 ### Remove Passkey
 
@@ -1489,6 +1830,23 @@ Expected result:
 - After the magic-link email is opened, the app redirects to `/two-factor`.
 - The magic-link sign-in does not satisfy the 2FA challenge by itself.
 - `/dashboard` is not accessible until the TOTP code is verified.
+
+### Passkey Login With TOTP Enabled
+
+1. Make sure TOTP is enabled for `{ADMIN_EMAIL}` or `{CONTRACTOR_EMAIL}`.
+2. Make sure the same account has a registered passkey on `{PASSKEY_DEVICE}`.
+3. Sign out.
+4. Open `https://{DOMAIN_NAME}/login`.
+5. Click `Continue with passkey`.
+6. Complete the passkey prompt on `{PASSKEY_DEVICE}`.
+
+Expected result:
+
+- The passkey prompt requires normal device verification, such as biometrics, PIN, or password.
+- The app redirects to `/dashboard` or the original callback URL.
+- The app does not show `/two-factor`.
+- Signing out and using password, magic link, or Google on an untrusted browser still shows
+  `/two-factor` for the same TOTP-enabled account.
 
 ### Verify TOTP Challenge
 
@@ -1639,24 +1997,145 @@ Expected result:
 - Project view groups by projects.
 - The selected filters are reflected in the URL and survive browser refresh.
 - Clearing filters returns to the default monthly report.
+- The donut chart's center label shows exactly one hour unit (e.g. `3.38 h`), never a doubled or
+  mismatched unit, in every display-preference and locale combination.
+
+### Edit Report Rows And Save Optional Corrections
+
+1. Sign in as `{ADMIN_EMAIL}` with TOTP enabled and verified.
+2. Open `https://{DOMAIN_NAME}/admin/reports` and choose filters that include multiple time entries.
+3. Note the total hours, one group total, and one row's description and hours.
+4. Click `Edit` above the itemized breakdown.
+5. Change the noted row's description and hours, typing a value like `3:30` or `3h 20m` into the
+   hours field.
+6. Confirm the report totals, group total, charts, and itemized row update immediately.
+7. Type `0` into another row's hours field and tab away; separately, type an unparseable value like
+   `abc` into a row's hours field and tab away.
+8. Click `Editing done`.
+9. Confirm the edited row carries a visual edit indicator.
+10. Confirm a prominent unsaved-change bar remains visible after leaving edit mode.
+11. Click `PDF export` and inspect the preview.
+12. Leave `Save edits to recorded time` off, download the PDF, then close the dialog.
+13. Confirm the unsaved-change bar is still present after the export dialog closes.
+14. Refresh the report and confirm the original values return.
+15. Repeat the edit, click `Save to recorded time` on the report page, enter a correction reason,
+    and confirm.
+16. Open the affected member's week on `/time`.
+17. Repeat with another edit by selecting `Save edits to recorded time` inside the PDF export
+    dialog, enter a reason, and download the PDF.
+
+Expected result:
+
+- Edit mode replaces row descriptions and hours with in-place inputs without changing the row's
+  member, project, or date.
+- The hours field accepts the same duration formats as the `/time` grid (`3.5`, `3:30`, `3h 20m`,
+  `200m`) and commits the parsed duration exactly, with no float rounding drift. Typing `0` or an
+  unparseable value is rejected: the field reverts to the row's last committed value instead of
+  silently saving a zero or truncated duration.
+- The information banner states that changes remain report-only until explicitly saved.
+- Totals, grouped summaries, charts, PDF preview, and the downloaded PDF all use the working-copy
+  values consistently.
+- Completing edit mode keeps the working-copy changes on the current page but does not persist them
+  to the underlying time entries.
+- Exporting without the save option leaves the working-copy edits visible after the dialog closes;
+  refreshing restores the values from recorded time.
+- Saving from either the report page or export dialog requires a reason and permanently updates the
+  source entry. A duration correction removes the old start/end interval so it cannot contradict
+  the corrected total.
+- The affected member's week shows an admin-correction banner. The entry shows the admin name,
+  correction time, and reason in the day view, entry editor, and multi-entry breakdown.
+- The audit log contains `time_entry.admin_updated` with before/after values and the correction
+  reason. It must not store only a generic `time_entry.updated` event for this operation.
+- Saving is rejected if an affected entry belongs to a submitted/locked timesheet period or if the
+  correction would make a day exceed 24 hours; the unsaved working copy remains available.
+- Hungarian and English modes translate the edit action, completion action, information banner,
+  persistence controls, member correction notice, and accessible input labels.
+
+### Configure Export Dialog
+
+1. Sign in as `{ADMIN_EMAIL}` with TOTP enabled and verified.
+2. Open `https://{DOMAIN_NAME}/admin/reports` and choose filters that include tracked time.
+3. Confirm the page header carries only the `PDF export` button — no export title field and no
+   content dropdown.
+4. Click `PDF export` and wait for the preview.
+5. Type a new export title one character at a time and watch the preview.
+6. Switch the content selection to internal, then back to cost-free.
+7. Switch time display between decimal hours and hours/minutes and compare the preview.
+8. Resize the window down to a narrow width.
+9. Close the dialog with the `X`, with `Escape`, with `Cancel`, and by clicking outside it. Reopen it
+   after each.
+
+Expected result:
+
+- The dialog opens with the export title prefilled from the current period, cost-free selected, and
+  `PDF document` shown as the only format.
+- The preview pane renders the real report document as a white page, one image per page of the
+  export, on the tinted panel behind it.
+- Typing does not re-render the preview on every keystroke: the preview refreshes once, roughly half
+  a second after typing stops, and the heading it shows then matches the title field.
+- A refresh never blanks the preview. The pages already on screen stay put and keep their scroll
+  position while the new render runs; a `Rendering the preview…` note appears next to the `PREVIEW`
+  label, stays visible even when the pages are scrolled past, and the new pages replace the old ones
+  in place. Switching content back and forth quickly does not make the pane strobe.
+- Selecting internal reveals the amber `Cost data is visible` warning, the preview gains rate and
+  cost columns plus a cost metric, and the time-display selector becomes disabled with a hint
+  explaining that internal exports always show decimal hours so they stay checkable against the
+  amounts beside them. Selecting cost-free re-enables the selector and removes the warning and cost
+  columns again.
+- The time-display selector defaults to the admin's saved preference for a cost-free export. Decimal
+  mode renders 203 minutes as `3.38 h`; hours/minutes mode renders it as `3:23` — identical in both
+  Hungarian and English, since the hour-minute format is locale-neutral. Switching to internal
+  forces the selector to `Decimal hours` and greys it out; the preview and the downloaded PDF render
+  `3.38 h` for internal exports regardless of what the selector showed before switching.
+- The footer states the time zone the report was cut on, matching the admin's own time zone.
+- Below roughly 48rem the two panes stack instead of scrolling sideways, and the page never scrolls
+  horizontally.
+- Every close route dismisses the dialog and returns focus to the `PDF export` button. Reopening
+  resets the title, content selection, and time display to their defaults.
+- The dialog title, both content labels and hints, the warning, the format row, the preview label,
+  the time zone label, `Cancel` and `Download PDF` are all translated in Hungarian and English.
+- Both themes are legible: the config rail and footer follow the theme, while the preview page stays
+  white in dark and light alike, because it is the printed document.
+
+### Export Preview Fidelity And Limits
+
+1. Sign in as `{ADMIN_EMAIL}` with TOTP enabled and verified.
+2. Open `https://{DOMAIN_NAME}/admin/reports`, pick a period long enough to fill more than one page,
+   and open the export dialog.
+3. Scroll the preview pane to the last page.
+4. Download the PDF and compare it page by page against what the preview showed.
+5. Pick a period with more than 12 pages of tracked time, if the data allows it.
+6. Filter down to a period with no tracked time and look at the `PDF export` button.
+7. Open the audit log and count the `report.exported` rows created while previewing.
+
+Expected result:
+
+- The preview shows every page of the document, not only the first, in order.
+- The downloaded PDF matches the preview: same title, same columns, same totals, same page count.
+- Beyond 12 pages the preview stops and says it is showing the first 12 pages, while the download
+  still contains all of them.
+- With no tracked time in range the `PDF export` button is disabled and the dialog cannot be opened.
+- Previewing records no `report.exported` audit rows, creates no report export or document rows, and
+  writes nothing to object storage. Only the actual download does.
 
 ### Export Cost-Free PDF
 
 1. Sign in as `{ADMIN_EMAIL}` with TOTP enabled and verified.
 2. Open `https://{DOMAIN_NAME}/admin/reports`.
 3. Choose filters that include tracked time.
-4. Enter `{REPORT_EXPORT_TITLE}` as the export title.
-5. Select cost-free content.
-6. Click `PDF export`.
-7. Open the downloaded PDF.
-8. Search the PDF for hourly rate, amount, and currency values that should only appear internally.
+4. Click `PDF export`.
+5. Enter `{REPORT_EXPORT_TITLE}` as the export title.
+6. Keep cost-free content selected.
+7. Click `Download PDF`.
+8. Open the downloaded PDF.
+9. Search the PDF for hourly rate, amount, and currency values that should only appear internally.
 
 Expected result:
 
 - A PDF downloads successfully.
 - The export title appears at the top of the PDF.
 - The PDF contains hours, dates, projects or members, and descriptions.
-- The PDF does not contain hourly rates or calculated amounts.
+- The PDF does not contain hourly rates or calculated amounts, and does not name the export mode.
 - An audit row is recorded for `report.exported`.
 
 ### Export Internal PDF
@@ -1664,16 +2143,20 @@ Expected result:
 1. Sign in as `{ADMIN_EMAIL}` with TOTP enabled and verified.
 2. Open `https://{DOMAIN_NAME}/admin/reports`.
 3. Choose filters that include tracked time with configured rates.
-4. Enter `{INTERNAL_REPORT_EXPORT_TITLE}` as the export title.
-5. Select internal content.
-6. Click `PDF export`.
-7. Open the downloaded PDF.
+4. Click `PDF export`.
+5. Enter `{INTERNAL_REPORT_EXPORT_TITLE}` as the export title.
+6. Select internal content.
+7. Click `Download PDF`.
+8. Open the downloaded PDF.
 
 Expected result:
 
 - A PDF downloads successfully.
 - The PDF contains hours, hourly rates, currencies, and calculated amounts.
-- Missing rates are shown as missing, not silently calculated as zero.
+- Every hours figure in the PDF renders decimal at two fraction digits (e.g. `9.50 h`), regardless
+  of the admin's saved time-display preference, so it stays checkable against the amount beside it.
+- Missing rates are marked with an em dash and explained in a footnote, not silently
+  calculated as zero.
 - An audit row is recorded for `report.exported`.
 
 ### Export Runtime Configuration
@@ -1682,12 +2165,136 @@ Expected result:
 2. Open `https://{DOMAIN_NAME}/admin/reports`.
 3. Export a PDF from an environment where object storage and Typst are configured.
 4. Repeat in an environment where Typst is intentionally not available, if such an environment exists.
+5. In that same environment, open the export dialog and read the preview pane.
 
 Expected result:
 
 - With object storage and Typst configured, the export succeeds.
 - Without Typst, the export fails with a clear server error instead of a broken or empty PDF.
 - Without object storage, the export fails and no report export metadata is left behind.
+- Without Typst, the preview pane shows a translated failure message and a retry button rather than
+  an empty white page, and the message does not leak the binary path or the renderer's stderr.
+
+### Export Template Rendering And Localization
+
+1. Sign in as `{ADMIN_EMAIL}` with TOTP enabled and verified.
+2. Set the interface language to Hungarian, open `https://{DOMAIN_NAME}/admin/reports`, and export
+   both a cost-free and an internal PDF with the `PDF language` selector left on `Magyar`.
+3. Switch the interface language to English, keep the `PDF language` selector on `English`, and
+   export both again.
+4. Open all four PDFs.
+
+Expected result:
+
+- Every PDF renders in the language chosen in the dialog: headings, table headers, the
+  confidentiality pill, the scope facet labels, the `Generated` label, the `Total` row, the footer
+  page label, and the footnotes.
+- Hungarian accented characters (`ő`, `ű`, `á`, `é`, `í`) render correctly and are not replaced by
+  boxes or blank glyphs. The body font is Inter in both languages.
+- Dates never wrap onto a second line inside the date column, in either language.
+- Cost-free PDFs contain no rate, amount, or currency values anywhere, including in the summary
+  band and the breakdown table.
+- A report whose lines have missing rates shows a warning banner, an em dash in the affected rate
+  and amount cells, and a footnote explaining the em dash — never a zero amount.
+
+### Export Language Independent Of The Interface
+
+1. Sign in as `{ADMIN_EMAIL}` with TOTP enabled and verified.
+2. Set the interface language to Hungarian and open `https://{DOMAIN_NAME}/admin/reports`.
+3. Click `PDF export` and read the `PDF nyelve` selector.
+4. Select `English` and wait for the preview to re-render.
+5. Type `{REPORT_EXPORT_TITLE}` over the generated title, switch back to `Magyar`, then to `English`
+   again.
+6. Click `Download PDF` and open the PDF.
+7. Switch the interface language to English, reopen the dialog, select `Magyar`, and download again.
+8. Reopen the dialog after both downloads.
+
+Expected result:
+
+- The selector is a two-pill toggle matching the `User view` / `Project view` pills on the reports
+  page, reachable by keyboard with the arrow keys moving the selection, in both dark and light theme.
+- The dialog's own labels and buttons stay in the interface language; only the preview and the PDF
+  follow the selector.
+- Selecting `English` re-renders the preview in English within about a second, and the generated
+  title switches from `Időriport - …` to `Time report - …`.
+- A hand-typed title survives every later language switch; it is never overwritten.
+- Both PDFs render fully in the language the selector showed at download time, with the app chrome
+  in the other language — proving the two directions are independent.
+- Reopening the dialog resets the selector to the interface language, the generated title, and
+  cost-free content.
+
+### Export Document Design
+
+1. Sign in as `{ADMIN_EMAIL}` with TOTP enabled and verified.
+2. Open `https://{DOMAIN_NAME}/admin/reports`, choose a period with enough tracked time to fill
+   more than one page, and export both a cost-free and an internal PDF.
+3. Read the header block, the summary band, and both tables in each PDF.
+4. Search both PDFs for the words `internal`, `cost-free`, `belső`, and `költségmentes`.
+5. Print or preview one PDF on paper.
+
+Expected result:
+
+- Neither PDF names its export mode anywhere. Both carry the same `Confidential` pill, and the
+  header states the scope instead: view, period, and the project, project group and member filters,
+  with an open filter spelled out as `All projects` / `All members`.
+- An internal export is distinguishable from a cost-free one only by its rate and amount columns
+  and its amount metric.
+- The summary band never leaves an orphaned metric on a second row: four metrics for a cost-free
+  export, five for an internal one, on a single row.
+- Numeric columns are right-aligned, decimal points line up down each column, and every table has
+  alternating row tints.
+- Each table ends with one `Total` row. It appears only after the last row of the table, never at
+  the foot of a page the table continues past.
+- The column header row repeats at the top of every page a table spans, and the footer reads
+  `Page 2 / 3` style page numbers.
+- Group rows carry a member initials chip in user view and a project colour dot in project view;
+  the dot colour matches the project colour on screen.
+- The share column shows a bar whose length matches its percentage, and the bar is still visible
+  for a group rounding to `0%`.
+- The printed page is white with tinted panels and table rows, not a full-page cream background.
+
+### Export Scoped To One Project Or One Member
+
+1. Sign in as `{ADMIN_EMAIL}` with TOTP enabled and verified.
+2. Open `https://{DOMAIN_NAME}/admin/reports`, select a single project, keep user view, and export
+   both a cost-free and an internal PDF.
+3. Switch to project view, clear the project filter, select a single member, and export both again.
+4. Select a single project _and_ a single member together, and export once more.
+5. Repeat step 2 with a project group selected instead of a single project.
+
+Expected result:
+
+- With one project selected, no PDF repeats the project name down a column. The project appears
+  once, in the header `Project` facet, next to a dot in its own project colour.
+- The internal details table drops its `Project` column and keeps `Member`; the description column
+  takes over the freed width.
+- The cost-free details table replaces its `Project` column with `Member`, so every row is still
+  attributable to someone. It never ends up with only a date, a description and hours while more
+  than one member contributed.
+- With one member selected in project view, the reverse happens: the `Member` column disappears and
+  the cost-free table shows `Project` instead.
+- With both a single project and a single member selected, both identifying columns are gone, the
+  details table is date, description and hours, and the header names both.
+- The `Projects` metric disappears from the summary band for a single-project export, and `People`
+  disappears for a single-member export. No metric reads `1`.
+- The breakdown section is omitted entirely when the report has only one group row, since its
+  totals would restate the summary band. The details table still ends with its own `Total` row.
+- Selecting a project _group_ changes nothing about the columns: a group spans several projects, so
+  the `Project` column and the `Projects` metric both stay.
+
+### Export Templates Present In The Deployed Image
+
+1. Sign in as `{ADMIN_EMAIL}` with TOTP enabled and verified.
+2. Open `https://{DOMAIN_NAME}/admin/system`.
+3. Read the Typst PDF renderer check.
+4. Export any report PDF.
+
+Expected result:
+
+- The Typst PDF renderer check passes, which also confirms the `.typ` templates and the bundled
+  Inter fonts were included in the deployed image, not only that the Typst binary exists.
+- If the check fails with a message naming a templates directory, the deployment is missing
+  `src/server/pdf/templates`; the export will fail the same way.
 
 ## Audit Log
 
@@ -1779,6 +2386,8 @@ Expected result:
 - The admin editor is available only to admins.
 - The live preview renders the controlled Markdown subset.
 - Publishing stores a new immutable version and shows a success message.
+- After publishing, the editor shows the stored (trimmed) title and body, the new version number,
+  and an updated-at timestamp formatted in the selected interface language.
 - The Help Welcome tab shows the newly published content.
 - An audit row is recorded for `info_pages.publish`.
 
@@ -1812,6 +2421,566 @@ Expected result:
 - `Napló` opens `/admin/audit`.
 - The current sidebar item is highlighted.
 
+## Appearance
+
+### Theme Preference
+
+1. In the browser devtools console run `localStorage.removeItem("theme")`, set the operating system
+   to light appearance, and hard-reload `https://{DOMAIN_NAME}/dashboard`.
+2. Open the theme control in the header (next to `HU | EN`) and pick `Sötét` / `Dark`.
+3. Navigate to `/time`, then reload the page.
+4. Pick `Rendszer` / `System`, then flip the operating system appearance while the tab stays open.
+5. Open a second tab on `/dashboard` and change the theme there.
+6. Below the `md` breakpoint, open the navigation drawer and use the theme and language controls in
+   its footer.
+7. Sign out and repeat step 2 on `/login`.
+
+Expected result:
+
+- With no stored preference the app follows the operating system, and the light theme paints with no
+  dark flash at any point during load.
+- The header control shows a sun in light and a moon in dark, and the open menu marks the active
+  preference.
+- The chosen theme survives navigation, reload, and a language change.
+- On `System`, flipping the operating system appearance re-themes the open tab without a reload.
+- Changing the theme in one tab re-themes the other.
+- In light theme the sidebar and mobile drawer are white (not near-black), the page wash is warm, and
+  dialogs, dropdowns, and popovers stay readable.
+- The drawer footer controls work on mobile and match the header behaviour.
+- The auth screens offer the same three options with the same labels in both locales.
+
+### Design Token Fidelity Against The Prototype
+
+Reference screens live in `claude_design_proto/screenshots` (gitignored). The prototype remains
+the reference for the **light** theme; the dark theme follows `docs/dark-mode-redesign.md`
+("Graphite Aurora") instead, so dark prototype screenshots are historical — compare dark against
+the checked-in visual baselines and the scenario below.
+
+1. Open `/dashboard` in dark theme and compare against `shell-dark-admin.png` and `dash-admin-dark.png`.
+2. Confirm the page canvas shows a faint mint glow off the **top-right** corner and a faint peach
+   glow off the **bottom-left**, over a near-black graphite base — not a flat fill.
+3. Switch to light theme. The canvas base is a warm beige that lightens toward white at the top-right.
+4. On both themes check a card: it is fully opaque, with no gradient showing through it.
+5. Hover a clickable card. It rises slightly, its border strengthens, and it gains one soft shadow.
+6. In light theme confirm shadows read teal-grey, not black.
+7. Check status pills on `/timesheets` or the review queue: a soft tint fill, tone-coloured text,
+   and a faint border of the same hue. The neutral pill keeps the standard border.
+8. Check a primary button: a mint gradient with a soft glow beneath it, not a flat fill.
+   Check the amber CTA button hovers to a deeper amber.
+9. Open a dialog and a drawer. The backdrop is a near-black scrim with a slight blur.
+10. Open a dropdown, a select and a tooltip. Each has a visible stronger border; the tooltip sits on
+    the tertiary surface, not the card colour.
+11. Trigger a loading state and confirm skeletons sweep a sheen across themselves rather than pulsing.
+12. Compare `/time` against `timegrid-dark.png` and `/admin/reports` against `rp-main.png`.
+13. Repeat steps 4–12 in the other theme.
+
+Expected result:
+
+- Both glows are visible on every app page in both themes.
+- Card, table, panel and popover surfaces are opaque and match the prototype's surface colour.
+- Every tone tint (success, warning, danger, accent) uses one consistent strength per theme, and in
+  light theme reads as a solid pastel rather than a washed-out dark colour.
+- Table headers have no fill of their own, just a hairline rule, in the subtle text tier.
+- Placeholders sit one step lighter than body copy.
+- Nothing regresses at mobile widths, and the collapsed sidebar rail is 76px.
+
+### Graphite Aurora Dark Theme
+
+1. Open `/dashboard` in the dark theme and look at the overall colour of the chassis: page,
+   sidebar, cards, dividers.
+2. Compare the sidebar against the page canvas, then hover an inactive navigation item and look at
+   the active one.
+3. Find a screen showing several status pills together (`/timesheets`, the review queue) and a
+   dashboard distribution bar with success, warning, and danger segments side by side.
+4. Look at the page gutters on `/dashboard` — the margins around and below the cards — then at a
+   dense table screen, then at `/login`.
+5. Enable "reduce motion" in the operating system and reload `/dashboard` and `/login`.
+6. Open `/time` and any form: click into an input.
+7. Open `/admin/reports` and check the donut, the horizontal bars, and the utilization trend in
+   both themes.
+8. Switch to the light theme and check an "Approved" pill and a rejected/danger state, then switch
+   back to dark and check the same rows.
+
+Expected result:
+
+- The chassis is neutral graphite — no green or teal cast on the page, cards, hovers, or borders.
+  Body text reads warm off-white, not mint-tinted. Mint appears only as a signal: the active nav
+  item, focus rings, links, the primary button, the running timer.
+- The sidebar is darker than the canvas and recedes; the active item carries a soft mint tint, a
+  bright label, and a thin gradient rail on its left edge; inactive items sit in the quiet third
+  text tier until hovered.
+- Every pill tone is distinguishable at a glance — danger is unmistakably rose, warning amber,
+  success green, info mint — each with a faint border of its own hue. The distribution bar's three
+  segments never read as two warm blushes.
+- The gutters show a faint dot lattice, a barely-there grain, and the brand shapes as soft light:
+  two blob glows whose silhouettes are readable via their thin outline echoes, a wave ridge along
+  the bottom, and a line-art swoosh off the top-right corner. None of it shows through cards,
+  tables, or dialogs, and a dense financial table stays calm. The auth screen shows the same
+  atmosphere behind the form panel only, never over the teal brand panel.
+- With reduce motion on, the corner glows sit still, centred and unscaled, and the page looks
+  composed — nothing is caught mid-drift.
+- Inputs sit slightly below the surface (a darker inset fill in dark, a warm cream fill in light)
+  with a visible border and a bright mint focus ring.
+- Report series follow one fixed colour order — mint, amber, violet, green, rose, blue — in both
+  themes; a series keeps its colour when filters change, and every mark is readable on its card.
+- "Approved" is the same green and "rejected" the same rose in both themes — the hue does not
+  drift between light and dark, and the pill text stays readable on its tint in both.
+
+### Rollout IT Brand Mark
+
+1. Open `https://{DOMAIN_NAME}/dashboard` in the dark theme and look at the top of the sidebar.
+2. Switch to the light theme without reloading.
+3. Collapse the sidebar with `Oldalsáv összecsukása` / `Collapse sidebar`, then reload the page.
+4. Below the `lg` breakpoint, open the navigation drawer and look at its header.
+5. Sign out, then look at the brand tile on the teal panel of `/login` in both themes, and at mobile
+   width where the panel becomes a banner.
+6. With devtools open on the network tab, hard-reload and filter for `rolloutit`.
+
+Expected result:
+
+- The sidebar shows the Rollout IT pictogram instead of the old `SH` tile, with `Sheet Happens` and
+  the subtitle beside it.
+- The mark is cream in the dark theme and deep teal in the light theme, and it swaps the instant the
+  theme changes — no reload, no flash of the wrong colour, and never a light mark on a white surface.
+- The collapsed rail keeps the mark centred at the same size, and a reload paints the correct colour
+  straight away.
+- The mobile drawer header shows the same mark.
+- The auth panel keeps its frosted tile and shows the cream mark in **both** themes — the panel is
+  teal either way, so a deep-teal mark there would be a bug, not a theme.
+- Both files are requested once and the mark stays crisp on a retina display.
+
+### Auth Panel Gyroscope
+
+1. Sign out, then open `https://{DOMAIN_NAME}/login` on a desktop width and watch the teal panel for
+   the first two seconds without touching anything.
+2. Keep watching for two or three minutes without scrolling or moving the pointer.
+3. Note where the Rollout IT mark sits, wait about twenty seconds, and look again. Repeat a few times.
+4. Maximise the window on the tallest display available and watch another two minutes.
+5. Narrow the window from full width down to roughly 1024px, then shorten it to roughly 700px tall and
+   then to roughly 640px, watching the mark against the headline, the tip pill, and the footer line the
+   whole way.
+6. Leave the window at 1024×768 and watch a full minute there.
+7. Narrow past the `lg` breakpoint so the panel becomes a banner.
+8. Repeat step 1 on `/set-password`, `/reset-password`, and the two-factor challenge screen, in both
+   Hungarian and English — the moods with the longest headlines wrap to two lines.
+9. Switch the theme between light, dark, and system while the panel is on screen.
+10. In the operating system accessibility settings turn on reduce motion, then hard-reload `/login`.
+
+Expected result:
+
+- The rings fade and scale into place one after another over roughly a second, and the mark blooms in
+  last. Nothing jumps or lands in the wrong place.
+- Four rings turn, at different speeds and in different directions, on three visibly different axes —
+  the cage reads as a gyroscope, not as stacked ellipses. Two bright arcs sweep round much faster than
+  the rings they ride. Glowing beads travel the rings with short tails behind them, and pass in front
+  of and behind the centre. Two faint rings ping outward from the mark every few seconds.
+- The whole cage wanders slowly and continuously, carrying the mark with it, and the rings swell and
+  shrink as it travels. It moves both across the panel and up and down it, and the two do not keep step:
+  the path should never look like a circuit being retraced. Over several minutes the mark should not
+  return to a spot you have already seen it in — the two axes only line up again after about 70 minutes.
+  The motion is even throughout, easing to a stop only at the far edges of its travel, with no jerk or
+  snap anywhere, including where it passes back through the middle.
+- The taller the window, the further up and down it ranges; a short window is mostly side to side, and
+  around 640px tall it stops moving vertically altogether. That is expected — there is no room.
+- The Rollout IT mark stays upright and perfectly still on its frosted tile throughout — it never
+  rotates with the rings, and it does not tilt or spin as the cage travels. It breathes very slightly,
+  out of step with the glow behind it.
+- The mark is the cream version at every width and in every theme, since the panel is teal in both.
+- Anywhere the cage wanders, at every window size, the mark's tile never touches or overlaps the
+  headline, the tip pill, or the footer line, and never gets clipped by the edge of the teal panel. It
+  comes closest to the left and right edges of the panel, so watch those. Ring arcs crossing behind the
+  text are expected; the frosted tile landing on text is not.
+- On the mobile banner the mark, the two fast arcs, and the innermost ring are gone; the two remaining
+  rings are cropped to arcs and still turn.
+- Under reduce motion everything is still and the panel still looks composed and deliberate — rings
+  crossing on three axes, with the cage at rest at the middle of its travel on both axes: horizontally
+  centred on the panel, and vertically midway between the tip pill and the footer line. No ring is
+  stranded mid-expansion and nothing is missing except the pings.
+- Scrolling and typing in the form on the right stay smooth with the animation running.
+
+### Brand Typefaces Load From The App Itself
+
+Lexend and Poppins are self-hosted from `public/fonts`. Before this they were named in CSS but never
+loaded, so every screen silently fell back to the OS UI font. The point of this scenario is to catch
+a **silent** regression: on a machine that happens to have Lexend or Poppins installed locally, a
+broken `@font-face` still looks correct. Test with DevTools, not with your eyes alone.
+
+1. Open `/dashboard` with DevTools → Network, filtered to **Font**, and hard-reload.
+2. Confirm `lexend-variable-latin.woff2` and `lexend-variable-latin-ext.woff2` are both fetched from
+   this app's own origin (`/fonts/…`), status 200 — not from `fonts.gstatic.com`.
+3. Confirm the two Lexend files start loading immediately on navigation, not after the page paints.
+4. Scroll to any table header or uppercase micro-label (`.font-ui`) and confirm `poppins-*.woff2`
+   files are fetched too.
+5. In DevTools → Elements, select a paragraph of body copy and read the **Computed → Rendered Fonts**
+   readout at the bottom of the pane. It must say `Lexend`.
+6. Select a table header or a stat-card label and confirm its rendered font is `Poppins`.
+7. Switch the app to Hungarian and open a screen with accented copy — `/time` or `/timesheets`.
+8. Find a word containing **ő** or **ű** (`Időszak`, `Hétfő`, `Törlés`, `űrlap`) and confirm the
+   rendered font for that text is still `Lexend`, with `lexend-variable-latin-ext.woff2` in the
+   Network list.
+9. Repeat step 8 on a `.font-ui` label containing ő/ű and confirm it is still `Poppins`.
+10. Throttle the network to Slow 3G and reload. Watch the first paint of body text.
+11. Open `/login` and repeat steps 5 and 8 — the auth screens sit outside the app shell.
+12. Repeat steps 5–6 in the other theme.
+
+Expected result:
+
+- Every font file comes from this origin. **No request to `fonts.googleapis.com` or
+  `fonts.gstatic.com` on any screen** — the app must render correctly with the machine offline from
+  Google, and with Lexend and Poppins uninstalled from the OS.
+- Body copy renders as Lexend and `.font-ui` labels render as Poppins, in both themes and both
+  locales, on `/login` as well as inside the app shell.
+- Hungarian ő and ű are the **same** typeface as the letters around them. A word where ő or ű is
+  visibly narrower, differently shaped, or sitting on a different baseline than its neighbours means
+  the `latin-ext` file failed to load and the glyph fell back to a system face.
+- Nothing renders in a heavier or lighter weight than designed. Poppins only ships 400/500/600/700
+  here; a label that looks artificially smeared or squeezed means markup asked for a weight with no
+  file behind it.
+- Under Slow 3G, text may appear briefly in the fallback face and then swap once — acceptable. Text
+  must never be **invisible** while the font loads, and the swap must not reflow the page enough to
+  move what you were about to click.
+
+### Brand Dropdowns And Date Pickers
+
+Every native `<select>` and `<input type="date">` in the app is replaced by a brand-aware control,
+and dropdowns above eight options grow a search field. The controls submit through hidden native
+fields, so the whole point of this scenario is that the **submitted values are unchanged** — a
+picker that looks right but sends the wrong shape fails silently, filtering nothing or saving
+nothing, with no error on screen.
+
+1. Open `/admin/timesheets`, pick a month in the month picker, and Apply.
+2. Read the address bar. It must carry `month=2026-08` — **four digits, a dash, two digits**. A
+   `month=2026-08-01` means the filter was dropped: the list will show every month with no error.
+3. Confirm the list actually narrowed to that month, then use Clear and confirm the filter resets.
+4. On the same page, open the contractor dropdown, type part of an email address, and confirm the
+   match is found by email even though the trigger shows only the name.
+5. Open `/admin/reports` and click through all five period pills — Month, Week, Day, Year, Custom.
+6. Confirm the control beneath them changes shape each time: a month grid, a calendar, a calendar, a
+   plain year number field, and a start/end pair.
+7. For each period, Apply and confirm the URL carries `anchor=` for the first four and `start=`
+   plus `end=` only for Custom. A URL carrying both is wrong.
+8. Open `/admin/people` → Invite member. Choose a currency and a timezone by typing in the search
+   field rather than scrolling (roughly 300 and 400 options respectively).
+9. Send the invite. After the success message, confirm the form is **fully** reset — including the
+   currency and timezone triggers, not just the text fields. A trigger still showing the previous
+   choice means the next invite will submit an empty value.
+10. Open `/admin/rates`, add a rate period, and confirm the currency picker saves. Then open a
+    replacement period and confirm days outside the period being replaced are greyed out and
+    unclickable.
+11. Open `/admin/people` → edit a member → change the timezone. This picker lives inside a drawer:
+    confirm the panel opens, the search field takes focus, typing filters, and Enter selects.
+12. Open `/time`, open the entry form, and confirm the date picker only offers days inside the open
+    week. Confirm the start and end time fields are still the native time inputs, so typing `0930`
+    fills them without opening anything.
+13. Repeat steps 1, 5 and 12 in Hungarian, then repeat them in the other theme.
+14. Repeat step 5 and step 12 at 390px width.
+15. Keyboard only, no mouse: tab to a dropdown, open it with Enter, type to filter, arrow to a row,
+    Enter to choose, and confirm focus lands back on the trigger. Then open a date picker, arrow
+    between days, and press Escape.
+
+Expected result:
+
+- The month filter URL is `YYYY-MM` and the day filters are `YYYY-MM-DD`. Nothing submits a
+  partially-padded value such as `2026-8-5`.
+- Every "All …" dropdown shows its "All …" label on the trigger when nothing is selected, never a
+  blank trigger.
+- Search appears on the long lists (currency, timezone, project, member, contractor) and does not
+  appear on the short ones (status, role, profile, project type).
+- Searching ignores accents in both directions: typing `arvizturo` finds `Árvíztűrő`, and typing
+  `Árvíz` finds it too.
+- Inside a drawer or dialog the picker panel takes focus and keeps it. Focus snapping back to the
+  drawer the instant a panel opens is a failure.
+- Every control returns focus to its own trigger when closed, by selection or by Escape.
+- Hungarian weekday headers read H / K / Sze / Cs / P / Szo / V and the month caption is lowercase
+  (`2026. június`, not `2026. Június`).
+- At 390px the calendar and the option lists stay inside the viewport — no horizontal scrolling of
+  the page itself.
+
+### Focus Indication
+
+Focus used to paint twice — a global mint outline that no component could cancel, plus each
+component's own ring — so dropdowns flashed highlight boxes that came and went for reasons a user
+could not see. There are now two treatments and they must never both appear on one control. The
+tell-tale of a regression is **two mint rings at different offsets**, or a highlight box that
+appears on a mouse click.
+
+1. Open `/admin/timesheets`. Using the mouse only, click the **Status** filter (eight options, a
+   plain menu) and read the closed trigger before the panel covers it: no ring, no glow, no outline.
+2. With the panel open, move the pointer down the rows. Each row under the pointer gets a soft grey
+   fill and nothing else — no ring around the row.
+3. Still in that panel, press ↓ three times. This is the case that used to light up: the rows must
+   still show only the grey fill.
+4. Escape out, then press Tab until the Status trigger has focus. Its border turns mint. Nothing
+   else changes — the control must not grow, glow, or gain a second ring outside the border.
+5. Click the **Contractor** filter (more than eight options, so it has a search field). The search
+   field shows a text caret and **no** box of any kind around it.
+6. Type two letters, then hover a result row and arrow through the rows. Only the grey fill moves.
+7. Tab through the page chrome — a button, a checkbox, a tab, a table row. Each shows exactly one
+   mint indicator. Count the rings: two concentric mint lines is the old bug.
+8. Click those same controls with the mouse. Nothing paints — a click leaves no focus box behind.
+9. Switch to the light theme and repeat steps 1, 4, 5 and 7. `--ring` is a darker teal there, so a
+   too-faint border on the focused trigger is a light-theme-only failure.
+10. Open `/time` and click a cell in the week grid. The cell gets a mint stroke drawn **inside** its
+    own edges, not spilling over the neighbouring cells.
+11. Open a table with clickable rows (`/admin/people`) and Tab to the first and last row. The
+    indicator is drawn inside the row and is not clipped by the card edge.
+12. Keyboard only, no mouse: Tab from the top of `/admin/timesheets` to the bottom and confirm you
+    can always tell where you are. A step where nothing is visibly focused is a blocker, not a nit.
+
+Expected result:
+
+- A control with its own border (inputs, textareas, dropdown and date-picker triggers) indicates
+  focus by turning that border mint, and by nothing else.
+- A borderless control (button, icon button, chip, tab, calendar day) shows one 2px mint outline
+  with a 2px gap. On a filled primary button the gap is what keeps the outline visible — an outline
+  flush against the mint fill is a regression.
+- Option and menu rows never show an outline or ring in any state, keyboard or pointer.
+- Nothing paints on a mouse click anywhere. Hover is the only pointer feedback.
+- Table rows and time-grid cells are the only two places using an inset stroke, and both are drawn
+  inside their own bounds.
+- No focusable element anywhere is left with no visible indicator under keyboard navigation.
+
+## Notification System
+
+### Admin Configuration And Channel Independence
+
+1. Sign in as `{ADMIN_EMAIL}` and open `/settings?section=notifications`.
+2. Confirm this section is visible only to admins.
+3. Set the company timezone, weekly weekday, and weekly local time, then save.
+4. Set the invoice first delay to `72` and repeat interval to `24`, then save.
+5. Reload and confirm every value persisted.
+6. For one workflow type, enable email and disable in-app delivery. For another type, disable email
+   and enable in-app delivery. Save and reload.
+7. Trigger both workflows and confirm each uses only its configured channel.
+8. Disable both channels for a test notification type and trigger it again.
+9. Confirm no email or in-app notification is created for the disabled type.
+10. Request a magic link or password reset and confirm authentication email still works even when
+    product notification channels are disabled.
+11. Open `/admin/audit` and confirm the settings update appears as a localized notification event.
+
+Expected result:
+
+- Schedule fields and every per-type email/in-app switch persist.
+- Product channel settings do not disable invitations, magic links, or password recovery.
+- Invalid timezone, weekday, time, delay, or repeat values are rejected on the server.
+
+### Notification Bell And Center
+
+1. Trigger a workflow notification for `{CONTRACTOR_EMAIL}` or `{EMPLOYEE_EMAIL}`.
+2. Sign in as that member and confirm the bell shows an unread count.
+3. Open the bell and confirm at most five recent notifications are shown.
+4. Open one notification and confirm it becomes read and navigates to the relevant page.
+5. Open `/notifications`, switch between All and Unread, and test pagination when enough records
+   exist.
+6. Select **Mark all as read** and confirm the unread count disappears.
+7. Create more than 15 read notifications, then trigger one more notification.
+8. Confirm all unread notifications remain and only the latest 15 read notifications are retained.
+9. Repeat the checks in Hungarian and English.
+
+Expected result:
+
+- Titles and bodies use the member's locale at display and email delivery time.
+- No notification belonging to another member is visible or markable through the API.
+- Read-state changes survive reloads.
+
+### Weekly Missing-Time Reminder
+
+1. Give `{EMPLOYEE_EMAIL}` or `{CONTRACTOR_EMAIL}` an active project assignment for the current
+   week, with no time entry and no inactive-week marker.
+2. Open the admin dashboard and confirm the member/project pair is flagged.
+3. Click **Send reminder** and confirm the member receives the configured email and/or in-app item.
+4. Open the notification and confirm it links to the relevant week on `/time`.
+5. Confirm `/admin/audit` contains the manual reminder event.
+6. Add time for that project, refresh the stale dashboard tab, and try its old reminder button.
+7. Repeat with an inactive-week marker instead of a time entry.
+8. Confirm both stale attempts are rejected and no notification is created.
+9. Remove the time/marker, temporarily configure the weekly schedule a few minutes ahead, and keep
+   the application running through the configured time.
+10. Confirm exactly one reminder is produced for the scheduled occurrence, even though the
+    in-service dispatcher checks every 15 seconds.
+
+Expected result:
+
+- Only active member/project assignments with no time and no inactive marker receive reminders.
+- Manual sending revalidates current data instead of trusting a stale dashboard row.
+- Repeated dispatcher runs are idempotent for the same weekly occurrence.
+
+### Invoice Reminder Uses Exact Elapsed Hours
+
+1. Approve a contractor timesheet without uploading an invoice.
+2. Set the invoice first delay to `1` hour for a practical QA run and repeat interval to `1` hour.
+3. Before one elapsed hour, wait for the notification dispatcher and confirm no invoice reminder
+   exists.
+4. After one exact elapsed hour, confirm the first reminder appears within 15 seconds.
+5. Confirm another run within the same occurrence does not duplicate the reminder.
+6. After the next elapsed hour, confirm one repeat reminder is created.
+7. Upload an invoice and confirm later dispatcher runs stop creating invoice reminders.
+8. Restore the intended defaults: first delay `72`, repeat interval `24`.
+
+Expected result:
+
+- Delays use elapsed UTC hours, not weekdays or company-local calendar boundaries.
+- The production default starts exactly 72 hours after approval and includes weekends.
+- Only approved timesheets still waiting for an invoice are eligible.
+
+### Workflow Notifications And Dispatcher Health
+
+1. Exercise timesheet submit, approve, reject, invoice upload, invoice accept/reject, and paid paths.
+2. Upload and replace an employee payslip.
+3. Permanently edit a member's time entry from the admin report.
+4. For each event, confirm the intended recipient, localized content, channel configuration, and
+   action link.
+5. Open `/admin/system` and confirm **Notification dispatcher** passes after a successful run.
+6. Set `NOTIFICATION_SCHEDULER_DISABLED=true` in a non-production test environment, restart the app,
+   wait more than one minute, and confirm the check warns instead of claiming success.
+7. Remove that variable, restart the app, and confirm the scheduler recovers without a separate
+   Railway service and the System check returns to passing within one minute.
+8. Temporarily break SMTP in a non-production test environment and trigger an email notification.
+9. Confirm the delivery records a failure and retries with increasing delays, up to five attempts.
+
+Expected result:
+
+- Admins receive review work; members receive decisions and personal document/change events.
+- Notification creation is idempotent when the dispatcher scans overlapping event windows.
+- The sequential loop does not overlap itself, and the database lock protects multiple replicas.
+- Scheduler failures are visible on the System page and email failures remain available for
+  operational diagnosis.
+
+## Create Flows In Side Sheets
+
+### Invite Member Sheet
+
+1. Sign in as `{ADMIN_EMAIL}` and open `https://{DOMAIN_NAME}/admin/people`.
+2. Confirm the member table's first data row is visible without scrolling.
+3. Click `Tag meghívása` / `Invite member` in the page header.
+4. Fill in first name, last name and an email that already belongs to a member, then submit.
+5. Correct the email to a fresh address, tick `Küldés után újabb meghívó` / `Invite another after
+sending`, and submit.
+6. Without ticking the checkbox, invite a second fresh address.
+7. Reopen the sheet, type a first name, and press `Escape`. Choose `Szerkesztés folytatása` / `Keep
+editing`, press `Escape` again, then choose `Elvetés` / `Discard`.
+8. Open `https://{DOMAIN_NAME}/admin/people?new=member` directly, then reload that URL.
+9. Repeat step 3 below the `sm` breakpoint.
+
+Expected result:
+
+- No invite form is on the page until the sheet is opened.
+- The sheet opens over the directory, the URL gains `?new=member`, and focus starts in the first
+  field.
+- The rejected submit keeps the sheet open, marks the email field, moves focus to it, and **keeps
+  every value that was typed**, including the profile, role, currency, timezone and language.
+- With `invite another` ticked the sheet stays open, empties, refocuses the first field, and shows
+  the confirmation.
+- Without it the sheet closes, the directory refreshes with the new row, and the confirmation shows
+  above the table.
+- `Escape`, the scrim and the close button all ask before discarding typed input; `Keep editing`
+  returns to the sheet with the values intact.
+- The deep link opens the sheet on load and survives a reload; closing it clears the parameter.
+- On a narrow viewport the sheet is full width, the header stays put, the fields scroll, and the
+  submit row stays visible.
+
+### Create Project And Project Group Sheets
+
+1. Open `https://{DOMAIN_NAME}/admin/projects` and confirm the project table is visible without
+   scrolling.
+2. Click `Új projekt` / `New project`, fill in a name, pick a colour, a start date and an end date
+   **before** the start date, and submit.
+3. Fix the end date and submit.
+4. Filter the directory so no project matches, and use the empty state's action.
+5. Click `Új csoport` / `New group` next to the `Projektcsoportok` / `Project groups` heading,
+   create a group, then edit an existing group from its row's `⋯` menu.
+6. Open `https://{DOMAIN_NAME}/admin/projects?new=project` and `?new=group` directly.
+7. While the create sheet is dirty, press `Escape`. Choose `Szerkesztés folytatása` / `Keep
+editing`, press `Escape` again, then choose `Elvetés` / `Discard`.
+
+Expected result:
+
+- Neither create form is on the page until it is opened.
+- The rejected project keeps the sheet open and keeps the name, slug, colour, dates, internal flag
+  and notes exactly as entered.
+- A successful create closes the sheet, refreshes the directory, and reports above the table.
+- The filtered-empty table offers to clear the filters; a genuinely empty one offers to create.
+- Both the project and the group forms are side sheets (not modal dialogs), share layout and
+  discard-guard behaviour, and the group sheet is the same one for create and edit, titled and
+  labelled for the mode it is in.
+- Archiving a group reports at the top of the section rather than into the edit form.
+- Both deep links open their overlay on load, and the discard guard fires on every dismissal path
+  (`Escape`, the scrim, and the close button).
+
+### Project Groups Table And Membership Drawer
+
+1. Open `https://{DOMAIN_NAME}/admin/projects` and scroll to `Projektcsoportok` / `Project groups`.
+   Confirm it renders as one table with no card nested inside another.
+2. Sort by each column (`Csoport`/`Group`, `Projektek`/`Projects`, `Állapot`/`State`,
+   `Frissítve`/`Updated`) and confirm the arrow direction and row order both change.
+3. Type into the search field, then set the `Állapot`/`State` and `Projektek`/`Projects` filters.
+   Confirm chips appear for each, the `Showing` count tracks, and each chip's `×` removes only that
+   filter.
+4. Click a group's name to open the membership drawer. Confirm the drawer's segmented control shows
+   correct `All`/`Selected`/`Available` counts, and that the counts (and the underlying table row)
+   update immediately after each toggle below — no page reload and no separate save step.
+5. In the drawer, search for a project by name and by slug (accent-folded — a Hungarian project
+   name should match with or without diacritics), switch between the three segments, and confirm
+   internal and inactive/archived projects carry their badge.
+6. Uncheck a project, confirm a brief pending spinner on that row, then recheck it. Confirm the
+   result banner behind the drawer reports both changes and the `/admin/audit` log gains one
+   `project_group.project_added`/`.project_removed` entry per toggle.
+7. Click `Csoport szerkesztése` / `Edit group` inside the drawer header; confirm it opens the same
+   edit sheet as the row menu's `Csoport szerkesztése` / `Edit group` item.
+8. From the row's `⋯` menu, open `Projektek kezelése` / `Manage projects` as a second way into the
+   same drawer, then archive the group and confirm it drops out of the list.
+9. Resize to a phone width and repeat steps 2-4: the table becomes stacked cards, and the drawer's
+   segmented control stays on one line instead of wrapping.
+
+Expected result:
+
+- The section is a single bordered table (or, on phones, a single card list) — never a card drawn
+  inside another card.
+- Sorting, filtering and the `Showing N of M groups` summary all match the visible rows exactly.
+- The membership drawer never requires a separate save: every checkbox toggle is applied
+  immediately, survives closing and reopening the drawer, and is reflected in both the table's
+  project-count cell and the audit log.
+- Search matches Hungarian diacritics loosely in both directions (typing `arvizturo` finds
+  `árvíztűrő` and vice versa).
+- The drawer stays keyboard-reachable: `Tab` reaches the group's name button and the row's `⋯`
+  trigger even though the row itself is not a single focus stop.
+
+### Filter Toolbars
+
+Run this on all four admin lists: `/admin/timesheets`, `/admin/payslips`, `/admin/people` and
+`/admin/projects`.
+
+1. Open the page and confirm the list is visible without scrolling.
+2. Apply two or three filters and submit.
+3. Remove one filter by clicking its chip.
+4. Use `Törlés` / `Clear`.
+5. Type a search term, submit, and read the chip it produces.
+6. On `/admin/projects`, filter by a project group.
+7. Narrow the window to tablet and phone widths.
+
+Expected result:
+
+- The filters are one toolbar row with no heading, and every control keeps an accessible name for
+  screen readers even though the visible labels are gone.
+- Each applied filter shows as a chip naming both the filter and its value; removing one chip leaves
+  the others applied, and does **not** apply edits sitting unsubmitted in the toolbar.
+- `Clear` removes all of them and returns to the unfiltered URL.
+- The search chip shows the term next to a magnifier rather than repeating a long field label, and a
+  screen reader still hears which filter it is.
+- The group chip names the group, never its id.
+- On `/admin/people` and `/admin/projects` the `Showing x-y of z` line stays visible even with no
+  filters applied; on the other two it lives in the list header as before.
+- The payslip employee picker is searchable rather than a native dropdown.
+- Check this in **both** locales: the Hungarian labels are markedly longer, and the controls size
+  themselves to their content, so a hint such as `Bármely hozzárendelés` is never the thing that
+  gets cut off — it takes the width it needs and the row wraps instead.
+- Every control on the row is the same height. A long _selected_ value may still ellipsise at the
+  control's maximum width; it must never wrap out of its box, and hovering shows the full text.
+- On `/admin/projects`, `Tömeges hozzárendelés` / `Bulk assign` sits in the `Projektlista` /
+  `Project directory` header on one line, and opening it puts `?new=assignments` in the URL.
+- The controls wrap onto further lines on narrow viewports with the submit staying on the right, and
+  no page scrolls sideways.
+
 ## Regression Checklist For Every Release
 
 - Invitation activation works for a new invited user.
@@ -1828,8 +2997,71 @@ Expected result:
 - Admin people page can invite, resend, edit, deactivate, reactivate, archive, and restore members.
 - Admin people page can revoke member sessions.
 - Passkey add, login, rename, and remove still work.
+- Passkey login skips the `/two-factor` challenge for TOTP-enabled accounts.
 - TOTP setup, challenge, invalid-code handling, trusted device, backup-code fallback, and disable
   still work.
 - TOTP disablement and backup-code regeneration create audit rows without storing secrets.
 - `/dashboard`, `/settings`, `/admin/people`, `/admin/audit`, `/two-factor`, and `/account-status`
   render without layout breakage on desktop and mobile widths.
+- The light, dark, and system theme preferences all apply with no flash, survive a reload, and leave
+  every screen readable in both themes.
+- Body copy renders in Lexend and `.font-ui` labels in Poppins, served from this origin with no
+  request to Google, and Hungarian ő/ű match the typeface of the letters beside them.
+- No native `<select>` or date input remains on any screen; dropdowns above eight options offer
+  search, and searching ignores accents.
+- The timesheet month filter submits `YYYY-MM` and actually narrows the list.
+- The reports period pills each render their own control shape and submit `anchor` or `start`+`end`,
+  never both.
+- Currency, timezone, project and member pickers save correctly, and a form reset clears their
+  triggers along with the text fields.
+- Pickers opened inside a drawer or dialog keep focus, and every control returns focus to its
+  trigger on close.
+- Focus paints once and only under keyboard navigation: bordered controls brighten their border,
+  borderless controls take a single 2px mint outline, option rows show only the pointer tint, and a
+  mouse click leaves no highlight box behind.
+- Notification settings persist, the dispatcher is fresh, and the bell unread count updates.
+- Weekly reminders exclude projects with time or inactive-week markers.
+- Invoice reminders use exact elapsed hours and stop after invoice upload.
+- Dark mode reads as lit rather than drab: cards sit visibly above the canvas on every screen, the
+  primary and CTA buttons each carry a glow of their own temperature, and the active sidebar item
+  shows a lit rail plus a tinted row.
+- No surface, glow, or chart mark reads as khaki, olive, tan, or drab teal in dark mode.
+- The dashboard's danger stat card is rose throughout — tinted surface, sparkline bars, and corner
+  glow — with no amber ground under rose content.
+- Status pills keep four visibly different tones side by side, each with a border of its own hue,
+  and every label stays readable on a card, on a hovered row, and inside a dropdown.
+- The atmosphere stays a gutter phenomenon: on the auth screen the description text remains fully
+  legible wherever the glows and blobs fall behind it, and no card, table, or panel shows it through.
+- Reports charts show six clearly distinct series, and green and rose remain tellable apart when
+  viewed through a deuteranopia simulator.
+- Light mode reads as a warm printed page rather than a flat white one: a card is clearly a panel
+  sitting on the canvas everywhere, including the top-right corner of a page, where a white card
+  used to disappear into a white glow.
+- Every de-emphasised string is readable in light — table column headers, input placeholders, the
+  command-palette placeholder, and inactive sidebar labels. None of them is a pale grey-green.
+- No text tier smaller than a heading sits directly on the light canvas: on the auth screen the
+  heading and the description are legible wherever the blobs and echo lines fall behind them.
+- Warning reads as a real amber in light and its label is legible on a pill, on a card, on a table
+  stripe, and on a hovered row — not a mustard on cream.
+- Status pills stay four visibly different tones in light, each with a border of its own hue; check
+  a warning pill and a danger pill sitting on a beige chip or table stripe specifically.
+- The light danger button is legible both at rest and while hovered, and so is a danger row in a
+  dropdown menu.
+- The light primary button shows a teal gradient rather than a flat fill, and it and the CTA each
+  cast a shadow of their own temperature — cool under primary, warm under the CTA.
+- Nothing in light reads as a smudge: the active sidebar label and rail, the stat-card sparkline's
+  final bar, and the distribution meter bars all have crisp edges with no dark halo behind them.
+- The brand atmosphere is present in light — printed pastel blobs with crisp echo lines, the wave,
+  the swoosh and the dot lattice — and stays in the gutters, never showing through a card, table or
+  panel. It carries no film grain.
+- The theme toggle survives a reload in both directions, and switching light↔dark on a dense screen
+  changes no layout or geometry, only colour.
+- Reports charts stay on white cards in light and show six clearly distinct series there.
+- Creating a project, a project group or an invitation happens in an overlay opened from a page
+  header; no create form sits above a directory table.
+- A rejected create keeps its overlay open with every typed value intact and focus on the offending
+  field.
+- Closing an overlay with unsaved input asks first, whichever way it is closed.
+- Admin list filters read as a single toolbar row with removable chips for whatever is applied.
+- A running timer sits in the app header on every signed-in page and at every width, and can be
+  stopped from there; starting one happens in an overlay opened from the time-tracking toolbar.

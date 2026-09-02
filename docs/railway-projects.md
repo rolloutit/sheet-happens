@@ -7,19 +7,25 @@ projects, environments, domains or the deployed databases.
 
 Since 2026-08-04 each stage is its own Railway project, in the `Rollout IT Workspace`:
 
-| Project             | Environment   | Branch    | Services                                                  | URL                                |
-| ------------------- | ------------- | --------- | --------------------------------------------------------- | ---------------------------------- |
-| `SheetHappens`      | `production`  | `main`    | `sheet-happens-next`, `Postgres`                          | `sheet.example.com`               |
-| `sheet-happens-dev` | `development` | `develop` | `sheet-happens-next`, `Postgres`, bucket `object-storage` | `<service>-<environment>.up.railway.app` |
+| Project              | Environment   | Branch    | Services                                                  | URL                                |
+| -------------------- | ------------- | --------- | --------------------------------------------------------- | ---------------------------------- |
+| `sheet-happens-prod` | `production`  | `main`    | `sheet-happens-next`, `Postgres`                          | `sheet.example.com`               |
+| `sheet-happens-dev`  | `development` | `develop` | `sheet-happens-next`, `Postgres`, bucket `object-storage` | `<service>-<environment>.up.railway.app` |
 
-`SheetHappens` still contains a `development` environment. It is **dormant**: its deploy trigger was
-removed, so it no longer tracks `develop`, and its generated domain was renamed to
-`<service>-<environment>.up.railway.app`. Its database and variables are intact and it exists only
-as a rollback target. Production is expected to move out of `SheetHappens` into its own project next;
-when that happens the old project — and its dormant dev environment — can be deleted.
+`sheet-happens-prod` was the original shared project (named `SheetHappens` until 2026-08-04), so it
+still contains a leftover `development` environment. That environment is **dormant**: its deploy
+trigger was deleted, so it no longer tracks `develop`, and its generated domain was renamed to
+`<service>-<environment>.up.railway.app`. Its database and variables are intact, and it exists only
+as a rollback target for the split. Once `sheet-happens-dev` has proven itself, deleting that
+environment finishes the separation — production itself does not need to move anywhere.
 
-Each project keeps one persistent environment. Stage differences live in project-scoped variables and
-the branch its service tracks, not in per-environment overrides.
+Each project should keep one persistent environment. Stage differences live in project-scoped
+variables and the branch the service tracks, not in per-environment overrides.
+
+Renaming a project is safe and touches nothing else: the project ID is what deploy triggers, the
+GitHub integration, dashboard URLs and `railway link` all key off, generated domains are
+`<service>-<environment>.up.railway.app` with no project name in them, and `RAILWAY_PROJECT_NAME` is
+computed at deploy time rather than stored, so no redeploy is triggered. Only docs need updating.
 
 ## PR environments
 
@@ -29,7 +35,7 @@ and deleted when the PR merges or closes.
 **Previews come from `sheet-happens-dev` only.** It has `prDeploys: true`,
 `focusedPrEnvironments: true`, `botPrEnvironments: false` (no previews for bot PRs), and
 `baseEnvironmentId` pointing at its `development` environment — so a PR into `develop` gets a preview
-forked from live dev. `SheetHappens` has `prDeploys: false` deliberately: its only deploy trigger is
+forked from live dev. `sheet-happens-prod` has `prDeploys: false` deliberately: its only deploy trigger is
 `main`, and its base environment is the dormant `development` one whose `BETTER_AUTH_URL` and
 `NEXT_PUBLIC_APP_URL` still name the hostname the new project now serves, so anything forked from it
 would come up with the wrong auth URLs. Disabling it also rules out a duplicate preview per PR.
@@ -56,9 +62,9 @@ Use email/password or magic-link sign-in there.
 
 `scripts/railway/provision-dev-project.sh` performs the whole split, one re-runnable step at a time
 (`export_source`, `create_project`, … , `cutover`; run it with no arguments to list them). It is the
-executable record of how `sheet-happens-dev` was built, and the starting point for splitting
-production off. It never writes secrets into command arguments — variable values move through
-mode-600 files and are piped into `railway variable set --stdin`.
+executable record of how `sheet-happens-dev` was built, and the template for standing up any further
+environment as its own project. It never writes secrets into command arguments — variable values move
+through mode-600 files and are piped into `railway variable set --stdin`.
 
 ## Constraints worth knowing
 
@@ -114,7 +120,7 @@ URI (`https://<host>/api/auth/callback/google`) and that existing passkeys will 
 
 ## Removing a deploy trigger from a shared service
 
-In `SheetHappens` one service is shared between the `production` and `development` environments, with
+In `sheet-happens-prod` one service is shared between the `production` and `development` environments, with
 a separate deploy trigger per environment. `railway service source disconnect` is too blunt there —
 delete just the trigger:
 

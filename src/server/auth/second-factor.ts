@@ -5,12 +5,17 @@ import { cookies } from "next/headers";
 import { authSecret } from "./auth";
 
 const secondFactorCookieName = "sheet_happens_2fa";
-const defaultMaxAgeSeconds = 12 * 60 * 60;
+const betterAuthSecondFactorCookieNames = [
+  "better-auth.two_factor",
+  "__Secure-better-auth.two_factor",
+];
+const sessionBoundMaxAgeSeconds = 7 * 24 * 60 * 60;
 const trustedDeviceMaxAgeSeconds = 30 * 24 * 60 * 60;
 
 type SecondFactorPayload = {
   userId: string;
-  tokenHash: string;
+  tokenHash?: string;
+  trustedDevice?: boolean;
   expiresAt: number;
 };
 
@@ -28,9 +33,11 @@ export async function hasSatisfiedSecondFactor(input: { userId: string; sessionT
     return false;
   }
 
-  return (
-    payload.userId === input.userId && payload.tokenHash === hashSessionToken(input.sessionToken)
-  );
+  if (payload.userId !== input.userId) return false;
+
+  if (payload.trustedDevice) return true;
+
+  return payload.tokenHash === hashSessionToken(input.sessionToken);
 }
 
 export async function setSecondFactorCookie(input: {
@@ -38,10 +45,17 @@ export async function setSecondFactorCookie(input: {
   sessionToken: string;
   trustDevice?: boolean;
 }) {
-  const maxAge = input.trustDevice ? trustedDeviceMaxAgeSeconds : defaultMaxAgeSeconds;
+  const trustedDevice = input.trustDevice === true;
+  const maxAge = trustedDevice ? trustedDeviceMaxAgeSeconds : sessionBoundMaxAgeSeconds;
   const payload: SecondFactorPayload = {
     userId: input.userId,
-    tokenHash: hashSessionToken(input.sessionToken),
+    ...(trustedDevice
+      ? {
+          trustedDevice: true,
+        }
+      : {
+          tokenHash: hashSessionToken(input.sessionToken),
+        }),
     expiresAt: Date.now() + maxAge * 1000,
   };
   const cookieStore = await cookies();
@@ -53,6 +67,14 @@ export async function setSecondFactorCookie(input: {
     path: "/",
     maxAge,
   });
+}
+
+export async function hasPendingBetterAuthSecondFactorChallenge() {
+  const cookieStore = await cookies();
+
+  return betterAuthSecondFactorCookieNames.some((cookieName) =>
+    Boolean(cookieStore.get(cookieName)),
+  );
 }
 
 export async function clearSecondFactorCookie() {
@@ -84,11 +106,19 @@ function verifySecondFactorCookie(value: string) {
       Buffer.from(encodedPayload, "base64url").toString("utf8"),
     ) as Partial<SecondFactorPayload>;
 
-    if (
-      typeof parsed.userId !== "string" ||
-      typeof parsed.tokenHash !== "string" ||
-      typeof parsed.expiresAt !== "number"
-    ) {
+    if (typeof parsed.userId !== "string" || typeof parsed.expiresAt !== "number") {
+      return null;
+    }
+
+    if (parsed.trustedDevice === true) {
+      return {
+        userId: parsed.userId,
+        trustedDevice: true,
+        expiresAt: parsed.expiresAt,
+      };
+    }
+
+    if (typeof parsed.tokenHash !== "string") {
       return null;
     }
 

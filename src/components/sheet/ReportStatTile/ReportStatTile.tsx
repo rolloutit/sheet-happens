@@ -29,7 +29,7 @@ export function ReportStatTile({
         <Icon className={cn("size-5", iconTone[tone])} aria-hidden="true" />
       </CardHeader>
       <CardContent>
-        <p className="text-3xl font-semibold">{value}</p>
+        <p className="text-3xl font-medium tracking-[-0.02em] tabular-nums">{value}</p>
         {helperText ? <p className="text-sm text-muted-foreground">{helperText}</p> : null}
       </CardContent>
     </Card>

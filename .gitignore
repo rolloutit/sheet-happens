@@ -30,3 +30,5 @@ src/server/db/generated
 
 # macOS
 .DS_Store
+
+claude_design_proto/

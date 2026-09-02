@@ -3,6 +3,22 @@
     "name": "Sheet Happens",
     "company": "Rollout IT"
   },
+  "Pickers": {
+    "search": "Search",
+    "searchPlaceholder": "Search...",
+    "noResults": "No results",
+    "clear": "Clear",
+    "done": "Done",
+    "today": "Today",
+    "thisMonth": "This month",
+    "calendar": "Calendar",
+    "selectMonth": "Select month",
+    "rangeEnd": "End date",
+    "previousMonth": "Previous month",
+    "nextMonth": "Next month",
+    "previousYear": "Previous year",
+    "nextYear": "Next year"
+  },
   "AppShell": {
     "brand": {
       "subtitle": "Rollout IT · internal"
@@ -19,7 +35,8 @@
       "label": "Jump anywhere..."
     },
     "scope": {
-      "all": "Everyone"
+      "all": "Everyone",
+      "profile": "Profile"
     },
     "roles": {
       "employee": "Employee",
@@ -34,6 +51,7 @@
       "dashboard": "Dashboard",
       "time": "Time tracking",
       "timesheets": "Timesheets",
+      "payslips": "Payslips",
       "review": "Approvals",
       "reports": "Reports",
       "projects": "Projects",
@@ -63,12 +81,15 @@
     },
     "userMenu": {
       "label": "User menu",
-      "profile": "Profile",
-      "settings": "Settings",
+      "myRates": "My rates",
+      "profileAndSettings": "Profile and settings",
       "signOut": "Sign out"
     },
     "timer": {
-      "stop": "Stop timer"
+      "stop": "Stop timer",
+      "open": "Open time tracking",
+      "running": "Timer running",
+      "dismissError": "Dismiss"
     }
   },
   "AuthShell": {
@@ -76,8 +97,6 @@
     "panelFooter": "Time tracking, timesheets and invoice checks — in one place.",
     "panelTip": "Tip: passkeys get you in two seconds flat.",
     "language": "Language",
-    "themeDark": "Dark theme",
-    "themeLight": "Light theme",
     "moods": {
       "back": {
         "title": "Welcome back.",
@@ -96,6 +115,12 @@
         "subtitle": "Just making sure it's really you."
       }
     }
+  },
+  "ThemeToggle": {
+    "label": "Theme",
+    "light": "Light",
+    "dark": "Dark",
+    "system": "System"
   },
   "Login": {
     "brandSubtitle": "Rollout IT · internal",
@@ -137,6 +162,8 @@
       "passkeyIncomplete": "Passkey sign-in was not completed.",
       "passwordRequired": "Password is required.",
       "emailPasswordIncorrect": "Email or password is incorrect.",
+      "passwordSignInRateLimited": "Too many password sign-in attempts. Please try again later.",
+      "rateLimited": "Too many requests. Please try again later.",
       "passwordResetSendFailed": "Could not send the password reset email.",
       "googleStartFailed": "Google sign-in could not be started.",
       "emailRequired": "Email is required.",
@@ -357,18 +384,247 @@
     }
   },
   "Dashboard": {
-    "eyebrow": "Home",
+    "eyebrow": "Everyone",
     "title": "Dashboard",
-    "subtitle": "Not implemented yet.",
-    "placeholder": {
-      "title": "Available shortcuts",
-      "description": "Use these links until the dashboard is implemented."
+    "greeting": "Hi, {name}!",
+    "member": {
+      "subtitle": "{status} · {month} · {week}",
+      "status": {
+        "no_projects": "No active projects",
+        "not_started": "No time logged",
+        "tracked": "Time logged",
+        "missing_rates": "Rate missing"
+      },
+      "projectBreakdown": {
+        "title": "Monthly work",
+        "heading": "Project breakdown",
+        "description": "Own tracked time and internal cost from your rate periods.",
+        "empty": "No tracked time for the selected month.",
+        "mixedRates": "Mixed rates",
+        "noRate": "No rate",
+        "missingRates": "{count} entries missing rate",
+        "table": {
+          "project": "Project",
+          "hours": "Hours",
+          "rate": "Rate",
+          "cost": "Internal cost",
+          "entries": "Entries"
+        }
+      },
+      "statusPanel": {
+        "title": "Monthly status",
+        "current": "Current",
+        "no_projects": "No active project assignment is currently expected for this month.",
+        "not_started": "There are active projects, but no tracked time yet this month.",
+        "tracked": "Tracked time is present for this month.",
+        "missing_rates": "Some tracked entries do not have an effective employee rate for the entry date.",
+        "totalCost": "Internal cost",
+        "missingRates": "Missing-rate entries"
+      }
     },
-    "actions": {
-      "time": "Open time tracking",
-      "settings": "Open settings",
-      "people": "Open people",
-      "projects": "Open projects"
+    "contractor": {
+      "subtitle": "{status} · {month}",
+      "stepperTitle": "Monthly timesheet",
+      "stepperAriaLabel": "Monthly timesheet workflow",
+      "stepper": {
+        "create": "Assemble",
+        "submit": "Submit",
+        "approve": "Approve",
+        "invoice": "Invoice",
+        "paid": "Paid"
+      },
+      "stepperLocked": {
+        "submit": "Review the assembled month before submitting it.",
+        "approve": "This step becomes available after submission and is completed by an admin.",
+        "invoice": "Invoice upload becomes available after admin approval.",
+        "paid": "An admin closes this step after invoice acceptance and payment."
+      },
+      "nextAction": {
+        "eyebrow": "Next action",
+        "record_time": {
+          "title": "Record time for this month",
+          "description": "No time has been tracked for the selected month yet.",
+          "cta": "Open time tracking"
+        },
+        "resolve_rates": {
+          "title": "Ask an admin to resolve the rates",
+          "description": "This month cannot be submitted until the missing or mixed rates are corrected by an admin.",
+          "cta": "View timesheet details"
+        },
+        "review_and_submit": {
+          "title": "Review and submit the timesheet",
+          "description": "Tracked time is ready for you to review before sending it for approval.",
+          "cta": "Review timesheet"
+        },
+        "correct_timesheet": {
+          "title": "Correct and resubmit the timesheet",
+          "description": "An admin returned this timesheet. Review the feedback, correct the entries, then submit again.",
+          "cta": "Correct timesheet"
+        },
+        "awaiting_approval": {
+          "title": "Awaiting admin approval",
+          "description": "Your submitted timesheet is locked while an admin reviews it.",
+          "cta": "View timesheet"
+        },
+        "upload_invoice": {
+          "title": "Upload the invoice",
+          "description": "The timesheet is approved. Upload the invoice PDF for the approved total.",
+          "cta": "Upload invoice"
+        },
+        "upload_cancellation_invoice": {
+          "title": "Upload the cancellation invoice",
+          "description": "The previous invoice was rejected. Upload its negative cancellation invoice before issuing a replacement.",
+          "cta": "Upload cancellation invoice"
+        },
+        "upload_replacement_invoice": {
+          "title": "Upload the corrected replacement invoice",
+          "description": "The cancellation invoice is recorded. Upload the corrected replacement invoice next.",
+          "cta": "Upload replacement invoice"
+        },
+        "review_invoice_rejection": {
+          "title": "Review the rejected invoice",
+          "description": "This invoice needs review before the correction flow can continue.",
+          "cta": "View invoice details"
+        },
+        "awaiting_invoice_review": {
+          "title": "Awaiting invoice review",
+          "description": "The invoice is uploaded and waiting for an admin decision.",
+          "cta": "View invoice"
+        },
+        "awaiting_payment": {
+          "title": "Awaiting payment",
+          "description": "The invoice is accepted and waiting to be marked as paid by an admin.",
+          "cta": "View invoice"
+        },
+        "complete": {
+          "title": "Month complete",
+          "description": "The timesheet and invoice are paid. This monthly workflow is complete.",
+          "cta": "View timesheet"
+        }
+      }
+    },
+    "stats": {
+      "activeProjects": "Active projects",
+      "hours": "Hours logged",
+      "averageWeek": "Weekly average",
+      "internalCost": "Internal cost",
+      "expectedAmount": "Expected amount",
+      "mixedCurrency": "Mixed currency",
+      "missingRate": "Missing rate",
+      "noAmount": "No amount"
+    },
+    "weekly": {
+      "title": "Weekly checklist",
+      "question": "Did you log time on every active project this week?",
+      "log": "Log",
+      "logged": "Logged",
+      "inactive": "Inactive",
+      "missing": "Missing",
+      "empty": "No active projects for this week.",
+      "allClear": "Everything is complete",
+      "allClearDescription": "Every active project has time logged or an inactive-week mark."
+    },
+    "admin": {
+      "subtitle": "{submitted} to approve · {accepted} awaiting payment",
+      "priority": {
+        "submitted": "Timesheets to approve",
+        "approved": "Approved, awaiting invoice",
+        "invoiced": "Invoice review pending",
+        "accepted": "Awaiting payment",
+        "missing": "Missing timesheets"
+      },
+      "flagged": {
+        "title": "Flagged users",
+        "description": "Active project, but no hours this week and no inactive-week mark.",
+        "name": "Name",
+        "project": "Active project",
+        "lastLogged": "Last logged",
+        "empty": "No flagged users for the current week.",
+        "never": "Never",
+        "lastWeek": "Last week",
+        "twoWeeksAgo": "2 weeks ago",
+        "viewDrilldown": "View details",
+        "remind": "Send reminder",
+        "reminderSent": "Reminder sent",
+        "reminderErrors": {
+          "member_unavailable": "This member is no longer active.",
+          "not_flagged": "The member no longer needs this reminder.",
+          "delivery_disabled": "Weekly reminder delivery is disabled in notification settings.",
+          "unauthorized": "Only active admins can send reminders.",
+          "failed": "The reminder could not be sent."
+        }
+      },
+      "drilldown": {
+        "eyebrow": "Drilldown",
+        "openFullList": "Open full list",
+        "openReport": "Open report",
+        "close": "Close",
+        "review": "Review",
+        "empty": "No records in this queue.",
+        "limited": "Showing {shown} of {total}. Open the full list for the rest.",
+        "notAvailable": "Not available",
+        "activeProjectCount": "{count} active",
+        "submitted": {
+          "title": "{count} timesheets to approve",
+          "description": "Submitted timesheets in {month} awaiting admin approval."
+        },
+        "approved": {
+          "title": "{count} approved timesheets awaiting invoice",
+          "description": "Approved timesheets in {month} where contractors still need to upload an invoice."
+        },
+        "invoiced": {
+          "title": "{count} invoices to review",
+          "description": "Timesheets in {month} with uploaded invoices waiting for invoice review."
+        },
+        "accepted": {
+          "title": "{count} accepted invoices awaiting payment",
+          "description": "Accepted invoices in {month} waiting for payment marking."
+        },
+        "missing": {
+          "title": "{count} missing timesheets",
+          "description": "Contractors expected to submit a {month} timesheet, but no timesheet exists yet."
+        },
+        "flagged": {
+          "title": "{count} flagged member/project pairs",
+          "description": "Active member/project assignments with no time logged during {week} and no inactive-week marker."
+        },
+        "table": {
+          "contractor": "Contractor",
+          "month": "Month",
+          "status": "Status",
+          "hours": "Hours",
+          "amount": "Amount",
+          "updated": "Updated",
+          "activeProjects": "Active projects",
+          "lastLogged": "Last logged",
+          "action": "Action"
+        }
+      },
+      "status": {
+        "title": "Time and billing tracking",
+        "caption": "monthly timesheet states",
+        "segment": {
+          "submitted": "Submitted",
+          "rejected": "Rejected",
+          "approved": "Approved",
+          "invoiced": "Invoice uploaded",
+          "invoice_rejected": "Invoice rejected",
+          "accepted": "Awaiting payment",
+          "paid": "Paid",
+          "missing": "Missing"
+        }
+      }
+    },
+    "timesheetStatus": {
+      "not_created": "Not created",
+      "submitted": "Submitted",
+      "rejected": "Rejected",
+      "approved": "Approved",
+      "invoiced": "Invoice uploaded",
+      "invoice_rejected": "Invoice rejected",
+      "accepted": "Awaiting payment",
+      "paid": "Paid",
+      "missing": "Missing"
     }
   },
   "Timesheets": {
@@ -381,8 +637,26 @@
       "amount": "Amount",
       "entries": "Entries"
     },
+    "workflow": {
+      "title": "Monthly workflow",
+      "description": "The current state and the remaining steps for this month.",
+      "ariaLabel": "Monthly timesheet and invoice workflow",
+      "steps": {
+        "created": "Assembled",
+        "submitted": "Submitted",
+        "approved": "Approved",
+        "invoiced": "Invoice",
+        "paid": "Paid"
+      },
+      "locked": {
+        "submitted": "Review the assembled month before submitting it.",
+        "approved": "This step becomes available after submission and is completed by an admin.",
+        "invoiced": "Invoice upload becomes available after admin approval.",
+        "paid": "An admin closes this step after invoice acceptance and payment."
+      }
+    },
     "status": {
-      "not_created": "Not submitted",
+      "not_created": "Not created",
       "submitted": "Submitted",
       "rejected": "Rejected",
       "approved": "Approved",
@@ -473,6 +747,9 @@
     "invoice": {
       "title": "Contractor invoice",
       "description": "Upload the invoice PDF after admin approval.",
+      "lockedTitle": "Invoice upload is not available yet",
+      "lockedDescription": "Invoice upload unlocks after the submitted timesheet is approved.",
+      "lockedReason": "An admin must approve this timesheet before an invoice can be uploaded.",
       "uploadedDescription": "Uploaded invoice for the approved timesheet revision.",
       "cancellationDescription": "Upload the cancellation invoice for the rejected invoice first.",
       "replacementDescription": "The cancellation invoice is uploaded. Upload the corrected invoice.",
@@ -559,17 +836,7 @@
       "accepted": "Accepted",
       "paid": "Paid"
     },
-    "stats": {
-      "matching": "Matching",
-      "matchingCaption": "Timesheets matching the current filters.",
-      "page": "Current page",
-      "pageCaption": "Visible range on this page.",
-      "pageSize": "Page size",
-      "pageSizeCaption": "Rows loaded per page."
-    },
     "filters": {
-      "title": "Filters",
-      "description": "Search by contractor name or email, then narrow by status, contractor, project, or month.",
       "search": "Search",
       "searchPlaceholder": "Name or email...",
       "status": "Status",
@@ -579,8 +846,11 @@
       "project": "Project",
       "allProjects": "All projects",
       "month": "Month",
+      "allMonths": "All months",
       "apply": "Apply filters",
-      "clear": "Clear"
+      "clear": "Clear",
+      "active": "Active filters",
+      "removeFilter": "Remove filter: {filter}"
     },
     "list": {
       "title": "Submitted timesheets",
@@ -590,6 +860,16 @@
       "review": "Review",
       "entries": "{count} entries",
       "projects": "{count} projects"
+    },
+    "bulk": {
+      "selected": "{count, plural, one {# selected} other {# selected}}",
+      "eligibilityHint": "Only submitted timesheets can be bulk-approved.",
+      "approve": "Approve ({count})",
+      "approving": "Approving...",
+      "clear": "Clear",
+      "selectAll": "Select all submitted timesheets on this page",
+      "selectRow": "Select {name}'s timesheet",
+      "notSelectable": "{name}'s timesheet cannot be selected in its current status"
     },
     "table": {
       "contractor": "Contractor",
@@ -713,6 +993,8 @@
     },
     "actionResults": {
       "approved": "Timesheet approved.",
+      "bulkApproved": "{count, plural, one {# timesheet approved.} other {# timesheets approved.}}",
+      "bulkChanged": "The selection changed before approval. No timesheets were approved; refresh and review the submitted rows.",
       "rejected": "Timesheet rejected and unlocked.",
       "invoiceAccepted": "Invoice accepted.",
       "invoiceRejected": "Invoice rejected.",
@@ -787,11 +1069,12 @@
     },
     "invite": {
       "title": "Invite member",
-      "description": "Send an invitation link and create the member profile used across the app."
-    },
-    "directory": {
-      "title": "Member directory",
-      "description": "Manage invited, active, inactive, and archived members."
+      "description": "Send an invitation link and create the member profile used across the app.",
+      "detailsTitle": "Member details",
+      "emailHint": "The invitation link is sent here.",
+      "defaultsTitle": "Role and defaults",
+      "defaultsHint": "Pre-filled with the usual team settings. Change these only when this person differs.",
+      "inviteAnother": "Invite another after sending"
     },
     "filters": {
       "search": "Search",
@@ -804,7 +1087,9 @@
       "allProfiles": "All profiles",
       "showing": "Showing {start}-{end} of {total} members",
       "apply": "Apply filters",
-      "clear": "Clear"
+      "clear": "Clear",
+      "active": "Active filters",
+      "removeFilter": "Remove filter: {filter}"
     },
     "pager": {
       "navigation": "People pages",
@@ -860,6 +1145,8 @@
       }
     },
     "actions": {
+      "inviteMember": "Invite member",
+      "close": "Close",
       "sendInvitation": "Send invitation",
       "openFor": "Open actions for {name}",
       "menuLabel": "Actions",
@@ -903,6 +1190,12 @@
       "effectiveDate": "Effective date",
       "reason": "Reason",
       "reasonHint": "Add a reason for this profile change."
+    },
+    "discardDialog": {
+      "title": "Discard this invitation?",
+      "description": "The details you filled in will not be saved.",
+      "confirm": "Discard",
+      "cancel": "Keep editing"
     }
   },
   "AdminPeopleActions": {
@@ -969,7 +1262,11 @@
     },
     "create": {
       "title": "Create project",
-      "description": "Projects are the work targets used for assignments and time entries."
+      "description": "Projects are the work targets used for assignments and time entries.",
+      "detailsTitle": "Project details",
+      "timelineTitle": "Timeline and notes",
+      "timelineHint": "Optional. Leave the dates empty for a project with no fixed end.",
+      "createAnother": "Create another after saving"
     },
     "directory": {
       "title": "Project directory",
@@ -1021,7 +1318,14 @@
       "unassigned": "Unassigned today",
       "showing": "Showing {start}-{end} of {total} projects",
       "apply": "Apply filters",
-      "clear": "Clear"
+      "clear": "Clear",
+      "active": "Active filters",
+      "removeFilter": "Remove filter: {filter}",
+      "allStates": "All states",
+      "allTypes": "All types",
+      "allTimelines": "Any timeline",
+      "allGroups": "All groups",
+      "allAssignments": "Any assignment"
     },
     "pager": {
       "navigation": "Project pages",
@@ -1048,6 +1352,18 @@
         "updated": "Updated"
       }
     },
+    "groupsTable": {
+      "caption": "Project groups table",
+      "ariaLabel": "Project groups table",
+      "openGroup": "Open {name}",
+      "moreProjects": "+{count} more",
+      "columns": {
+        "group": "Group",
+        "projects": "Projects",
+        "state": "State",
+        "updated": "Updated"
+      }
+    },
     "groupsPanel": {
       "groupName": "Group name",
       "generatedSlug": "Generated from name",
@@ -1057,9 +1373,6 @@
       "emptyFiltered": "No project groups match the current filters.",
       "projectCount": "{count, plural, one {# project} other {# projects}}",
       "noProjects": "No projects in this group.",
-      "removeProjectLabel": "Remove {project} from {group}",
-      "chooseProject": "Choose project",
-      "allProjectsLinked": "All projects are in this group",
       "editTitle": "Edit {name}",
       "editDescription": "Group changes affect filtering and project organization. They do not change project assignment or billing rules.",
       "archiveTitle": "Archive project group?",
@@ -1074,12 +1387,36 @@
         "withProjects": "With projects",
         "empty": "Empty",
         "showing": "Showing {count} of {total} groups"
+      },
+      "createTitle": "Create project group",
+      "createDescription": "Groups organize projects for filtering and reporting. They do not change assignments or billing.",
+      "manageTitle": "Manage {name}",
+      "done": "Done",
+      "discardDialog": {
+        "title": "Discard this group?",
+        "description": "The details you filled in will not be saved.",
+        "confirm": "Discard",
+        "cancel": "Keep editing"
+      },
+      "membership": {
+        "filterLabel": "Project filter",
+        "all": "All",
+        "inGroup": "Selected",
+        "available": "Available",
+        "searchLabel": "Search projects",
+        "searchPlaceholder": "Search projects...",
+        "noMatches": "No projects match your search.",
+        "noneAvailable": "All projects are already in this group.",
+        "toggleLabel": "Toggle {project}"
       }
     },
     "actions": {
+      "newProject": "New project",
+      "newGroup": "New group",
+      "close": "Close",
       "createProject": "Create project",
       "createGroup": "Create group",
-      "addProject": "Add project",
+      "manageProjects": "Manage projects",
       "cancel": "Cancel",
       "saveGroup": "Save group",
       "archiveGroup": "Archive group",
@@ -1165,6 +1502,12 @@
       "scheduledOverride": "Scheduled override",
       "scheduledOverrideDetail": "{count, plural, one {# override period scheduled.} other {# override periods scheduled.}}",
       "contractorCentralRate": "Contractor assignment currently uses the member central rate."
+    },
+    "discardDialog": {
+      "title": "Discard this project?",
+      "description": "The details you filled in will not be saved.",
+      "confirm": "Discard",
+      "cancel": "Keep editing"
     }
   },
   "AdminProjectsActions": {
@@ -1376,6 +1719,109 @@
       "title": "Event watcher",
       "description": "Security, member, project, rate, and time-tracking events with actor, target, and request context."
     },
+    "events": {
+      "actions": {
+        "inactive_project_week__marked": "Marked inactive",
+        "inactive_project_week__unmarked": "Inactive mark removed",
+        "info_pages__publish": "Published",
+        "invoice__accepted": "Accepted",
+        "invoice__rejected": "Rejected",
+        "invoice__uploaded": "Uploaded",
+        "member__activated": "Activated",
+        "member__avatar_deleted": "Profile image deleted",
+        "member__avatar_updated": "Profile image updated",
+        "member__duration_display_format_updated": "Time display updated",
+        "member__bootstrap_invited": "Initial admin invited",
+        "member__deactivated": "Deactivated",
+        "member__deleted": "Archived",
+        "member__invitation_resent": "Invitation resent",
+        "member__invitation_revoked": "Invitation revoked",
+        "member__invited": "Invited",
+        "member__pending_invitations_revoked": "Invitations revoked",
+        "member__profile_changed": "Profile changed",
+        "member__profile_transition_scheduled": "Profile change scheduled",
+        "member__reactivated": "Reactivated",
+        "member__restored": "Restored",
+        "member__role_changed": "Role changed",
+        "member__session_revoked": "Session revoked",
+        "member__timezone_updated": "Time zone updated",
+        "member__updated": "Updated",
+        "notification__settings_updated": "Settings updated",
+        "notification__weekly_reminder_sent": "Weekly reminder sent",
+        "payslip__deleted": "Deleted",
+        "payslip__downloaded": "Downloaded",
+        "payslip__previewed": "Viewed",
+        "payslip__replaced": "Replaced",
+        "payslip__uploaded": "Uploaded",
+        "project__archived": "Archived",
+        "project__created": "Created",
+        "project__status_changed": "Status changed",
+        "project__updated": "Updated",
+        "project_assignment__closed": "Closed",
+        "project_assignment__created": "Assigned",
+        "project_assignment__updated": "Updated",
+        "project_group__archived": "Archived",
+        "project_group__created": "Created",
+        "project_group__project_added": "Project added",
+        "project_group__project_removed": "Project removed",
+        "project_group__updated": "Updated",
+        "rate__assignment_override__closed_for_replacement": "Closed for replacement",
+        "rate__assignment_override__closed_for_successor": "Closed",
+        "rate__assignment_override__created": "Created",
+        "rate__assignment_override__replaced_in_place": "Replaced",
+        "rate__assignment_override__replacement_created": "New period created",
+        "rate__member_default__closed_for_replacement": "Closed for replacement",
+        "rate__member_default__closed_for_successor": "Closed",
+        "rate__member_default__created": "Created",
+        "rate__member_default__replaced_in_place": "Replaced",
+        "rate__member_default__replacement_created": "New period created",
+        "report__exported": "Exported",
+        "running_timer__discarded_daily_limit": "Discarded at daily limit",
+        "running_timer__started": "Started",
+        "running_timer__stopped": "Stopped",
+        "security__backup_codes_regenerated": "Backup codes renewed",
+        "security__passkey_added": "Passkey added",
+        "security__passkey_deleted": "Passkey deleted",
+        "security__passkey_renamed": "Passkey renamed",
+        "security__password_lockout": "Account locked",
+        "security__password_lockout_recovered": "Account unlocked",
+        "security__password_reset": "Password reset",
+        "security__totp_disabled": "2FA disabled",
+        "security__totp_enabled": "2FA enabled",
+        "security__totp_reset": "2FA reset",
+        "time_entries__copy_previous_day": "Previous day copied",
+        "time_entries__duplicate_previous_week": "Previous week copied",
+        "time_entry__created": "Created",
+        "time_entry__deleted": "Deleted",
+        "time_entry__updated": "Updated",
+        "time_entry__admin_updated": "Admin corrected",
+        "timesheet__approved": "Approved",
+        "timesheet__paid": "Marked paid",
+        "timesheet__rejected": "Rejected",
+        "timesheet__resubmitted": "Resubmitted",
+        "timesheet__submitted": "Submitted"
+      },
+      "targets": {
+        "assignment_rate_period": "Project rate",
+        "contractor_invoice": "Invoice",
+        "inactive_project_week": "Inactive week",
+        "info_page": "Information page",
+        "member": "Member",
+        "member_default_rate_period": "Central rate",
+        "notification_configuration": "Notification settings",
+        "passkey": "Passkey",
+        "payslip": "Payslip",
+        "project": "Project",
+        "project_assignment": "Project assignment",
+        "project_group": "Project group",
+        "project_group_project": "Group membership",
+        "report_export": "Report export",
+        "running_timer": "Timer",
+        "time_entries": "Time entries",
+        "time_entry": "Time entry",
+        "timesheet": "Timesheet"
+      }
+    },
     "client": {
       "showing": "Showing {start}-{end} of {total} events",
       "lastRefreshed": "Last refreshed {time}",
@@ -1389,8 +1835,8 @@
       "allTargets": "All targets",
       "actor": "Actor",
       "allActors": "All actors",
-      "from": "From",
-      "to": "To",
+      "period": "Period",
+      "allDates": "All dates",
       "apply": "Apply",
       "clear": "Clear",
       "empty": "No audit events match the current filters.",
@@ -1399,7 +1845,9 @@
       "time": "Time",
       "request": "Request",
       "noIp": "No IP",
+      "system": "System",
       "auditEvent": "Audit event",
+      "eventCode": "Technical event code",
       "dialogDescription": "Append-only event details. Sensitive-looking keys are redacted before display.",
       "noRequestId": "No request id",
       "ipAddress": "IP address",
@@ -1450,6 +1898,9 @@
         },
         "typst": {
           "title": "Typst PDF renderer"
+        },
+        "notificationDispatcher": {
+          "title": "Notification dispatcher"
         }
       }
     },
@@ -1465,7 +1916,10 @@
       "emailSmtpDefaultFrom": "SMTP is configured, but AUTH_EMAIL_FROM still uses the local default sender.",
       "googleDisabled": "Google OAuth is not configured. This is acceptable only if Google sign-in is intentionally disabled for this environment.",
       "googlePartialConfig": "Google OAuth is partially configured. Client id, client secret, and allowed domains must all be present.",
-      "typstProbeFailed": "Typst could not compile the PDF probe. Report PDF exports will fail until the renderer is available."
+      "typstProbeFailed": "Typst could not compile the PDF probe. Report PDF exports will fail until the renderer is available.",
+      "notificationDispatcherNeverRun": "The in-service notification scheduler has not completed a run since the application started.",
+      "notificationDispatcherStale": "The in-service notification scheduler has not completed within the last minute.",
+      "notificationDispatcherFailed": "The latest notification dispatcher run failed."
     },
     "details": {
       "checkedAt": "Checked at",
@@ -1474,7 +1928,10 @@
       "provider": "Provider",
       "allowedDomains": "Allowed domains",
       "probeObject": "Probe object",
-      "probePdf": "PDF probe"
+      "probePdf": "PDF probe",
+      "lastRun": "Last run",
+      "jobStatus": "Job status",
+      "ageSeconds": "Age in seconds"
     },
     "duration": "{durationMs} ms",
     "missingEnv": "Missing: {names}"
@@ -1508,11 +1965,13 @@
       "edit": "Edit",
       "close": "Close",
       "cancel": "Cancel",
-      "save": "Save"
+      "save": "Save",
+      "newTimer": "New timer"
     },
     "tooltips": {
       "copyPreviousDay": "Copy entries from the day before {date}.",
-      "duplicatePreviousWeek": "Copy entries from the previous week into this week."
+      "duplicatePreviousWeek": "Copy entries from the previous week into this week.",
+      "stopTimerFirst": "Stop the running timer before starting another one."
     },
     "quickActionConfirm": {
       "confirm": "Copy entries",
@@ -1563,14 +2022,26 @@
     "timer": {
       "trackedWithTimer": "Tracked with timer",
       "placeholder": "What are you working on?",
+      "projectLabel": "Timer project",
       "start": "Start",
       "stop": "Stop"
+    },
+    "timerModal": {
+      "title": "New timer",
+      "description": "Pick a project and describe what you are working on. The timer starts right away."
     },
     "entryModal": {
       "newTitle": "New time entry",
       "editTitle": "Edit time entry",
       "prefillHint": "Add a short description and save.",
       "requiredHint": "Project and description are required. Future dates and long days save with warnings."
+    },
+    "adminModification": {
+      "weekTitle": "{count, plural, one {An administrator changed # entry in this week.} other {An administrator changed # entries in this week.}}",
+      "weekDescription": "Open an affected entry to see the correction details.",
+      "adminFallback": "Administrator",
+      "changedBy": "Changed by {name} on {date}.",
+      "reason": "Reason: {reason}"
     },
     "fields": {
       "description": "Description",
@@ -1594,12 +2065,12 @@
       "futureDate": "Future date",
       "futureDateAllowed": "This is a future date. Entries are allowed, but they stay flagged.",
       "dailyTotalOver8": "Daily total is over 8h.",
-      "dailyTotalExact": "That is {hours}h in one day.",
+      "dailyTotalExact": "That is {hours} in one day.",
       "dailyTotalOver24Blocked": "Daily total cannot exceed 24 hours.",
-      "dailyTotalOver24Projected": "Daily total cannot exceed 24 hours, the total would be {hours}h.",
+      "dailyTotalOver24Projected": "Daily total cannot exceed 24 hours, the total would be {hours}.",
       "dayHasOverlaps": "Day has overlapping entries.",
       "dayOver8": "The selected day has more than 8 logged hours.",
-      "dayOver8Projected": "The selected day has more than 8 logged hours, the total is {hours}h.",
+      "dayOver8Projected": "The selected day has more than 8 logged hours, the total is {hours}.",
       "longContinuousSession": "Long continuous session",
       "overlapsAnotherEntry": "Overlaps another entry",
       "durationOver24Blocked": "Duration cannot exceed 24 hours.",
@@ -1699,11 +2170,174 @@
       }
     }
   },
+  "MyRates": {
+    "eyebrow": "Profile",
+    "title": "My rates",
+    "subtitle": {
+      "employee": "Your internal hourly rate, by period. You only see your own rate.",
+      "contractor": "Your central rate and per-project rates, by period. You only see your own rates."
+    },
+    "profiles": {
+      "employee": "Employee",
+      "contractor": "Contractor"
+    },
+    "central": {
+      "title": "Central rate",
+      "employeeDescription": "Your internal hourly rate. If none is set, calculations have no resolved rate.",
+      "contractorDescription": "Your default rate across every project. Project overrides can replace it.",
+      "emptyTitle": "No central rate is set",
+      "emptyDescription": "Ask an administrator to configure your rate."
+    },
+    "period": {
+      "to": "to",
+      "open": "open",
+      "current": "Current"
+    },
+    "projects": {
+      "title": "By project",
+      "override": "Project override",
+      "followsCentral": "Follows the central rate",
+      "missing": "No project override or central rate",
+      "notSet": "Not set",
+      "current": "Current rate"
+    },
+    "privacy": "This page shows only your rates. Other people’s rates are not visible."
+  },
+  "NotificationsPage": {
+    "eyebrow": "Account",
+    "title": "Notifications",
+    "subtitle": "Workflow updates, reminders, and actions related to your account.",
+    "all": "All",
+    "unread": "Unread",
+    "empty": "No notifications match this view.",
+    "markAllRead": "Mark all as read",
+    "pagination": "Notification pages",
+    "previous": "Previous",
+    "next": "Next",
+    "page": "Page {page} of {total}"
+  },
   "Settings": {
     "page": {
-      "eyebrow": "Account",
-      "title": "Security settings",
-      "subtitle": "Manage sign-in methods, passkeys, and authenticator-app verification for your Sheet Happens account."
+      "eyebrow": "Profile",
+      "title": "Profile and settings",
+      "subtitle": "Manage your account, sign-in security, appearance, and time zone."
+    },
+    "sections": {
+      "label": "Profile settings sections",
+      "profile": "Profile",
+      "security": "Security and sign-in",
+      "preferences": "Preferences",
+      "notifications": "Notifications"
+    },
+    "profile": {
+      "title": "Profile",
+      "description": "Your core member details are managed by an administrator and are read-only here.",
+      "readOnly": "Read only",
+      "name": "Name",
+      "email": "Email",
+      "profile": "Profile",
+      "profiles": {
+        "employee": "Employee",
+        "contractor": "Contractor"
+      },
+      "adminManaged": "Need a change? Ask an administrator to update your name, email address, or profile."
+    },
+    "securitySection": {
+      "title": "Security and sign-in",
+      "description": "Manage sign-in methods, passkeys, and authenticator-app verification."
+    },
+    "preferences": {
+      "title": "Preferences",
+      "description": "Manage your profile image, time zone, and time display.",
+      "avatar": {
+        "label": "Profile image",
+        "description": "Upload a square PNG or JPEG up to 2 MB, or keep your initials.",
+        "upload": "Upload",
+        "change": "Change",
+        "save": "Save image",
+        "view": "View",
+        "delete": "Delete",
+        "close": "Close",
+        "previewTitle": "Profile image"
+      },
+      "timezone": {
+        "label": "Time zone",
+        "description": "Controls local day boundaries and how dates appear in time tracking and reports.",
+        "search": "Search time zones",
+        "searchPlaceholder": "Search by city or region...",
+        "empty": "No time zone found",
+        "save": "Save time zone"
+      },
+      "durationDisplay": {
+        "label": "Time display",
+        "description": "Choose how worked durations appear throughout the application.",
+        "decimal": "Decimal hours",
+        "hoursMinutes": "Hours and minutes",
+        "decimalExample": "Example: 3 hours 23 minutes appears as 3.38 h.",
+        "hoursMinutesExample": "Example: 3 hours 23 minutes appears as 3:23.",
+        "save": "Save display"
+      }
+    },
+    "notifications": {
+      "title": "Notifications",
+      "description": "Configure system-wide reminders and workflow delivery methods.",
+      "systemWide": "These settings apply to every member and normally take effect within 15 seconds.",
+      "companyTimezone": "Company time zone",
+      "deliveryMethods": "Delivery methods",
+      "email": "Email",
+      "inApp": "In-app",
+      "save": "Save notification settings",
+      "hoursAsDays": "{days, plural, one {# day} other {# days}} ({hours} hours)",
+      "hoursUnit": "Elapsed hours",
+      "weekdays": {
+        "1": "Monday",
+        "2": "Tuesday",
+        "3": "Wednesday",
+        "4": "Thursday",
+        "5": "Friday",
+        "6": "Saturday",
+        "7": "Sunday"
+      },
+      "weekly": {
+        "title": "Weekly missing-hours reminder",
+        "description": "Notifies members who have an active assignment but no time and no inactive-week marker.",
+        "day": "Send on",
+        "time": "At"
+      },
+      "invoice": {
+        "title": "Invoice upload reminder",
+        "description": "Starts after timesheet approval and stops as soon as an invoice is uploaded.",
+        "initialDelay": "First reminder after approval",
+        "repeat": "Repeat interval",
+        "exactHours": "Intervals are exact elapsed hours: three days means 72 hours after approval, including weekends."
+      },
+      "workflow": {
+        "title": "Workflow notifications",
+        "description": "Choose the delivery method independently for every product event. Authentication emails are configured separately.",
+        "moreInfo": "More information about {notification}"
+      },
+      "types": {
+        "TIMESHEET_SUBMITTED": "Timesheet submitted",
+        "TIMESHEET_APPROVED": "Timesheet approved",
+        "TIMESHEET_REJECTED": "Timesheet rejected",
+        "INVOICE_UPLOADED": "Invoice uploaded",
+        "INVOICE_REJECTED": "Invoice rejected",
+        "INVOICE_ACCEPTED": "Invoice accepted",
+        "TIMESHEET_PAID": "Payment recorded",
+        "PAYSLIP_AVAILABLE": "Payslip available",
+        "TIME_ENTRY_ADMIN_MODIFIED": "Time entry changed by admin"
+      },
+      "typeDescriptions": {
+        "TIMESHEET_SUBMITTED": "Notifies active admins when a contractor submits or resubmits a timesheet for review.",
+        "TIMESHEET_APPROVED": "Notifies the contractor when an admin approves the timesheet and the invoice step becomes available.",
+        "TIMESHEET_REJECTED": "Notifies the contractor when an admin rejects the timesheet and corrections are required.",
+        "INVOICE_UPLOADED": "Notifies active admins when a contractor uploads an original, corrected, or cancellation invoice.",
+        "INVOICE_REJECTED": "Notifies the contractor when an admin rejects an invoice and further action is required.",
+        "INVOICE_ACCEPTED": "Notifies the contractor when an admin accepts the invoice and it is awaiting payment.",
+        "TIMESHEET_PAID": "Notifies the contractor when an admin records the workflow as paid.",
+        "PAYSLIP_AVAILABLE": "Notifies the employee when an admin uploads or replaces their payslip.",
+        "TIME_ENTRY_ADMIN_MODIFIED": "Notifies the affected member when an admin permanently changes one of their recorded time entries."
+      }
     },
     "setupBanner": {
       "securityReady": "Security ready",
@@ -1713,7 +2347,7 @@
       "adminTotpDescription": "Admin tools require authenticator-app verification. Enable an authenticator app before returning to management screens.",
       "memberDescription": "Add a passkey or enable an authenticator app before continuing.",
       "noFurtherAction": "No further security action is required right now.",
-      "adminTotpHint": "Use the authenticator-app controls below to satisfy the admin 2FA requirement. Passkeys remain available for sign-in, but they do not replace admin TOTP in v1.",
+      "adminTotpHint": "Use the authenticator-app controls below to satisfy the admin setup requirement. Passkey sign-in can skip the code challenge after authenticator setup is complete.",
       "memberHint": "Use the passkey or authenticator-app controls below to satisfy this requirement."
     },
     "states": {
@@ -1828,7 +2462,7 @@
       "codeHint": "Enter the current code from your authenticator app.",
       "codeInputLabel": "Authenticator code",
       "verifyAndEnable": "Verify and enable",
-      "footer": "TOTP is the v1 admin second factor. Email passwords and passkeys remain sign-in methods, not admin 2FA replacements."
+      "footer": "Authenticator-app setup is required for admin accounts. Passkey sign-in satisfies the sign-in challenge without an extra code."
     },
     "backupCodes": {
       "title": "Backup codes",
@@ -1868,14 +2502,42 @@
     "export": {
       "action": "Export PDF",
       "defaultTitle": "Time report",
+      "dialogTitle": "Configure export",
+      "dialogDescription": "Name the export, choose what it contains, and check the preview before downloading the PDF.",
       "titleLabel": "Export title",
+      "titlePlaceholder": "e.g. Diapro — June hours summary",
+      "languageLabel": "PDF language",
+      "durationFormatLabel": "Time display",
+      "durationFormatDecimal": "Decimal hours",
+      "durationFormatHoursMinutes": "Hours and minutes",
+      "durationFormatInternalHint": "Internal exports always show decimal hours, so they stay checkable against the amounts printed beside them.",
       "modeLabel": "Content",
       "modeCostFree": "Cost-free",
-      "modeInternal": "Internal"
+      "modeCostFreeHint": "Hours and descriptions only — safe to share externally.",
+      "modeInternal": "Internal",
+      "modeInternalHint": "With rates and project cost — internal use only.",
+      "internalWarningTitle": "Cost data is visible",
+      "internalWarningBody": "This export includes internal rates and cost. Never send it to a client or outside party.",
+      "formatLabel": "Format",
+      "formatPdf": "PDF document",
+      "previewLabel": "Preview",
+      "previewLoading": "Rendering the preview…",
+      "previewError": "The preview could not be rendered. The export itself may still work.",
+      "previewRetry": "Try again",
+      "previewTruncated": "Preview shows the first {count} pages. The download contains every page.",
+      "timezoneLabel": "Time zone",
+      "cancel": "Cancel",
+      "close": "Close",
+      "download": "Download PDF"
     },
     "filters": {
       "start": "From",
       "end": "To",
+      "periodStart": "Period start",
+      "periodEnd": "Period end",
+      "anchorMonth": "Month",
+      "anchorDate": "Date",
+      "anchorYear": "Year",
       "project": "Project",
       "group": "Project group",
       "member": "Member",
@@ -1918,7 +2580,42 @@
     "detail": {
       "title": "Itemized breakdown",
       "description": "Cost-free report data from time entries. Rates and costs are reserved for internal export mode.",
-      "internalProject": "Internal"
+      "internalProject": "Internal",
+      "profileContractor": "Contractor",
+      "profileEmployee": "Employee",
+      "edit": "Edit",
+      "editingDone": "Editing done",
+      "editHint": "Changes stay in this report and its export until you explicitly save them to recorded time.",
+      "descriptionInput": "Description for {name}",
+      "hoursInput": "Hours for {name}",
+      "hoursInputHint": "Type time like 3.5, 3:30, 3h 20m, or 200m."
+    },
+    "persistence": {
+      "unsavedTitle": "{count, plural, one {# unsaved report change} other {# unsaved report changes}}",
+      "unsavedDescription": "These values affect the report and export only until you explicitly save them to recorded time.",
+      "save": "Save to recorded time",
+      "discard": "Discard changes",
+      "cancel": "Cancel",
+      "dialogTitle": "Save report changes to recorded time?",
+      "dialogDescription": "This permanently updates {count, plural, one {# time entry} other {# time entries}}. Locked timesheet periods cannot be changed.",
+      "reasonLabel": "Correction reason",
+      "reasonPlaceholder": "Explain why the recorded time needs to change",
+      "memberVisibility": "Affected members will see who changed each entry, when it changed, and this reason.",
+      "confirm": "Save permanent changes",
+      "exportOption": "Save edits to recorded time",
+      "exportOptionHint": "Permanently update {count, plural, one {# edited entry} other {# edited entries}} before downloading.",
+      "exportOptionEmpty": "Edit at least one report row to enable permanent saving.",
+      "success": "{count, plural, one {# time entry was updated permanently.} other {# time entries were updated permanently.}}",
+      "errors": {
+        "invalid": "Check the edited values and provide a correction reason.",
+        "EMPTY_REASON": "Provide a correction reason before saving.",
+        "ENTRY_NOT_FOUND": "One or more edited time entries no longer exist. Refresh the report and try again.",
+        "ENTRY_LOCKED": "One or more edited entries belong to a locked timesheet period and cannot be changed.",
+        "INVALID_DESCRIPTION": "Every saved time entry needs a description of at most 1,000 characters.",
+        "INVALID_DURATION": "Saved durations must be between 1 minute and 24 hours.",
+        "DAILY_LIMIT_EXCEEDED": "The changes would make at least one day exceed the 24-hour hard limit.",
+        "generic": "The report changes could not be saved."
+      }
     },
     "table": {
       "date": "Date",
@@ -1931,16 +2628,54 @@
     "empty": {
       "title": "No tracked time matches these filters.",
       "description": "Adjust the period or remove a filter."
+    },
+    "pdf": {
+      "brand": "Sheet Happens",
+      "confidential": "Confidential",
+      "page": "Page",
+      "generatedAt": "Generated",
+      "breakdown": "Breakdown",
+      "breakdownDescription": "Grouped hours and entry counts for the selected report view.",
+      "details": "Details",
+      "detailsDescription": "Time entries included in this report export.",
+      "attention": "Attention",
+      "name": "Name",
+      "share": "Share",
+      "entries": "Entries",
+      "rate": "Rate",
+      "amount": "Amount",
+      "total": "Total",
+      "missingRate": "Missing rate",
+      "missingRateNote": "{marker} marks a time entry with no hourly rate for its period.",
+      "warnings": {
+        "missingRates": "{count, plural, one {# entry is missing a rate.} other {# entries are missing rates.}}",
+        "mixedCurrency": "The report contains multiple currencies: {currencies}."
+      }
     }
   },
   "SettingsActions": {
     "success": {
+      "avatarUpdated": "Profile image updated.",
+      "avatarDeleted": "Profile image deleted.",
+      "timezoneUpdated": "Time zone updated.",
+      "durationDisplayUpdated": "Time display updated.",
       "passkeyRenamed": "Passkey renamed.",
       "passkeyRemoved": "Passkey removed.",
       "totpDisabledAudited": "Authenticator app disablement audited.",
-      "backupCodesRegeneratedAudited": "Backup-code regeneration audited."
+      "backupCodesRegeneratedAudited": "Backup-code regeneration audited.",
+      "notificationSettingsUpdated": "Notification settings updated."
     },
     "errors": {
+      "avatarRequired": "Choose a profile image.",
+      "avatarTooLarge": "The profile image must be no larger than 2 MB.",
+      "avatarInvalidType": "The profile image must be a valid PNG or JPEG.",
+      "avatarUploadFailed": "The profile image could not be uploaded.",
+      "avatarDeleteFailed": "The profile image could not be deleted.",
+      "timezoneInvalid": "Choose a supported time zone.",
+      "timezoneUpdateFailed": "The time zone could not be updated.",
+      "durationDisplayInvalid": "Choose a supported time display.",
+      "durationDisplayUpdateFailed": "The time display could not be updated.",
+      "memberNotFound": "The member profile could not be found.",
       "passkeyIdMissing": "Passkey id is missing.",
       "passkeyNameRequired": "Passkey name is required.",
       "passkeyNotFound": "Passkey not found.",
@@ -1948,7 +2683,124 @@
       "passkeyRemoveFailed": "Could not remove the passkey.",
       "totpDisableAuditFailed": "Authenticator app was disabled, but the audit event could not be recorded.",
       "backupCodesAuditFailed": "Backup codes were regenerated, but the audit event could not be recorded.",
-      "noAuthAccount": "No auth account is linked to this member."
+      "noAuthAccount": "No auth account is linked to this member.",
+      "notificationSettingsUpdateFailed": "Notification settings could not be updated.",
+      "notificationSettingsInvalid": "Check the notification schedule and delivery settings."
+    }
+  },
+  "Payslips": {
+    "actions": {
+      "preview": "Preview",
+      "download": "Download",
+      "close": "Close",
+      "upload": "Upload payslip",
+      "replace": "Replace",
+      "delete": "Delete",
+      "cancel": "Cancel",
+      "confirmUpload": "Upload",
+      "confirmReplace": "Replace and upload",
+      "confirmDelete": "Delete payslip",
+      "clear": "Clear filters"
+    },
+    "employee": {
+      "eyebrow": "Employee documents",
+      "title": "My payslips",
+      "subtitle": "Your monthly payslips, newest first.",
+      "latest": "Latest",
+      "history": "Earlier months",
+      "available": "Available",
+      "privateNote": "Only you can view your payslips. Documents are opened through a short-lived private link.",
+      "filters": {
+        "year": "Year",
+        "allYears": "All years",
+        "order": "Order",
+        "newest": "Newest first",
+        "oldest": "Oldest first",
+        "pageSize": "Per page",
+        "clear": "Clear",
+        "empty": "No earlier payslips match these filters."
+      },
+      "empty": {
+        "title": "No payslips yet",
+        "description": "Your administrator will publish each monthly payslip here when it is available."
+      }
+    },
+    "viewer": {
+      "signedLink": "Private file · short-lived link",
+      "title": "Preview of {filename}"
+    },
+    "admin": {
+      "eyebrow": "Admin",
+      "title": "Payslips",
+      "subtitle": "Upload and manage monthly payslips by employee. Payroll is not calculated in Sheet Happens.",
+      "filters": {
+        "employee": "Employee",
+        "allEmployees": "All employees",
+        "month": "Month",
+        "allMonths": "All months",
+        "search": "Search name or email",
+        "apply": "Apply filters",
+        "active": "Active filters",
+        "removeFilter": "Remove filter: {filter}"
+      },
+      "overview": {
+        "title": "Month overview",
+        "posted": "{posted} of {expected} posted",
+        "complete": "Every active employee has a payslip for this month.",
+        "missing": "Missing",
+        "uploadFor": "Upload payslip for {name}"
+      },
+      "list": {
+        "title": "Payslip history",
+        "description": "Current payslip documents matching the selected filters.",
+        "empty": "No payslips match the selected filters.",
+        "showing": "Showing {start}-{end} of {total}",
+        "employee": "Employee",
+        "month": "Month",
+        "file": "File",
+        "published": "Published",
+        "actions": "Actions",
+        "inactive": "Inactive",
+        "uploadedBy": "Published by {name}"
+      },
+      "upload": {
+        "title": "Upload payslip",
+        "description": "Choose an employee and month, then upload a PDF. Uploading to an occupied month replaces the current document.",
+        "employee": "Employee",
+        "employeePlaceholder": "Choose an employee",
+        "month": "Month",
+        "monthNavigation": "Payslip year",
+        "previousYear": "Show the previous year",
+        "nextYear": "Show the next year",
+        "file": "PDF file",
+        "dropzone": "Drop the payslip PDF here",
+        "dropzoneDescription": "PDF only, up to 10 MB.",
+        "existing": "A payslip already exists for this employee and month. The uploaded PDF will replace it.",
+        "success": "Payslip uploaded.",
+        "replaced": "Payslip replaced."
+      },
+      "delete": {
+        "title": "Delete payslip?",
+        "description": "{name} · {month}. The document will be removed. A new payslip can be uploaded for this month later.",
+        "success": "Payslip deleted."
+      }
+    },
+    "errors": {
+      "notAllowed": "You are not allowed to manage payslips.",
+      "employeeRequired": "Choose an employee profile.",
+      "monthRequired": "Choose a valid month.",
+      "fileRequired": "Choose a payslip PDF.",
+      "fileTooLarge": "The payslip PDF must be 10 MB or smaller.",
+      "pdfRequired": "Only PDF files can be uploaded.",
+      "storageMissing": "Payslip storage is not configured.",
+      "uploadFailed": "The payslip could not be uploaded.",
+      "deleteFailed": "The payslip could not be deleted."
+    },
+    "pager": {
+      "navigation": "Payslip pages",
+      "summary": "Page {page} of {totalPages}, {totalItems} payslips",
+      "previous": "Previous",
+      "next": "Next"
     }
   },
   "TwoFactorActions": {

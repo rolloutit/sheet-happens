@@ -1,7 +1,7 @@
 "use client";
 
 import { CalendarClock, Save } from "lucide-react";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { type FormEvent, useState, useTransition } from "react";
 
 import { Button } from "@/src/components/ui/Button";
@@ -13,9 +13,12 @@ import {
   DrawerHeader,
   DrawerTitle,
 } from "@/src/components/ui/Drawer";
+import { DatePicker } from "@/src/components/ui/DatePicker";
 import { Field } from "@/src/components/ui/Field";
 import { Input } from "@/src/components/ui/Input";
+import { Select } from "@/src/components/ui/Select";
 import { Textarea } from "@/src/components/ui/Textarea";
+import { usePickerLabels } from "@/src/i18n/picker-labels";
 import type { MemberPreferenceOptions } from "@/src/lib/member-preferences";
 import type { AdminPersonRow } from "@/src/server/users";
 import { scheduleProfileTransitionAction, updateMemberDetailsAction } from "./actions";
@@ -26,7 +29,6 @@ import type {
   UpdateMemberDetailsActionInput,
   UpdateMemberDetailsActionState,
 } from "./actions.types";
-import { nativeSelectClassName } from "./formStyles";
 
 export type MemberEditDrawerProps = {
   member: AdminPersonRow | null;
@@ -99,6 +101,7 @@ function MemberEditForm({
   onSaved: () => void;
 }) {
   const t = useTranslations("AdminPeople");
+  const pickerLabels = usePickerLabels();
   const [values, setValues] = useState<EditableValues>(() => getEditableValues(member));
   const [fieldErrors, setFieldErrors] =
     useState<UpdateMemberDetailsActionState["fieldErrors"]>(undefined);
@@ -230,21 +233,17 @@ function MemberEditForm({
             error={fieldErrors?.defaultCurrencyCode}
           >
             {({ id, describedBy, invalid, required }) => (
-              <select
+              <Select
                 id={id}
+                label={t("form.currency")}
                 value={values.defaultCurrencyCode}
                 aria-describedby={describedBy}
-                aria-invalid={invalid}
+                invalid={invalid}
                 required={required}
-                className={nativeSelectClassName}
-                onChange={(event) => updateField("defaultCurrencyCode", event.target.value)}
-              >
-                {preferenceOptions.currencies.map((option) => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
+                labels={pickerLabels.combobox}
+                options={preferenceOptions.currencies}
+                onValueChange={(value) => updateField("defaultCurrencyCode", value)}
+              />
             )}
           </Field>
           <Field
@@ -254,40 +253,32 @@ function MemberEditForm({
             error={fieldErrors?.timezone}
           >
             {({ id, describedBy, invalid, required }) => (
-              <select
+              <Select
                 id={id}
+                label={t("form.timezone")}
                 value={values.timezone}
                 aria-describedby={describedBy}
-                aria-invalid={invalid}
+                invalid={invalid}
                 required={required}
-                className={nativeSelectClassName}
-                onChange={(event) => updateField("timezone", event.target.value)}
-              >
-                {preferenceOptions.timezones.map((option) => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
+                labels={pickerLabels.combobox}
+                options={preferenceOptions.timezones}
+                onValueChange={(value) => updateField("timezone", value)}
+              />
             )}
           </Field>
           <Field label={t("form.locale")} required reserveMessageSpace error={fieldErrors?.locale}>
             {({ id, describedBy, invalid, required }) => (
-              <select
+              <Select
                 id={id}
+                label={t("form.locale")}
                 value={values.locale}
                 aria-describedby={describedBy}
-                aria-invalid={invalid}
+                invalid={invalid}
                 required={required}
-                className={nativeSelectClassName}
-                onChange={(event) => updateField("locale", event.target.value)}
-              >
-                {preferenceOptions.locales.map((option) => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
+                labels={pickerLabels.combobox}
+                options={preferenceOptions.locales}
+                onValueChange={(value) => updateField("locale", value)}
+              />
             )}
           </Field>
         </div>
@@ -295,7 +286,7 @@ function MemberEditForm({
         {status && status.status === "error" ? (
           <p
             role="alert"
-            className="rounded-[var(--radius-md)] border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive"
+            className="rounded-[var(--radius-md)] border border-destructive/40 bg-destructive-soft px-3 py-2 text-sm text-destructive"
           >
             {status.message}
           </p>
@@ -333,6 +324,8 @@ function ProfileTransitionForm({
   onSaved: () => void;
 }) {
   const t = useTranslations("AdminPeople");
+  const locale = useLocale();
+  const pickerLabels = usePickerLabels();
   const [values, setValues] = useState<ProfileTransitionValues>(() => ({
     profile: getOppositeProfile(member.profileValue),
     validFrom: todayDate,
@@ -393,20 +386,22 @@ function ProfileTransitionForm({
           error={fieldErrors?.profile}
         >
           {({ id, describedBy, invalid, required }) => (
-            <select
+            <Select
               id={id}
+              label={t("profileTransition.newProfile")}
               value={values.profile}
               aria-describedby={describedBy}
-              aria-invalid={invalid}
+              invalid={invalid}
               required={required}
-              className={nativeSelectClassName}
-              onChange={(event) =>
-                updateField("profile", event.target.value as ProfileTransitionValues["profile"])
+              labels={pickerLabels.combobox}
+              options={[
+                { value: "CONTRACTOR", label: t("profiles.contractor") },
+                { value: "EMPLOYEE", label: t("profiles.employee") },
+              ]}
+              onValueChange={(value) =>
+                updateField("profile", value as ProfileTransitionValues["profile"])
               }
-            >
-              <option value="CONTRACTOR">{t("profiles.contractor")}</option>
-              <option value="EMPLOYEE">{t("profiles.employee")}</option>
-            </select>
+            />
           )}
         </Field>
 
@@ -417,15 +412,17 @@ function ProfileTransitionForm({
           error={fieldErrors?.validFrom}
         >
           {({ id, describedBy, invalid, required }) => (
-            <Input
+            <DatePicker
               id={id}
-              type="date"
+              label={t("profileTransition.effectiveDate")}
+              locale={locale}
               value={values.validFrom}
               min={todayDate}
               aria-describedby={describedBy}
               invalid={invalid}
               required={required}
-              onChange={(event) => updateField("validFrom", event.target.value)}
+              labels={pickerLabels.date}
+              onValueChange={(value) => updateField("validFrom", value ?? "")}
             />
           )}
         </Field>
@@ -452,7 +449,7 @@ function ProfileTransitionForm({
       {status && status.status === "error" ? (
         <p
           role="alert"
-          className="rounded-[var(--radius-md)] border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive"
+          className="rounded-[var(--radius-md)] border border-destructive/40 bg-destructive-soft px-3 py-2 text-sm text-destructive"
         >
           {status.message}
         </p>

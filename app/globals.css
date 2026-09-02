@@ -2,6 +2,138 @@
 
 @custom-variant dark (&:is(.dark *));
 
+/* Brand typefaces, self-hosted from `public/fonts` for the same reason the PDF pipeline bundles
+ * Inter (see `src/server/pdf/templates/lib/theme.typ`): a render must be identical on a dev
+ * machine, in Docker and in CI. Declaring them here rather than through `next/font` is deliberate —
+ * `app/layout.tsx` and `.storybook/preview.tsx` both import this file, so the app, Storybook and the
+ * checked-in Playwright baselines resolve one set of `@font-face` rules. `@storybook/nextjs-vite`
+ * implements no `next/font` transform, so a loader in the layout would leave Storybook on system-ui
+ * and every visual baseline asserting the wrong typeface.
+ *
+ * `unicode-range` values are copied verbatim from the Google Fonts CSS API and must stay paired with
+ * the file they were fetched with. Dropping `latin-ext` would break Hungarian: ő (U+0151) and
+ * ű (U+0171) live in U+0100-02BA and are absent from the `latin` subset.
+ *
+ * Lexend ships a real `wght` axis, so one variable file per subset covers 100-900. Poppins has no
+ * variable release, hence one static file per weight — 400/500/600/700, the only weights the app
+ * uses (`font-normal`/`font-medium`/`font-semibold`/`font-bold`). Adding a weight to markup without
+ * adding the matching file here gets a synthesised approximation, not the real cut. */
+
+/* Lexend — body/default, `--font-sans`. */
+@font-face {
+  font-family: "Lexend";
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url("/fonts/lexend-variable-latin.woff2") format("woff2");
+  unicode-range:
+    U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329,
+    U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: "Lexend";
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url("/fonts/lexend-variable-latin-ext.woff2") format("woff2");
+  unicode-range:
+    U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329,
+    U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F,
+    U+A720-A7FF;
+}
+
+/* Poppins — UI/subhead accent, `--font-ui` via the `.font-ui` class. */
+@font-face {
+  font-family: "Poppins";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("/fonts/poppins-400-latin.woff2") format("woff2");
+  unicode-range:
+    U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329,
+    U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: "Poppins";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("/fonts/poppins-400-latin-ext.woff2") format("woff2");
+  unicode-range:
+    U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329,
+    U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F,
+    U+A720-A7FF;
+}
+@font-face {
+  font-family: "Poppins";
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url("/fonts/poppins-500-latin.woff2") format("woff2");
+  unicode-range:
+    U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329,
+    U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: "Poppins";
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url("/fonts/poppins-500-latin-ext.woff2") format("woff2");
+  unicode-range:
+    U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329,
+    U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F,
+    U+A720-A7FF;
+}
+@font-face {
+  font-family: "Poppins";
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url("/fonts/poppins-600-latin.woff2") format("woff2");
+  unicode-range:
+    U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329,
+    U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: "Poppins";
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url("/fonts/poppins-600-latin-ext.woff2") format("woff2");
+  unicode-range:
+    U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329,
+    U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F,
+    U+A720-A7FF;
+}
+@font-face {
+  font-family: "Poppins";
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url("/fonts/poppins-700-latin.woff2") format("woff2");
+  unicode-range:
+    U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329,
+    U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: "Poppins";
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url("/fonts/poppins-700-latin-ext.woff2") format("woff2");
+  unicode-range:
+    U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329,
+    U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F,
+    U+A720-A7FF;
+}
+
+/* Every value below that is a `var()` reference is deliberately declared here rather than as a
+ * literal: `@theme inline` resolves references into the utility itself, so `bg-accent-soft` emits
+ * `var(--accent-soft)` and follows the theme. The trade-off is that a referencing entry is *not*
+ * emitted as a custom property, so plain CSS must read the underlying variable
+ * (`var(--elevation-pop)`), never the theme name (`var(--shadow-soft)`). Literal entries such as
+ * the radii *are* emitted, which is what keeps `rounded-[var(--radius-lg)]` working. */
 @theme inline {
   --font-sans: var(--font-lexend);
   --font-ui: var(--font-poppins);
@@ -18,19 +150,42 @@
   --color-secondary-foreground: var(--secondary-foreground);
   --color-muted: var(--muted);
   --color-muted-foreground: var(--muted-foreground);
+  --color-subtle-foreground: var(--text-subtle);
   --color-accent: var(--accent);
   --color-accent-foreground: var(--accent-foreground);
+  --color-accent-soft: var(--accent-soft);
+  --color-accent-line: var(--accent-line);
   --color-cta: var(--cta);
+  --color-cta-hover: var(--cta-hover);
   --color-cta-foreground: var(--cta-foreground);
   --color-destructive: var(--destructive);
+  --color-destructive-soft: var(--destructive-soft);
+  --color-destructive-bright: var(--destructive-bright);
   --color-destructive-foreground: var(--destructive-foreground);
   --color-success: var(--success);
+  --color-success-soft: var(--success-soft);
   --color-success-foreground: var(--success-foreground);
   --color-warning: var(--warning);
+  --color-warning-soft: var(--warning-soft);
   --color-warning-foreground: var(--warning-foreground);
   --color-border: var(--border);
+  --color-border-strong: var(--border-strong);
   --color-input: var(--input);
   --color-ring: var(--ring);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-header: var(--header-bg);
+  --color-scrim: var(--scrim);
+  --color-surface-inset: var(--surface-inset);
+  --color-ink-mint: var(--ink-mint);
+  --color-ink-amber: var(--ink-amber);
+  --color-ink-rose: var(--ink-rose);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --color-chart-6: var(--chart-6);
 
   --radius-xs: 6px;
   --radius-sm: 9px;
@@ -39,8 +194,13 @@
   --radius-xl: 22px;
   --radius-pill: 999px;
 
-  --shadow-soft: 0 18px 48px rgb(0 0 0 / 0.24);
-  --shadow-panel: 0 22px 70px rgb(0 0 0 / 0.34);
+  /* Two elevations now: the neutral pop every surface uses, and the coloured glow that sits under
+     an element carrying a signal. Both names for the pop are kept so existing call sites stand;
+     all of them resolve to the theme-aware raw variables. */
+  --shadow-soft: var(--elevation-pop);
+  --shadow-panel: var(--elevation-pop);
+  --shadow-accent-glow: var(--elevation-glow);
+  --shadow-cta-glow: var(--elevation-glow-warm);
 }
 
 :root {
@@ -50,31 +210,182 @@
   --font-poppins:
     "Poppins", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 
-  --background: #0a1716;
-  --foreground: #ecf6f3;
-  --card: #11221f;
-  --card-foreground: #ecf6f3;
-  --popover: #11221f;
-  --popover-foreground: #ecf6f3;
-  --primary: #19a8a3;
-  --primary-foreground: #062624;
-  --secondary: #1a302c;
-  --secondary-foreground: #ecf6f3;
-  --muted: #244039;
-  --muted-foreground: #9eb9b1;
-  --accent: #37e3de;
-  --accent-foreground: #062624;
-  --cta: #ffc68b;
-  --cta-foreground: #2f1802;
-  --destructive: #ff6b6b;
-  --destructive-foreground: #240707;
-  --success: #5fdaa8;
-  --success-foreground: #082313;
-  --warning: #fcba63;
-  --warning-foreground: #2e2100;
-  --border: rgb(143 240 228 / 0.1);
-  --input: rgb(236 246 243 / 0.14);
-  --ring: #37e3de;
+  /* Atmosphere — "Graphite Aurora", relit (docs/dark-mode-redesign.md §5, §12). `--canvas-base`
+     is the void behind everything; `--canvas-aurora` carries the two glow layers so each theme
+     owns its own geometry as well as its colours.
+
+     The alphas here are capped by legibility, not taste. `AuthForm` puts `--muted-foreground`
+     directly on this canvas, so the brightest point two overlapping layers can reach must still
+     carry it at 4.5:1. On `--background` — the lighter of the two bases and therefore the worse
+     case — that ceiling is relative luminance 0.0607. The values below peak at 0.0525.
+
+     What that budget caps is *luminance*, and the khaki cast was a *chroma* problem, so the fix is
+     to spend the budget on the most chromatic source rather than the brightest one. A composite
+     carries only `alpha × source` chroma, and at a fixed resulting luminance the two families
+     differ enormously in what they return:
+
+       cool, at the ceiling    mint-glow #84F4F4 -> C 0.034   ·   mint #29C6C6 -> C 0.054  (+56%)
+       warm, at the ceiling    peach #FFD9B4     -> C 0.013   ·   warning #FAAB59 -> C 0.044 (+245%)
+
+     So both families draw from the saturated middle of their ladder, not the pale top of it. The
+     old warm layer was `#FFCB97` at 8.5%, which composited to C 0.007 at hue 48° — a desaturated
+     brown, which is precisely what a khaki is. It now lands at C 0.025 at hue 64°: amber light.
+     Chroma is up 62–103% across the four layers with no loss of legibility.
+
+     `--atmo-dot` is not counted as a third stacked layer. The lattice is 1px dots on a 24px grid —
+     about 0.14% pixel coverage — and is masked out of the centre-top where content sits, so no
+     glyph ever rests on one. Modelling it as full coverage would fail a case that cannot occur. */
+  --canvas-base: #07080a;
+  --atmo-mint: rgb(41 198 198 / 0.145);
+  --atmo-peach: rgb(250 171 89 / 0.135);
+  --atmo-dot: rgb(132 244 244 / 0.1);
+  --atmo-blob-mint: rgb(41 198 198 / 0.16);
+  --atmo-blob-peach: rgb(250 171 89 / 0.15);
+  --atmo-line-mint: rgb(132 244 244 / 0.28);
+  --atmo-line-peach: rgb(250 185 118 / 0.28);
+  --atmo-grain: 0.045;
+  --canvas-aurora:
+    radial-gradient(1600px 1000px at 100% -12%, var(--atmo-mint), transparent 62%),
+    radial-gradient(1300px 900px at -10% 115%, var(--atmo-peach), transparent 64%);
+
+  /* Chassis — cool graphite (H ≈ 264°), chroma rising with elevation (C 0.005 → 0.022).
+     inset < base < raised (card) < hover (secondary) < over (popover/muted). The sidebar sits
+     *below* the canvas: navigation recedes, content comes forward.
+
+     The steps are deliberately far apart. The first pass ran the whole ramp inside 0.145–0.251 L,
+     which put a card only 0.036 L above the canvas it sits on — below the threshold where an edge
+     reads, so every panel dissolved into its ground and the interface flattened into a murk. The
+     ladder now spans 0.134–0.300: card-over-canvas is 0.051 and card-over-void 0.109, roughly
+     +40% and +70%. Nothing else in this file buys as much as pulling these six numbers apart. */
+  --background: #12141a;
+  --surface-inset: #0c0d11;
+  --card: #1c2027;
+  --popover: #282e39;
+  --secondary: #222730;
+  --muted: #282e39;
+  --sidebar: #0c0d11;
+
+  /* Type — warm ivory (H ≈ 79°, from the brand Beige ramp) on the cool chassis. All three live
+     tiers clear 4.5:1 on every surface up to `--popover`. */
+  --foreground: #f3efe9;
+  --card-foreground: #f3efe9;
+  --popover-foreground: #f3efe9;
+  --secondary-foreground: #f3efe9;
+  --muted-foreground: #b7b2aa;
+  /* Lifted from #948F87 (L 0.652). The old value was tuned against a `--popover` at L 0.251;
+     against the new one at L 0.300 it fell to 4.25:1. L 0.684 restores the floor with margin —
+     4.82:1 on the lightest surface it can land on. Same warm-ivory hue, so the tier still reads
+     as the third step of the Beige ramp rather than a different colour. */
+  --text-subtle: #9e9991;
+
+  /* Inks — dark text for full-strength signal fills. One per family; every pairing clears 6:1. */
+  --ink-mint: #04211f;
+  --ink-amber: #2a1608;
+  --ink-rose: #2a0a10;
+
+  /* Signals. The four families sit ≥ 42° apart in hue so the `*-soft` tints stay distinguishable
+     over the neutral card. The hues are unchanged; what changed is the licence to use them.
+
+     The original discipline rule — "mint is a signal, never a surface, under ~5% of the pixels on
+     any screen" — cured the old monochrome teal wash but left nothing on screen with any life in
+     it. The rule is now semantic only: a colour still has to mean the thing it means (mint =
+     system/active/primary, peach = the CTA, green = approved, rose = blocked), but it may carry
+     gradients, glows and tinted surfaces at whatever size the design needs. The one part that
+     stands is the part that caused the original complaint: **mint is still never the page or
+     sidebar background.** Structure stays neutral; everything on top of it may sing.
+
+     The `*-soft` alphas rise from a flat 16% to per-tone values, each the loudest tint whose own
+     full-strength label still clears 4.5:1 on every surface the tint can land on — card,
+     canvas and the `--secondary` hover fill alike. They are not a single number because the four
+     hues do not composite alike. */
+  --primary: #29c6c6;
+  --primary-foreground: var(--ink-mint);
+  --accent: #84f4f4;
+  --accent-foreground: var(--ink-mint);
+  --accent-soft: rgb(41 198 198 / 0.24);
+  --accent-line: rgb(132 244 244 / 0.42);
+  --cta: #ffcb97;
+  --cta-hover: #fab976;
+  --cta-foreground: var(--ink-amber);
+  --success: #5ce08c;
+  --success-soft: rgb(92 224 140 / 0.22);
+  --success-foreground: var(--ink-mint);
+  --warning: #faab59;
+  --warning-soft: rgb(250 171 89 / 0.21);
+  --warning-foreground: var(--ink-amber);
+  --destructive: #ff6a7e;
+  --destructive-soft: rgb(255 106 126 / 0.22);
+  --destructive-foreground: var(--ink-rose);
+  /* Rose is the one family that needs two steps, exactly as mint does. `--destructive` #FF6A7E is
+     the darkest of the four signals (L 0.714), so it cannot serve as both the fill and the label
+     on its own tint: it already only just held at 4.54:1 on the old popover, and the lifted ladder
+     drops it to 3.92:1. `--destructive-bright` is the same hue and chroma at L 0.834 — the rose
+     equivalent of what `--accent` is to `--primary` — and clears 4.63:1 on the tint over every
+     surface. Use it for a label *on* a rose tint; keep `--destructive` for fills and for text on a
+     plain card. */
+  --destructive-bright: #ff91a3;
+
+  /* Edges, depth, chrome — neutral hairlines; a mint edge is reserved for elements that carry
+     the accent. */
+  --border: rgb(232 236 242 / 0.11);
+  --border-strong: rgb(232 236 242 / 0.22);
+  /* Input borders are the prototype's `--border-strong`. Declared once: `var()` resolves at the
+     use site, so re-binding `--border-strong` in `.light` carries `--input` with it. */
+  --input: var(--border-strong);
+  --ring: #84f4f4;
+  --sidebar-border: rgb(232 236 242 / 0.09);
+  --header-bg: rgb(18 20 26 / 0.72);
+  --scrim: rgb(7 8 10 / 0.72);
+
+  /* Skeleton shimmer stops. Raw variables — they feed a gradient, not a colour utility. */
+  --skeleton: rgb(232 236 242 / 0.06);
+  --skeleton-sheen: rgb(232 236 242 / 0.13);
+
+  --elevation-pop: 0 24px 56px -18px rgb(0 0 0 / 0.8), 0 0 0 1px rgb(232 236 242 / 0.09);
+
+  /* The second elevation the redesign specified (§3.3) and never shipped. `--shadow-accent-glow`
+     used to resolve to `0 10px 26px -12px var(--accent-line)`: a 30%-alpha colour pulled in 12px,
+     which is close to invisible — the "glow" under the primary button was doing nothing. These are
+     real light sources: a wide coloured bloom plus a tight one for the contact edge. Two so a warm
+     control is lit by warm light; peach glowing mint is the giveaway of a palette applied by
+     search-and-replace. */
+  --elevation-glow:
+    0 10px 34px -10px rgb(41 198 198 / 0.5), 0 2px 12px -4px rgb(132 244 244 / 0.32);
+  --elevation-glow-warm:
+    0 10px 34px -10px rgb(250 185 118 / 0.45), 0 2px 12px -4px rgb(255 217 180 / 0.3);
+
+  /* Charts — categorical ramp in the redesign's hue order (mint, amber, violet, green, rose,
+     blue; §7). Same six hues, same fixed order, re-derived for chroma.
+
+     The previous values passed the `dataviz` validator but read as tan, olive, drab teal and
+     brick — a literal camouflage swatch set. The cause was not the validator's mark-lightness
+     band: every one of those steps sat *inside* the band while using only 59–80% of the chroma
+     available at its own lightness. So the fix is to spend that headroom. Each step now runs at
+     95% of the sRGB gamut ceiling for its hue, capped so no series exceeds ~1.9× the chroma of the
+     least-saturated one — cyan's ceiling in this band is barely half of violet's, and taking a
+     flat fraction of each ceiling would make violet and rose shout while mint whispered, which is
+     not a categorical set.
+
+     Lightness is deliberately staggered rather than flat. Green and rose are adjacent in the fixed
+     order and collapse under deuteranopia when they share a lightness (ΔE 1.3 at equal L); the
+     stagger is what carries that pair, and it is why this ramp is not simply the six brand hues at
+     full strength.
+
+     Verified with the skill's own validator, not by eye: all five checks PASS against both the
+     dark card (#1C2027) and white — band, chroma floor, CVD separation (worst adjacent ΔE 8.7,
+     above the 8.0 target), normal-vision floor (22.5), and ≥3:1 contrast with no relief warning.
+     The ramp therefore stays theme-stable and `.light` carries no override. Chroma is up 6–53%
+     per step. Violet and blue are chart-only; they never appear in chrome. */
+  --chart-1: #1ea5a5;
+  --chart-2: #ce801a;
+  --chart-3: #8969f9;
+  --chart-4: #199552;
+  --chart-5: #f64c6a;
+  --chart-6: #1681f9;
+
+  --sidebar-w: 256px;
+  --sidebar-w-collapsed: 76px;
+  --header-h: 64px;
 
   --ease-standard: cubic-bezier(0.2, 0.7, 0.2, 1);
 }
@@ -85,31 +396,207 @@
 
 .light {
   color-scheme: light;
+
+  /* Atmosphere — "Ivory Ledger", relit (docs/light-mode-redesign.md §12). In dark the brand
+     silhouettes stop being ink and become light; light is the kit's native medium, so they go back
+     to being ink — a printed pastel fill with its offset echo line. Same shapes, same blurs, same
+     drift; only these values differ.
+
+     THE BUDGET IS TWO-SIDED HERE, and that is the whole difference from dark. Dark has one bound,
+     a luminance ceiling, because the only thing its atmosphere can do to a near-black ground is
+     lighten it. Light's atmosphere can move the ground both ways and each way breaks something
+     different:
+
+       FLOOR    relative luminance 0.5390. `AuthForm` renders `--muted-foreground` directly on this
+                canvas, so darkening the ground eats that tier's contrast. Tier 1 is far more
+                forgiving and tier 3 is not allowed on the canvas at all, so tier 2 is what binds.
+       CEILING  relative luminance 0.9406. `--card` is #ffffff and cannot go lighter, so every step
+                the canvas takes toward white is a step of card separation destroyed. This is the
+                bound light had no concept of: `--atmo-mint` was the literal value `#ffffff` at
+                full alpha, in a radial that reaches the top-right corner of every page. The canvas
+                there *was* white, card-over-canvas was 1.00, and a panel in that corner had
+                nothing but a hairline to show it existed.
+
+     The stacking model is dark's, made explicit: any two overlapping AREA layers must sit inside
+     that band — aurora+blob, aurora+echo, and blob+its-own-echo are each checked. The dot lattice
+     is excluded for the reason §12.3 gives (1px dots on a 24px grid is ~0.14% coverage, masked out
+     of the content area). Verified: 5.74 / 4.84 / 4.51 cool, 5.35 / 4.78 / 4.69 warm.
+
+     WHICH END OF THE LADDER TO DRAW FROM ALSO INVERTS. Dark's rule is "spend a capped budget on
+     chroma, not brightness" — at a luminance ceiling the pale end returns almost no colour, so
+     draw from the saturated middle. In light the resource is luminance *displacement*, and a
+     source far from the ground's own luminance displaces it fast and is therefore rationed to a
+     low alpha. mint-700 at the alpha the floor allows returns C 0.014 at hue 155° — a grey-olive,
+     light's own khaki. mint-200 sits near the ground's luminance, so it can run at 0.44 and hands
+     back C 0.046 at hue 186°. The washes therefore come from the BRIGHT end here, and the deep end
+     is reserved for the one layer whose job is edge rather than colour. */
+  --canvas-base: #efe5db;
+  --atmo-mint: rgb(132 244 244 / 0.44);
+  --atmo-peach: rgb(255 203 151 / 0.48);
+  --atmo-dot: rgb(10 41 48 / 0.1);
+  --atmo-blob-mint: rgb(41 198 198 / 0.17);
+  --atmo-blob-peach: rgb(250 171 89 / 0.31);
+  /* The echo lines are the only layer drawn from the deep end, because a line is visible precisely
+     by *being* a luminance difference — that cost is intrinsic and cannot be optimised away. They
+     are what carries "printed, not lit", so they get the budget the washes give up: 1.31 against
+     the void, the same weight dark's echoes have against theirs. */
+  --atmo-line-mint: rgb(31 116 117 / 0.21);
+  --atmo-line-peach: rgb(250 171 89 / 0.62);
+  /* No grain in light. Banding is a near-black artifact — the light aurora spans ΔL ≈ 0.02 across
+     enormous radii at L ≈ 0.91, far below the 8-bit step — and the grain tile is white-alpha noise,
+     which composites to nothing on paper. `.sheet-grain` stays hidden; this documents the intent. */
+  --atmo-grain: 0;
+  --canvas-aurora:
+    radial-gradient(1150px 700px at 100% -8%, var(--atmo-mint), transparent 58%),
+    radial-gradient(880px 600px at -8% 112%, var(--atmo-peach), transparent 60%);
+
+  /* Chassis — the brand Beige ramp, verbatim, with chroma falling as the surface lifts toward
+     white (0.0173 → 0). Dark's fix was to pull its ladder apart upward; light cannot lift, because
+     `--card` is already white, so the only direction available is DOWN. The void drops to beige-700
+     and card-over-void goes 0.057 → 0.073 L (1.18 → 1.24). beige-800 is not available: at relative
+     luminance 0.7166 it sits below the text floor above.
+
+     The void is deliberately NOT `--muted` any more. It is decorative ground, not a text surface,
+     and separating the two is what lets `--muted` stay light enough for a third text tier to exist
+     (see below). Seven tokens now resolve to six distinct planes; they used to resolve to four. */
   --background: #fdfaf4;
-  --foreground: #0a2930;
+  --surface-inset: #f8f2eb;
   --card: #ffffff;
-  --card-foreground: #0a2930;
   --popover: #ffffff;
+  --secondary: #faf6f1;
+  --muted: #f4ece3;
+  /* The sidebar recedes below the canvas, as in dark: navigation recedes, content comes forward.
+     It used to be #ffffff, i.e. the same plane as `--card`. */
+  --sidebar: #f8f2eb;
+
+  /* Type — one ink, three tiers. The diagnosis was not that the ink was wrong but that there were
+     three different ones: `--foreground` at H 215°, `--muted-foreground` at 233°, `--text-subtle`
+     at 168° — a 65° spread across three steps of what is supposed to be one ladder. Tier 1 is brand
+     ink-800 and does not move; tiers 2 and 3 are re-derived at its hue, so the spread is now 3.1°.
+
+     `--text-subtle` was the real fault: at #8a938f it cleared 4.5:1 on NOTHING (3.16 on white down
+     to 2.67 on the canvas) while carrying table headers, placeholders and sidebar nav labels —
+     running text, not decoration.
+
+     THE RULE THAT MAKES A THIRD TIER POSSIBLE: only tiers 1 and 2 may sit directly on the canvas.
+     Require tier 3 to clear 4.5:1 on the void as well and it collapses into tier 2 — searched that
+     way the two land ΔL 0.026 apart, which is not a ladder, it is one colour printed twice.
+     Excluding the void buys the third step ΔL 0.088. Verified against every call site: placeholders
+     and sidebar labels sit on `--surface-inset` (4.97), table headers and the command input on the
+     card (5.53), nav hover on `--secondary` (5.14). None renders on the canvas. */
+  --foreground: #0a2930;
+  --card-foreground: #0a2930;
   --popover-foreground: #0a2930;
-  --primary: #1f7475;
-  --primary-foreground: #f7fffc;
-  --secondary: #faf5ee;
   --secondary-foreground: #0a2930;
-  --muted: #f4ece1;
-  --muted-foreground: #5b6266;
-  --accent: #1f7475;
-  --accent-foreground: #f7fffc;
+  --muted-foreground: #3d545b;
+  --text-subtle: #5d6b6f;
+
+  /* Signals. The four hues are dark's, to within hex rounding (196° / 153° / 65° / 15°), so a
+     status means one colour in both themes; what is re-derived is lightness and chroma, because a
+     saturated colour on white has to be darker to stay legible. Each family spends the same
+     fraction of the sRGB gamut ceiling its dark counterpart spends, which is what makes them feel
+     equally saturated rather than merely equally named — except that the spread is then capped at
+     1.9× the least-saturated (which is `--primary`, fixed by the brand at C 0.0776). That is the
+     chart ramp's rule applied to chrome, and for the same reason: four families that appear side
+     by side in a status column are a set, and an uncapped rose lands at C 0.223, 2.9× the accent —
+     one member shouting while another whispers. Large areas of saturated colour also fatigue faster
+     in light than in dark, which is the second argument for the cap.
+
+     `--warning` moves furthest: #b07a1e failed every pairing it had (3.72 on white down to 3.15)
+     and sat at hue 75°, the one family that escaped the cross-theme alignment. It is now on dark's
+     64.7° amber and clears 4.5:1 everywhere. `--warning-foreground` becomes plain white (5.29),
+     replacing #fff8e7 at 3.51. */
+  --primary: #1f7475;
+  --primary-foreground: #ffffff;
+  /* mint-800, not a second copy of `--primary`. Two things need it. The `primary` button is
+     `linear-gradient(135deg, var(--primary), var(--accent))`, which in light was a gradient between
+     one colour and itself — a flat fill where dark has a lit one. And `--accent` is the text/border
+     step (`text-accent`, `border-accent`, checked checkboxes), which in this polarity wants to be
+     DARKER than the fill, not lighter. It is the exact mirror of dark's pair, where `--accent`
+     #84f4f4 is the lighter step above `--primary` #29c6c6. White on it reads 6.51. */
+  --accent: #196869;
+  --accent-foreground: #ffffff;
+  --accent-line: rgb(31 116 117 / 0.42);
   --cta: #ffcb97;
-  --cta-foreground: #2f1802;
-  --destructive: #c84747;
-  --destructive-foreground: #fff7f7;
-  --success: #257a4a;
-  --success-foreground: #f7fff9;
-  --warning: #9a6500;
-  --warning-foreground: #fff8e7;
-  --border: #ece4d8;
-  --input: rgb(10 41 48 / 0.16);
+  /* amber-700, snapped from #f9c088 — it was ΔE 0.0048 off a real brand step for no reason. */
+  --cta-hover: #f9c289;
+  /* The theme-stable ink rather than a one-off #20140a (12.22 → 11.70; consolidation, not
+     contrast). The CTA is a light fill in both themes and is the one control whose label does not
+     follow the polarity. */
+  --cta-foreground: var(--ink-amber);
+  --success: #2e794a;
+  --success-foreground: #ffffff;
+  --warning: #995e18;
+  --warning-foreground: #ffffff;
+  --destructive: #b64455;
+  --destructive-foreground: #ffffff;
+  /* Light's tints are solid pastels, not alpha, so they get their own derivation rather than a
+     per-tone alpha. Each is the pastel whose separation from the surfaces it lands on is as close
+     as the gamut allows to a common target, with its own full-strength label still clearing 4.5:1
+     on it and body text clearing it too.
+
+     The cool pair and the warm pair are not equally free, and the proposal that predates this pass
+     concluded from the warm pair that all four were stuck. They are not: near white the sRGB
+     ceiling at 196°/153° is 0.075/0.081 against 0.033/0.025 at 66°/15°, so letting the cool tints
+     darken buys them separation the warm ones can never have. Held to a common band instead, so the
+     four read as one set: ΔE 0.057–0.062 from the card, against 0.043–0.057 before.
+
+     `--muted` is the honest exception. A warm pastel cannot move far from a warm chassis — warning
+     and danger sit at ΔE 0.019 from beige-600 and no value fixes that — which is why the 45%
+     same-hue border on `StatusPill`, `Card` and `Button` is mandatory in light rather than
+     decorative. It composites to 1.82–1.88 against its own tint. */
+  --accent-soft: #cdfefe;
+  --success-soft: #dbfee3;
+  --warning-soft: #feead7;
+  --destructive-soft: #fee8e8;
+  /* Light DOES need a second rose step, and the previous note here was wrong about why it did not.
+     The alias was checked against the tint (4.54, fine) but not against the other ground this token
+     labels: `Button variant="danger"` hovers to `bg-destructive/30`, and with the alias in place the
+     label and the wash are the same colour, so every point of alpha eats contrast directly — 3.42 on
+     a card, 3.02 over `--muted`.
+
+     The token's job is "the rose that labels a rose ground". In dark that ground is dark, so the
+     step is lighter; in light the ground is light, so the step is DEEPER — same role, mirrored,
+     exactly like the `--accent`/`--primary` pair above. Same hue and the same 68% of the gamut
+     ceiling as `--destructive`, ΔL 0.100 below it. Clears 4.57 on the darkest hover wash it can
+     meet and 6.87 on the tint. */
+  --destructive-bright: #8a323f;
+
+  /* Edges. In light, elevation cannot come from a lightness step — `--card` is white — so it comes
+     from the hairline and the shadow, and the hairline has to do real work. `--border` moves to
+     beige-800: 1.37 against the card, the same weight class as dark's `--border-strong` composite
+     (1.56) and a genuine edge where #ece4d8 gave 1.26 and the card's own shadow ring gave 1.09. */
+  --border: #e8dacc;
+  --border-strong: #dccfc2;
   --ring: #1f7475;
+  --sidebar-border: #efe5db;
+  --header-bg: rgb(253 250 244 / 0.82);
+  /* Scrim and skeleton move onto the ink ladder's own hue (215°) instead of two unrelated teals at
+     186° and 215°. The scrim is also a little heavier, because it now has to dim a deeper canvas. */
+  --scrim: rgb(10 41 48 / 0.38);
+  --skeleton: rgb(10 41 48 / 0.07);
+  --skeleton-sheen: rgb(10 41 48 / 0.03);
+
+  /* The shadow ink stays brand mint-900 — rgb(12 66 63) is the styleguide's own `--shadow-1..3`
+     recipe and the one sanctioned place teal touches the chassis. Both layers are stronger: the
+     ring went 0.05 → 0.07 (1.09 → 1.13 against the page) and the cast 0.22 → 0.26, because the
+     widened ladder gives a card more to lift off. */
+  --elevation-pop: 0 18px 44px -14px rgb(12 66 63 / 0.26), 0 0 0 1px rgb(12 66 63 / 0.07);
+
+  /* Light's own glows, finally — these two used to hold `0 10px 26px -12px var(--accent-line)`,
+     which is the exact "invisible glow" dark §12.2 was written to kill: a 40%-alpha colour pulled
+     in 12px. Light inherited it verbatim and kept it.
+
+     A glow does not translate. Emitted light on a near-black ground reads as light; the same shape
+     on paper reads as a smudge. The light equivalent of "this control is lit" is a COLOURED
+     SHADOW — the element tints the page beneath it instead of lighting the room around it — so
+     these are directional, not omnidirectional, with a tight second layer for the contact edge.
+     Still two of them, and still keyed to the control's own family: a warm control lit by mint is
+     the giveaway of a palette applied by search-and-replace. */
+  --elevation-glow:
+    0 10px 30px -10px rgb(31 116 117 / 0.45), 0 2px 10px -4px rgb(31 116 117 / 0.22);
+  --elevation-glow-warm:
+    0 10px 30px -10px rgb(250 171 89 / 0.55), 0 2px 10px -4px rgb(250 171 89 / 0.3);
 }
 
 * {
@@ -118,19 +605,219 @@
 
 html {
   min-height: 100%;
-  background: var(--background);
+  background: var(--canvas-base);
 }
 
 body {
   min-height: 100vh;
   margin: 0;
-  background:
-    radial-gradient(circle at top left, rgb(55 227 222 / 0.12), transparent 30rem),
-    radial-gradient(circle at 80% 10%, rgb(255 198 139 / 0.14), transparent 24rem),
-    var(--background);
   color: var(--foreground);
   font-family: var(--font-lexend);
   text-rendering: geometricPrecision;
+}
+
+/* The app canvas. `AppShell` needs its own copy of this because it owns the
+   `h-screen`/`overflow-hidden` scroll container and would otherwise paint over the body. */
+body,
+.sheet-canvas {
+  background: var(--canvas-aurora), var(--canvas-base);
+}
+
+/* Atmosphere — the brand layer behind the app (docs/dark-mode-redesign.md §5,
+   docs/light-mode-redesign.md §12). Both themes: the geometry below is shared and only the
+   `--atmo-*` values differ, so dark reads the shapes as light and light reads them as ink. Mounted by
+   `AppShell` and `AuthShell` inside their own positioned roots, so `absolute` rather than the
+   usual `fixed` — the auth screen must keep it off the brand panel. Content sits at z-index 2,
+   above both layers; surfaces stay opaque, so on dense screens the atmosphere lives only in the
+   gutters. */
+.sheet-atmosphere {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  pointer-events: none;
+  contain: strict; /* isolates paint; the layer never reflows with content */
+}
+
+/* The dot lattice appears only toward the edges: transparent at the centre-top where content
+   lives, opaque toward the gutters. */
+.sheet-atmosphere::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image: radial-gradient(circle at 1px 1px, var(--atmo-dot) 1px, transparent 0);
+  background-size: 24px 24px;
+  mask-image: radial-gradient(120% 90% at 50% 0%, transparent 34%, #000 100%);
+}
+
+/* Brand blobs as light, not ink: the styleguide silhouettes, gradient-lit at single-digit alpha
+   with a soft blur — enough that the form still reads, not so little that it becomes a sticker.
+   The offset outline echo inside each SVG carries the edge, exactly as the styleguide's Group
+   compositions draw it. Anchored to opposite corners and bleeding off-canvas — a glimpsed shape
+   reads as depth, a complete one reads as clip art.
+
+   Drift follows the AuthGyroscope rules established above: one translate axis per element, the
+   swell on the independent `scale` property, and frame 0 of every loop is the resting state —
+   centred and unscaled — because `prefers-reduced-motion` collapses each loop to one iteration
+   and the visual baselines freeze infinite animations at frame 0. The wave and the swoosh are
+   still: two moving glows are a mood, four are a screensaver. */
+.sheet-blob {
+  position: absolute;
+}
+
+/* Fill and echo carry different blurs: the fill dissolves into a glow, the echo stays a
+   near-crisp line so the silhouette's form survives. Anchors keep each blob's lit lobe clear of
+   the opaque sidebar and the header, which would otherwise swallow it. */
+.sheet-blob-fill,
+.sheet-blob-echo {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+/* 40px rather than 26px. At the old radius the blob still had a discernible edge, and a soft-edged
+   warm patch over a cool near-black is exactly what a camouflage blotch is — the shape read as
+   painted-on rather than lit. Blurring further past the silhouette's own scale turns it back into
+   a light source; the echo below is what keeps the form legible. */
+.sheet-blob-fill {
+  filter: blur(40px);
+}
+
+.sheet-blob-echo {
+  filter: blur(1.5px);
+}
+
+.sheet-blob--mint {
+  top: -14%;
+  left: 9%;
+  width: 56vmax;
+  height: auto;
+  aspect-ratio: 652 / 628;
+  animation:
+    sheet-blob-drift-x 120s linear infinite,
+    sheet-blob-swell 90s var(--ease-standard) infinite;
+}
+
+.sheet-blob--peach {
+  right: -10%;
+  bottom: -18%;
+  width: 50vmax;
+  height: auto;
+  aspect-ratio: 616 / 652;
+  animation:
+    sheet-blob-drift-y 170s linear infinite,
+    sheet-blob-swell 90s var(--ease-standard) infinite;
+}
+
+/* The wave ridge sits on the bottom edge like a horizon line; the swoosh bleeds off the top-right
+   corner alongside the aurora. Both are stationary and quieter than the blobs. */
+/* Wider than the original 26vmax, and barely blurred: it is line-art now (see `Atmosphere.tsx`),
+   so it wants the arc's near-crisp treatment rather than the blobs' bloom. */
+.sheet-wave {
+  position: absolute;
+  bottom: -6%;
+  left: 18%;
+  width: 38vmax;
+  height: auto;
+  aspect-ratio: 250 / 91;
+  filter: blur(1.5px);
+}
+
+.sheet-arc {
+  position: absolute;
+  top: 2%;
+  right: -7%;
+  width: 32vmax;
+  height: auto;
+  aspect-ratio: 479 / 278;
+  filter: blur(2px);
+}
+
+/* The same four-stop sine as the gyroscope drift: ease-out to one extreme, ease-in-out across to
+   the other, ease-in home — zero velocity meets zero velocity at the extremes, and 0% is the
+   centre rather than an endpoint. */
+@keyframes sheet-blob-drift-x {
+  0% {
+    translate: 0 0;
+    animation-timing-function: ease-out;
+  }
+
+  25% {
+    translate: 3rem 0;
+    animation-timing-function: ease-in-out;
+  }
+
+  75% {
+    translate: -3rem 0;
+    animation-timing-function: ease-in;
+  }
+
+  100% {
+    translate: 0 0;
+  }
+}
+
+@keyframes sheet-blob-drift-y {
+  0% {
+    translate: 0 0;
+    animation-timing-function: ease-out;
+  }
+
+  25% {
+    translate: 0 2.5rem;
+    animation-timing-function: ease-in-out;
+  }
+
+  75% {
+    translate: 0 -2.5rem;
+    animation-timing-function: ease-in;
+  }
+
+  100% {
+    translate: 0 0;
+  }
+}
+
+@keyframes sheet-blob-swell {
+  0%,
+  100% {
+    scale: 1;
+  }
+
+  50% {
+    scale: 1.03;
+  }
+}
+
+/* Grain, so the faint aurora gradients don't band on 8-bit panels. The turbulence noise is moved
+   into *alpha* by the feColorMatrix (white with varying opacity), because `mix-blend-mode:
+   overlay` preserves blacks and would do almost nothing at this lightness. `stitchTiles` makes
+   the 160px tile seamless. `baseFrequency` and `--atmo-grain` are the two numbers to tune on real
+   hardware; if paint cost shows up, rasterise the tile to a WebP in `public/`. */
+.sheet-grain {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  opacity: var(--atmo-grain);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix type='matrix' values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0.28 0.28 0.28 0 0'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23g)'/%3E%3C/svg%3E");
+}
+
+/* Only the grain. The atmosphere itself ships to light (docs/light-mode-redesign.md §12) — the
+   silhouettes are drawn as ink on a warm page in the styleguide, so light is the layer's native
+   habitat, not an adaptation of it. Grain stays out: it exists because 8-bit near-black radials
+   band, and its tile is white-alpha noise, which composites to nothing at L ≈ 0.91. */
+.light .sheet-grain {
+  display: none;
+}
+
+/* Reduced motion is handled by the global block at the end of this file (every loop collapses to
+   its frame-0 resting state). Reduced transparency switches the drift off as well. */
+@media (prefers-reduced-transparency: reduce) {
+  .sheet-blob {
+    animation: none;
+  }
 }
 
 button,
@@ -141,18 +828,30 @@ textarea {
 }
 
 ::selection {
-  background: rgb(55 227 222 / 0.28);
+  background: rgb(41 198 198 / 0.32);
 }
 
-:focus-visible {
-  outline: 2px solid var(--ring);
-  outline-offset: 2px;
-}
+/* The only layered rules in this file, and they have to be. A control that wants a different focus
+   treatment cancels this one with `focus-visible:outline-none`, and that utility compiles into
+   Tailwind's `@layer utilities` — unlayered, the rule below would outrank it (the mechanism the
+   `.auth-gyro-layer` note relies on), which is how every such call site ended up compositing a
+   second ring on top of this outline instead of replacing it. Layered, `base` loses to `utilities`
+   and the cancel works.
 
-[data-auth-input]:focus,
-[data-auth-input]:focus-visible {
-  outline: none;
-  outline-offset: 0;
+   Two treatments live on top of this: controls with their own visible border brighten that border
+   instead (`focusChromeClassName`), and borderless controls declare nothing and take the outline
+   below. See `docs/tokens.md`. `[data-auth-input]` still wins here on specificity. */
+@layer base {
+  :focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: 2px;
+  }
+
+  [data-auth-input]:focus,
+  [data-auth-input]:focus-visible {
+    outline: none;
+    outline-offset: 0;
+  }
 }
 
 [data-auth-input]:-webkit-autofill,
@@ -169,25 +868,51 @@ textarea {
   font-family: var(--font-poppins);
 }
 
+/* Reads `--elevation-pop`, not `--shadow-soft`: the latter is a referencing `@theme inline` entry
+   and so is never emitted as a custom property. */
 .sheet-panel {
   border: 1px solid var(--border);
-  background: color-mix(in srgb, var(--card) 92%, transparent);
-  box-shadow: var(--shadow-soft);
+  background: var(--card);
+  box-shadow: var(--elevation-pop);
 }
 
-.auth-shell-orbit-ring {
-  transform-origin: 280px 280px;
-  animation: auth-shell-orbit-spin 60s linear infinite;
+/* The trend line's own light (`ChartPrimitives`). `flood-opacity` is a real CSS property on
+   `feDropShadow`, not just a presentation attribute, which is the only way to theme an SVG filter
+   — the attribute form cannot read a `var()`. Dark gets a glow around the stroke; light gets a
+   quarter of it, because a coloured bloom around a dark line on white is a blurred line, not a lit
+   one. Not removed outright in light: at 0.14 it still softens the stroke's contact with the area
+   fill under it, which is what stops the two reading as separate objects. */
+.sheet-trend-glow {
+  flood-opacity: 0.55;
+}
+
+.light .sheet-trend-glow {
+  flood-opacity: 0.14;
+}
+
+.sheet-shimmer {
+  background: linear-gradient(
+    90deg,
+    var(--skeleton) 25%,
+    var(--skeleton-sheen) 50%,
+    var(--skeleton) 75%
+  );
+  background-size: 220% 100%;
+  animation: sheet-shimmer 1.6s var(--ease-standard) infinite;
+}
+
+@keyframes sheet-shimmer {
+  from {
+    background-position: -180% 0;
+  }
+
+  to {
+    background-position: 180% 0;
+  }
 }
 
 .auth-shell-float {
   animation: auth-shell-float 7s var(--ease-standard) infinite;
-}
-
-@keyframes auth-shell-orbit-spin {
-  to {
-    transform: rotate(360deg);
-  }
 }
 
 @keyframes auth-shell-float {
@@ -201,6 +926,385 @@ textarea {
   }
 }
 
+/* AuthGyroscope — the auth panel's ring cage. Two constraints shape every keyframe below.
+   1. The `prefers-reduced-motion` block at the end of this file drops every animation to one
+      iteration, so each loop lands on its own 100% frame. Every looping keyframe here therefore ends
+      where it began, and the two that cannot (the pings) are switched off there instead.
+   2. `playwright.visual.config.ts` screenshots with `animations: "disabled"`, which cancels infinite
+      animations to frame 0 and fast-forwards finite ones to their end. Frame 0 of each loop is
+      therefore the frame any visual baseline would capture, so the ring phases that make up frame 0
+      are chosen as a composition rather than left at zero. */
+/* The cage wanders rather than sitting still, and the two axes are deliberately on separate elements.
+   An element has one `translate`, so driving x and y from a single animation puts them on one clock and
+   the cage retraces one closed loop — recognisable within a minute. Split over the root and the stage
+   they run at 53s and 79s, both prime, so the composite path is a Lissajous figure that only closes
+   after their product: 4189s, or about 70 minutes. The 37s swell is prime to both again.
+
+   `translate` and `scale` rather than `transform`, because they are independent properties: the ring
+   planes inside own `transform` outright, and a group transform here would have to be composed into
+   every one of them.
+
+   Frame 0 of all three is the resting state — cage centred in its box, unscaled — which is where both a
+   frozen screenshot and `prefers-reduced-motion` land. */
+.auth-gyro {
+  --gyro-drift-x: 4rem;
+  --gyro-drift-y: 1rem;
+
+  pointer-events: none;
+  /* The keyframes carry their own per-segment easing; this only fills the shorthand. */
+  animation: auth-gyro-drift-x 53s linear infinite;
+}
+
+.auth-gyro-stage {
+  position: absolute;
+  inset: 0;
+  perspective: 1100px;
+  transform-style: preserve-3d;
+  animation:
+    auth-gyro-drift-y 79s linear infinite,
+    auth-gyro-swell 37s var(--ease-standard) infinite;
+}
+
+/* How far it may wander, in one expression per axis instead of a ladder of breakpoints.
+
+   The hub is a 6rem tile and it may not touch the copy, the footer, or the panel's edge. Measured
+   panel-relative across all four moods in both locales, the copy block bottoms out at `0.1H + 331` and
+   the footer starts at `H - 96`, which puts the clear band between them at `0.55H + 118` — the `top`
+   `AuthShell` uses — with a half-height of `0.45H - 280`. `45dvh - 300px` is that half-height less a
+   20px margin, at every window height, which is why no height queries are needed. Horizontally the
+   panel is `46%` of the window capped at `620px`, so half of it is `min(23vw, 310px)`, and 70px off
+   that clears the tile's own half-width plus the same kind of margin.
+
+   Both clamp at 0: under about 590px tall the copy and footer leave no room for the tile at all, and a
+   still hub is the honest answer there rather than one that wanders into text. The x and y limits are
+   independent — the band sits entirely below the copy, so how far across the panel the hub is cannot
+   put it back into the text — which is what makes two separate axes safe in the first place. */
+@media (width >= 64rem) {
+  .auth-gyro {
+    --gyro-drift-x: max(0px, calc(min(23vw, 310px) - 70px));
+    --gyro-drift-y: max(0px, calc(45dvh - 300px));
+  }
+}
+
+/* `display` deliberately stays out of this rule and is a `grid` utility on the element instead.
+   Everything in this file bar the focus block is unlayered, and unlayered declarations outrank
+   Tailwind's `@layer utilities` — a `display: grid` here would quietly beat the `hidden` that hides
+   three of these layers below `lg`. */
+.auth-gyro-layer {
+  position: absolute;
+  inset: 0;
+  transform-style: preserve-3d;
+  animation: auth-gyro-in 900ms var(--ease-standard) both;
+  animation-delay: var(--gyro-in-delay, 0ms);
+}
+
+/* Centred by the layer's grid rather than by a translate, so `transform` is free to carry nothing but
+   the tilt and `transform-origin` stays the plane's own centre. */
+.auth-gyro-plane {
+  position: relative;
+  width: var(--gyro-diameter);
+  aspect-ratio: 1;
+  transform: rotateZ(var(--gyro-tilt-z)) rotateX(var(--gyro-tilt-x));
+  transform-style: preserve-3d;
+}
+
+.auth-gyro-spin {
+  position: absolute;
+  inset: 0;
+  transform: rotateZ(var(--gyro-phase, 0deg));
+  transform-style: preserve-3d;
+  animation: auth-gyro-turn var(--gyro-duration, 30s) linear infinite;
+  animation-direction: var(--gyro-direction, normal);
+}
+
+.auth-gyro-arm {
+  position: absolute;
+  inset: 0;
+  transform: rotateZ(var(--gyro-arm, 0deg));
+  transform-style: preserve-3d;
+}
+
+.auth-gyro-dot {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  width: var(--gyro-dot, 8px);
+  height: var(--gyro-dot, 8px);
+  border-radius: 50%;
+  background: radial-gradient(
+    circle,
+    #f4ffff 0%,
+    #3affff 42%,
+    rgb(41 198 198 / 0.5) 66%,
+    rgb(41 198 198 / 0) 78%
+  );
+  box-shadow: 0 0 18px 6px rgb(58 255 255 / 0.5);
+  transform: translate(-50%, -50%) rotateX(var(--gyro-face, 0deg));
+}
+
+.auth-gyro-dot--amber {
+  background: radial-gradient(
+    circle,
+    #fff6ec 0%,
+    #fdcfae 45%,
+    rgb(253 207 174 / 0.4) 68%,
+    rgb(253 207 174 / 0) 80%
+  );
+  box-shadow: 0 0 18px 6px rgb(253 207 174 / 0.4);
+}
+
+/* The gradient runs clockwise from the dot's own position, and `--gyro-trail-flip` mirrors it so the
+   arc falls behind the dot on rings that turn the other way. */
+.auth-gyro-trail {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: conic-gradient(
+    from 0deg,
+    rgb(58 255 255 / 0.75) 0deg,
+    rgb(58 255 255 / 0.28) 15deg,
+    rgb(58 255 255 / 0) 34deg,
+    rgb(58 255 255 / 0) 360deg
+  );
+  mask-image: radial-gradient(farthest-side, transparent calc(100% - 6px), #000 calc(100% - 2px));
+  transform: scaleX(var(--gyro-trail-flip, 1));
+}
+
+/* Filters are applied before masks, so the glow lives on the wrapper: on the arc itself it would
+   bloom around the whole disc instead of around the visible arc. */
+.auth-gyro-comet {
+  position: absolute;
+  inset: 0;
+  filter: drop-shadow(0 0 16px rgb(58 255 255 / 0.7));
+}
+
+/* The second sweep runs on a ring that is already the brightest thing in the cage, so it carries less
+   glow — two full-strength sweeps crossing turn the centre into a smear. */
+.auth-gyro-comet--soft {
+  opacity: 0.6;
+  filter: drop-shadow(0 0 12px rgb(132 244 244 / 0.45));
+}
+
+.auth-gyro-comet-arc {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: conic-gradient(
+    from 0deg,
+    rgb(240 255 255 / 0.98) 0deg,
+    rgb(58 255 255 / 0.62) 12deg,
+    rgb(58 255 255 / 0.2) 38deg,
+    rgb(58 255 255 / 0) 68deg,
+    rgb(58 255 255 / 0) 360deg
+  );
+  mask-image: radial-gradient(farthest-side, transparent calc(100% - 7px), #000 calc(100% - 2px));
+}
+
+.auth-gyro-aura {
+  position: absolute;
+  inset: 8%;
+  border-radius: 50%;
+  background: radial-gradient(
+    circle,
+    rgb(58 255 255 / 0.22) 0%,
+    rgb(41 198 198 / 0.13) 42%,
+    rgb(41 198 198 / 0) 70%
+  );
+  filter: blur(18px);
+  animation: auth-gyro-aura 11s var(--ease-standard) infinite;
+}
+
+.auth-gyro-pulse {
+  position: absolute;
+  inset: 0;
+  border: 1px solid rgb(132 244 244 / 0.5);
+  border-radius: 50%;
+  opacity: 0;
+  animation: auth-gyro-pulse 6s var(--ease-standard) infinite;
+  animation-delay: var(--gyro-delay, 0s);
+}
+
+.auth-gyro-hub {
+  position: absolute;
+  inset: 0;
+  place-items: center;
+  animation: auth-gyro-in 900ms var(--ease-standard) both;
+  animation-delay: 340ms;
+}
+
+.auth-gyro-hub-core {
+  position: relative;
+  display: grid;
+  place-items: center;
+}
+
+.auth-gyro-hub-halo {
+  position: absolute;
+  inset: -70%;
+  border-radius: 50%;
+  background: radial-gradient(
+    circle,
+    rgb(58 255 255 / 0.3) 0%,
+    rgb(41 198 198 / 0.14) 42%,
+    rgb(41 198 198 / 0) 72%
+  );
+  /* 7.4s against the tile's 5s: the two never line up, so the centre never pulses on a beat. */
+  animation: auth-gyro-halo 7.4s var(--ease-standard) infinite;
+}
+
+.auth-gyro-hub-tile {
+  position: relative;
+  display: grid;
+  place-items: center;
+  border: 1px solid rgb(255 255 255 / 0.22);
+  border-radius: 22px;
+  background: linear-gradient(160deg, rgb(255 255 255 / 0.2), rgb(255 255 255 / 0.06));
+  box-shadow:
+    0 24px 60px -22px rgb(0 0 0 / 0.65),
+    0 0 42px -6px rgb(58 255 255 / 0.42);
+  backdrop-filter: blur(10px);
+  animation: auth-gyro-breathe 5s var(--ease-standard) infinite;
+}
+
+/* One axis, swung from the middle out to each extreme and back — the shape of a sine, built from four
+   stops rather than sampled into a dozen.
+
+   The per-keyframe easings are what make it a sine and not a bounce. Centre to extreme decelerates
+   (`ease-out`), extreme through centre to the far extreme is `ease-in-out`, and the last quarter back to
+   the middle accelerates (`ease-in`). Every join therefore meets zero velocity against zero velocity at
+   the extremes, and full velocity against full velocity where the loop closes — so nothing snaps, and
+   0% is the centre rather than an endpoint. Starting at an extreme instead, which `alternate` would do,
+   would leave a frozen page resting hard against one side. */
+@keyframes auth-gyro-drift-x {
+  0% {
+    translate: 0 0;
+    animation-timing-function: ease-out;
+  }
+
+  25% {
+    translate: var(--gyro-drift-x) 0;
+    animation-timing-function: ease-in-out;
+  }
+
+  75% {
+    translate: calc(-1 * var(--gyro-drift-x)) 0;
+    animation-timing-function: ease-in;
+  }
+
+  100% {
+    translate: 0 0;
+  }
+}
+
+@keyframes auth-gyro-drift-y {
+  0% {
+    translate: 0 0;
+    animation-timing-function: ease-out;
+  }
+
+  25% {
+    translate: 0 var(--gyro-drift-y);
+    animation-timing-function: ease-in-out;
+  }
+
+  75% {
+    translate: 0 calc(-1 * var(--gyro-drift-y));
+    animation-timing-function: ease-in;
+  }
+
+  100% {
+    translate: 0 0;
+  }
+}
+
+/* Scales about the cage's own centre, which is where the hub sits — so the rings swell and the tile
+   stays put. That keeps the swell out of the clearance arithmetic above. */
+@keyframes auth-gyro-swell {
+  0%,
+  100% {
+    scale: 1;
+  }
+
+  50% {
+    scale: 1.06;
+  }
+}
+
+@keyframes auth-gyro-turn {
+  from {
+    transform: rotateZ(var(--gyro-phase, 0deg));
+  }
+
+  to {
+    transform: rotateZ(calc(var(--gyro-phase, 0deg) + 360deg));
+  }
+}
+
+@keyframes auth-gyro-in {
+  from {
+    opacity: 0;
+    transform: scale(0.72);
+  }
+
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes auth-gyro-pulse {
+  0% {
+    opacity: 0;
+    transform: scale(0.18);
+  }
+
+  16% {
+    opacity: 0.55;
+  }
+
+  100% {
+    opacity: 0;
+    transform: scale(1.04);
+  }
+}
+
+@keyframes auth-gyro-aura {
+  0%,
+  100% {
+    opacity: 0.75;
+    transform: scale(1);
+  }
+
+  50% {
+    opacity: 1;
+    transform: scale(1.08);
+  }
+}
+
+@keyframes auth-gyro-halo {
+  0%,
+  100% {
+    opacity: 0.7;
+    transform: scale(0.94);
+  }
+
+  50% {
+    opacity: 1;
+    transform: scale(1.06);
+  }
+}
+
+@keyframes auth-gyro-breathe {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+
+  50% {
+    transform: scale(1.03);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
@@ -209,5 +1313,11 @@ textarea {
     animation-iteration-count: 1 !important;
     scroll-behavior: auto !important;
     transition-duration: 0.01ms !important;
+  }
+
+  /* The pings are the one loop whose 100% frame is invisible, and a single fast-forwarded iteration
+     would leave a stray ring mid-expansion. They carry no meaning, so they simply go. */
+  .auth-gyro-pulse {
+    display: none;
   }
 }

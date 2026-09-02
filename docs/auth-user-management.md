@@ -112,6 +112,10 @@ and enforce domain status:
 - Trusted devices may be allowed for ordinary members.
 - Admins should not rely only on trusted-device bypass for sensitive management actions; sensitive
   admin actions can later require recent 2FA verification.
+- Local dev only: setting `AUTH_SECURITY_SETUP_MODE="optional"` skips the security-setup gate
+  (`src/server/auth/app-access.ts`), including the admin TOTP requirement, so a freshly bootstrapped
+  local admin doesn't need a real authenticator app. It is only read when `NODE_ENV !== "production"`;
+  the Dockerfile hardcodes `NODE_ENV=production` for every deploy, so it has no effect there.
 
 ## Passkey Rules
 
