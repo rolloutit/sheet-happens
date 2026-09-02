@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 
 import { resolveLocale } from "@/src/i18n/locales";
 import { requireActiveAppMemberForAction } from "@/src/server/auth/app-access";
+import { authErrorStatus } from "@/src/server/auth/route-errors";
 import {
   getMemberNotificationSummary,
   markAllNotificationsRead,
@@ -15,15 +16,24 @@ export async function GET(request: Request) {
     const locale = resolveLocale(url.searchParams.get("locale")) ?? "hu";
     const summary = await getMemberNotificationSummary({ memberId: member.id, locale, limit: 5 });
     return NextResponse.json(summary, { headers: { "Cache-Control": "private, no-store" } });
-  } catch {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  } catch (error) {
+    return errorResponse(error, "[notifications] summary read failed");
   }
 }
 
 export async function PATCH(request: Request) {
   try {
     const { member } = await requireActiveAppMemberForAction();
-    const body = (await request.json()) as { notificationId?: unknown; all?: unknown };
+
+    let body: { notificationId?: unknown; all?: unknown };
+    try {
+      const parsed: unknown = await request.json();
+      if (typeof parsed !== "object" || parsed === null) throw new Error("Body must be an object.");
+      body = parsed as { notificationId?: unknown; all?: unknown };
+    } catch {
+      return NextResponse.json({ error: "Invalid request" }, { status: 400 });
+    }
+
     if (body.all === true) {
       await markAllNotificationsRead(member.id);
     } else if (typeof body.notificationId === "string") {
@@ -32,7 +42,17 @@ export async function PATCH(request: Request) {
       return NextResponse.json({ error: "Invalid request" }, { status: 400 });
     }
     return NextResponse.json({ ok: true });
-  } catch {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  } catch (error) {
+    return errorResponse(error, "[notifications] read-state update failed");
   }
+}
+
+function errorResponse(error: unknown, logMessage: string) {
+  const authStatus = authErrorStatus(error);
+
+  if (authStatus === 401) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (authStatus === 403) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+
+  console.error(logMessage, error);
+  return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
 }

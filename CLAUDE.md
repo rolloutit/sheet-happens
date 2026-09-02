@@ -15,7 +15,8 @@ pnpm only — `packageManager: pnpm@11.5.3`, Node `24.14.0` (`.nvmrc`). Never np
   `db:dev:seed`, `db:dev:stop`. Requires Docker running.
 - `pnpm db:generate` — regenerate Prisma client after any schema edit
 - `pnpm typecheck` · `pnpm lint` · `pnpm format` (check only; `pnpm format:write` fixes)
-- `pnpm test` — Vitest/jsdom, picks up `src/**/*.test.{ts,tsx}` only. Filter while iterating:
+- `pnpm test` — Vitest/jsdom, picks up `src/**/*.test.{ts,tsx}` and `app/**/*.test.{ts,tsx}`
+  (browser tests excluded). Filter while iterating:
   `pnpm test src/lib/duration.test.ts`
 - `pnpm test:browser` — Vitest browser mode, `src/**/*.browser.{test,spec}.{ts,tsx}`
 - `pnpm storybook` · `pnpm test-storybook`
@@ -78,7 +79,9 @@ Follow `src/components/README.md`. In short:
 
 ## Testing conventions
 
-- Unit and domain tests colocate as `*.test.ts` beside the source under `src/`.
+- Unit and domain tests colocate as `*.test.ts` beside the source under `src/`. Route handler
+  tests colocate beside the handler in `app/` (e.g. `app/api/notifications/route.test.ts`) — Next
+  routes only `route`/`page` basenames, so they are never served.
 - Visual baselines in `visual/storybook.spec.ts-snapshots/` are checked in and platform-suffixed
   (`-darwin`). Refresh with `pnpm test:visual:update` **only** for an intentional visual change, and
   say so in the commit.

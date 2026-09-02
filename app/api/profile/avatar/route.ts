@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { requireActiveAppMemberForAction } from "@/src/server/auth/app-access";
+import { authErrorStatus } from "@/src/server/auth/route-errors";
 import { createMemberAvatarReadUrl, MemberPreferenceError } from "@/src/server/settings";
 
 export const dynamic = "force-dynamic";
@@ -18,6 +19,11 @@ export async function GET() {
     if (error instanceof MemberPreferenceError) {
       return new NextResponse(null, { status: 404 });
     }
-    return new NextResponse(null, { status: 401 });
+
+    const authStatus = authErrorStatus(error);
+    if (authStatus) return new NextResponse(null, { status: authStatus });
+
+    console.error("[profile] avatar access failed", error);
+    return new NextResponse(null, { status: 500 });
   }
 }
