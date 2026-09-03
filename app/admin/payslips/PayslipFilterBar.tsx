@@ -18,7 +18,7 @@ type FilterKey = "query" | "employeeMemberId" | "month";
 
 export type PayslipFilterBarProps = {
   query: string;
-  employeeMemberId: string;
+  employeeMemberIds: readonly string[];
   /** `YYYY-MM`. */
   month: string;
   employeeOptions: readonly { id: string; name: string; email: string }[];
@@ -35,7 +35,7 @@ export type PayslipFilterBarProps = {
  */
 export function PayslipFilterBar({
   query,
-  employeeMemberId,
+  employeeMemberIds,
   month,
   employeeOptions,
   monthOptions,
@@ -44,17 +44,29 @@ export function PayslipFilterBar({
   const router = useRouter();
   const pickerLabels = usePickerLabels();
 
-  const current: Record<FilterKey, string> = {
+  const current: Record<FilterKey, string | readonly string[]> = {
     query,
-    employeeMemberId,
+    employeeMemberId: employeeMemberIds,
     month,
   };
 
-  function hrefWithout(key: FilterKey) {
+  /**
+   * Drops one filter, or — when `value` is given — one value of a multi-select filter,
+   * leaving that filter's other values applied.
+   */
+  function hrefWithout(key: FilterKey, value?: string) {
     const params = new URLSearchParams();
 
-    for (const [name, value] of Object.entries(current)) {
-      if (name !== key && value) params.set(name, value);
+    for (const [name, entry] of Object.entries(current)) {
+      if (typeof entry === "string") {
+        if (name !== key && entry) params.set(name, entry);
+        continue;
+      }
+
+      for (const candidate of entry) {
+        if (name === key && (value === undefined || candidate === value)) continue;
+        params.append(name, candidate);
+      }
     }
 
     const search = params.toString();
@@ -72,12 +84,13 @@ export function PayslipFilterBar({
       leading: <Search className="size-3" aria-hidden="true" />,
     });
   }
-  if (employeeMemberId) {
-    const employee = employeeOptions.find((option) => option.id === employeeMemberId);
+  for (const memberId of employeeMemberIds) {
+    const employee = employeeOptions.find((option) => option.id === memberId);
 
     activeFilters.push({
       id: "employeeMemberId",
-      label: `${t("admin.filters.employee")}: ${employee?.name ?? employeeMemberId}`,
+      value: memberId,
+      label: `${t("admin.filters.employee")}: ${employee?.name ?? memberId}`,
     });
   }
   if (month) {
@@ -103,19 +116,19 @@ export function PayslipFilterBar({
         </div>
         <div className="w-[calc(50%-0.25rem)] sm:w-auto sm:min-w-32 sm:max-w-64">
           <Combobox
+            multiple
             name="employeeMemberId"
             label={t("admin.filters.employee")}
+            // No "all employees" option to carry: an empty selection already is that state,
+            // so the label becomes the placeholder.
             placeholder={t("admin.filters.allEmployees")}
-            defaultValue={employeeMemberId}
+            defaultValue={employeeMemberIds}
             labels={pickerLabels.combobox}
-            options={[
-              { value: "", label: t("admin.filters.allEmployees") },
-              ...employeeOptions.map((employee) => ({
-                value: employee.id,
-                label: employee.name,
-                meta: employee.email,
-              })),
-            ]}
+            options={employeeOptions.map((employee) => ({
+              value: employee.id,
+              label: employee.name,
+              meta: employee.email,
+            }))}
           />
         </div>
         <div className="w-[calc(50%-0.25rem)] sm:w-auto sm:min-w-32 sm:max-w-64">
@@ -142,7 +155,7 @@ export function PayslipFilterBar({
           clear: t("actions.clear"),
           remove: (filter) => t("admin.filters.removeFilter", { filter }),
         }}
-        onRemove={(id) => router.push(hrefWithout(id))}
+        onRemove={(id, value) => router.push(hrefWithout(id, value))}
         onClear={() => router.push("/admin/payslips" as Route)}
       />
     </div>

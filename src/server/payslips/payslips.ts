@@ -3,6 +3,7 @@ import { createHash, randomUUID } from "node:crypto";
 import { prisma } from "@/src/server/db/client";
 import type { Prisma } from "@/src/server/db/generated/client";
 import { getObjectStorage, type ObjectStorage } from "@/src/server/storage";
+import { listSearchParam } from "@/src/lib/search-params";
 import { formatDateOnly, getMonthStart, normalizeDateOnly } from "@/src/server/time-tracking";
 
 export const PAYSLIP_MAX_BYTES = 10 * 1024 * 1024;
@@ -37,7 +38,8 @@ export type PayslipReadAccessInput = {
 };
 
 export type PayslipListFilters = {
-  employeeMemberId?: string | null;
+  /** A repeated query parameter arrives as an array; the picker is a multi-select. */
+  employeeMemberId?: string | string[] | null;
   month?: string | null;
   query?: string | null;
   page?: string | number | null;
@@ -66,7 +68,7 @@ export type PayslipListResult = {
   pageSize: number;
   employeeOptions: Array<{ id: string; name: string; email: string; status: string }>;
   filters: {
-    employeeMemberId: string | null;
+    employeeMemberIds: string[];
     month: string | null;
     query: string;
   };
@@ -501,7 +503,9 @@ export async function listPayslipsForAdmin(
       status: "AVAILABLE" as const,
       deletedAt: null,
     },
-    ...(filters.employeeMemberId ? { employeeMemberId: filters.employeeMemberId } : {}),
+    ...(filters.employeeMemberIds.length > 0
+      ? { employeeMemberId: { in: filters.employeeMemberIds } }
+      : {}),
     ...(filters.month
       ? {
           periodStart: getMonthStart(new Date(`${filters.month}-01T00:00:00.000Z`)),
@@ -558,7 +562,7 @@ export async function listPayslipsForAdmin(
       status: employee.status,
     })),
     filters: {
-      employeeMemberId: filters.employeeMemberId,
+      employeeMemberIds: filters.employeeMemberIds,
       month: filters.month,
       query: filters.query,
     },
@@ -649,7 +653,7 @@ export function normalizePayslipListFilters(filters: PayslipListFilters) {
   const pageSize = Math.min(100, Math.max(1, toPositiveInteger(filters.pageSize, 20)));
 
   return {
-    employeeMemberId: normalizeOptionalString(filters.employeeMemberId),
+    employeeMemberIds: listSearchParam(filters.employeeMemberId ?? undefined),
     month,
     query: normalizeOptionalString(filters.query) ?? "",
     page: toPositiveInteger(filters.page, 1),
