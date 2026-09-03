@@ -61,17 +61,12 @@ export function Combobox(props: ComboboxProps) {
   const selectedLabels = options
     .filter((option) => values.includes(option.value))
     .map((option) => option.label);
-  /**
-   * Past the first choice the trigger shows a count, not chips: it is a fixed-height control
-   * from `controlSurface.ts`, and a row of chips would overflow it. The four URL-filtered
-   * admin lists repeat the chosen values as removable chips under the bar (`FilterChips`),
-   * so there the count is a summary of something already on screen; elsewhere the full list
-   * is reachable through the accessible name and the `title`.
-   */
-  const summary =
-    multiple && values.length > 1
-      ? (labels?.selected?.(values.length) ?? `${values.length} selected`)
-      : selectedLabels[0];
+  const summary = getTriggerSummary({
+    multiple: Boolean(multiple),
+    values,
+    selectedLabels,
+    labels,
+  });
   /**
    * The chosen value belongs in the accessible name because `aria-label` overrides the
    * trigger's own text content. Without it a screen reader hears which filter this is and
@@ -185,7 +180,17 @@ export function Combobox(props: ComboboxProps) {
           */}
           {multiple && values.length > 0 ? (
             <div className="mt-2 flex justify-end border-t border-border pt-2">
-              <Button type="button" variant="ghost" size="sm" onClick={selection.clear}>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                // This button unmounts with the last value, so move focus somewhere useful
+                // first — otherwise a keyboard user is left on `document.body`.
+                onClick={() => {
+                  searchRef.current?.focus();
+                  selection.clear();
+                }}
+              >
                 {labels?.clear ?? "Clear"}
               </Button>
             </div>
@@ -203,6 +208,36 @@ export function Combobox(props: ComboboxProps) {
       ) : null}
     </div>
   );
+}
+
+/**
+ * What the trigger reads.
+ *
+ * Past the first choice it shows a count, not chips: the trigger is a fixed-height control
+ * from `controlSurface.ts`, and a row of chips would overflow it. The four URL-filtered
+ * admin lists repeat the chosen values as removable chips under the bar (`FilterChips`), so
+ * there the count summarizes something already on screen; elsewhere the full list is
+ * reachable through the accessible name and the `title`.
+ *
+ * A value whose option is missing — a project deleted since the link was shared — still
+ * counts. Falling back to the placeholder would render an active filter as "All projects".
+ */
+function getTriggerSummary({
+  multiple,
+  values,
+  selectedLabels,
+  labels,
+}: {
+  multiple: boolean;
+  values: readonly string[];
+  selectedLabels: string[];
+  labels: ComboboxProps["labels"];
+}) {
+  if (!multiple) return selectedLabels[0];
+  if (values.length === 0) return undefined;
+  if (values.length === 1 && selectedLabels.length === 1) return selectedLabels[0];
+
+  return labels?.selected?.(values.length) ?? `${values.length} selected`;
 }
 
 /**
@@ -275,10 +310,9 @@ function ComboboxItem({
  * form participation, and `form.reset()`.
  *
  * In multi mode a native `<select multiple>` serializes as one repeated parameter per chosen
- * value, so a GET form needs no encoding of its own. Reading them back is the parser's job
- * and today's parsers do not: `getSingleParam` in the admin list pages keeps only the first
- * value, so a URL-backed multi filter needs its parser widened to `getAll` in the same
- * change.
+ * value, so a GET form needs no encoding of its own. Reading them back is the parser's job:
+ * `listSearchParam` in `src/lib/search-params.ts` is the one that keeps every value, and a
+ * single-value reader in its place would narrow the filter with no error to show for it.
  */
 function ComboboxFormValue({
   name,
@@ -323,6 +357,17 @@ function ComboboxFormValue({
           {option.label}
         </option>
       ))}
+      {/*
+        A chosen value with no option of its own still needs one, or submitting the form
+        would quietly drop it and widen the filter. Reachable when a shared URL names
+        something since deleted, and only in multi mode — single mode's value is always
+        either an option or the empty fallback above.
+      */}
+      {values.flatMap((value) =>
+        options.some((option) => option.value === value)
+          ? []
+          : [<option key={`unlisted-${value}`} value={value} />],
+      )}
     </select>
   );
 }

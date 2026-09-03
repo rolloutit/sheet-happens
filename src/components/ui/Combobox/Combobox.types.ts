@@ -72,11 +72,11 @@ export type ComboboxSingleProps = ComboboxBaseProps & {
  * collapses to a count past the first choice.
  *
  * The hidden control becomes a `<select multiple>`, so a plain GET form serializes
- * `?name=a&name=b` with no encoding of its own — but the reading side is not free: the admin
- * pages' `getSingleParam` drops everything past the first value, so a URL-backed multi
- * filter has to widen its parser too. An empty array means "nothing filtered", which is why
- * multi-select filters drop the `{ value: "", label: "All …" }` sentinel option their
- * single-select counterparts carry and pass that label as `placeholder` instead.
+ * `?name=a&name=b` with no encoding of its own; the reading side is `listSearchParam` in
+ * `src/lib/search-params.ts`, which is what keeps every value rather than the first. An
+ * empty array means "nothing filtered", which is why multi-select filters drop the
+ * `{ value: "", label: "All …" }` sentinel option their single-select counterparts carry and
+ * pass that label as `placeholder` instead.
  */
 export type ComboboxMultipleProps = ComboboxBaseProps & {
   multiple: true;

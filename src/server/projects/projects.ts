@@ -3,7 +3,7 @@ import {
   isProjectColorToken,
   type ProjectColorToken,
 } from "@/src/lib/project-colors";
-import { firstSearchParam, listSearchParam } from "@/src/lib/search-params";
+import { firstSearchParam, listSearchParam, uniqueValues } from "@/src/lib/search-params";
 import { prisma } from "@/src/server/db/client";
 import { anyOf } from "@/src/server/db/any-of";
 import type { Prisma } from "@/src/server/db/generated/client";
@@ -434,7 +434,8 @@ export function normalizeProjectFilters(
     timelines: listSearchParam(searchParams.timeline)
       .map(normalizeProjectTimelineFilter)
       .filter((timeline): timeline is Exclude<ProjectTimelineFilter, ""> => timeline !== ""),
-    groups: listSearchParam(searchParams.group).map(normalizeProjectGroupFilter),
+    // Deduped after normalizing: two values differing only in whitespace are one group.
+    groups: uniqueValues(listSearchParam(searchParams.group).map(normalizeProjectGroupFilter)),
     assignment: normalizeProjectAssignmentFilter(firstSearchParam(searchParams.assignment)),
     page: parsePositiveInteger(firstSearchParam(searchParams.page), DEFAULT_PAGE),
     pageSize: Math.min(
@@ -973,11 +974,17 @@ function normalizeProjectTypeFilter(value: string): ProjectTypeFilter {
  */
 function buildTimelineClause(timelines: Exclude<ProjectTimelineFilter, "">[], today: Date) {
   return anyOf(
+    // Switched rather than chained so adding a timeline is a type error here instead of
+    // silently falling through to "ended".
     timelines.map<Prisma.ProjectWhereInput>((timeline) => {
-      if (timeline === "current") return buildCurrentProjectDateWhere(today);
-      if (timeline === "future") return { startsOn: { gt: today } };
-
-      return { endsOn: { lt: today } };
+      switch (timeline) {
+        case "current":
+          return buildCurrentProjectDateWhere(today);
+        case "future":
+          return { startsOn: { gt: today } };
+        case "ended":
+          return { endsOn: { lt: today } };
+      }
     }),
   );
 }

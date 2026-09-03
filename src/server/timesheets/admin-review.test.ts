@@ -68,6 +68,17 @@ describe("normalizeAdminTimesheetFilters", () => {
     expect(filters.statuses).toEqual(["SUBMITTED"]);
   });
 
+  /**
+   * `listSearchParam` dedups the raw values, but the status filter upper-cases afterwards —
+   * so without a second pass two chips would share a React key and the trigger would read
+   * "2 selected" for one status.
+   */
+  it("collapses values that differ only in case", () => {
+    expect(normalizeAdminTimesheetFilters({ status: ["submitted", "SUBMITTED"] }).statuses).toEqual(
+      ["SUBMITTED"],
+    );
+  });
+
   it("treats an absent or blank filter as every status", () => {
     expect(normalizeAdminTimesheetFilters({}).statuses).toEqual([]);
     expect(normalizeAdminTimesheetFilters({ status: ["", " "] }).statuses).toEqual([]);

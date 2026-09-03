@@ -3,8 +3,10 @@ import { describe, expect, it } from "vitest";
 import {
   deleteSearchParamValue,
   firstSearchParam,
+  formDataStrings,
   listSearchParam,
   setSearchParamList,
+  uniqueValues,
 } from "./search-params";
 
 describe("firstSearchParam", () => {
@@ -84,5 +86,43 @@ describe("deleteSearchParamValue", () => {
     deleteSearchParamValue(params, "status");
 
     expect(params.has("status")).toBe(false);
+  });
+
+  /**
+   * The value a chip carries has been through a normalizer, so a hand-edited URL that
+   * padded it would otherwise survive the click and only vanish on a second one.
+   */
+  it("matches a value the URL padded with whitespace", () => {
+    const params = new URLSearchParams("group=%20g1%20&group=g2");
+
+    deleteSearchParamValue(params, "group", "g1");
+
+    expect(params.getAll("group")).toEqual(["g2"]);
+  });
+});
+
+describe("uniqueValues", () => {
+  it("collapses duplicates left by a normalizer, keeping the first", () => {
+    expect(uniqueValues(["SUBMITTED", "SUBMITTED", "PAID"])).toEqual(["SUBMITTED", "PAID"]);
+  });
+});
+
+describe("formDataStrings", () => {
+  it("reads every entry of a repeated field", () => {
+    const formData = new FormData();
+
+    formData.append("status", "SUBMITTED");
+    formData.append("status", "REJECTED");
+
+    expect(formDataStrings(formData, "status")).toEqual(["SUBMITTED", "REJECTED"]);
+  });
+
+  it("ignores a file entry, which is never a filter value", () => {
+    const formData = new FormData();
+
+    formData.append("status", "PAID");
+    formData.append("status", new File(["x"], "x.txt"));
+
+    expect(formDataStrings(formData, "status")).toEqual(["PAID"]);
   });
 });

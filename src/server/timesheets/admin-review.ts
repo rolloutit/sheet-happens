@@ -1,5 +1,5 @@
 import { isProjectColorToken, projectColorValues } from "@/src/lib/project-colors";
-import { firstSearchParam, listSearchParam } from "@/src/lib/search-params";
+import { firstSearchParam, listSearchParam, uniqueValues } from "@/src/lib/search-params";
 import { prisma } from "@/src/server/db/client";
 import type { Prisma } from "@/src/server/db/generated/client";
 import { formatDateOnly, normalizeDateOnly, parseDateOnly } from "@/src/server/time-tracking";
@@ -1242,11 +1242,13 @@ export function normalizeAdminTimesheetFilters(
     query: firstSearchParam(searchParams.q).trim().slice(0, 120),
     // Unknown statuses drop out rather than emptying the filter: a stale link naming one
     // real and one retired status should still narrow the list to the real one.
-    statuses: listSearchParam(searchParams.status)
-      .map((status) => status.toUpperCase())
-      .filter((status): status is TimesheetStatusRecord =>
-        STATUS_FILTERS.has(status as TimesheetStatusRecord),
-      ),
+    // Deduped after upper-casing: `?status=submitted&status=SUBMITTED` reads as two
+    // distinct URL values but is one status.
+    statuses: uniqueValues(
+      listSearchParam(searchParams.status).map((status) => status.toUpperCase()),
+    ).filter((status): status is TimesheetStatusRecord =>
+      STATUS_FILTERS.has(status as TimesheetStatusRecord),
+    ),
     contractorMemberIds: listSearchParam(searchParams.contractor),
     projectIds: listSearchParam(searchParams.project),
     month: normalizeMonthInput(firstSearchParam(searchParams.month)),

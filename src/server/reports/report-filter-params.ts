@@ -1,5 +1,5 @@
 import { defaultLocale, resolveLocale } from "@/src/i18n/locales";
-import { firstSearchParam, listSearchParam } from "@/src/lib/search-params";
+import { firstSearchParam, formDataStrings, listSearchParam } from "@/src/lib/search-params";
 import {
   addDays,
   formatDateOnly,
@@ -91,9 +91,9 @@ export function reportSearchParamsFromFormData(formData: FormData): ReportSearch
     period: formString(formData, "period"),
     anchor: formString(formData, "anchor"),
     // The scope filters are multi-selects, so each arrives as one entry per chosen value.
-    project: formStrings(formData, "project"),
-    group: formStrings(formData, "group"),
-    member: formStrings(formData, "member"),
+    project: formDataStrings(formData, "project"),
+    group: formDataStrings(formData, "group"),
+    member: formDataStrings(formData, "member"),
     view: formString(formData, "view"),
   };
 }
@@ -251,8 +251,4 @@ function formString(formData: FormData, key: string) {
   const value = formData.get(key);
 
   return typeof value === "string" ? value : undefined;
-}
-
-function formStrings(formData: FormData, key: string) {
-  return formData.getAll(key).filter((value): value is string => typeof value === "string");
 }

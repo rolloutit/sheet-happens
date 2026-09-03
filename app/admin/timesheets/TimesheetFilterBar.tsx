@@ -2,7 +2,7 @@
 
 import { Filter, Search } from "lucide-react";
 import type { Route } from "next";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useLocale, useTranslations } from "next-intl";
 
 import { FilterChips } from "@/src/components/sheet/FilterChips";
@@ -14,6 +14,7 @@ import { MonthPicker } from "@/src/components/ui/MonthPicker";
 import { Select } from "@/src/components/ui/Select";
 import { usePickerLabels } from "@/src/i18n/picker-labels";
 import { formatMonthLabel } from "@/src/lib/formatting";
+import { deleteSearchParamValue } from "@/src/lib/search-params";
 
 /** The statuses an admin can filter by, in review order. */
 const filterableStatuses = [
@@ -70,40 +71,28 @@ export function TimesheetFilterBar({
   const t = useTranslations("AdminTimesheets");
   const locale = useLocale();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const pickerLabels = usePickerLabels();
-
-  const current: Record<FilterKey, string | readonly string[]> = {
-    q: query,
-    status: statuses,
-    contractor: contractorMemberIds,
-    project: projectIds,
-    month,
-  };
 
   /**
    * Drops one filter, or — when `value` is given — one value of a multi-select filter,
-   * leaving that filter's other values applied.
+   * leaving that filter's other values applied. Built from the live query string rather
+   * than from the applied filters, so unrelated parameters survive the click.
    */
   function hrefWithout(key: FilterKey, value?: string) {
-    const params = new URLSearchParams();
+    const params = new URLSearchParams(searchParams.toString());
 
-    for (const [name, entry] of Object.entries(current)) {
-      if (typeof entry === "string") {
-        if (name !== key && entry) params.set(name, entry);
-        continue;
-      }
-
-      for (const candidate of entry) {
-        if (name === key && (value === undefined || candidate === value)) continue;
-        params.append(name, candidate);
-      }
-    }
+    deleteSearchParamValue(params, key, value);
+    // Fewer filters means a different list, so the old page number no longer points at
+    // anything in particular.
+    params.delete("page");
 
     const search = params.toString();
 
     return (search ? `/admin/timesheets?${search}` : "/admin/timesheets") as Route;
   }
 
+  const appliedFilterKey = [query, statuses, contractorMemberIds, projectIds, month].join("|");
   const activeFilters: FilterChip<FilterKey>[] = [];
 
   if (query) {
@@ -148,7 +137,14 @@ export function TimesheetFilterBar({
 
   return (
     <div className="grid gap-3">
+      {/*
+        Keyed on the applied filters so the controls are rebuilt whenever those change. The
+        pickers are uncontrolled — `defaultValue` is read once — so without this, taking a
+        chip off would update the URL and the list while the picker still showed the value it
+        had just dropped, and the next submit would put it back.
+      */}
       <form
+        key={appliedFilterKey}
         className="flex flex-wrap items-center gap-2 rounded-[var(--radius-lg)] border border-border bg-card p-3"
         action="/admin/timesheets"
       >

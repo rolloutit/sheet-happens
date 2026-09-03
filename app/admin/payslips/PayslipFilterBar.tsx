@@ -2,7 +2,7 @@
 
 import { Filter, Search } from "lucide-react";
 import type { Route } from "next";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 
 import { FilterChips } from "@/src/components/sheet/FilterChips";
@@ -12,6 +12,7 @@ import { Combobox } from "@/src/components/ui/Combobox";
 import { Input } from "@/src/components/ui/Input";
 import { Select } from "@/src/components/ui/Select";
 import { usePickerLabels } from "@/src/i18n/picker-labels";
+import { deleteSearchParamValue } from "@/src/lib/search-params";
 
 /** The query-string names, which are also the `<form>` control names. */
 type FilterKey = "query" | "employeeMemberId" | "month";
@@ -42,38 +43,26 @@ export function PayslipFilterBar({
 }: PayslipFilterBarProps) {
   const t = useTranslations("Payslips");
   const router = useRouter();
+  const searchParams = useSearchParams();
   const pickerLabels = usePickerLabels();
-
-  const current: Record<FilterKey, string | readonly string[]> = {
-    query,
-    employeeMemberId: employeeMemberIds,
-    month,
-  };
 
   /**
    * Drops one filter, or — when `value` is given — one value of a multi-select filter,
-   * leaving that filter's other values applied.
+   * leaving that filter's other values applied. Built from the live query string rather
+   * than from the applied filters, so unrelated parameters survive the click.
    */
   function hrefWithout(key: FilterKey, value?: string) {
-    const params = new URLSearchParams();
+    const params = new URLSearchParams(searchParams.toString());
 
-    for (const [name, entry] of Object.entries(current)) {
-      if (typeof entry === "string") {
-        if (name !== key && entry) params.set(name, entry);
-        continue;
-      }
-
-      for (const candidate of entry) {
-        if (name === key && (value === undefined || candidate === value)) continue;
-        params.append(name, candidate);
-      }
-    }
+    deleteSearchParamValue(params, key, value);
+    params.delete("page");
 
     const search = params.toString();
 
     return (search ? `/admin/payslips?${search}` : "/admin/payslips") as Route;
   }
 
+  const appliedFilterKey = [query, employeeMemberIds, month].join("|");
   const activeFilters: FilterChip<FilterKey>[] = [];
 
   if (query) {
@@ -104,7 +93,14 @@ export function PayslipFilterBar({
 
   return (
     <div className="grid gap-3">
-      <form className="flex flex-wrap items-center gap-2 rounded-[var(--radius-lg)] border border-border bg-card p-3">
+      {/*
+        Keyed on the applied filters so the uncontrolled pickers are rebuilt whenever those
+        change — see the note in `TimesheetFilterBar`.
+      */}
+      <form
+        key={appliedFilterKey}
+        className="flex flex-wrap items-center gap-2 rounded-[var(--radius-lg)] border border-border bg-card p-3"
+      >
         <div className="min-w-[13rem] flex-1">
           <Input
             name="query"

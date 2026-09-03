@@ -81,10 +81,10 @@ Form control conventions:
   empty selection already means "unfiltered". Pass `labels.selected` and `labels.clear`
   (`usePickerLabels` already does).
 - A multi-select's hidden control is a `<select multiple>`, so a GET form serializes
-  `?name=a&name=b` without encoding anything itself. Reading it back is not free: the admin
-  pages' `getSingleParam` keeps only the first value, so putting a multi-select into a
-  URL-backed filter means widening that parser and the Prisma `where` (`equals` → `in`) in
-  the same change.
+  `?name=a&name=b` without encoding anything itself. Read it back with `listSearchParam` from
+  `src/lib/search-params.ts` — a single-value reader keeps only the first value and narrows
+  the filter with nothing to show for it — and widen the Prisma clause to `in`, or to an `OR`
+  through `anyOf` when the values do not share a shape.
 - Dates are `YYYY-MM-DD` strings and months are `YYYY-MM` strings, never `Date` objects —
   `DatePicker`, `DateRangePicker`, and `MonthPicker` all convert at their own boundary. See
   `src/lib/date-values.ts`.

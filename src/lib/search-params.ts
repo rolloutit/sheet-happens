@@ -4,9 +4,11 @@
  *
  * Repeated parameters are how multi-select filters travel: a `<select multiple>` serializes
  * `?status=a&status=b` on its own, so a filter that accepts several values reads
- * `listSearchParam` and one that accepts a single value reads `firstSearchParam`. Before
- * this existed roughly fifteen copies of the single-value helper had been written out by
- * hand, each page and domain module carrying its own.
+ * `listSearchParam` and one that accepts a single value reads `firstSearchParam`.
+ *
+ * The single-value reader had been written out by hand in roughly fifteen places. The admin
+ * list pages and domain modules now import it from here; the auth and settings pages still
+ * carry their own copies, which are worth folding in the next time they are touched.
  */
 export type SearchParamValue = string | string[] | undefined;
 
@@ -31,15 +33,29 @@ export function firstSearchParam(value: SearchParamValue): string {
 export function listSearchParam(value: SearchParamValue): string[] {
   const values = Array.isArray(value) ? value : [value];
 
-  return [
-    ...new Set(
-      values.flatMap((entry) => {
-        const trimmed = entry?.trim();
+  return uniqueValues(
+    values.flatMap((entry) => {
+      const trimmed = entry?.trim();
 
-        return trimmed ? [trimmed] : [];
-      }),
-    ),
-  ];
+      return trimmed ? [trimmed] : [];
+    }),
+  );
+}
+
+/**
+ * Collapses duplicates, keeping the first occurrence.
+ *
+ * `listSearchParam` already does this on the raw values, but a caller that normalizes them
+ * afterwards — upper-casing a status, capping a length — can turn two distinct URL values
+ * into one, and a duplicate that reaches the UI becomes two chips sharing a React key.
+ */
+export function uniqueValues(values: readonly string[]): string[] {
+  return [...new Set(values)];
+}
+
+/** `FormData` hands back files as well as strings; only the strings are filter values. */
+export function formDataStrings(formData: FormData, key: string): string[] {
+  return formData.getAll(key).filter((value): value is string => typeof value === "string");
 }
 
 /**
@@ -78,6 +94,9 @@ export function deleteSearchParamValue(params: URLSearchParams, key: string, val
   setSearchParamList(
     params,
     key,
-    params.getAll(key).filter((entry) => entry !== value),
+    // Trimmed on both sides: `setSearchParamList` stores values trimmed, and the value a
+    // chip carries has been through a normalizer, so a hand-edited `?group=%20g1%20` would
+    // otherwise never match the `g1` the chip offers to remove.
+    params.getAll(key).filter((entry) => entry.trim() !== value.trim()),
   );
 }

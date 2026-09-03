@@ -411,3 +411,58 @@ export const MultipleSubmitsInAForm: StoryObj<ComboboxMultipleProps> = {
     );
   },
 };
+
+/**
+ * The two visuals multi mode adds: the checkbox on each row and the panel's clear footer.
+ * Both in dark, where the checked fill and the footer border are easiest to get wrong.
+ */
+export const MultipleDark: StoryObj<ComboboxMultipleProps> = {
+  globals: { theme: "dark" },
+  render: () => (
+    <div className="w-80">
+      <Combobox
+        multiple
+        label="Status"
+        placeholder="All statuses"
+        options={statuses}
+        labels={multiLabels}
+        defaultValue={["SUBMITTED", "APPROVED"]}
+      />
+    </div>
+  ),
+  play: async ({ canvas, userEvent }) => {
+    await userEvent.click(canvas.getByRole(statusTrigger.role, { name: statusTrigger.name }));
+
+    await expect(screen.getByRole("option", { name: /submitted/i })).toHaveAttribute(
+      "aria-checked",
+      "true",
+    );
+    await expect(screen.getByRole("button", { name: /clear/i })).toBeVisible();
+  },
+};
+
+/** At phone width the trigger still holds one line: the count is what makes that possible. */
+export const MultipleMobile: StoryObj<ComboboxMultipleProps> = {
+  parameters: {
+    viewport: {
+      defaultViewport: "mobile1",
+    },
+  },
+  render: () => (
+    <div className="w-full">
+      <Combobox
+        multiple
+        label="Status"
+        placeholder="All statuses"
+        options={statuses}
+        labels={multiLabels}
+        defaultValue={["SUBMITTED", "REJECTED", "APPROVED"]}
+      />
+    </div>
+  ),
+  play: async ({ canvas }) => {
+    await expect(
+      canvas.getByRole(statusTrigger.role, { name: statusTrigger.name }),
+    ).toHaveTextContent(/3 selected/i);
+  },
+};

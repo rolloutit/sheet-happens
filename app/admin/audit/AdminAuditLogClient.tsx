@@ -23,7 +23,7 @@ import { Pager } from "@/src/components/ui/Pager";
 import { Select } from "@/src/components/ui/Select";
 import { DataTable, type TableColumn } from "@/src/components/ui/Table";
 import { usePickerLabels } from "@/src/i18n/picker-labels";
-import { setSearchParamList } from "@/src/lib/search-params";
+import { formDataStrings, setSearchParamList } from "@/src/lib/search-params";
 import { cn } from "@/src/lib/utils";
 import type { AuditLogListResult, AuditLogRow } from "@/src/server/audit";
 
@@ -44,6 +44,14 @@ export function AdminAuditLogClient({ result }: AdminAuditLogClientProps) {
   const [selectedRow, setSelectedRow] = useState<AuditLogRow | null>(null);
   const [isRefreshing, startRefreshTransition] = useTransition();
   const rows = result.rows as AuditTableRow[];
+  const appliedFilterKey = [
+    result.filters.query,
+    result.filters.actions,
+    result.filters.targetTypes,
+    result.filters.actorMemberIds,
+    result.filters.fromDate,
+    result.filters.toDate,
+  ].join("|");
   const labels = getAuditLabels(t);
   const auditColumns = getAuditColumns(t, labels);
 
@@ -74,9 +82,9 @@ export function AdminAuditLogClient({ result }: AdminAuditLogClientProps) {
 
     setParam(params, "q", formData.get("q"));
     // The three pickers are multi-selects, so each submits one entry per chosen value.
-    setFormList(params, "action", formData.getAll("action"));
-    setFormList(params, "targetType", formData.getAll("targetType"));
-    setFormList(params, "actor", formData.getAll("actor"));
+    setSearchParamList(params, "action", formDataStrings(formData, "action"));
+    setSearchParamList(params, "targetType", formDataStrings(formData, "targetType"));
+    setSearchParamList(params, "actor", formDataStrings(formData, "actor"));
     setParam(params, "from", formData.get("from"));
     setParam(params, "to", formData.get("to"));
     params.delete("page");
@@ -128,7 +136,13 @@ export function AdminAuditLogClient({ result }: AdminAuditLogClientProps) {
         </div>
       </div>
 
+      {/*
+        Keyed on the applied filters so the uncontrolled pickers are rebuilt whenever those
+        change. Without it `Clear` would empty the URL and the list while the pickers still
+        showed the cleared values, and the next `Apply` would restore them.
+      */}
       <form
+        key={appliedFilterKey}
         className="grid gap-3 rounded-[var(--radius-lg)] border border-border bg-card p-4"
         onSubmit={submitFilters}
       >
@@ -459,15 +473,6 @@ function setParam(params: URLSearchParams, key: string, value: FormDataEntryValu
 
   if (normalized) params.set(key, normalized);
   else params.delete(key);
-}
-
-/** `FormData` hands back files as well as strings; only the strings are filter values. */
-function setFormList(params: URLSearchParams, key: string, values: FormDataEntryValue[]) {
-  setSearchParamList(
-    params,
-    key,
-    values.filter((value): value is string => typeof value === "string"),
-  );
 }
 
 function buildUrl(pathname: string, params: URLSearchParams) {

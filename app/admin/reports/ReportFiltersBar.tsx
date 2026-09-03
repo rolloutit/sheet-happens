@@ -106,7 +106,13 @@ export function ReportFiltersBar({
   ];
 
   return (
+    /*
+      Keyed on the applied scope so the uncontrolled pickers are rebuilt whenever it changes.
+      `Clear` is a `<Link>`, so without this it would reset the URL and the report while the
+      pickers still showed the cleared projects, and the next submit would bring them back.
+    */
     <form
+      key={[projectIds, groupIds, memberIds].join("|")}
       className="rounded-[var(--radius-lg)] border border-border bg-card px-4 py-4 shadow-soft"
       action="/admin/reports"
     >

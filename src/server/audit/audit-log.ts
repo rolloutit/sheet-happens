@@ -1,4 +1,4 @@
-import { firstSearchParam, listSearchParam } from "@/src/lib/search-params";
+import { firstSearchParam, listSearchParam, uniqueValues } from "@/src/lib/search-params";
 import { anyOf } from "@/src/server/db/any-of";
 import type { Prisma } from "@/src/server/db/generated/client";
 import { prisma } from "@/src/server/db/client";
@@ -209,9 +209,10 @@ export async function listAuditLogsForAdmin(
 export function normalizeAuditLogFilters(searchParams: AuditLogSearchParams = {}): AuditLogFilters {
   return {
     query: firstSearchParam(searchParams.q).trim().slice(0, 120),
-    actions: listSearchParam(searchParams.action).map(capValueLength),
-    targetTypes: listSearchParam(searchParams.targetType).map(capValueLength),
-    actorMemberIds: listSearchParam(searchParams.actor).map(capValueLength),
+    // Deduped after capping: two over-long values can cap to the same one.
+    actions: uniqueValues(listSearchParam(searchParams.action).map(capValueLength)),
+    targetTypes: uniqueValues(listSearchParam(searchParams.targetType).map(capValueLength)),
+    actorMemberIds: uniqueValues(listSearchParam(searchParams.actor).map(capValueLength)),
     fromDate: normalizeDateInput(firstSearchParam(searchParams.from)),
     toDate: normalizeDateInput(firstSearchParam(searchParams.to)),
     page: parsePositiveInteger(firstSearchParam(searchParams.page), DEFAULT_PAGE),
