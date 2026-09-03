@@ -74,6 +74,7 @@ import {
   type ProjectColorToken,
 } from "@/src/lib/project-colors";
 import { usePickerLabels } from "@/src/i18n/picker-labels";
+import { deleteSearchParamValue, setSearchParamList } from "@/src/lib/search-params";
 import { formatTimestamp } from "@/src/lib/formatting/dates";
 import { useOverlayParam } from "@/src/lib/use-overlay-param";
 import { cn } from "@/src/lib/utils";
@@ -133,10 +134,10 @@ type ProjectFilterKey = "q" | "status" | "type" | "timeline" | "group" | "assign
 
 type ProjectFilterFormState = {
   assignment: ProjectListResult["filters"]["assignment"];
-  group: string;
+  groups: ProjectListResult["filters"]["groups"];
   query: string;
   status: ProjectListResult["filters"]["status"];
-  timeline: ProjectListResult["filters"]["timeline"];
+  timelines: ProjectListResult["filters"]["timelines"];
   type: ProjectListResult["filters"]["type"];
 };
 
@@ -236,8 +237,8 @@ export function AdminProjectsTable({
     setParam(params, "q", filters.query);
     setParam(params, "status", filters.status);
     setParam(params, "type", filters.type);
-    setParam(params, "timeline", filters.timeline);
-    setParam(params, "group", filters.group);
+    setSearchParamList(params, "timeline", filters.timelines);
+    setSearchParamList(params, "group", filters.groups);
     setParam(params, "assignment", filters.assignment);
     params.delete("page");
     setMessage(null);
@@ -249,8 +250,8 @@ export function AdminProjectsTable({
     result.filters.query ||
     result.filters.status ||
     result.filters.type ||
-    result.filters.timeline ||
-    result.filters.group ||
+    result.filters.timelines.length ||
+    result.filters.groups.length ||
     result.filters.assignment,
   );
 
@@ -266,10 +267,10 @@ export function AdminProjectsTable({
    * Takes one filter off, rather than re-applying the form. The form may hold edits the user
    * has not applied yet, and pulling a chip should not smuggle those into the URL with it.
    */
-  function removeFilter(key: ProjectFilterKey) {
+  function removeFilter(key: ProjectFilterKey, value?: string) {
     const params = new URLSearchParams(searchParams.toString());
 
-    params.delete(key);
+    deleteSearchParamValue(params, key, value);
     params.delete("page");
     setMessage(null);
 
@@ -584,7 +585,7 @@ function ProjectDirectoryFilters({
   groups: AdminProjectGroupRow[];
   onApply: (filters: ProjectFilterFormState) => void;
   onClear: () => void;
-  onRemove: (key: ProjectFilterKey) => void;
+  onRemove: (key: ProjectFilterKey, value?: string) => void;
 }) {
   const t = useTranslations("AdminProjects");
   const pickerLabels = usePickerLabels();
@@ -592,8 +593,8 @@ function ProjectDirectoryFilters({
     query: result.filters.query,
     status: result.filters.status,
     type: result.filters.type,
-    timeline: result.filters.timeline,
-    group: result.filters.group,
+    timelines: result.filters.timelines,
+    groups: result.filters.groups,
     assignment: result.filters.assignment,
   }));
 
@@ -607,8 +608,8 @@ function ProjectDirectoryFilters({
       query: "",
       status: "",
       type: "",
-      timeline: "",
-      group: "",
+      timelines: [],
+      groups: [],
       assignment: "",
     });
     onClear();
@@ -640,19 +641,24 @@ function ProjectDirectoryFilters({
       label: `${t("filters.type")}: ${t(`states.${result.filters.type}`)}`,
     });
   }
-  if (result.filters.timeline) {
+  for (const timeline of result.filters.timelines) {
     activeFilters.push({
       id: "timeline",
-      label: `${t("filters.timeline")}: ${t(`filters.${result.filters.timeline}`)}`,
+      value: timeline,
+      label: `${t("filters.timeline")}: ${t(`filters.${timeline}`)}`,
     });
   }
-  if (result.filters.group) {
+  for (const group of result.filters.groups) {
     const groupName =
-      result.filters.group === "ungrouped"
+      group === "ungrouped"
         ? t("states.ungrouped")
-        : (groups.find((group) => group.id === result.filters.group)?.name ?? result.filters.group);
+        : (groups.find((entry) => entry.id === group)?.name ?? group);
 
-    activeFilters.push({ id: "group", label: `${t("filters.group")}: ${groupName}` });
+    activeFilters.push({
+      id: "group",
+      value: group,
+      label: `${t("filters.group")}: ${groupName}`,
+    });
   }
   if (result.filters.assignment) {
     activeFilters.push({
@@ -728,20 +734,20 @@ function ProjectDirectoryFilters({
         </div>
         <div className="w-[calc(50%-0.25rem)] sm:w-auto sm:min-w-32 sm:max-w-64">
           <Select
+            multiple
             label={t("filters.timeline")}
+            // No "all timelines" option to carry: an empty selection already is that state,
+            // so the label becomes the placeholder.
             placeholder={t("filters.allTimelines")}
-            value={filterForm.timeline}
+            value={filterForm.timelines}
             labels={pickerLabels.combobox}
-            onValueChange={(value) => {
-              const timeline = value as ProjectFilterFormState["timeline"];
-
+            onValueChange={(timelines) => {
               setFilterForm((current) => ({
                 ...current,
-                timeline,
+                timelines: timelines as ProjectFilterFormState["timelines"],
               }));
             }}
             options={[
-              { value: "", label: t("filters.allTimelines") },
               { value: "current", label: t("filters.current") },
               { value: "future", label: t("filters.future") },
               { value: "ended", label: t("filters.ended") },
@@ -750,18 +756,18 @@ function ProjectDirectoryFilters({
         </div>
         <div className="w-[calc(50%-0.25rem)] sm:w-auto sm:min-w-32 sm:max-w-64">
           <Select
+            multiple
             label={t("filters.group")}
             placeholder={t("filters.allGroups")}
-            value={filterForm.group}
+            value={filterForm.groups}
             labels={pickerLabels.combobox}
-            onValueChange={(group) => {
+            onValueChange={(nextGroups) => {
               setFilterForm((current) => ({
                 ...current,
-                group,
+                groups: nextGroups,
               }));
             }}
             options={[
-              { value: "", label: t("filters.allGroups") },
               { value: "ungrouped", label: t("states.ungrouped") },
               ...groups.map((group) => ({ value: group.id, label: group.name })),
             ]}
@@ -817,8 +823,8 @@ function getProjectFilterKey(filters: ProjectListResult["filters"]) {
     filters.query,
     filters.status,
     filters.type,
-    filters.timeline,
-    filters.group,
+    filters.timelines.join(","),
+    filters.groups.join(","),
     filters.assignment,
     filters.page,
     filters.pageSize,

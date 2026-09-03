@@ -7,6 +7,7 @@ import {
   formatDecimalHours,
   formatHours,
   formatHoursWithUnit,
+  formatList,
   formatMonthLabel,
   formatMonthName,
   formatMoney,
@@ -215,5 +216,21 @@ describe("instants", () => {
       "Jul 31, 2026, 12:00 PM",
     );
     expect(formatTimestamp(null, "en")).toBe("-");
+  });
+});
+
+describe("formatList", () => {
+  it("names several values with the locale's own last separator", () => {
+    expect(formatList(["Apollo", "Helix", "Internal"], "en")).toBe("Apollo, Helix, and Internal");
+    expect(formatList(["Apollo", "Helix", "Belső"], "hu")).toBe("Apollo, Helix és Belső");
+  });
+
+  it("names a single value with no separator at all", () => {
+    expect(formatList(["Apollo"], "en")).toBe("Apollo");
+    expect(formatList(["Apollo"], "hu")).toBe("Apollo");
+  });
+
+  it("returns nothing for an empty list, so the caller can fall back", () => {
+    expect(formatList([], "en")).toBe("");
   });
 });

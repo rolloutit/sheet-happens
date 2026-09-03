@@ -23,7 +23,7 @@ import type { LucideIcon } from "lucide-react";
 import type { HTMLAttributes } from "react";
 
 import { AppShell } from "@/src/components/layout/AppShell";
-import { StatusPill } from "@/src/components/sheet/StatusPill";
+import { StatusPill, statusTone, statusToneVar } from "@/src/components/sheet/StatusPill";
 import { TimesheetStepper } from "@/src/components/sheet/TimesheetStepper";
 import { Badge } from "@/src/components/ui/Badge";
 import { Button } from "@/src/components/ui/Button";
@@ -70,23 +70,28 @@ const priorityIcons: Record<AdminPriorityMetric["id"], LucideIcon> = {
   missing: AlertTriangle,
 };
 
+// Both maps used to be hand-picked hex literals and they disagreed with the pill and with
+// themselves: `accepted` and `paid` were one green, `rejected` and `missing` one rose, `submitted`
+// was amber here and mint in the table. They were also dark-theme values hardcoded into inline
+// styles, so light mode got dark mode's palette. Reading `statusTone` gives one colour per status,
+// the same one the pill uses, and `var()` follows the theme.
 const priorityAccent: Record<AdminPriorityMetric["id"], string> = {
-  submitted: "#FAAB59",
-  approved: "#2FD4D4",
-  invoiced: "#66D6A8",
-  accepted: "#4FC79B",
-  missing: "#F08A82",
+  submitted: statusToneVar[statusTone.submitted],
+  approved: statusToneVar[statusTone.approved],
+  invoiced: statusToneVar[statusTone.invoiced],
+  accepted: statusToneVar[statusTone.accepted],
+  missing: statusToneVar[statusTone.missing],
 };
 
 const statusColor: Record<AdminStatusSegment["id"], string> = {
-  submitted: "#FAAB59",
-  rejected: "#F08A82",
-  approved: "#2FD4D4",
-  invoiced: "#9AA5A6",
-  invoice_rejected: "#D8A03D",
-  accepted: "#4FC79B",
-  paid: "#4FC79B",
-  missing: "#F08A82",
+  submitted: statusToneVar[statusTone.submitted],
+  rejected: statusToneVar[statusTone.rejected],
+  approved: statusToneVar[statusTone.approved],
+  invoiced: statusToneVar[statusTone.invoiced],
+  invoice_rejected: statusToneVar[statusTone.invoice_rejected],
+  accepted: statusToneVar[statusTone.accepted],
+  paid: statusToneVar[statusTone.paid],
+  missing: statusToneVar[statusTone.missing],
 };
 
 export default async function DashboardPage({ searchParams }: DashboardPageProps) {
@@ -818,7 +823,10 @@ function PriorityMetricCard({
         <div className="flex items-center justify-between gap-4">
           <span
             className="flex size-9 items-center justify-center rounded-[var(--radius-md)]"
-            style={{ backgroundColor: `${accent}22`, color: accent }}
+            style={{
+              backgroundColor: `color-mix(in srgb, ${accent} 13%, transparent)`,
+              color: accent,
+            }}
           >
             <Icon className="size-5" aria-hidden="true" />
           </span>

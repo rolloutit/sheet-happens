@@ -34,6 +34,9 @@ export function usePickerLabels(): PickerLabels {
       search: t("search"),
       searchPlaceholder: t("searchPlaceholder"),
       empty: t("noResults"),
+      // Both only reach a multi-select, which has no "All …" option to lean on.
+      selected: (count) => t("selectedCount", { count }),
+      clear: t("clear"),
     };
 
     const date: DatePickerLabels = {

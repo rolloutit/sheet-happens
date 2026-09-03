@@ -34,3 +34,15 @@ if (typeof window !== "undefined" && !window.matchMedia) {
     },
   });
 }
+
+// jsdom ships no ResizeObserver either, and Radix measures its trigger before mounting the
+// hidden input that makes a checkbox part of a `<form>` — so without this stub every test
+// that renders one throws in a layout effect. A no-op is enough: nothing under test reacts
+// to a resize, only to the observer existing.
+if (typeof globalThis.ResizeObserver === "undefined") {
+  globalThis.ResizeObserver = class ResizeObserver {
+    observe() {}
+    unobserve() {}
+    disconnect() {}
+  };
+}

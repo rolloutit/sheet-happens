@@ -149,9 +149,9 @@ describe("report PDF payload", () => {
       ...snapshot,
       filters: {
         ...snapshot.filters,
-        projectName: "Client Portal",
-        projectGroupName: "Key accounts",
-        memberName: "Contractor Example",
+        projectNames: ["Client Portal"],
+        projectGroupNames: ["Key accounts"],
+        memberNames: ["Contractor Example"],
       },
     });
 
@@ -162,6 +162,44 @@ describe("report PDF payload", () => {
       "Key accounts",
       "Contractor Example",
     ]);
+  });
+
+  /**
+   * `report.typ` gives each facet an equal fraction of the page width, so a facet is about
+   * one narrow column. Eight spelled-out project names would wrap to several lines and grow
+   * the header on every page of a financial document.
+   */
+  it("caps how many scope values a header facet spells out", () => {
+    const snapshot = createCostFreeReportSnapshot();
+    const payload = buildPayload({
+      ...snapshot,
+      filters: {
+        ...snapshot.filters,
+        projectIds: ["p1", "p2", "p3", "p4", "p5"],
+        projectNames: ["Apollo", "Helix", "Atlas", "Orion", "Vega"],
+      },
+    });
+    const projectFacet = payload.header.facets.find((facet) => facet.label === "Project");
+
+    expect(projectFacet?.value).toBe("Apollo, Helix, Atlas, and +2 more");
+  });
+
+  it("names every scope value while they still fit", () => {
+    const snapshot = createCostFreeReportSnapshot();
+    const payload = buildPayload({
+      ...snapshot,
+      filters: {
+        ...snapshot.filters,
+        projectIds: ["p1", "p2"],
+        projectNames: ["Apollo", "Helix"],
+      },
+    });
+    const projectFacet = payload.header.facets.find((facet) => facet.label === "Project");
+
+    // Two projects: named in full, and no colour dot — one line's colour would speak for
+    // the other as well.
+    expect(projectFacet?.value).toBe("Apollo and Helix");
+    expect(projectFacet?.color).toBeNull();
   });
 
   it("shows the dimension a cost-free report is not grouped by", () => {
@@ -183,12 +221,16 @@ describe("report PDF payload", () => {
     const snapshot = createCostFreeReportSnapshot();
     const singleProject = buildPayload({
       ...snapshot,
-      filters: { ...snapshot.filters, projectId: "project-1", projectName: "Client Portal" },
+      filters: { ...snapshot.filters, projectIds: ["project-1"], projectNames: ["Client Portal"] },
     });
     const singleMember = buildPayload({
       ...snapshot,
       view: "PROJECT",
-      filters: { ...snapshot.filters, memberId: "member-1", memberName: "Contractor Example" },
+      filters: {
+        ...snapshot.filters,
+        memberIds: ["member-1"],
+        memberNames: ["Contractor Example"],
+      },
     });
 
     // A user-view report normally lists projects. With one project selected it lists members
@@ -203,10 +245,10 @@ describe("report PDF payload", () => {
       ...snapshot,
       filters: {
         ...snapshot.filters,
-        projectId: "project-1",
-        projectName: "Client Portal",
-        memberId: "member-1",
-        memberName: "Contractor Example",
+        projectIds: ["project-1"],
+        projectNames: ["Client Portal"],
+        memberIds: ["member-1"],
+        memberNames: ["Contractor Example"],
       },
     });
 
@@ -220,7 +262,11 @@ describe("report PDF payload", () => {
     expect(
       buildPayload({
         ...snapshot,
-        filters: { ...snapshot.filters, projectId: "project-1", projectName: "Client Portal" },
+        filters: {
+          ...snapshot.filters,
+          projectIds: ["project-1"],
+          projectNames: ["Client Portal"],
+        },
       }).detailColumns,
     ).toEqual({ member: true, project: false });
   });
@@ -229,7 +275,11 @@ describe("report PDF payload", () => {
     const snapshot = createCostFreeReportSnapshot();
     const payload = buildPayload({
       ...snapshot,
-      filters: { ...snapshot.filters, projectGroupId: "group-1", projectGroupName: "Key accounts" },
+      filters: {
+        ...snapshot.filters,
+        projectGroupIds: ["group-1"],
+        projectGroupNames: ["Key accounts"],
+      },
     });
 
     // A group still spans several projects, so the column is doing work.
@@ -240,7 +290,7 @@ describe("report PDF payload", () => {
     const snapshot = createCostFreeReportSnapshot();
     const payload = buildPayload({
       ...snapshot,
-      filters: { ...snapshot.filters, projectId: "project-1", projectName: "Client Portal" },
+      filters: { ...snapshot.filters, projectIds: ["project-1"], projectNames: ["Client Portal"] },
     });
 
     expect(payload.summary.metrics.map((metric) => metric.label)).toEqual(["Entries", "People"]);
@@ -255,7 +305,11 @@ describe("report PDF payload", () => {
     const snapshot = createCostFreeReportSnapshot();
     const payload = buildPayload({
       ...snapshot,
-      filters: { ...snapshot.filters, memberId: "member-1", memberName: "Contractor Example" },
+      filters: {
+        ...snapshot.filters,
+        memberIds: ["member-1"],
+        memberNames: ["Contractor Example"],
+      },
     });
 
     expect(payload.summary.metrics.map((metric) => metric.label)).toEqual(["Entries", "Projects"]);
@@ -414,10 +468,10 @@ describe("report PDF payload", () => {
             ...costFree,
             filters: {
               ...costFree.filters,
-              projectId: "project-1",
-              projectName: "Client Portal",
-              memberId: "member-1",
-              memberName: "Contractor Example",
+              projectIds: ["project-1"],
+              projectNames: ["Client Portal"],
+              memberIds: ["member-1"],
+              memberNames: ["Contractor Example"],
             },
           },
         ],

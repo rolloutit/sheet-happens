@@ -45,3 +45,17 @@ export const Compact: Story = {
     </div>
   ),
 };
+
+// The nine states carry nine hues, and four of them are re-derived per theme rather than reused, so
+// "all of them, in the other polarity" is the story that would catch a family that only works in
+// dark. Pinned to light because the addon default is dark.
+export const AllStatusesLight: Story = {
+  parameters: { globals: { theme: "light" } },
+  render: () => (
+    <div className="flex flex-wrap gap-2">
+      {timesheetStatuses.map((status) => (
+        <StatusPill key={status} status={status} />
+      ))}
+    </div>
+  ),
+};

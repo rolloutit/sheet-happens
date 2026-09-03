@@ -12,13 +12,9 @@ export type SelectOption = {
   disabled?: boolean;
 };
 
-export type SelectProps = {
+type SelectBaseProps = {
   /** Readonly so callers can pass frozen option tables straight through. */
   options: readonly SelectOption[];
-  /** Controlled value. Omit and use `defaultValue` inside a Server Action form. */
-  value?: string;
-  defaultValue?: string;
-  onValueChange?: (value: string) => void;
   /** Submits under this name. Both paths emit a hidden native select. */
   name?: string;
   /** Associates with a `<form>` by id, like the native attribute. */
@@ -33,7 +29,8 @@ export type SelectProps = {
   invalid?: boolean;
   /**
    * `"auto"` (the default) turns search on once `options.length` exceeds
-   * `searchThreshold`. Pass `true` or `false` to decide at the call site.
+   * `searchThreshold`. Pass `true` or `false` to decide at the call site. Ignored under
+   * `multiple`, which is always searchable.
    */
   searchable?: boolean | "auto";
   searchThreshold?: number;
@@ -46,5 +43,31 @@ export type SelectProps = {
   "aria-describedby"?: string;
 };
 
-/** The Radix menu path. Everything `Select` accepts except the search-related props. */
-export type SelectMenuProps = Omit<SelectProps, "searchable" | "searchThreshold" | "labels">;
+/** The default: one value. */
+export type SelectSingleProps = SelectBaseProps & {
+  multiple?: false;
+  /** Controlled value. Omit and use `defaultValue` inside a Server Action form. */
+  value?: string;
+  defaultValue?: string;
+  onValueChange?: (value: string) => void;
+};
+
+/** Multi-select. Always takes the `Combobox` path; see the note on `Select`. */
+export type SelectMultipleProps = SelectBaseProps & {
+  multiple: true;
+  /** Controlled values. Omit and use `defaultValue` inside a Server Action form. */
+  value?: readonly string[];
+  defaultValue?: readonly string[];
+  onValueChange?: (values: string[]) => void;
+};
+
+export type SelectProps = SelectSingleProps | SelectMultipleProps;
+
+/**
+ * The Radix menu path. Everything a single `Select` accepts except the search-related props
+ * — and never `multiple`, which Radix's Select cannot express.
+ */
+export type SelectMenuProps = Omit<
+  SelectSingleProps,
+  "searchable" | "searchThreshold" | "labels" | "multiple"
+>;

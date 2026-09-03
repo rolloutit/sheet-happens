@@ -90,9 +90,10 @@ The trade-off is that such an entry is **not** emitted as a custom property. Two
     what lets the void go dark enough for a card to read while `--muted` stays light enough for a
     third text tier to exist. Merging them back collapses the type ladder — see the Focus-adjacent
     rule below and `docs/light-mode-redesign.md` §12.4.
-- **Signals:** the four families sit ≥ 42° apart in OKLCH hue (mint 195°, green 153°, amber 65°,
-  rose 15°), so the `*-soft` tints stay distinguishable when composited over the neutral card.
-  **All four now use the same hues in both themes**, so a status reads as one colour everywhere.
+- **Signals:** **eight families**, not four. The original four sit ≥ 42° apart in OKLCH hue (mint
+  195°, green 153°, amber 65°, rose 15°), so the `*-soft` tints stay distinguishable when
+  composited over the neutral card. **All eight use the same hues in both themes**, so a status
+  reads as one colour everywhere.
   What differs per theme is lightness and chroma: a saturated colour on white has to be darker to
   stay legible, so light's values are re-derived — each spending the same _fraction of the sRGB
   gamut ceiling_ its dark counterpart spends, capped so no family exceeds 1.9× the chroma of the
@@ -121,8 +122,23 @@ The trade-off is that such an entry is **not** emitted as a custom property. Two
   - **The 45% same-hue border on a tinted pill is mandatory in light**, not decoration. Warning and
     danger sit at ΔE 0.019 from `--muted` and no value fixes that — a warm pastel cannot get far
     from a warm chassis. The border is what makes the chip unambiguous.
+  - `--pending` (yellow 96°), `--verified` (blue 238°), `--settled` (violet 294°) and `--blocked`
+    (magenta 330°) are **the four added for the timesheet lifecycle**, which has nine states. Four
+    hues could not label nine things: `submitted` and `invoiced` were both mint, both rejections
+    were both rose, and `approved`/`accepted`/`paid` were one green printed three times. Each has a
+    `*-soft` and follows every rule above — 90% of the sRGB ceiling at its own lightness, the set
+    still inside 1.9×, per-tone dark alphas (yellow 0.29, the rest 0.20), solid pastels in light.
+    Eight families cannot hold the 42° spacing with four hues pinned, so **separation is verified as
+    OKLab ΔE over the whole set** the way the chart ramp is, not by hue angle: worst pair 0.104 in
+    dark, 0.084 in light, against the ramp's 0.080 target. Lightness stagger is what carries the two
+    closest hue pairs — magenta L 0.800 against rose 0.714 in dark, yellow and violet pushed to the
+    bottom of the band (L 0.441 / 0.444) in light, where every warm hue collapses toward brown.
+  - **Eight chromatic families do not separate under deuteranopia or protanopia**, and no arrangement
+    of eight would. Colour is therefore never the only carrier of a status: `StatusPill` prints the
+    status name beside its dot and the dashboard legend labels every swatch. Keep it that way.
 - **Inks:** `--ink-mint`, `--ink-amber`, `--ink-rose` — the three dark text colours for
-  full-strength signal fills. The `*-foreground` tokens reference them in dark; every pairing
+  full-strength signal fills. The four added families carry no ink and no `*-foreground`: nothing
+  puts text on them at full strength, and adding one would need its own 6:1 derivation. The `*-foreground` tokens reference them in dark; every pairing
   clears 6:1. Components should keep using the semantic `*-foreground` names. Light needs no ink
   tokens of its own — its fills are dark, so every `*-foreground` is plain white (5.29–6.51) — with
   one exception: the CTA is a light peach fill in **both** themes and keeps a dark label, so
@@ -133,8 +149,9 @@ The trade-off is that such an entry is **not** emitted as a custom property. Two
   requiring it to would collapse it into `--muted-foreground` (ΔL 0.026). That rule is load-bearing
   in light and is verified against every call site in `docs/light-mode-redesign.md` §12.4.
 - **Color, second tier** — the prototype's derived set, preferred over ad-hoc opacity modifiers:
-  - `accent-soft` / `success-soft` / `warning-soft` / `destructive-soft` — the one canonical tint per
-    tone. Use `bg-success-soft`, not `bg-success/12`. In light theme these are solid pastels, which a
+  - `accent-soft` / `success-soft` / `warning-soft` / `destructive-soft` / `pending-soft` /
+    `verified-soft` / `settled-soft` / `blocked-soft` — the one canonical tint per tone. Use
+    `bg-success-soft`, not `bg-success/12`. In light theme these are solid pastels, which a
     percentage of the full-strength colour cannot reproduce.
   - `accent-line` — the accent border colour (`border-accent-line`).
   - `border-strong` — the stronger edge used on inputs, dropdowns, popovers and tooltips. `--input`

@@ -23,6 +23,7 @@ import { Pager } from "@/src/components/ui/Pager";
 import { Select } from "@/src/components/ui/Select";
 import { DataTable, type TableColumn } from "@/src/components/ui/Table";
 import { usePickerLabels } from "@/src/i18n/picker-labels";
+import { formDataStrings, setSearchParamList } from "@/src/lib/search-params";
 import { cn } from "@/src/lib/utils";
 import type { AuditLogListResult, AuditLogRow } from "@/src/server/audit";
 
@@ -43,6 +44,14 @@ export function AdminAuditLogClient({ result }: AdminAuditLogClientProps) {
   const [selectedRow, setSelectedRow] = useState<AuditLogRow | null>(null);
   const [isRefreshing, startRefreshTransition] = useTransition();
   const rows = result.rows as AuditTableRow[];
+  const appliedFilterKey = [
+    result.filters.query,
+    result.filters.actions,
+    result.filters.targetTypes,
+    result.filters.actorMemberIds,
+    result.filters.fromDate,
+    result.filters.toDate,
+  ].join("|");
   const labels = getAuditLabels(t);
   const auditColumns = getAuditColumns(t, labels);
 
@@ -72,9 +81,10 @@ export function AdminAuditLogClient({ result }: AdminAuditLogClientProps) {
     const params = new URLSearchParams(searchParams.toString());
 
     setParam(params, "q", formData.get("q"));
-    setParam(params, "action", formData.get("action"));
-    setParam(params, "targetType", formData.get("targetType"));
-    setParam(params, "actor", formData.get("actor"));
+    // The three pickers are multi-selects, so each submits one entry per chosen value.
+    setSearchParamList(params, "action", formDataStrings(formData, "action"));
+    setSearchParamList(params, "targetType", formDataStrings(formData, "targetType"));
+    setSearchParamList(params, "actor", formDataStrings(formData, "actor"));
     setParam(params, "from", formData.get("from"));
     setParam(params, "to", formData.get("to"));
     params.delete("page");
@@ -126,7 +136,13 @@ export function AdminAuditLogClient({ result }: AdminAuditLogClientProps) {
         </div>
       </div>
 
+      {/*
+        Keyed on the applied filters so the uncontrolled pickers are rebuilt whenever those
+        change. Without it `Clear` would empty the URL and the list while the pickers still
+        showed the cleared values, and the next `Apply` would restore them.
+      */}
       <form
+        key={appliedFilterKey}
         className="grid gap-3 rounded-[var(--radius-lg)] border border-border bg-card p-4"
         onSubmit={submitFilters}
       >
@@ -143,63 +159,57 @@ export function AdminAuditLogClient({ result }: AdminAuditLogClientProps) {
           <Field label={t("client.event")}>
             {({ id }) => (
               <Select
+                multiple
                 id={id}
                 name="action"
                 label={t("client.event")}
-                // Radix reads an empty value as unset, so the "all" label is also the
-                // placeholder — otherwise the trigger renders blank.
+                // No "all events" option to carry: an empty selection already is that state,
+                // so the label becomes the placeholder.
                 placeholder={t("client.allEvents")}
-                defaultValue={result.filters.action}
+                defaultValue={result.filters.actions}
                 labels={pickerLabels.combobox}
                 contentClassName="w-[28rem] max-w-[calc(100vw-2rem)]"
-                options={[
-                  { value: "", label: t("client.allEvents") },
-                  ...result.actionOptions.map((option) => ({
-                    ...option,
-                    label: `${labels.target(actionTargetType(option.value))} · ${labels.action(option.value)}`,
-                  })),
-                ]}
+                options={result.actionOptions.map((option) => ({
+                  ...option,
+                  label: `${labels.target(actionTargetType(option.value))} · ${labels.action(option.value)}`,
+                }))}
               />
             )}
           </Field>
           <Field label={t("client.target")}>
             {({ id }) => (
               <Select
+                multiple
                 id={id}
                 name="targetType"
                 label={t("client.target")}
                 placeholder={t("client.allTargets")}
-                defaultValue={result.filters.targetType}
+                defaultValue={result.filters.targetTypes}
                 labels={pickerLabels.combobox}
-                options={[
-                  { value: "", label: t("client.allTargets") },
-                  ...result.targetTypeOptions.map((option) => ({
-                    ...option,
-                    label: labels.target(option.value),
-                  })),
-                ]}
+                options={result.targetTypeOptions.map((option) => ({
+                  ...option,
+                  label: labels.target(option.value),
+                }))}
               />
             )}
           </Field>
           <Field label={t("client.actor")}>
             {({ id }) => (
               <Combobox
+                multiple
                 id={id}
                 name="actor"
                 label={t("client.actor")}
                 placeholder={t("client.allActors")}
-                defaultValue={result.filters.actorMemberId}
+                defaultValue={result.filters.actorMemberIds}
                 labels={pickerLabels.combobox}
-                options={[
-                  { value: "", label: t("client.allActors") },
-                  // Email moves from the label into meta so it stays searchable while the
-                  // trigger shows just the name.
-                  ...result.actorOptions.map((option) => ({
-                    value: option.value,
-                    label: option.value === "system" ? t("client.system") : option.label,
-                    meta: option.email ?? undefined,
-                  })),
-                ]}
+                // Email moves from the label into meta so it stays searchable while the
+                // trigger shows just the name.
+                options={result.actorOptions.map((option) => ({
+                  value: option.value,
+                  label: option.value === "system" ? t("client.system") : option.label,
+                  meta: option.email ?? undefined,
+                }))}
               />
             )}
           </Field>

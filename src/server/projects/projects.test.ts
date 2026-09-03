@@ -396,8 +396,8 @@ describe("project management services", () => {
       query: "Anna",
       status: "ACTIVE",
       type: "external",
-      timeline: "current",
-      group: "ungrouped",
+      timelines: ["current"],
+      groups: ["ungrouped"],
       assignment: "assigned",
       page: 3,
       pageSize: 100,
@@ -415,11 +415,59 @@ describe("project management services", () => {
     ).toMatchObject({
       status: "",
       type: "",
-      timeline: "",
+      timelines: [],
       assignment: "",
       page: 1,
       pageSize: 20,
     });
+  });
+
+  /**
+   * Timeline and group take several values. Neither is a plain column: each timeline is its
+   * own date comparison, and `ungrouped` is the absence of a group rather than one of them,
+   * so both fold into an `OR` instead of an `in`.
+   */
+  it("matches any of several timelines", () => {
+    const where = buildProjectWhere(
+      normalizeProjectFilters({ timeline: ["future", "ended"] }),
+      new Date("2026-07-26T00:00:00.000Z"),
+    );
+
+    expect(where.AND).toEqual(
+      expect.arrayContaining([
+        {
+          OR: [
+            { startsOn: { gt: new Date("2026-07-26T00:00:00.000Z") } },
+            { endsOn: { lt: new Date("2026-07-26T00:00:00.000Z") } },
+          ],
+        },
+      ]),
+    );
+  });
+
+  it("matches any of several groups, ungrouped included", () => {
+    const where = buildProjectWhere(
+      normalizeProjectFilters({ group: ["ungrouped", "group-1", "group-2"] }),
+      new Date("2026-07-26T00:00:00.000Z"),
+    );
+
+    expect(where.AND).toEqual(
+      expect.arrayContaining([
+        {
+          OR: [
+            { groupProjects: { none: { projectGroup: { deletedAt: null } } } },
+            {
+              groupProjects: {
+                some: {
+                  projectGroupId: { in: ["group-1", "group-2"] },
+                  projectGroup: { deletedAt: null },
+                },
+              },
+            },
+          ],
+        },
+      ]),
+    );
   });
 
   it("builds relational project search filters", () => {

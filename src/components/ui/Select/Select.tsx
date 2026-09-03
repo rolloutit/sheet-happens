@@ -15,7 +15,7 @@ import type { SelectProps } from "./Select.types";
 export const defaultSearchThreshold = 8;
 
 /**
- * A single-select that grows a search field when the list gets long.
+ * A select that grows a search field when the list gets long.
  *
  * Dispatches to a Radix menu below the threshold and to `Combobox` above it. The switch is
  * deliberately invisible from the outside: both paths honour `name`, `defaultValue`,
@@ -25,26 +25,33 @@ export const defaultSearchThreshold = 8;
  *
  * The count has to be decided here rather than at the call site because several lists are
  * data-driven — a tenant with six projects and one with sixty use the same JSX.
+ *
+ * `multiple` always takes the `Combobox` path, however few options it has: Radix's Select
+ * has no multiple mode, and its menu closes on every pick, which is the wrong shape for
+ * choosing several things anyway.
  */
-export function Select({
-  searchable = "auto",
-  searchThreshold = defaultSearchThreshold,
-  labels,
-  modal,
-  label,
-  "aria-label": ariaLabel,
-  ...props
-}: SelectProps) {
-  const useSearch =
-    searchable === true || (searchable !== false && props.options.length > searchThreshold);
+export function Select(props: SelectProps) {
+  const {
+    searchable = "auto",
+    searchThreshold = defaultSearchThreshold,
+    labels,
+    modal,
+    label,
+    "aria-label": ariaLabel,
+    ...rest
+  } = props;
 
-  if (!useSearch) {
-    return <SelectMenu {...props} label={label} aria-label={ariaLabel} />;
+  const useSearch =
+    searchable === true || (searchable !== false && rest.options.length > searchThreshold);
+
+  if (rest.multiple !== true && !useSearch) {
+    // `multiple` rides along as `false | undefined`; `SelectMenu` does not read it.
+    return <SelectMenu {...rest} label={label} aria-label={ariaLabel} />;
   }
 
   return (
     <Combobox
-      {...props}
+      {...rest}
       // Combobox requires a name for its trigger; Select allows either spelling.
       label={ariaLabel ?? label ?? ""}
       labels={labels}

@@ -270,8 +270,8 @@ describe("report snapshots", () => {
     const filters = normalizeReportFilters({
       periodStart: dateOnly("2026-07-01"),
       periodEnd: dateOnly("2026-07-31"),
-      projectGroupId: "group-1",
-      memberId: "member-1",
+      projectGroupIds: ["group-1"],
+      memberIds: ["member-1"],
     });
 
     expect(buildReportTimeEntryWhere(filters)).toEqual({
@@ -280,15 +280,87 @@ describe("report snapshots", () => {
         gte: dateOnly("2026-07-01"),
         lte: dateOnly("2026-07-31"),
       },
-      memberId: "member-1",
+      memberId: { in: ["member-1"] },
       project: {
         groupProjects: {
           some: {
-            projectGroupId: "group-1",
+            projectGroupId: { in: ["group-1"] },
           },
         },
       },
     });
+  });
+
+  /**
+   * The report scope takes several projects, groups and members. On a financial screen the
+   * failure would be quiet: a clause left as `equals` returns nothing for two selections,
+   * and a label list out of order would name the wrong project in the PDF header.
+   */
+  it("matches any of several projects, groups and members", () => {
+    const filters = normalizeReportFilters({
+      periodStart: dateOnly("2026-07-01"),
+      periodEnd: dateOnly("2026-07-31"),
+      projectIds: ["project-1", "project-2"],
+      projectGroupIds: ["group-1", "group-2"],
+      memberIds: ["member-1", "member-2"],
+    });
+
+    expect(buildReportTimeEntryWhere(filters)).toMatchObject({
+      memberId: { in: ["member-1", "member-2"] },
+      projectId: { in: ["project-1", "project-2"] },
+      project: {
+        groupProjects: { some: { projectGroupId: { in: ["group-1", "group-2"] } } },
+      },
+    });
+  });
+
+  it("names the chosen scope in the order the filter listed it", async () => {
+    const db = {
+      timeEntry: { findMany: vi.fn().mockResolvedValue([]) },
+      project: {
+        // Returned in the opposite order on purpose: the database decides its own ordering.
+        findMany: vi.fn().mockResolvedValue([
+          { id: "project-2", name: "Helix" },
+          { id: "project-1", name: "Apollo" },
+        ]),
+      },
+      projectGroup: { findMany: vi.fn().mockResolvedValue([]) },
+      member: { findMany: vi.fn().mockResolvedValue([]) },
+    };
+
+    const snapshot = await getTimeEntryReportSnapshot(
+      {
+        periodStart: dateOnly("2026-07-01"),
+        periodEnd: dateOnly("2026-07-01"),
+        projectIds: ["project-1", "project-2"],
+      },
+      { db, now: () => new Date("2026-07-31T12:00:00.000Z") },
+    );
+
+    expect(snapshot.filters.projectNames).toEqual(["Apollo", "Helix"]);
+  });
+
+  it("drops a scope id that no longer resolves rather than leaving a gap", async () => {
+    const db = {
+      timeEntry: { findMany: vi.fn().mockResolvedValue([]) },
+      project: {
+        findMany: vi.fn().mockResolvedValue([{ id: "project-1", name: "Apollo" }]),
+      },
+      projectGroup: { findMany: vi.fn().mockResolvedValue([]) },
+      member: { findMany: vi.fn().mockResolvedValue([]) },
+    };
+
+    const snapshot = await getTimeEntryReportSnapshot(
+      {
+        periodStart: dateOnly("2026-07-01"),
+        periodEnd: dateOnly("2026-07-01"),
+        projectIds: ["project-1", "deleted-project"],
+      },
+      { db, now: () => new Date("2026-07-31T12:00:00.000Z") },
+    );
+
+    expect(snapshot.filters.projectIds).toEqual(["project-1", "deleted-project"]);
+    expect(snapshot.filters.projectNames).toEqual(["Apollo"]);
   });
 
   it("queries entries by stored member-local dates and keeps involved timezones in the snapshot", async () => {
@@ -317,19 +389,23 @@ describe("report snapshots", () => {
       timeEntry: {
         findMany: vi.fn().mockResolvedValue(entries),
       },
+      // The scope filters take several values, so the labels are looked up by id list.
       project: {
-        findUnique: vi.fn().mockResolvedValue({ name: "Client Portal" }),
+        findMany: vi.fn().mockResolvedValue([{ id: "project-1", name: "Client Portal" }]),
       },
       projectGroup: {
-        findUnique: vi.fn().mockResolvedValue({ name: "Client Work" }),
+        findMany: vi.fn().mockResolvedValue([{ id: "group-1", name: "Client Work" }]),
       },
       member: {
-        findUnique: vi.fn().mockResolvedValue({
-          email: "contractor@example.com",
-          firstName: "Contractor",
-          lastName: "Example",
-          displayName: "Contractor Example",
-        }),
+        findMany: vi.fn().mockResolvedValue([
+          {
+            id: "member-1",
+            email: "contractor@example.com",
+            firstName: "Contractor",
+            lastName: "Example",
+            displayName: "Contractor Example",
+          },
+        ]),
       },
     };
 
@@ -337,9 +413,9 @@ describe("report snapshots", () => {
       {
         periodStart: dateOnly("2026-07-01"),
         periodEnd: dateOnly("2026-07-01"),
-        projectId: "project-1",
-        projectGroupId: "group-1",
-        memberId: "member-1",
+        projectIds: ["project-1"],
+        projectGroupIds: ["group-1"],
+        memberIds: ["member-1"],
       },
       {
         db,
@@ -355,12 +431,12 @@ describe("report snapshots", () => {
             gte: dateOnly("2026-07-01"),
             lte: dateOnly("2026-07-01"),
           },
-          memberId: "member-1",
-          projectId: "project-1",
+          memberId: { in: ["member-1"] },
+          projectId: { in: ["project-1"] },
           project: {
             groupProjects: {
               some: {
-                projectGroupId: "group-1",
+                projectGroupId: { in: ["group-1"] },
               },
             },
           },
@@ -374,9 +450,9 @@ describe("report snapshots", () => {
       timezones: ["America/New_York", "Europe/Budapest"],
     });
     expect(snapshot.filters).toMatchObject({
-      projectName: "Client Portal",
-      projectGroupName: "Client Work",
-      memberName: "Contractor Example",
+      projectNames: ["Client Portal"],
+      projectGroupNames: ["Client Work"],
+      memberNames: ["Contractor Example"],
     });
   });
 });

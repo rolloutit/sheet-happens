@@ -865,16 +865,28 @@ Expected result:
 12. Accept the invoice.
 13. Confirm the invoice reconciliation section shows the paid action.
 14. Click `Mark as paid`.
-15. Reopen `https://{DOMAIN_NAME}/admin/timesheets`.
-16. Filter by paid status, `{CONTRACTOR_EMAIL}`, or `{TIMESHEET_MONTH}`.
-17. Open the paid timesheet review.
-18. Sign in again as `{CONTRACTOR_EMAIL}`.
-19. Open `https://{DOMAIN_NAME}/timesheets?month={TIMESHEET_MONTH}`.
+15. Reopen `https://{DOMAIN_NAME}/admin/timesheets` and read the list without touching a filter.
+16. Tick `Kifizetettek mutatása` / `Show paid` and apply.
+17. Take the `Kifizetettek is látszanak` / `Paid included` chip off again.
+18. Filter by paid status alone, leaving the checkbox unticked.
+19. Add `{CONTRACTOR_EMAIL}` or `{TIMESHEET_MONTH}` to that filter, then page to the second page if
+    there is one.
+20. Open the paid timesheet review.
+21. Sign in again as `{CONTRACTOR_EMAIL}`.
+22. Open `https://{DOMAIN_NAME}/timesheets?month={TIMESHEET_MONTH}`.
 
 Expected result:
 
 - The paid action is only visible after the invoice has been accepted.
 - Marking as paid changes the timesheet status to paid.
+- The unfiltered list leaves the paid timesheet out, and the `Showing x-y of z` count drops with it —
+  the queue shows what is still to do, not what is settled.
+- Ticking the checkbox brings it back, puts `includePaid=1` in the URL, and produces one chip;
+  taking that chip off hides paid rows again **and** unticks the box.
+- Filtering by paid status shows paid rows even with the box unticked: an explicit status filter is
+  itself the request. A list that comes back empty because two filters disagree is the failure here.
+- Paging carries `includePaid=1` along with the other filters.
+- `Törlés` / `Clear` returns to the default, paid rows hidden.
 - The contractor monthly preview shows the paid status.
 - Source time entries remain locked.
 - The same timesheet cannot be marked as paid again.
@@ -1987,15 +1999,28 @@ Expected result:
 2. Open `https://{DOMAIN_NAME}/admin/reports`.
 3. Switch between month, week, day, year, and custom period filters.
 4. Filter by project, project group, and member.
-5. Switch between user view and project view.
-6. Clear filters.
+5. Pick **two** projects and **two** members in the same report, then apply.
+6. Copy the URL, open it in a new tab, and confirm both values come back on each filter.
+7. Export the report to PDF with two projects chosen, and read the header.
+8. Export again with exactly one project chosen.
+9. Switch between user view and project view.
+10. Clear filters.
 
 Expected result:
 
 - The report updates for each period mode and filter.
 - User view groups by people.
 - Project view groups by projects.
-- The selected filters are reflected in the URL and survive browser refresh.
+- The selected filters are reflected in the URL and survive browser refresh. A filter holding
+  several values appears once per value (`?project=…&project=…`), and every value comes back when
+  the URL is reopened — none is silently dropped.
+- The report totals cover **all** chosen projects and members, not only the first one.
+- The exported PDF header names every chosen project, in the order the picker lists them, joined the
+  way the document's language joins a list (`Apollo, Helix és Belső` in Hungarian). With one project
+  chosen it names that project and shows its colour dot; with two it names both and shows no dot.
+- With two projects chosen the detail table keeps its project column — the header says what the
+  scope is, the column says which line is which. With exactly one it drops that column, as before.
+- The preview inside the export dialog and the downloaded file describe the same scope.
 - Clearing filters returns to the default monthly report.
 - The donut chart's center label shows exactly one hour unit (e.g. `3.38 h`), never a doubled or
   mismatched unit, in every display-preference and locale combination.
@@ -2318,14 +2343,21 @@ Expected result:
 2. Open `{AUDIT_LOG_VIEW}`.
 3. Search for a known event action, for example `member.updated` or `security.totp_reset`.
 4. Filter by event, target type, actor, and a date range.
-5. Clear the filters.
+5. Pick **two** events (for example a rate created and a rate updated), then apply.
+6. Pick `Rendszer` / `System` **and** a named person in the actor filter, then apply.
+7. Page to the second page of results.
+8. Clear the filters.
 
 Expected result:
 
-- Search and filters update the URL query string.
-- Rows match the selected criteria.
+- Search and filters update the URL query string. A filter holding several values appears once per
+  value, and every value comes back when the URL is reopened.
+- Rows match the selected criteria, and a multi-value filter matches **any** of them: two events
+  show both events' rows.
+- `Rendszer` / `System` picked alongside a person shows both the system rows and that person's —
+  system is not a member, so it cannot be folded in with real actors.
 - Clearing filters returns to the unfiltered first page.
-- Pagination keeps the selected filters.
+- Pagination keeps the selected filters, including every value of a multi-select one.
 
 ### Audit Details Redaction
 
@@ -2956,7 +2988,11 @@ Run this on all four admin lists: `/admin/timesheets`, `/admin/payslips`, `/admi
 4. Use `Törlés` / `Clear`.
 5. Type a search term, submit, and read the chip it produces.
 6. On `/admin/projects`, filter by a project group.
-7. Narrow the window to tablet and phone widths.
+7. Pick **two** values in one of the multi-select filters — status on `/admin/timesheets`, state on
+   `/admin/people`, group or timeline on `/admin/projects`, employee on `/admin/payslips` — and
+   submit.
+8. Remove **one** of the two chips that filter produced.
+9. Narrow the window to tablet and phone widths.
 
 Expected result:
 
@@ -2980,6 +3016,73 @@ Expected result:
   `Project directory` header on one line, and opening it puts `?new=assignments` in the URL.
 - The controls wrap onto further lines on narrow viewports with the submit staying on the right, and
   no page scrolls sideways.
+- A multi-select filter shows one chip **per chosen value**, and removing one leaves the others
+  applied — the list stays filtered by what the remaining chips say.
+- The list matches **any** of the chosen values, not all of them: two statuses on
+  `/admin/timesheets` show both statuses' rows, and `Aktív` + `Meghívott` on `/admin/people` shows
+  everyone who is not archived.
+- On `/admin/people`, `Zárolt` / `Locked` picked alongside a real state still shows both — it is a
+  soft-delete marker rather than a status, so it cannot be folded in with the others. The same holds
+  for `Csoport nélkül` / `Ungrouped` next to a real group on `/admin/projects`.
+- Paging keeps every value of a multi-select filter: go to page 2 and confirm the chips and the URL
+  still carry both.
+
+### Multi-Select Rate Filters
+
+1. Open `https://{DOMAIN_NAME}/admin/rates`.
+2. Open the `Projekt` / `Project` filter and read the trigger before choosing anything.
+3. Pick one project. Confirm the panel stays open.
+4. Pick a second project without reopening the panel, then close it with `Esc`.
+5. Reopen the panel and confirm both chosen rows are still ticked.
+6. Use the panel's `Törlés` / `Clear` action.
+7. Repeat steps 2-6 on the `Csoport` / `Group` filter, including its `Csoport nélkül` /
+   `Ungrouped` entry alongside a real group.
+8. Type into the panel's search field with two projects already chosen.
+9. Narrow the window to tablet and phone widths.
+
+Expected result:
+
+- With nothing chosen the trigger reads `Mind` / `All` as placeholder text, and the table shows
+  every row — an empty selection means "no filter", not "no results".
+- Choosing an option does not close the panel; each row carries a checkbox that fills in when
+  ticked, so it is visible up front that several can be picked.
+- One choice shows that option's own label. From the second onwards the trigger shows
+  `2 kiválasztva` / `2 selected`, and hovering it lists the chosen names in full.
+- The table lists members matching **any** of the chosen projects, not only the last one. The same
+  holds for groups, and `Csoport nélkül` matches members whose assigned projects have no group.
+- `Törlés` / `Clear` empties the filter and disappears with the last chosen value.
+- Searching filters the rows but never hides the `Törlés` / `Clear` action, and ticked rows that
+  fall outside the search term stay chosen.
+- Check this in **both** locales, and confirm the trigger keeps the control's height at every
+  width: a long count or label ellipsises, it never wraps out of its box.
+
+### One Colour Per Timesheet Status
+
+1. Open `https://{DOMAIN_NAME}/admin/timesheets` with `Kifizetettek mutatása` / `Show paid` ticked
+   and `Minden státusz` / `All statuses` selected, so as many states as possible are on one page.
+2. Read the `Státusz` / `Status` column top to bottom.
+3. Switch the theme to light and read it again.
+4. Open `https://{DOMAIN_NAME}/dashboard` as an admin and compare the status distribution bar and
+   its legend against the pills you just read.
+5. Open a contractor's own `https://{DOMAIN_NAME}/timesheets` month list and check
+   `Nincs létrehozva` / `Not created` and `Hiányzik` / `Missing`.
+
+Expected result:
+
+- `Számlázva` / `Invoiced` is **yellow** — not the mint that `Beküldve` / `Submitted` uses.
+- No two statuses share a colour. All nine are distinguishable side by side: grey for
+  `Nincs létrehozva`, amber `Hiányzik`, mint `Beküldve`, rose `Elutasítva`, green `Jóváhagyva`,
+  yellow `Számlázva`, magenta `Számla elutasítva`, blue `Elfogadva`, violet `Kifizetve`.
+- In particular the two rejections differ (rose vs magenta) and the three end states differ (green
+  vs blue vs violet); these were previously one colour each.
+- Every pill's label is comfortably readable on its own tint, and each pill has a border of its own
+  hue — check a row on a hovered table stripe and inside a dropdown/popover too, not just on a card.
+- The same nine colours appear in light, still all distinct. Yellow and amber must not both read as
+  brown; violet, blue and magenta must not collapse into one purple.
+- The dashboard's distribution bar, its legend swatches and the priority-metric tiles use the same
+  colour for a status as the table pill does, in **both** themes — the dashboard used to carry its
+  own hardcoded dark-theme colours.
+- Every colour is accompanied by its status name; nothing requires colour alone to be identified.
 
 ## Regression Checklist For Every Release
 
@@ -3010,6 +3113,7 @@ Expected result:
 - No native `<select>` or date input remains on any screen; dropdowns above eight options offer
   search, and searching ignores accents.
 - The timesheet month filter submits `YYYY-MM` and actually narrows the list.
+- The timesheet list hides paid months until `Kifizetettek mutatása` / `Show paid` is ticked.
 - The reports period pills each render their own control shape and submit `anchor` or `start`+`end`,
   never both.
 - Currency, timezone, project and member pickers save correctly, and a form reset clears their

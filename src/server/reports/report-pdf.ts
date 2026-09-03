@@ -18,9 +18,9 @@ export type ReportPdfExportFilters = {
   anchor: string;
   periodStart: string;
   periodEnd: string;
-  projectId: string | null;
-  projectGroupId: string | null;
-  memberId: string | null;
+  projectIds: string[];
+  projectGroupIds: string[];
+  memberIds: string[];
   durationDisplayFormat: DurationDisplayFormat;
 };
 

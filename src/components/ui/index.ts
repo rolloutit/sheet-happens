@@ -23,7 +23,7 @@ export type {
   CardTextProps,
   CardVariant,
 } from "./Card";
-export { Checkbox } from "./Checkbox";
+export { Checkbox, checkboxBoxClassName } from "./Checkbox";
 export type { CheckboxProps } from "./Checkbox";
 export { ChipButton, chipButtonVariants } from "./ChipButton";
 export type { ChipButtonProps } from "./ChipButton";
@@ -38,7 +38,13 @@ export type {
 export { CodeInput } from "./CodeInput";
 export type { CodeInputProps } from "./CodeInput";
 export { Combobox, useFormReset } from "./Combobox";
-export type { ComboboxLabels, ComboboxOption, ComboboxProps } from "./Combobox";
+export type {
+  ComboboxLabels,
+  ComboboxMultipleProps,
+  ComboboxOption,
+  ComboboxProps,
+  ComboboxSingleProps,
+} from "./Combobox";
 export {
   Command,
   CommandEmpty,
@@ -174,7 +180,13 @@ export type { SectionHeadProps } from "./SectionHead";
 export { SegmentedControl } from "./SegmentedControl";
 export type { SegmentItem, SegmentedControlProps } from "./SegmentedControl";
 export { defaultSearchThreshold, Select, SelectMenu } from "./Select";
-export type { SelectMenuProps, SelectOption, SelectProps } from "./Select";
+export type {
+  SelectMenuProps,
+  SelectMultipleProps,
+  SelectOption,
+  SelectProps,
+  SelectSingleProps,
+} from "./Select";
 export { Skeleton } from "./Skeleton";
 export type { SkeletonProps, SkeletonVariant } from "./Skeleton";
 export { StrengthMeter, evaluatePasswordStrength } from "./StrengthMeter";
