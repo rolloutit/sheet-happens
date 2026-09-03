@@ -112,7 +112,7 @@ async function seedDatabase() {
     await client.query("begin");
 
     try {
-      const summary = await seedDevDatabase(client);
+      const summary = await seedDevDatabase(client, { objectStorage });
 
       await client.query("commit");
 
@@ -155,7 +155,12 @@ function printSummary(summary) {
   console.log(`- assignments: ${summary.assignments} (${summary.overrideRates} rate overrides)`);
   console.log(`- time entries inserted this run: ${summary.timeEntries}`);
   console.log(`- inactive project weeks inserted this run: ${summary.inactiveWeeks}`);
-  console.log("- no timesheets, contractor invoices, or payslips (create those by hand)");
+  console.log(
+    `- timesheets seeded this run: ${summary.timesheets.timesheets}` +
+      ` (${summary.timesheets.revisions} revisions, ${summary.timesheets.invoices} invoices)`,
+  );
+  console.log(`- timesheet statuses: ${summary.timesheetStatuses.join(", ")}`);
+  console.log("- no payslips (create those by hand)");
   console.log("");
   console.log("Seeded invite links:");
 

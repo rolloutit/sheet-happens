@@ -1,11 +1,11 @@
 #!/usr/bin/env node
 
 // Content of the local dev seed: members, invitations, projects, project groups,
-// assignments, internal rates, and roughly four months of weekday time entries.
-// Orchestration (Docker, extensions, `prisma db push`) lives in scripts/dev-db.mjs.
+// assignments, internal rates, and a year of weekday time entries.
+// Orchestration (Docker, extensions, `prisma db push`) lives in scripts/dev-db.mjs,
+// the contractor timesheet workflow states in scripts/dev-seed-timesheets.mjs.
 //
-// Deliberately stops before timesheets, contractor invoices, and payslips: those
-// flows are meant to be driven by hand from this raw tracked time.
+// Deliberately stops before payslips: that flow is meant to be driven by hand.
 //
 // Every insert is idempotent, so `pnpm db:dev:seed` can run against a database
 // that is already seeded. Randomised parts run through a fixed-seed PRNG, so a
@@ -13,11 +13,14 @@
 
 import { createHash } from "node:crypto";
 
+import { seedTimesheetWorkflows } from "./dev-seed-timesheets.mjs";
+
 const RATE_HISTORY_START = "2024-01-01";
 const ASSIGNMENT_HISTORY_START = "2024-01-01";
 
-// Time entries cover the current month plus this many whole months before it.
-const ENTRY_MONTHS_BACK = 3;
+// Time entries cover the current month plus this many whole months before it. A year of history
+// is what makes the report period filters — year and custom ranges especially — worth testing.
+const ENTRY_MONTHS_BACK = 12;
 // Only the most recent weeks get "nothing to report" markers.
 const INACTIVE_WEEK_LOOKBACK = 4;
 
@@ -394,7 +397,7 @@ const NOTIFICATION_RULE_TYPES = [
   "time_entry_admin_modified",
 ];
 
-export async function seedDevDatabase(client) {
+export async function seedDevDatabase(client, { objectStorage }) {
   const memberIds = new Map();
 
   for (const member of MEMBERS) {
@@ -494,6 +497,12 @@ export async function seedDevDatabase(client) {
 
   await ensureNotificationConfiguration(client);
 
+  const timesheets = await seedTimesheetWorkflows(client, {
+    memberIds,
+    adminId,
+    objectStorage,
+  });
+
   return {
     members: MEMBERS.length,
     projects: PROJECTS.length,
@@ -502,7 +511,17 @@ export async function seedDevDatabase(client) {
     overrideRates: overrideRateCount,
     timeEntries: timeEntryCount,
     inactiveWeeks: inactiveWeekCount,
+    timesheets,
+    timesheetStatuses: await countTimesheetStatuses(client),
   };
+}
+
+async function countTimesheetStatuses(client) {
+  const result = await client.query(
+    "SELECT status, count(*)::int AS count FROM timesheets GROUP BY status ORDER BY status",
+  );
+
+  return result.rows.map((row) => `${row.status} ${row.count}`);
 }
 
 async function ensureMember(client, member) {
@@ -781,19 +800,22 @@ async function ensureAssignmentOverrideRate(
 // Real weeks have a focus: people rarely touch every assigned project every week.
 // Picking a weekly focus first is what makes "nothing to report" markers meaningful.
 async function seedMemberTimeTracking(client, { member, memberId, assignments, adminId }) {
-  const pending = [];
-
-  for (const assignment of assignments) {
-    const existing = await client.query(
-      "SELECT 1 FROM time_entries WHERE project_assignment_id = $1::uuid LIMIT 1",
-      [assignment.assignmentId],
-    );
-
-    if (existing.rowCount === 0) pending.push(assignment);
-  }
-
-  if (pending.length === 0) return { timeEntries: 0, inactiveWeeks: 0 };
-
+  // Skipping is per day rather than per assignment, so a database seeded a month ago gains the
+  // days it is missing instead of staying frozen at whatever the first run produced. Months that
+  // already carry a timesheet stay untouched: a new entry there would sit outside the submitted
+  // snapshot, which is the one thing a timesheet revision must never be.
+  const [seededDays, timesheetMonths] = await Promise.all([
+    client.query(
+      "SELECT DISTINCT to_char(local_date, 'YYYY-MM-DD') AS day FROM time_entries WHERE member_id = $1::uuid",
+      [memberId],
+    ),
+    client.query(
+      "SELECT to_char(period_start, 'YYYY-MM') AS month FROM timesheets WHERE contractor_member_id = $1::uuid",
+      [memberId],
+    ),
+  ]);
+  const filledDays = new Set(seededDays.rows.map((row) => row.day));
+  const closedMonths = new Set(timesheetMonths.rows.map((row) => row.month));
   const random = createRandom(`time-tracking:${member.email}`);
   const windowStart = monthStart(ENTRY_MONTHS_BACK);
   const windowEnd = startOfToday();
@@ -807,7 +829,7 @@ async function seedMemberTimeTracking(client, { member, memberId, assignments, a
       maxDate(weekStart, windowStart),
       minDate(addDays(weekStart, 6), windowEnd),
     );
-    const eligible = pending.filter((assignment) => coversWeek(assignment, weekStart));
+    const eligible = assignments.filter((assignment) => coversWeek(assignment, weekStart));
 
     if (eligible.length === 0) continue;
 
@@ -824,6 +846,10 @@ async function seedMemberTimeTracking(client, { member, memberId, assignments, a
       if (active.length === 0) continue;
       if (random() >= WORKDAY_PROBABILITY) continue;
 
+      // Decided after the rolls above, never before them: skipping earlier would shift the PRNG
+      // stream, and the next run would invent a different set of workdays for the same days.
+      const skipDay = filledDays.has(localDate) || closedMonths.has(localDate.slice(0, 7));
+
       const durations = splitMinutes(random, pick(random, DAILY_MINUTES), active.length);
       // Timer-sourced entries need non-overlapping windows, so walk a clock through the day.
       let cursor = new Date(`${localDate}T07:00:00.000Z`);
@@ -834,9 +860,12 @@ async function seedMemberTimeTracking(client, { member, memberId, assignments, a
         const startedAt = cursor;
         const endedAt = new Date(cursor.getTime() + durationMinutes * 60_000);
         const project = PROJECTS.find((candidate) => candidate.slug === assignment.projectSlug);
+        const description = pick(random, project.descriptions);
         const isAdminEdited = date >= adminEditCutoff && random() < ADMIN_EDIT_PROBABILITY;
 
         cursor = new Date(endedAt.getTime() + 30 * 60_000);
+
+        if (skipDay) continue;
 
         await client.query(
           `
@@ -864,7 +893,7 @@ async function seedMemberTimeTracking(client, { member, memberId, assignments, a
             source === "timer" ? startedAt.toISOString() : null,
             source === "timer" ? endedAt.toISOString() : null,
             durationMinutes,
-            pick(random, project.descriptions),
+            description,
             source,
             isAdminEdited ? endedAt.toISOString() : null,
             isAdminEdited ? adminId : null,
@@ -882,7 +911,7 @@ async function seedMemberTimeTracking(client, { member, memberId, assignments, a
       if (focus.includes(assignment)) continue;
       if (random() >= INACTIVE_WEEK_PROBABILITY) continue;
 
-      await client.query(
+      const marked = await client.query(
         `
           INSERT INTO inactive_project_weeks (member_id, project_id, week_start_date, timezone, note)
           VALUES ($1::uuid, $2::uuid, $3::date, $4, 'Dev seed')
@@ -891,7 +920,7 @@ async function seedMemberTimeTracking(client, { member, memberId, assignments, a
         [memberId, assignment.projectId, toDateOnly(weekStart), member.timezone],
       );
 
-      inactiveWeeks += 1;
+      inactiveWeeks += marked.rowCount;
     }
   }
 
