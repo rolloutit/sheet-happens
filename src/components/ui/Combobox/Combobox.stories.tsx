@@ -4,7 +4,7 @@ import { expect, fn, screen, waitFor } from "storybook/test";
 
 import { Button } from "../Button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "../Dialog";
-import { Combobox } from ".";
+import { Combobox, type ComboboxMultipleProps, type ComboboxSingleProps } from ".";
 
 const options = [
   { value: "apollo", label: "Apollo Migration", meta: "Client project" },
@@ -21,10 +21,17 @@ const meta = {
     label: "Project",
     options,
   },
-} satisfies Meta<typeof Combobox>;
+} satisfies Meta<ComboboxSingleProps>;
 
 export default meta;
-type Story = StoryObj<typeof meta>;
+
+/**
+ * Pinned to the single-select half of the union rather than derived from `meta`. Deriving it
+ * reads args off the component, and indexing a discriminated union collapses
+ * `onValueChange` to both signatures at once — which then fits neither variant. The
+ * multi-select stories pin themselves to the other half the same way.
+ */
+type Story = StoryObj<ComboboxSingleProps>;
 
 /** The search field and the trigger both report `role="combobox"` — cmdk hardcodes it. */
 const trigger = { role: "combobox" as const, name: /project/i };
@@ -236,6 +243,180 @@ export const SubmitsInAForm: Story = {
     await userEvent.click(canvas.getByRole("button", { name: /reset/i }));
     await waitFor(() =>
       expect(canvas.getByRole(trigger.role, { name: trigger.name })).toHaveTextContent(/apollo/i),
+    );
+  },
+};
+
+const statuses = [
+  { value: "SUBMITTED", label: "Submitted" },
+  { value: "REJECTED", label: "Rejected" },
+  { value: "APPROVED", label: "Approved" },
+];
+
+/** Multi mode has no "All …" option to fall back on, so it needs both of these. */
+const multiLabels = {
+  selected: (count: number) => `${count} selected`,
+  clear: "Clear",
+};
+
+const statusTrigger = { role: "combobox" as const, name: /status/i };
+
+/**
+ * Closes the panel before reading the trigger.
+ *
+ * A modal Radix popover `aria-hidden`s the rest of the document while it is open, and role
+ * queries skip hidden subtrees — so the trigger is only reachable once the panel is gone.
+ * The single-select stories never needed this because picking an option closes the panel by
+ * itself, which is exactly what multi mode does not do.
+ */
+async function closePanel(userEvent: { keyboard: (keys: string) => Promise<void> }) {
+  await userEvent.keyboard("{Escape}");
+}
+
+/**
+ * The behaviour that separates multi from single: the panel survives a pick, so several
+ * choices are one visit rather than one visit each.
+ */
+export const MultipleSelection: StoryObj<ComboboxMultipleProps> = {
+  render: () => {
+    const [values, setValues] = useState<string[]>([]);
+
+    return (
+      <div className="w-80">
+        <Combobox
+          multiple
+          label="Status"
+          placeholder="All statuses"
+          options={statuses}
+          labels={multiLabels}
+          value={values}
+          onValueChange={setValues}
+        />
+      </div>
+    );
+  },
+  play: async ({ canvas, userEvent }) => {
+    await userEvent.click(canvas.getByRole(statusTrigger.role, { name: statusTrigger.name }));
+    await userEvent.click(screen.getByRole("option", { name: /submitted/i }));
+
+    // Still open, and the chosen row reports itself through `aria-checked` — cmdk owns
+    // `aria-selected` for its own highlight.
+    await expect(screen.getByRole("option", { name: /submitted/i })).toHaveAttribute(
+      "aria-checked",
+      "true",
+    );
+    await userEvent.click(screen.getByRole("option", { name: /rejected/i }));
+
+    await closePanel(userEvent);
+    await expect(
+      canvas.getByRole(statusTrigger.role, { name: statusTrigger.name }),
+    ).toHaveTextContent(/2 selected/i);
+  },
+};
+
+/** A single choice keeps its own label; only the second one collapses to a count. */
+export const MultipleShowsOneLabel: StoryObj<ComboboxMultipleProps> = {
+  render: () => (
+    <div className="w-80">
+      <Combobox
+        multiple
+        label="Status"
+        placeholder="All statuses"
+        options={statuses}
+        labels={multiLabels}
+        defaultValue={["APPROVED"]}
+      />
+    </div>
+  ),
+  play: async ({ canvas }) => {
+    await expect(
+      canvas.getByRole(statusTrigger.role, { name: statusTrigger.name }),
+    ).toHaveTextContent(/approved/i);
+  },
+};
+
+/** Clearing is the multi equivalent of picking the "All …" option in single mode. */
+export const MultipleClearsFromPanel: StoryObj<ComboboxMultipleProps> = {
+  render: () => (
+    <div className="w-80">
+      <Combobox
+        multiple
+        label="Status"
+        placeholder="All statuses"
+        options={statuses}
+        labels={multiLabels}
+        defaultValue={["SUBMITTED", "REJECTED"]}
+      />
+    </div>
+  ),
+  play: async ({ canvas, userEvent }) => {
+    await userEvent.click(canvas.getByRole(statusTrigger.role, { name: statusTrigger.name }));
+    await userEvent.click(screen.getByRole("button", { name: /clear/i }));
+
+    // The action removes itself with the last value rather than sitting there inert.
+    await expect(screen.queryByRole("button", { name: /clear/i })).not.toBeInTheDocument();
+
+    await closePanel(userEvent);
+    await expect(
+      canvas.getByRole(statusTrigger.role, { name: statusTrigger.name }),
+    ).toHaveTextContent(/all statuses/i);
+  },
+};
+
+/**
+ * The URL contract. The hidden `<select multiple>` serializes one repeated parameter per
+ * value, which is what the filter parsers read back — no custom encoding anywhere.
+ */
+export const MultipleSubmitsInAForm: StoryObj<ComboboxMultipleProps> = {
+  render: () => {
+    const [submitted, setSubmitted] = useState<string>();
+
+    return (
+      <form
+        className="grid w-80 gap-3"
+        onSubmit={(event) => {
+          event.preventDefault();
+          setSubmitted(new FormData(event.currentTarget).getAll("status").join("&status="));
+        }}
+      >
+        <Combobox
+          multiple
+          label="Status"
+          name="status"
+          placeholder="All statuses"
+          options={statuses}
+          labels={multiLabels}
+          defaultValue={["SUBMITTED"]}
+        />
+        <div className="flex gap-2">
+          <Button type="submit" size="sm">
+            Submit
+          </Button>
+          <Button type="reset" size="sm" variant="soft">
+            Reset
+          </Button>
+        </div>
+        <p className="font-ui text-sm text-muted-foreground">
+          Submitted: <output>{submitted ?? "nothing"}</output>
+        </p>
+      </form>
+    );
+  },
+  play: async ({ canvas, userEvent }) => {
+    await userEvent.click(canvas.getByRole(statusTrigger.role, { name: statusTrigger.name }));
+    await userEvent.click(screen.getByRole("option", { name: /approved/i }));
+    await closePanel(userEvent);
+    await userEvent.click(canvas.getByRole("button", { name: /submit/i }));
+
+    // Option order, not click order: the hidden select is the serializer.
+    await expect(canvas.getByRole("status")).toHaveTextContent("SUBMITTED&status=APPROVED");
+
+    // Resetting the form must pull the trigger back to its defaultValue, not strand it.
+    await userEvent.click(canvas.getByRole("button", { name: /reset/i }));
+    await waitFor(() =>
+      expect(canvas.getByRole(statusTrigger.role, { name: statusTrigger.name })).toHaveTextContent(
+        /submitted/i,
+      ),
     );
   },
 };

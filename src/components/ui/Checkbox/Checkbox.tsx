@@ -6,6 +6,7 @@ import * as React from "react";
 
 import { cn } from "@/src/lib/utils";
 import type { CheckboxProps } from "./Checkbox.types";
+import { checkboxBoxClassName } from "./Checkbox.variants";
 
 export const Checkbox = React.forwardRef<
   React.ElementRef<typeof CheckboxPrimitive.Root>,
@@ -14,7 +15,8 @@ export const Checkbox = React.forwardRef<
   <CheckboxPrimitive.Root
     ref={ref}
     className={cn(
-      "peer size-5 shrink-0 rounded-[var(--radius-xs)] border border-input bg-background/50 transition disabled:cursor-not-allowed disabled:opacity-50 data-[state=checked]:border-accent data-[state=checked]:bg-accent data-[state=checked]:text-accent-foreground",
+      checkboxBoxClassName,
+      "peer disabled:cursor-not-allowed disabled:opacity-50",
       className,
     )}
     {...props}

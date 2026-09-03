@@ -73,6 +73,14 @@ Form control conventions:
   directly only when a list must always be searchable. Both paths honour `name`,
   `defaultValue`, `required`, `invalid`, and `form.reset()`, and share one trigger surface
   (`controlSurface.ts`) so the switch is invisible.
+- `multiple` turns either of them into a multi-select, typed as a discriminated union: the
+  value and the callback become arrays. It always renders the `Combobox` path — Radix's
+  Select has no multiple mode — the panel stays open while picking, and rows grow a
+  checkbox. Filters in multi mode drop the `{ value: "", label: "All …" }` option their
+  single-select counterparts carry and pass that label as `placeholder` instead, because an
+  empty selection already means "unfiltered". The hidden control becomes a
+  `<select multiple>`, so a GET form serializes `?name=a&name=b` with no extra encoding.
+  Pass `labels.selected` and `labels.clear` (`usePickerLabels` already does).
 - Dates are `YYYY-MM-DD` strings and months are `YYYY-MM` strings, never `Date` objects —
   `DatePicker`, `DateRangePicker`, and `MonthPicker` all convert at their own boundary. See
   `src/lib/date-values.ts`.
