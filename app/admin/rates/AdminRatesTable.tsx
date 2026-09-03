@@ -93,8 +93,9 @@ export function AdminRatesTable({
   const [query, setQuery] = useState("");
   const [profileFilter, setProfileFilter] = useState<ProfileFilter>("all");
   const [rateFilter, setRateFilter] = useState<RateFilter>("all");
-  const [projectFilter, setProjectFilter] = useState("all");
-  const [groupFilter, setGroupFilter] = useState("all");
+  // Multi-select: an empty list means "every project", so there is no "all" sentinel value.
+  const [projectFilter, setProjectFilter] = useState<string[]>([]);
+  const [groupFilter, setGroupFilter] = useState<string[]>([]);
   const [selectedMemberId, setSelectedMemberId] = useState<string | null>(null);
   const [actionState, setActionState] = useState<RateActionState>(initialActionState);
   const [pendingKey, setPendingKey] = useState<string | null>(null);
@@ -142,23 +143,25 @@ export function AdminRatesTable({
     if (rateFilter === "has" && !row.currentRate) return false;
     if (rateFilter === "none" && row.currentRate) return false;
 
-    if (projectFilter !== "all") {
+    if (projectFilter.length > 0) {
       const hasProjectAssignment = assignmentRates.some(
         (assignment) =>
-          assignment.memberId === row.memberId && assignment.projectId === projectFilter,
+          assignment.memberId === row.memberId && projectFilter.includes(assignment.projectId),
       );
 
       if (!hasProjectAssignment) return false;
     }
 
-    if (groupFilter !== "all") {
+    if (groupFilter.length > 0) {
       return assignmentRates.some((assignment) => {
         if (assignment.memberId !== row.memberId) return false;
         const projectGroups = projectGroupsByProjectId.get(assignment.projectId) ?? [];
 
-        if (groupFilter === "ungrouped") return projectGroups.length === 0;
+        // A project with no groups can only match through the explicit "ungrouped" entry,
+        // which stays selectable alongside real groups.
+        if (projectGroups.length === 0) return groupFilter.includes("ungrouped");
 
-        return projectGroups.some((group) => group.id === groupFilter);
+        return projectGroups.some((group) => groupFilter.includes(group.id));
       });
     }
 
@@ -274,15 +277,14 @@ export function AdminRatesTable({
               {t("filters.project")}
             </span>
             <Combobox
+              multiple
               label={t("filters.project")}
+              placeholder={t("filters.all")}
               value={projectFilter}
               onValueChange={setProjectFilter}
               labels={pickerLabels.combobox}
               triggerClassName="h-auto border-0 bg-transparent px-0 font-semibold shadow-none"
-              options={[
-                { value: "all", label: t("filters.all") },
-                ...projects.map((project) => ({ value: project.id, label: project.name })),
-              ]}
+              options={projects.map((project) => ({ value: project.id, label: project.name }))}
             />
           </label>
           <label
@@ -295,13 +297,14 @@ export function AdminRatesTable({
               {t("filters.group")}
             </span>
             <Combobox
+              multiple
               label={t("filters.group")}
+              placeholder={t("filters.all")}
               value={groupFilter}
               onValueChange={setGroupFilter}
               labels={pickerLabels.combobox}
               triggerClassName="h-auto border-0 bg-transparent px-0 font-semibold shadow-none"
               options={[
-                { value: "all", label: t("filters.all") },
                 { value: "ungrouped", label: t("filters.ungrouped") },
                 ...groupOptions.map((group) => ({ value: group.id, label: group.name })),
               ]}
