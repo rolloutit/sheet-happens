@@ -31,9 +31,9 @@ The next work should move from component-library hardening into real app screens
 
 Current explicit behavior coverage:
 
-- Storybook play tests: AppShell mobile navigation, BulkBar, Button, Checkbox, ChipButton, Combobox, CommandPill, DashboardCards, DatePicker, Dialog, DocumentPreview, Drawer, Dropdown, Dropzone, Field, FlaggedUserList, InvoiceUploadPanel, LanguageToggle, ListRow, MobileBottomBar, MonthRow, NotificationButton, NotificationPreferences, Pager, PayslipAdminTable, PayslipMonthList, Payslips, PayslipSummaryCard, PayslipUploadPanel, PayslipViewer, PeopleTable, Popover, PreferenceControls, ProfileSettingsPanel, ProjectDrawer, RateDrawer, ReportExportDialog, ReportFilterBar, Reports, RejectDialog, ReviewActionBar, ReviewDiffList, ReviewQueueTable, SecurityMethodList, SegmentedControl, Select, SettingsPanels, StatCard, StatusOverview, SubmitTimesheetDialog, Switch, Table, Tabs, TimeGridTimer, TimesheetStepper, TimesheetSummaryCard, Toast, Tooltip, TotpSetupDialog, TweaksPanel, UserMenu, WeeklyTimeGrid.
-- Playwright visual baselines: Button variants, Field error, WeeklyTimeGrid cell states, Dashboard admin cards, AppShell desktop, AppShell mobile drawer, CommandPill, CommandPalette, LanguageToggle, NotificationButton menu, UserMenu, MobileBottomBar, TimeEntryForm, DayDetailPanel, TimeBreakdownDialog, PdfViewer, ChartPrimitives, and InfoPageEditor across scoped desktop/mobile viewports.
-- Unit tests: StatusPill only.
+- Storybook play tests: AppShell mobile navigation, BulkBar, Button, Checkbox, ChipButton, Combobox, CommandPill, DashboardCards, DayAgenda, DatePicker, Dialog, DocumentPreview, Drawer, Dropdown, Dropzone, Field, FlaggedUserList, InvoiceUploadPanel, LanguageToggle, ListRow, MobileBottomBar, MonthRow, NotificationButton, NotificationPreferences, Pager, PayslipAdminTable, PayslipMonthList, Payslips, PayslipSummaryCard, PayslipUploadPanel, PayslipViewer, PeopleTable, Popover, PreferenceControls, ProfileSettingsPanel, ProjectDrawer, RateDrawer, ReportExportDialog, ReportFilterBar, Reports, RejectDialog, ReviewActionBar, ReviewDiffList, ReviewQueueTable, SecurityMethodList, SegmentedControl, Select, SettingsPanels, StatCard, StatusOverview, SubmitTimesheetDialog, Switch, Table, Tabs, TimeGridTimer, TimesheetStepper, TimesheetSummaryCard, Toast, Tooltip, TotpSetupDialog, TweaksPanel, UserMenu, WeekAgenda, WeeklyTimeGrid.
+- Playwright visual baselines: Button variants, Field error, WeeklyTimeGrid cell states, Dashboard admin cards, AppShell desktop, AppShell mobile drawer, CommandPill, CommandPalette, LanguageToggle, NotificationButton menu, UserMenu, MobileBottomBar, TimeEntryForm, DayAgenda, WeekAgenda (desktop dark, desktop light, mobile accordion), TimeBreakdownDialog, PdfViewer, ChartPrimitives, and InfoPageEditor across scoped desktop/mobile viewports.
+- Unit tests: StatusPill, TimesheetStepper, ProjectPicker, WeekAgenda.
 
 No item from the original high-priority behavior list is completely untested anymore. Remaining behavior work is deeper coverage:
 
@@ -143,7 +143,8 @@ Recommendation: do not implement all immediately. Add them only when real screen
 | AuthScreens             | Ready  | Full auth-mode story coverage, typed form/callback contracts, and reusable PasswordInput, StrengthMeter, and CodeInput wiring.                  |
 | ChartPrimitives         | Ready  | ChartFrame, TrendChart, and DistributionBarList provide reusable report/chart building blocks beyond the bar chart card.                        |
 | DashboardCards          | Ready  | Composes data-driven stats, checklist, flagged-user, hero action, and status APIs; covered by Storybook and the app audit route.                |
-| DayDetailPanel          | Ready  | Data-driven day entries with totals, capacity warning, billable status, and edit/delete/add callbacks.                                          |
+| DayAgenda               | Ready  | L1 of the `/time` zoom axis: one day's entries with source, warnings, admin corrections, and edit/delete/add callbacks.                         |
+| WeekAgenda              | Ready  | L2 of the `/time` zoom axis: seven day columns on desktop, an accordion on mobile, with per-day totals, add, edit, delete, and zoom callbacks.  |
 | StatCard                | Ready  | Dashboard KPI primitive with typed tone, trend, loading, and sparkline props.                                                                   |
 | FlaggedUserList         | Ready  | Controlled flagged-user panel with selection, reminder callback, sent/empty states, and Storybook interaction coverage.                         |
 | StatusOverview          | Ready  | Data-driven distribution/legend primitive with empty state, formatter hook, and action slot.                                                    |
@@ -225,7 +226,7 @@ Recommended story additions:
 - Payslips: summary actions, month preview/download, upload panel browse/upload, admin table sort/actions, viewer states, and composed employee/admin callback stories exist.
 - Settings: profile action, security method action, TOTP dialog verify, timezone/language preference changes, notification toggles/reset/cadence, and composed settings callback stories exist.
 - WeeklyTimeGrid: edit start/change, arrow-key cell movement, locked grid, warning cells, future days, mobile day grid, and timer controls exist.
-- New app surfaces: CommandPalette, TimeEntryForm, DayDetailPanel, TimeBreakdownDialog, PdfViewer, ChartPrimitives, and InfoPageEditor now have typed stories and interaction coverage where behavior exists.
+- New app surfaces: CommandPalette, TimeEntryForm, DayAgenda, WeekAgenda, TimeBreakdownDialog, PdfViewer, ChartPrimitives, and InfoPageEditor now have typed stories and interaction coverage where behavior exists.
 
 ## API Guidelines To Enforce Next
 
@@ -284,7 +285,7 @@ Additional primitive behavior progress:
 - Done: CommandPill, LanguageToggle, NotificationButton, UserMenu, and MobileBottomBar are extracted from the shell as typed layout controls with Storybook coverage.
 - Done: SegmentedControl vertical orientation and full-width mobile layout are covered.
 - Done: TweaksPanel has a typed value/persistence contract with reset/apply/change callbacks.
-- Done: CommandPalette content, TimeEntryForm, DayDetailPanel, TimeBreakdownDialog, PdfViewer, ChartPrimitives, and InfoPageEditor are implemented as standalone typed components.
+- Done: CommandPalette content, TimeEntryForm, DayAgenda, WeekAgenda, TimeBreakdownDialog, PdfViewer, ChartPrimitives, and InfoPageEditor are implemented as standalone typed components.
 
 ### Batch 2: Product Component Decomposition
 
@@ -312,7 +313,7 @@ Done: Storybook is now protected with a local Playwright visual baseline:
 
 Retired: the internal `/component-library` route has been removed. Storybook remains the component-library surface, and route-level Playwright coverage should target real backend-backed workflows:
 
-- Storybook covers DashboardCards, WeeklyTimeGrid, TimeEntryForm, DayDetailPanel, TimeBreakdownDialog, TimesheetComponents, AdminReview, PdfViewer, ManagementViews, Reports, SettingsPanels, TweaksPanel, Payslips, and InfoPageEditor.
+- Storybook covers DashboardCards, WeeklyTimeGrid, TimeEntryForm, DayAgenda, WeekAgenda, TimeBreakdownDialog, TimesheetComponents, AdminReview, PdfViewer, ManagementViews, Reports, SettingsPanels, TweaksPanel, Payslips, and InfoPageEditor.
 - `visual/storybook.spec.ts` protects the visual baseline for key primitive and product compositions.
 - Production routes should add E2E coverage when they wire these components to real data and actions.
 

@@ -1940,9 +1940,24 @@
     "missingEnv": "Hiányzik: {names}"
   },
   "TimeTracking": {
-    "view": {
-      "weeklyGrid": "Heti rács",
-      "day": "Nap"
+    "zoom": {
+      "day": "Nap",
+      "week": "Hét",
+      "grid": "Rács",
+      "controlLabel": "Részletességi szint",
+      "keyboardHint": "1-3 szint · − + lépés · [ ] hét · t ma",
+      "dayStrip": "A hét napjai",
+      "selectDay": "{day} kiválasztása",
+      "zoomToDay": "{day} megnyitása",
+      "zoomOut": "Vissza a heti nézetre"
+    },
+    "week": {
+      "columnEmpty": "Nincs rögzítve",
+      "expandDay": "{day} mutatása",
+      "addEntryOn": "Bejegyzés hozzáadása – {day}",
+      "editEntryNamed": "{entry} szerkesztése",
+      "deleteEntryNamed": "{entry} törlése",
+      "adminModified": "Adminisztrátor módosította"
     },
     "labels": {
       "thisWeek": "Ez a hét",

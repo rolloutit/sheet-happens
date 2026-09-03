@@ -1940,9 +1940,24 @@
     "missingEnv": "Missing: {names}"
   },
   "TimeTracking": {
-    "view": {
-      "weeklyGrid": "Weekly grid",
-      "day": "Day"
+    "zoom": {
+      "day": "Day",
+      "week": "Week",
+      "grid": "Grid",
+      "controlLabel": "Detail level",
+      "keyboardHint": "1-3 level · − + step · [ ] week · t today",
+      "dayStrip": "Days of this week",
+      "selectDay": "Select {day}",
+      "zoomToDay": "Open {day}",
+      "zoomOut": "Back out to the week"
+    },
+    "week": {
+      "columnEmpty": "Nothing logged",
+      "expandDay": "Show {day}",
+      "addEntryOn": "Add entry on {day}",
+      "editEntryNamed": "Edit {entry}",
+      "deleteEntryNamed": "Delete {entry}",
+      "adminModified": "Changed by an administrator"
     },
     "labels": {
       "thisWeek": "This week",

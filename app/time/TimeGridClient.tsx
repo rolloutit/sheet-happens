@@ -11,10 +11,8 @@ import {
   Grid3X3,
   Info,
   Layers,
-  List,
   MessageSquare,
   Moon,
-  Pencil,
   Play,
   Plus,
   RotateCcw,
@@ -39,10 +37,17 @@ import {
 } from "react";
 import { useLocale, useTranslations } from "next-intl";
 
+import { DayAgenda, type DayAgendaEntry } from "@/src/components/sheet/DayAgenda";
+import {
+  WeekAgenda,
+  type WeekAgendaDay,
+  type WeekAgendaEntry,
+} from "@/src/components/sheet/WeekAgenda";
 import { Button } from "@/src/components/ui/Button";
 import { Combobox } from "@/src/components/ui/Combobox";
 import { DatePicker } from "@/src/components/ui/DatePicker";
 import { focusChromeClassName } from "@/src/components/ui/focusRing";
+import { SegmentedControl } from "@/src/components/ui/SegmentedControl";
 import { TimeInput } from "@/src/components/ui/TimeInput";
 import {
   Dialog,
@@ -89,6 +94,9 @@ import {
 } from "./actions.types";
 import { TimerCreateDialog } from "./TimerCreateDialog";
 import { TIME_OVERLAY_PARAM, TIMER_OVERLAY_VALUE } from "./time-overlays";
+import { TimeZoomShell } from "./TimeZoomShell";
+import { useTimeZoom } from "./use-time-zoom";
+import { DAY_PARAM, ZOOM_PARAM, zoomLevels, type ZoomLevel } from "./zoom";
 
 const GRID_ENTRY_IDLE_OPEN_DELAY_MS = 900;
 
@@ -157,14 +165,11 @@ export function TimeGridClient({ week, durationDisplayFormat }: TimeGridClientPr
 function TimeGridContent({ week }: { week: TimeGridWeek }) {
   const router = useRouter();
   const t = useTranslations("TimeTracking");
+  const locale = useLocale();
+  const durationDisplayFormat = useContext(DurationDisplayContext);
   const { formatMinutesAsHours, formatMinutesWithUnit } = useDurationFormatting();
   const [isPending, startTransition] = useTransition();
-  const [view, setView] = useState<"grid" | "day">("grid");
-  const [selectedDayIso, setSelectedDayIso] = useState(() =>
-    week.todayIso >= week.weekStart && week.todayIso <= week.weekEnd
-      ? week.todayIso
-      : week.weekStart,
-  );
+  const { level, selectedDayIso, setLevel, setSelectedDayIso, zoomToDay } = useTimeZoom(week);
   const [notice, setNotice] = useState<Notice>(null);
   const [entryModal, setEntryModal] = useState<EntryModalState>(null);
   const [breakdown, setBreakdown] = useState<BreakdownState>(null);
@@ -199,9 +204,117 @@ function TimeGridContent({ week }: { week: TimeGridWeek }) {
   const recentProjects = week.recentProjects.filter((project) =>
     projectsById.has(project.projectId),
   );
+  const selectedDayTotalMinutes = selectedDay
+    ? (dailyTotals[week.days.indexOf(selectedDay)] ?? 0)
+    : 0;
 
-  function navigateToWeek(weekStart: string) {
-    router.push(`/time?week=${weekStart}` as Route);
+  /**
+   * The day and week levels are presentational: they take rows and report intent. Resolving the
+   * project, the warnings and the admin note happens once, here, so both levels show the same
+   * entry the same way and neither has to know what a `TimeGridEntry` is.
+   */
+  function describeEntry(entry: TimeGridEntry) {
+    const project = projectsById.get(entry.projectId);
+
+    return {
+      id: entry.id,
+      projectName: project?.name ?? t("labels.archivedProject"),
+      projectColor: project?.color ?? "var(--muted-foreground)",
+      description: entry.description,
+      durationMinutes: entry.durationMinutes,
+      startTime: entry.startTime,
+      endTime: entry.endTime,
+      locked: entry.locked,
+      warnings: getEntryWarnings(entry, entriesByDay.get(entry.localDate) ?? [], t),
+    };
+  }
+
+  const dayAgendaEntries: DayAgendaEntry[] = selectedDayEntries.map((entry) => {
+    const described = describeEntry(entry);
+    const { adminModification } = entry;
+
+    return {
+      ...described,
+      sourceLabel: formatEntrySource(entry.source, t),
+      warnings:
+        selectedDay?.state === "future"
+          ? [...described.warnings, t("warnings.futureDate")]
+          : described.warnings,
+      adminNotice: adminModification
+        ? {
+            changedBy: t("adminModification.changedBy", {
+              name: adminModification.modifiedByName ?? t("adminModification.adminFallback"),
+              date: formatAdminModifiedAt(adminModification, locale),
+            }),
+            reason: t("adminModification.reason", { reason: adminModification.reason }),
+          }
+        : null,
+    };
+  });
+
+  const weekAgendaDays: WeekAgendaDay[] = week.days.map((day, dayIndex) => ({
+    isoDate: day.isoDate,
+    label: day.label,
+    shortLabel: day.shortLabel,
+    dayNumber: day.dayNumber,
+    state: day.state,
+    locked: day.locked,
+    totalMinutes: dailyTotals[dayIndex] ?? 0,
+    entries: (entriesByDay.get(day.isoDate) ?? []).map((entry): WeekAgendaEntry => ({
+      ...describeEntry(entry),
+      adminModified: Boolean(entry.adminModification),
+    })),
+  }));
+
+  function addEntryOnDay(localDate: string) {
+    const project = projectRows[0];
+    if (!project) return;
+
+    setEntryModal({
+      mode: "create",
+      source: "FORM",
+      projectId: project.projectId,
+      localDate,
+      durationMinutes: 60,
+    });
+  }
+
+  function editEntryById(entryId: string) {
+    const entry = week.entries.find((candidate) => candidate.id === entryId);
+    if (entry) setEntryModal({ mode: "edit", entry });
+  }
+
+  function deleteEntryById(entryId: string) {
+    runAction(() => deleteTimeEntryAction({ timeEntryId: entryId }));
+  }
+
+  /**
+   * Changing weeks is a real navigation — new data, new server queries — unlike changing level or
+   * day, which the axis writes with `replaceState`. Both of those still have to survive it: the
+   * level because losing it on every `]` is exactly the "constant clicking" the axis removes, and
+   * the day because the same weekday in the next week is the only mapping that reads as continuous.
+   */
+  function navigateToWeek(weekStart: string, dayIso?: string) {
+    const weekdayIndex = Math.max(
+      0,
+      week.days.findIndex((day) => day.isoDate === selectedDayIso),
+    );
+    const params = new URLSearchParams({
+      week: weekStart,
+      [ZOOM_PARAM]: level,
+      [DAY_PARAM]: dayIso ?? shiftIsoDate(weekStart, weekdayIndex),
+    });
+
+    router.push(`/time?${params.toString()}` as Route);
+  }
+
+  function goToToday() {
+    if (week.weekStart === week.thisWeek) {
+      setSelectedDayIso(week.todayIso);
+      return;
+    }
+
+    navigateToWeek(week.thisWeek, week.todayIso);
   }
 
   function refreshWithResult(result: TimeTrackingActionState) {
@@ -347,34 +460,20 @@ function TimeGridContent({ week }: { week: TimeGridWeek }) {
 
   return (
     <div className="grid gap-4">
-      <div className="flex items-center justify-between gap-3">
-        <div className="inline-flex rounded-[var(--radius-pill)] border border-border bg-secondary p-1">
-          <button
-            type="button"
-            className={cn(
-              "inline-flex items-center gap-2 rounded-[var(--radius-pill)] px-4 py-2 text-sm font-semibold transition",
-              view === "grid"
-                ? "bg-accent text-accent-foreground"
-                : "text-muted-foreground hover:text-foreground",
-            )}
-            onClick={() => setView("grid")}
-          >
-            <Grid3X3 className="size-4" aria-hidden="true" />
-            {t("view.weeklyGrid")}
-          </button>
-          <button
-            type="button"
-            className={cn(
-              "inline-flex items-center gap-2 rounded-[var(--radius-pill)] px-4 py-2 text-sm font-semibold transition",
-              view === "day"
-                ? "bg-accent text-accent-foreground"
-                : "text-muted-foreground hover:text-foreground",
-            )}
-            onClick={() => setView("day")}
-          >
-            <List className="size-4" aria-hidden="true" />
-            {t("view.day")}
-          </button>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex min-w-0 flex-wrap items-center gap-3">
+          <SegmentedControl
+            label={t("zoom.controlLabel")}
+            value={level}
+            onValueChange={(value) => setLevel(value as ZoomLevel)}
+            items={zoomLevels.map((zoomLevel) => ({
+              value: zoomLevel,
+              label: t(`zoom.${zoomLevel}`),
+            }))}
+          />
+          <span className="hidden text-xs text-muted-foreground lg:inline">
+            {t("zoom.keyboardHint")}
+          </span>
         </div>
 
         <div className="flex items-center gap-2">
@@ -404,12 +503,9 @@ function TimeGridContent({ week }: { week: TimeGridWeek }) {
                 mode: "create",
                 source: "FORM",
                 projectId: project.projectId,
-                localDate:
-                  view === "day" && selectedDay
-                    ? selectedDay.isoDate
-                    : week.todayIso >= week.weekStart && week.todayIso <= week.weekEnd
-                      ? week.todayIso
-                      : week.weekStart,
+                // The day strip is persistent chrome now, so the selected day is visible at every
+                // level — which makes it the honest default for a new entry at every level too.
+                localDate: targetDate,
                 durationMinutes: 60,
               });
             }}
@@ -460,7 +556,7 @@ function TimeGridContent({ week }: { week: TimeGridWeek }) {
             <button
               type="button"
               className="inline-flex items-center gap-2 rounded-[var(--radius-pill)] border border-border bg-card px-3 py-2 text-sm font-medium text-foreground transition hover:bg-secondary"
-              onClick={() => navigateToWeek(week.thisWeek)}
+              onClick={goToToday}
             >
               <RotateCcw className="size-4" aria-hidden="true" />
               {t("labels.thisWeek")}
@@ -611,281 +707,302 @@ function TimeGridContent({ week }: { week: TimeGridWeek }) {
       ) : null}
 
       {projectRows.length ? (
-        view === "day" && selectedDay ? (
-          <DayView
-            day={selectedDay}
-            days={week.days}
-            dailyTotalMinutes={dailyTotals[week.days.indexOf(selectedDay)] ?? 0}
-            entries={selectedDayEntries}
-            entriesByDay={entriesByDay}
-            isPending={isPending}
-            projectsById={projectsById}
-            onAddEntry={(localDate) => {
-              const project = projectRows[0];
-              if (!project) return;
-
-              setEntryModal({
-                mode: "create",
-                source: "FORM",
-                projectId: project.projectId,
-                localDate,
-                durationMinutes: 60,
-              });
-            }}
-            onDeleteEntry={(entry) =>
-              runAction(() => deleteTimeEntryAction({ timeEntryId: entry.id }))
-            }
-            onEditEntry={(entry) => setEntryModal({ mode: "edit", entry })}
-            onSelectDay={setSelectedDayIso}
-            t={t}
-          />
-        ) : (
-          <>
-            <div className="hidden overflow-x-auto lg:block">
-              <div className="min-w-[900px] overflow-hidden rounded-[var(--radius-lg)] border border-border bg-card">
-                <div className="grid grid-cols-[minmax(190px,1.5fr)_repeat(7,minmax(54px,1fr))_92px]">
-                  <GridHeaderCell label={t("grid.projects")} />
-                  {week.days.map((day) => (
-                    <div
-                      key={day.isoDate}
-                      className={cn(
-                        "border-b border-r border-border px-2 py-3 text-center",
-                        day.state === "today" && "text-accent",
-                        day.state === "future" && "opacity-55",
-                      )}
-                    >
-                      <span className="block font-ui text-[11px] font-semibold uppercase tracking-[0.06em] text-muted-foreground">
-                        {day.shortLabel}
-                      </span>
-                      <span className="mt-0.5 block text-[15px] font-medium">{day.dayNumber}</span>
-                    </div>
-                  ))}
-                  <GridHeaderCell label={t("grid.total")} noRightBorder />
-
-                  {projectRows.map((project) => {
-                    const inactive = inactiveProjectIds.has(project.projectId);
-                    const rowTotal = week.days.reduce(
-                      (sum, day) =>
-                        sum +
-                        getCellEntries(entriesByCell, project.projectId, day.isoDate).totalMinutes,
-                      0,
-                    );
-                    const canToggleInactive = !weekHasLockedPeriod && rowTotal === 0;
-
-                    return (
-                      <div key={project.projectId} className="contents">
+        <TimeZoomShell
+          days={week.days}
+          todayIso={week.todayIso}
+          dayTotalMinutes={selectedDayTotalMinutes}
+          formatMinutes={formatMinutesWithUnit}
+          onPreviousPeriod={() => navigateToWeek(week.previousWeek)}
+          onNextPeriod={() => navigateToWeek(week.nextWeek)}
+          onToday={goToToday}
+          renderLevel={(activeLevel) =>
+            activeLevel === "day" ? (
+              <DayAgenda
+                isoDate={targetDate}
+                dayState={selectedDay?.state ?? "normal"}
+                totalMinutes={selectedDayTotalMinutes}
+                capacityMinutes={DAILY_SOFT_WARNING_MINUTES}
+                entries={dayAgendaEntries}
+                locale={locale}
+                durationDisplayFormat={durationDisplayFormat}
+                disabled={isPending}
+                labels={{
+                  durationMode: t("mode.duration"),
+                  futureDay: t("warnings.futureDateAllowed"),
+                  overCapacity: t("warnings.dayOver8"),
+                  emptyTitle: t("day.emptyTitle"),
+                  emptyDescription: t("day.emptyDescription"),
+                  addEntry: t("actions.addEntry"),
+                  editEntry: (entry) => t("week.editEntryNamed", { entry: entry.description }),
+                  deleteEntry: (entry) => t("week.deleteEntryNamed", { entry: entry.description }),
+                }}
+                onAddEntry={addEntryOnDay}
+                onEditEntry={(entry) => editEntryById(entry.id)}
+                onDeleteEntry={(entry) => deleteEntryById(entry.id)}
+              />
+            ) : activeLevel === "week" ? (
+              <WeekAgenda
+                days={weekAgendaDays}
+                selectedDayIso={targetDate}
+                locale={locale}
+                durationDisplayFormat={durationDisplayFormat}
+                disabled={isPending}
+                labels={{
+                  openDay: (day) => t("zoom.zoomToDay", { day: day.label }),
+                  expandDay: (day) => t("week.expandDay", { day: day.label }),
+                  columnEmpty: t("week.columnEmpty"),
+                  addEntry: (day) => t("week.addEntryOn", { day: day.label }),
+                  editEntry: (entry) => t("week.editEntryNamed", { entry: entry.description }),
+                  deleteEntry: (entry) => t("week.deleteEntryNamed", { entry: entry.description }),
+                  adminModified: t("week.adminModified"),
+                }}
+                onSelectDay={setSelectedDayIso}
+                onZoomToDay={zoomToDay}
+                onAddEntry={addEntryOnDay}
+                onEditEntry={(entry) => editEntryById(entry.id)}
+                onDeleteEntry={(entry) => deleteEntryById(entry.id)}
+              />
+            ) : (
+              <>
+                <div className="hidden overflow-x-auto lg:block">
+                  <div className="min-w-[900px] overflow-hidden rounded-[var(--radius-lg)] border border-border bg-card">
+                    <div className="grid grid-cols-[minmax(190px,1.5fr)_repeat(7,minmax(54px,1fr))_92px]">
+                      <GridHeaderCell label={t("grid.projects")} />
+                      {week.days.map((day) => (
                         <div
+                          key={day.isoDate}
                           className={cn(
-                            "flex min-h-14 items-center gap-2 border-b border-r border-border px-3",
-                            inactive && "opacity-65",
+                            "border-b border-r border-border px-2 py-3 text-center",
+                            day.state === "today" && "text-accent",
+                            day.state === "future" && "opacity-55",
                           )}
                         >
-                          <span
-                            className="size-2.5 shrink-0 rounded-full"
-                            style={{ backgroundColor: project.color }}
-                            aria-hidden="true"
-                          />
-                          <span className="min-w-0 flex-1 truncate text-sm font-medium">
-                            {project.name}
+                          <span className="block font-ui text-[11px] font-semibold uppercase tracking-[0.06em] text-muted-foreground">
+                            {day.shortLabel}
                           </span>
-                          <button
-                            type="button"
-                            disabled={!canToggleInactive && !inactive}
-                            title={
-                              inactive
-                                ? t("inactive.undo")
-                                : canToggleInactive
-                                  ? t("inactive.mark")
-                                  : t("inactive.removeEntriesFirst")
-                            }
-                            className="grid size-7 place-items-center rounded-[var(--radius-xs)] text-muted-foreground transition hover:bg-secondary hover:text-accent disabled:cursor-not-allowed disabled:opacity-35"
-                            onClick={() => toggleInactive(project, inactive)}
-                          >
-                            <CalendarX className="size-4" aria-hidden="true" />
-                          </button>
+                          <span className="mt-0.5 block text-[15px] font-medium">
+                            {day.dayNumber}
+                          </span>
                         </div>
+                      ))}
+                      <GridHeaderCell label={t("grid.total")} noRightBorder />
 
-                        {inactive ? (
-                          <InactiveProjectRow onUndo={() => toggleInactive(project, true)} />
-                        ) : (
-                          <>
-                            {week.days.map((day, dayIndex) => (
-                              <TimeGridCell
-                                key={day.isoDate}
-                                day={day}
-                                dayTotalMinutes={dailyTotals[dayIndex] ?? 0}
-                                entriesByDay={entriesByDay}
-                                project={project}
-                                cell={getCellEntries(entriesByCell, project.projectId, day.isoDate)}
-                                disabled={
-                                  isPending ||
-                                  day.locked ||
-                                  !isProjectAssignableOnDate(project, day.isoDate)
-                                }
-                                onCommit={(rawValue) => handleCellCommit(project, day, rawValue)}
-                                onOpenBreakdown={() =>
-                                  setBreakdown({
-                                    projectId: project.projectId,
-                                    localDate: day.isoDate,
-                                  })
-                                }
-                                t={t}
+                      {projectRows.map((project) => {
+                        const inactive = inactiveProjectIds.has(project.projectId);
+                        const rowTotal = week.days.reduce(
+                          (sum, day) =>
+                            sum +
+                            getCellEntries(entriesByCell, project.projectId, day.isoDate)
+                              .totalMinutes,
+                          0,
+                        );
+                        const canToggleInactive = !weekHasLockedPeriod && rowTotal === 0;
+
+                        return (
+                          <div key={project.projectId} className="contents">
+                            <div
+                              className={cn(
+                                "flex min-h-14 items-center gap-2 border-b border-r border-border px-3",
+                                inactive && "opacity-65",
+                              )}
+                            >
+                              <span
+                                className="size-2.5 shrink-0 rounded-full"
+                                style={{ backgroundColor: project.color }}
+                                aria-hidden="true"
                               />
-                            ))}
-                            <div className="flex min-h-14 items-center justify-center border-b border-border text-base font-semibold">
-                              {formatMinutesAsHours(rowTotal)}
+                              <span className="min-w-0 flex-1 truncate text-sm font-medium">
+                                {project.name}
+                              </span>
+                              <button
+                                type="button"
+                                disabled={!canToggleInactive && !inactive}
+                                title={
+                                  inactive
+                                    ? t("inactive.undo")
+                                    : canToggleInactive
+                                      ? t("inactive.mark")
+                                      : t("inactive.removeEntriesFirst")
+                                }
+                                className="grid size-7 place-items-center rounded-[var(--radius-xs)] text-muted-foreground transition hover:bg-secondary hover:text-accent disabled:cursor-not-allowed disabled:opacity-35"
+                                onClick={() => toggleInactive(project, inactive)}
+                              >
+                                <CalendarX className="size-4" aria-hidden="true" />
+                              </button>
                             </div>
-                          </>
-                        )}
-                      </div>
-                    );
-                  })}
 
-                  <div className="flex min-h-[52px] items-center border-r border-border bg-secondary px-3 font-ui text-[11px] font-semibold uppercase tracking-[0.06em] text-muted-foreground">
-                    {t("grid.dailyTotal")}
-                  </div>
-                  {week.days.map((day, dayIndex) => {
-                    const total = dailyTotals[dayIndex] ?? 0;
-                    const over = total > DAILY_SOFT_WARNING_MINUTES;
+                            {inactive ? (
+                              <InactiveProjectRow onUndo={() => toggleInactive(project, true)} />
+                            ) : (
+                              <>
+                                {week.days.map((day, dayIndex) => (
+                                  <TimeGridCell
+                                    key={day.isoDate}
+                                    day={day}
+                                    dayTotalMinutes={dailyTotals[dayIndex] ?? 0}
+                                    entriesByDay={entriesByDay}
+                                    project={project}
+                                    cell={getCellEntries(
+                                      entriesByCell,
+                                      project.projectId,
+                                      day.isoDate,
+                                    )}
+                                    disabled={
+                                      isPending ||
+                                      day.locked ||
+                                      !isProjectAssignableOnDate(project, day.isoDate)
+                                    }
+                                    onCommit={(rawValue) =>
+                                      handleCellCommit(project, day, rawValue)
+                                    }
+                                    onOpenBreakdown={() =>
+                                      setBreakdown({
+                                        projectId: project.projectId,
+                                        localDate: day.isoDate,
+                                      })
+                                    }
+                                    t={t}
+                                  />
+                                ))}
+                                <div className="flex min-h-14 items-center justify-center border-b border-border text-base font-semibold">
+                                  {formatMinutesAsHours(rowTotal)}
+                                </div>
+                              </>
+                            )}
+                          </div>
+                        );
+                      })}
 
-                    return (
-                      <div
-                        key={day.isoDate}
-                        className={cn(
-                          "relative flex min-h-[52px] items-center justify-center gap-1 border-r border-border bg-secondary text-sm font-semibold",
-                          day.state === "today" && "bg-accent-soft",
-                          over
-                            ? "text-warning"
-                            : total
-                              ? "text-foreground"
-                              : "text-muted-foreground",
-                        )}
-                      >
-                        {formatMinutesAsHours(total)}
-                        {over ? (
-                          <WarningTip
-                            text={t("warnings.dailyTotalExact", {
-                              hours: formatMinutesWithUnit(total),
-                            })}
-                          />
-                        ) : null}
+                      <div className="flex min-h-[52px] items-center border-r border-border bg-secondary px-3 font-ui text-[11px] font-semibold uppercase tracking-[0.06em] text-muted-foreground">
+                        {t("grid.dailyTotal")}
                       </div>
-                    );
-                  })}
-                  <div className="flex min-h-[52px] items-center justify-center bg-secondary text-[17px] font-semibold text-accent">
-                    {formatMinutesAsHours(weekTotal)}
+                      {week.days.map((day, dayIndex) => {
+                        const total = dailyTotals[dayIndex] ?? 0;
+                        const over = total > DAILY_SOFT_WARNING_MINUTES;
+
+                        return (
+                          <div
+                            key={day.isoDate}
+                            className={cn(
+                              "relative flex min-h-[52px] items-center justify-center gap-1 border-r border-border bg-secondary text-sm font-semibold",
+                              day.state === "today" && "bg-accent-soft",
+                              over
+                                ? "text-warning"
+                                : total
+                                  ? "text-foreground"
+                                  : "text-muted-foreground",
+                            )}
+                          >
+                            {formatMinutesAsHours(total)}
+                            {over ? (
+                              <WarningTip
+                                text={t("warnings.dailyTotalExact", {
+                                  hours: formatMinutesWithUnit(total),
+                                })}
+                              />
+                            ) : null}
+                          </div>
+                        );
+                      })}
+                      <div className="flex min-h-[52px] items-center justify-center bg-secondary text-[17px] font-semibold text-accent">
+                        {formatMinutesAsHours(weekTotal)}
+                      </div>
+                    </div>
                   </div>
                 </div>
-              </div>
-            </div>
 
-            <div className="grid gap-3 lg:hidden">
-              <div className="grid grid-cols-7 gap-1.5">
-                {week.days.map((day) => (
-                  <div
-                    key={day.isoDate}
-                    className={cn(
-                      "rounded-[var(--radius-md)] border border-border bg-card px-1 py-2 text-center",
-                      day.state === "today" && "border-accent bg-accent-soft text-accent",
-                    )}
-                  >
-                    <span className="block font-ui text-[10px] font-semibold uppercase tracking-[0.04em] text-muted-foreground">
-                      {day.shortLabel}
-                    </span>
-                    <span className="block text-base font-semibold">{day.dayNumber}</span>
-                    {day.state === "today" ? (
-                      <span className="mx-auto mt-1 block size-1.5 rounded-full bg-accent" />
-                    ) : (
-                      <span className="mt-1 block h-1.5" />
-                    )}
-                  </div>
-                ))}
-              </div>
-
-              <div className="overflow-hidden rounded-[var(--radius-lg)] border border-border bg-card">
-                {projectRows.map((project) => {
-                  const inactive = inactiveProjectIds.has(project.projectId);
-                  return (
-                    <div key={project.projectId} className="border-b border-border last:border-b-0">
-                      <div className="flex items-center gap-2 px-4 py-3">
-                        <span
-                          className="size-2.5 shrink-0 rounded-full"
-                          style={{ backgroundColor: project.color }}
-                          aria-hidden="true"
-                        />
-                        <span className="min-w-0 flex-1 truncate text-sm font-medium">
-                          {project.name}
-                        </span>
-                        {inactive ? (
-                          <button
-                            type="button"
-                            className="text-xs font-semibold text-accent"
-                            onClick={() => toggleInactive(project, true)}
-                          >
-                            {t("actions.undo")}
-                          </button>
-                        ) : null}
-                      </div>
-                      {inactive ? (
-                        <div className="px-4 pb-4 text-sm italic text-muted-foreground">
-                          {t("inactive.title")}
-                        </div>
-                      ) : (
-                        <div className="grid grid-cols-7 gap-1 px-3 pb-3">
-                          {week.days.map((day) => {
-                            const cell = getCellEntries(
-                              entriesByCell,
-                              project.projectId,
-                              day.isoDate,
-                            );
-                            return (
+                {/* The day row this level used to carry on mobile is now the persistent day strip
+                above every level, so the grid renders only its project rows here. */}
+                <div className="grid gap-3 lg:hidden">
+                  <div className="overflow-hidden rounded-[var(--radius-lg)] border border-border bg-card">
+                    {projectRows.map((project) => {
+                      const inactive = inactiveProjectIds.has(project.projectId);
+                      return (
+                        <div
+                          key={project.projectId}
+                          className="border-b border-border last:border-b-0"
+                        >
+                          <div className="flex items-center gap-2 px-4 py-3">
+                            <span
+                              className="size-2.5 shrink-0 rounded-full"
+                              style={{ backgroundColor: project.color }}
+                              aria-hidden="true"
+                            />
+                            <span className="min-w-0 flex-1 truncate text-sm font-medium">
+                              {project.name}
+                            </span>
+                            {inactive ? (
                               <button
-                                key={day.isoDate}
                                 type="button"
-                                disabled={
-                                  day.locked || !isProjectAssignableOnDate(project, day.isoDate)
-                                }
-                                className={cn(
-                                  "rounded-[var(--radius-sm)] border border-border bg-background px-1 py-2 text-sm font-semibold disabled:opacity-35",
-                                  cell.totalMinutes > 0 &&
-                                    "border-accent-line bg-accent-soft text-accent",
-                                )}
-                                onClick={() => {
-                                  if (cell.entries.length === 0) {
-                                    setEntryModal({
-                                      mode: "create",
-                                      source: "GRID",
-                                      projectId: project.projectId,
-                                      localDate: day.isoDate,
-                                      durationMinutes: 60,
-                                      prefill: true,
-                                    });
-                                  } else {
-                                    setBreakdown({
-                                      projectId: project.projectId,
-                                      localDate: day.isoDate,
-                                    });
-                                  }
-                                }}
+                                className="text-xs font-semibold text-accent"
+                                onClick={() => toggleInactive(project, true)}
                               >
-                                {formatMinutesAsHours(cell.totalMinutes)}
+                                {t("actions.undo")}
                               </button>
-                            );
-                          })}
+                            ) : null}
+                          </div>
+                          {inactive ? (
+                            <div className="px-4 pb-4 text-sm italic text-muted-foreground">
+                              {t("inactive.title")}
+                            </div>
+                          ) : (
+                            <div className="grid grid-cols-7 gap-1 px-3 pb-3">
+                              {week.days.map((day) => {
+                                const cell = getCellEntries(
+                                  entriesByCell,
+                                  project.projectId,
+                                  day.isoDate,
+                                );
+                                return (
+                                  <button
+                                    key={day.isoDate}
+                                    type="button"
+                                    disabled={
+                                      day.locked || !isProjectAssignableOnDate(project, day.isoDate)
+                                    }
+                                    className={cn(
+                                      "rounded-[var(--radius-sm)] border border-border bg-background px-1 py-2 text-sm font-semibold disabled:opacity-35",
+                                      cell.totalMinutes > 0 &&
+                                        "border-accent-line bg-accent-soft text-accent",
+                                    )}
+                                    onClick={() => {
+                                      if (cell.entries.length === 0) {
+                                        setEntryModal({
+                                          mode: "create",
+                                          source: "GRID",
+                                          projectId: project.projectId,
+                                          localDate: day.isoDate,
+                                          durationMinutes: 60,
+                                          prefill: true,
+                                        });
+                                      } else {
+                                        setBreakdown({
+                                          projectId: project.projectId,
+                                          localDate: day.isoDate,
+                                        });
+                                      }
+                                    }}
+                                  >
+                                    {formatMinutesAsHours(cell.totalMinutes)}
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          )}
                         </div>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
+                      );
+                    })}
+                  </div>
+                </div>
 
-            <div className="flex items-center gap-2 text-xs text-muted-foreground">
-              <Info className="size-4" aria-hidden="true" />
-              {t("help.durationFormats")}
-            </div>
-          </>
-        )
+                <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                  <Info className="size-4" aria-hidden="true" />
+                  {t("help.durationFormats")}
+                </div>
+              </>
+            )
+          }
+        />
       ) : (
         <div className="rounded-[var(--radius-lg)] border border-border bg-card px-6 py-12 text-center">
           <div className="mx-auto grid size-12 place-items-center rounded-full bg-secondary text-muted-foreground">
@@ -1258,211 +1375,6 @@ function QuickActionConfirmDialog({
         </DialogFooter>
       </DialogContent>
     </Dialog>
-  );
-}
-
-type DayViewProps = {
-  day: TimeGridDay;
-  days: TimeGridDay[];
-  dailyTotalMinutes: number;
-  entries: TimeGridEntry[];
-  entriesByDay: Map<string, TimeGridEntry[]>;
-  isPending: boolean;
-  projectsById: Map<string, TimeGridAssignedProject>;
-  onAddEntry: (localDate: string) => void;
-  onDeleteEntry: (entry: TimeGridEntry) => void;
-  onEditEntry: (entry: TimeGridEntry) => void;
-  onSelectDay: (localDate: string) => void;
-  t: TimeTrackingTranslator;
-};
-
-function DayView({
-  day,
-  days,
-  dailyTotalMinutes,
-  entries,
-  entriesByDay,
-  isPending,
-  projectsById,
-  onAddEntry,
-  onDeleteEntry,
-  onEditEntry,
-  onSelectDay,
-  t,
-}: DayViewProps) {
-  const { formatMinutesWithUnit } = useDurationFormatting();
-  const sortedEntries = [...entries].sort((a, b) => {
-    const aTime = a.startTime ?? "99:99";
-    const bTime = b.startTime ?? "99:99";
-    return aTime.localeCompare(bTime);
-  });
-
-  return (
-    <div className="grid gap-4">
-      <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
-        <div className="grid grid-cols-7 gap-1.5 sm:w-auto">
-          {days.map((option) => (
-            <button
-              key={option.isoDate}
-              type="button"
-              className={cn(
-                "rounded-[var(--radius-md)] border border-border bg-card px-3 py-2 text-center transition hover:border-accent/45 hover:bg-accent-soft",
-                option.isoDate === day.isoDate && "border-accent bg-accent-soft text-accent",
-                option.state === "future" && "opacity-65",
-              )}
-              onClick={() => onSelectDay(option.isoDate)}
-            >
-              <span className="block font-ui text-[10px] font-semibold uppercase tracking-[0.06em] text-muted-foreground">
-                {option.shortLabel}
-              </span>
-              <span className="block text-base font-semibold">{option.dayNumber}</span>
-            </button>
-          ))}
-        </div>
-
-        <div className="flex items-center gap-3 sm:justify-end">
-          <span className="font-ui text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
-            {t("labels.dayTotal")}
-          </span>
-          <span
-            className={cn(
-              "text-[26px] font-semibold",
-              dailyTotalMinutes > DAILY_SOFT_WARNING_MINUTES ? "text-warning" : "text-foreground",
-            )}
-          >
-            {formatMinutesWithUnit(dailyTotalMinutes)}
-          </span>
-        </div>
-      </div>
-
-      {day.state === "future" ? (
-        <div className="flex items-start gap-3 rounded-[var(--radius-md)] border border-warning/30 bg-warning-soft px-4 py-3 text-sm text-warning">
-          <AlertTriangle className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
-          {t("warnings.futureDateAllowed")}
-        </div>
-      ) : null}
-
-      {dailyTotalMinutes > DAILY_SOFT_WARNING_MINUTES ? (
-        <div className="flex items-start gap-3 rounded-[var(--radius-md)] border border-warning/30 bg-warning-soft px-4 py-3 text-sm text-warning">
-          <AlertTriangle className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
-          {t("warnings.dayOver8")}
-        </div>
-      ) : null}
-
-      <div className="overflow-hidden rounded-[var(--radius-lg)] border border-border bg-card">
-        {sortedEntries.length ? (
-          sortedEntries.map((entry) => {
-            const project = projectsById.get(entry.projectId);
-            const warnings = getEntryWarnings(entry, entriesByDay.get(entry.localDate) ?? [], t);
-
-            if (day.state === "future") warnings.push(t("warnings.futureDate"));
-
-            return (
-              <div
-                key={entry.id}
-                className={cn(
-                  "grid gap-3 border-b border-border p-4 last:border-b-0 sm:grid-cols-[5.5rem_1fr_auto]",
-                  warnings.length && "bg-warning-soft",
-                )}
-              >
-                <div className="font-ui text-xs font-semibold uppercase tracking-[0.06em] text-muted-foreground">
-                  {entry.startTime && entry.endTime ? (
-                    <>
-                      <span className="block text-foreground">{entry.startTime}</span>
-                      <span className="block">{entry.endTime}</span>
-                    </>
-                  ) : (
-                    <span className="italic">{t("mode.duration")}</span>
-                  )}
-                </div>
-
-                <div className="min-w-0">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <p className="text-sm font-semibold text-foreground">{entry.description}</p>
-                    <span className="rounded-[var(--radius-pill)] bg-secondary px-2 py-0.5 font-ui text-[10px] font-semibold uppercase tracking-[0.06em] text-muted-foreground">
-                      {formatEntrySource(entry.source, t)}
-                    </span>
-                  </div>
-                  <div className="mt-1 flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
-                    <span className="inline-flex items-center gap-1.5">
-                      <span
-                        className="size-2 rounded-full"
-                        style={{ backgroundColor: project?.color ?? "var(--muted-foreground)" }}
-                        aria-hidden="true"
-                      />
-                      {project?.name ?? t("labels.archivedProject")}
-                    </span>
-                    <span>·</span>
-                    <span className="font-semibold text-foreground">
-                      {formatMinutesWithUnit(entry.durationMinutes)}
-                    </span>
-                  </div>
-                  {entry.adminModification ? (
-                    <AdminModificationNotice modification={entry.adminModification} compact t={t} />
-                  ) : null}
-                  {warnings.length ? (
-                    <div className="mt-2 flex flex-wrap gap-2">
-                      {warnings.map((warning) => (
-                        <span
-                          key={warning}
-                          className="inline-flex items-center gap-1 text-xs font-medium text-warning"
-                        >
-                          <AlertTriangle className="size-3.5" aria-hidden="true" />
-                          {warning}
-                        </span>
-                      ))}
-                    </div>
-                  ) : null}
-                </div>
-
-                <div className="flex items-center gap-1 sm:justify-end">
-                  <button
-                    type="button"
-                    disabled={entry.locked || isPending}
-                    className="grid size-9 place-items-center rounded-[var(--radius-sm)] text-muted-foreground transition hover:bg-secondary hover:text-accent disabled:cursor-not-allowed disabled:opacity-40"
-                    aria-label={t("actions.editEntry")}
-                    onClick={() => onEditEntry(entry)}
-                  >
-                    <Pencil className="size-4" aria-hidden="true" />
-                  </button>
-                  <button
-                    type="button"
-                    disabled={entry.locked || isPending}
-                    className="grid size-9 place-items-center rounded-[var(--radius-sm)] text-muted-foreground transition hover:bg-destructive-soft hover:text-destructive disabled:cursor-not-allowed disabled:opacity-40"
-                    aria-label={t("actions.deleteEntry")}
-                    onClick={() => onDeleteEntry(entry)}
-                  >
-                    <Trash2 className="size-4" aria-hidden="true" />
-                  </button>
-                </div>
-              </div>
-            );
-          })
-        ) : (
-          <div className="px-6 py-14 text-center">
-            <div className="mx-auto grid size-12 place-items-center rounded-full bg-secondary text-muted-foreground">
-              <Clock3 className="size-6" aria-hidden="true" />
-            </div>
-            <h2 className="mt-4 text-base font-semibold">{t("day.emptyTitle")}</h2>
-            <p className="mx-auto mt-2 max-w-sm text-sm leading-6 text-muted-foreground">
-              {t("day.emptyDescription")}
-            </p>
-          </div>
-        )}
-      </div>
-
-      <div>
-        <button
-          type="button"
-          disabled={isPending}
-          className="inline-flex items-center gap-2 rounded-[var(--radius-md)] border border-dashed border-accent/45 bg-card px-4 py-2.5 text-sm font-semibold text-accent transition hover:bg-accent-soft disabled:cursor-not-allowed disabled:opacity-50"
-          onClick={() => onAddEntry(day.isoDate)}
-        >
-          <Plus className="size-4" aria-hidden="true" />
-          {t("actions.addEntry")}
-        </button>
-      </div>
-    </div>
   );
 }
 
@@ -2203,11 +2115,7 @@ function AdminModificationNotice({
   t: TimeTrackingTranslator;
 }) {
   const locale = useLocale();
-  const modifiedAt = new Intl.DateTimeFormat(locale, {
-    dateStyle: "medium",
-    timeStyle: "short",
-    timeZone: modification.timezone,
-  }).format(new Date(modification.modifiedAt));
+  const modifiedAt = formatAdminModifiedAt(modification, locale);
 
   return (
     <div
@@ -2424,6 +2332,18 @@ function getEntryWarnings(
   if (entryHasOverlap(entry, dayEntries)) warnings.push(t("warnings.overlapsAnotherEntry"));
 
   return warnings;
+}
+
+/** The admin's own timezone, not the reader's — the correction happened at a moment they know. */
+function formatAdminModifiedAt(
+  modification: NonNullable<TimeGridEntry["adminModification"]>,
+  locale: string,
+) {
+  return new Intl.DateTimeFormat(locale, {
+    dateStyle: "medium",
+    timeStyle: "short",
+    timeZone: modification.timezone,
+  }).format(new Date(modification.modifiedAt));
 }
 
 function formatEntrySource(source: TimeGridEntry["source"], t: TimeTrackingTranslator) {

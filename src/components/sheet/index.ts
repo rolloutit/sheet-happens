@@ -30,8 +30,14 @@ export type {
   DocumentPreviewProps,
   DocumentPreviewRow,
 } from "./DocumentPreview";
-export { DayDetailPanel } from "./DayDetailPanel";
-export type { DayDetailEntry, DayDetailPanelLabels, DayDetailPanelProps } from "./DayDetailPanel";
+export { DayAgenda } from "./DayAgenda";
+export type {
+  DayAgendaAdminNotice,
+  DayAgendaDayState,
+  DayAgendaEntry,
+  DayAgendaLabels,
+  DayAgendaProps,
+} from "./DayAgenda";
 export { EmptyState, emptyStateVariants } from "./EmptyState";
 export type { EmptyStateProps } from "./EmptyState";
 export { FilterChips } from "./FilterChips";
@@ -221,6 +227,14 @@ export { TotpSetupDialog } from "./TotpSetupDialog";
 export type { TotpSetupDialogProps } from "./TotpSetupDialog";
 export { TweaksPanel } from "./TweaksPanel";
 export type { TweaksPanelProps } from "./TweaksPanel";
+export { WeekAgenda, weekAgendaColumnVariants, weekAgendaHeaderVariants } from "./WeekAgenda";
+export type {
+  WeekAgendaDay,
+  WeekAgendaDayState,
+  WeekAgendaEntry,
+  WeekAgendaLabels,
+  WeekAgendaProps,
+} from "./WeekAgenda";
 export { WeeklyTimeGrid } from "./WeeklyTimeGrid";
 export type {
   TimeGridCellContext,
