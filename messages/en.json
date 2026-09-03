@@ -848,6 +848,8 @@
       "allProjects": "All projects",
       "month": "Month",
       "allMonths": "All months",
+      "includePaid": "Show paid",
+      "includePaidChip": "Paid included",
       "apply": "Apply filters",
       "clear": "Clear",
       "active": "Active filters",

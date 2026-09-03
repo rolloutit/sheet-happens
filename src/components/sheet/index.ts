@@ -166,7 +166,13 @@ export type {
   StatCardTrend,
   StatTrendDirection,
 } from "./StatCard";
-export { StatusPill, statusPillVariants, statusTone, timesheetStatuses } from "./StatusPill";
+export {
+  StatusPill,
+  statusPillVariants,
+  statusTone,
+  statusToneVar,
+  timesheetStatuses,
+} from "./StatusPill";
 export type {
   StatusPillDensity,
   StatusPillProps,

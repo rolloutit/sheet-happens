@@ -6,4 +6,4 @@ export type {
   TimesheetStatus,
 } from "./StatusPill.types";
 export { timesheetStatuses } from "./StatusPill.types";
-export { statusPillVariants, statusTone } from "./StatusPill.variants";
+export { statusPillVariants, statusTone, statusToneVar } from "./StatusPill.variants";

@@ -70,6 +70,7 @@ export default async function AdminTimesheetsPage({ searchParams }: AdminTimeshe
           contractorMemberIds={result.filters.contractorMemberIds}
           projectIds={result.filters.projectIds}
           month={result.filters.month}
+          includePaid={result.filters.includePaid}
           contractorOptions={result.contractorOptions}
           projectOptions={result.projectOptions}
         />
@@ -159,6 +160,8 @@ function buildPageHref(result: AdminTimesheetListResult, page: number) {
   }
   for (const projectId of result.filters.projectIds) params.append("project", projectId);
   if (result.filters.month) params.set("month", result.filters.month);
+  // Off is the default, so the flag only ever travels in its "on" form.
+  if (result.filters.includePaid) params.set("includePaid", "1");
   if (safePage > 1) params.set("page", String(safePage));
 
   const query = params.toString();

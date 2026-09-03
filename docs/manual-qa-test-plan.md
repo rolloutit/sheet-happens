@@ -865,16 +865,28 @@ Expected result:
 12. Accept the invoice.
 13. Confirm the invoice reconciliation section shows the paid action.
 14. Click `Mark as paid`.
-15. Reopen `https://{DOMAIN_NAME}/admin/timesheets`.
-16. Filter by paid status, `{CONTRACTOR_EMAIL}`, or `{TIMESHEET_MONTH}`.
-17. Open the paid timesheet review.
-18. Sign in again as `{CONTRACTOR_EMAIL}`.
-19. Open `https://{DOMAIN_NAME}/timesheets?month={TIMESHEET_MONTH}`.
+15. Reopen `https://{DOMAIN_NAME}/admin/timesheets` and read the list without touching a filter.
+16. Tick `Kifizetettek mutatása` / `Show paid` and apply.
+17. Take the `Kifizetettek is látszanak` / `Paid included` chip off again.
+18. Filter by paid status alone, leaving the checkbox unticked.
+19. Add `{CONTRACTOR_EMAIL}` or `{TIMESHEET_MONTH}` to that filter, then page to the second page if
+    there is one.
+20. Open the paid timesheet review.
+21. Sign in again as `{CONTRACTOR_EMAIL}`.
+22. Open `https://{DOMAIN_NAME}/timesheets?month={TIMESHEET_MONTH}`.
 
 Expected result:
 
 - The paid action is only visible after the invoice has been accepted.
 - Marking as paid changes the timesheet status to paid.
+- The unfiltered list leaves the paid timesheet out, and the `Showing x-y of z` count drops with it —
+  the queue shows what is still to do, not what is settled.
+- Ticking the checkbox brings it back, puts `includePaid=1` in the URL, and produces one chip;
+  taking that chip off hides paid rows again **and** unticks the box.
+- Filtering by paid status shows paid rows even with the box unticked: an explicit status filter is
+  itself the request. A list that comes back empty because two filters disagree is the failure here.
+- Paging carries `includePaid=1` along with the other filters.
+- `Törlés` / `Clear` returns to the default, paid rows hidden.
 - The contractor monthly preview shows the paid status.
 - Source time entries remain locked.
 - The same timesheet cannot be marked as paid again.
@@ -3044,6 +3056,34 @@ Expected result:
 - Check this in **both** locales, and confirm the trigger keeps the control's height at every
   width: a long count or label ellipsises, it never wraps out of its box.
 
+### One Colour Per Timesheet Status
+
+1. Open `https://{DOMAIN_NAME}/admin/timesheets` with `Kifizetettek mutatása` / `Show paid` ticked
+   and `Minden státusz` / `All statuses` selected, so as many states as possible are on one page.
+2. Read the `Státusz` / `Status` column top to bottom.
+3. Switch the theme to light and read it again.
+4. Open `https://{DOMAIN_NAME}/dashboard` as an admin and compare the status distribution bar and
+   its legend against the pills you just read.
+5. Open a contractor's own `https://{DOMAIN_NAME}/timesheets` month list and check
+   `Nincs létrehozva` / `Not created` and `Hiányzik` / `Missing`.
+
+Expected result:
+
+- `Számlázva` / `Invoiced` is **yellow** — not the mint that `Beküldve` / `Submitted` uses.
+- No two statuses share a colour. All nine are distinguishable side by side: grey for
+  `Nincs létrehozva`, amber `Hiányzik`, mint `Beküldve`, rose `Elutasítva`, green `Jóváhagyva`,
+  yellow `Számlázva`, magenta `Számla elutasítva`, blue `Elfogadva`, violet `Kifizetve`.
+- In particular the two rejections differ (rose vs magenta) and the three end states differ (green
+  vs blue vs violet); these were previously one colour each.
+- Every pill's label is comfortably readable on its own tint, and each pill has a border of its own
+  hue — check a row on a hovered table stripe and inside a dropdown/popover too, not just on a card.
+- The same nine colours appear in light, still all distinct. Yellow and amber must not both read as
+  brown; violet, blue and magenta must not collapse into one purple.
+- The dashboard's distribution bar, its legend swatches and the priority-metric tiles use the same
+  colour for a status as the table pill does, in **both** themes — the dashboard used to carry its
+  own hardcoded dark-theme colours.
+- Every colour is accompanied by its status name; nothing requires colour alone to be identified.
+
 ## Regression Checklist For Every Release
 
 - Invitation activation works for a new invited user.
@@ -3073,6 +3113,7 @@ Expected result:
 - No native `<select>` or date input remains on any screen; dropdowns above eight options offer
   search, and searching ignores accents.
 - The timesheet month filter submits `YYYY-MM` and actually narrows the list.
+- The timesheet list hides paid months until `Kifizetettek mutatása` / `Show paid` is ticked.
 - The reports period pills each render their own control shape and submit `anchor` or `start`+`end`,
   never both.
 - Currency, timezone, project and member pickers save correctly, and a form reset clears their

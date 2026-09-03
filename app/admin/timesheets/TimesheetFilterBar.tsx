@@ -8,6 +8,7 @@ import { useLocale, useTranslations } from "next-intl";
 import { FilterChips } from "@/src/components/sheet/FilterChips";
 import type { FilterChip } from "@/src/components/sheet/FilterChips";
 import { Button } from "@/src/components/ui/Button";
+import { Checkbox } from "@/src/components/ui/Checkbox";
 import { Combobox } from "@/src/components/ui/Combobox";
 import { Input } from "@/src/components/ui/Input";
 import { MonthPicker } from "@/src/components/ui/MonthPicker";
@@ -28,7 +29,7 @@ const filterableStatuses = [
 ] as const;
 
 /** The query-string names, which are also the `<form>` control names. */
-type FilterKey = "q" | "status" | "contractor" | "project" | "month";
+type FilterKey = "q" | "status" | "contractor" | "project" | "month" | "includePaid";
 
 export type TimesheetFilterBarProps = {
   query: string;
@@ -37,6 +38,8 @@ export type TimesheetFilterBarProps = {
   projectIds: readonly string[];
   /** `YYYY-MM`. */
   month: string;
+  /** Whether paid timesheets are listed. Off by default; see the checkbox below. */
+  includePaid: boolean;
   contractorOptions: readonly { value: string; label: string; email?: string | null }[];
   projectOptions: readonly { value: string; label: string }[];
 };
@@ -58,6 +61,10 @@ export type TimesheetFilterBarProps = {
  * Status, contractor and project accept several values, so each contributes one chip per
  * value and the whole filter reads as a union: the review queue is `SUBMITTED` **or**
  * `REJECTED` in one URL rather than two.
+ *
+ * The paid checkbox is the one filter that is applied without being asked for: the list
+ * leaves paid timesheets out until it is ticked, so it carries a chip like the rest to keep
+ * the row an honest account of what the list is showing.
  */
 export function TimesheetFilterBar({
   query,
@@ -65,6 +72,7 @@ export function TimesheetFilterBar({
   contractorMemberIds,
   projectIds,
   month,
+  includePaid,
   contractorOptions,
   projectOptions,
 }: TimesheetFilterBarProps) {
@@ -92,7 +100,14 @@ export function TimesheetFilterBar({
     return (search ? `/admin/timesheets?${search}` : "/admin/timesheets") as Route;
   }
 
-  const appliedFilterKey = [query, statuses, contractorMemberIds, projectIds, month].join("|");
+  const appliedFilterKey = [
+    query,
+    statuses,
+    contractorMemberIds,
+    projectIds,
+    month,
+    includePaid,
+  ].join("|");
   const activeFilters: FilterChip<FilterKey>[] = [];
 
   if (query) {
@@ -132,6 +147,12 @@ export function TimesheetFilterBar({
     activeFilters.push({
       id: "month",
       label: `${t("filters.month")}: ${formatMonthLabel(`${month}-01`, locale)}`,
+    });
+  }
+  if (includePaid) {
+    activeFilters.push({
+      id: "includePaid",
+      label: t("filters.includePaidChip"),
     });
   }
 
@@ -212,6 +233,15 @@ export function TimesheetFilterBar({
             labels={pickerLabels.month}
           />
         </div>
+        {/*
+          Not wrapped in a width class like the pickers: a checkbox and its label want their
+          own width, and `whitespace-nowrap` keeps the Hungarian label — half again as long as
+          the English one — from breaking away from its box when the row wraps.
+        */}
+        <label className="flex cursor-pointer items-center gap-2 whitespace-nowrap text-sm text-muted-foreground">
+          <Checkbox name="includePaid" value="1" defaultChecked={includePaid} />
+          {t("filters.includePaid")}
+        </label>
         <Button type="submit" icon={Filter} className="ml-auto">
           {t("filters.apply")}
         </Button>

@@ -83,6 +83,26 @@ describe("normalizeAdminTimesheetFilters", () => {
     expect(normalizeAdminTimesheetFilters({}).statuses).toEqual([]);
     expect(normalizeAdminTimesheetFilters({ status: ["", " "] }).statuses).toEqual([]);
   });
+
+  it("leaves paid timesheets out until the checkbox asks for them", () => {
+    expect(normalizeAdminTimesheetFilters({}).includePaid).toBe(false);
+    expect(normalizeAdminTimesheetFilters({ includePaid: "1" }).includePaid).toBe(true);
+  });
+
+  /**
+   * The toolbar submits `1`, but the value is the kind of thing a bookmarked or hand-typed
+   * URL carries in whatever shape its author expected — and a flag that silently reads as
+   * `false` hides rows the admin explicitly asked to see.
+   */
+  it("accepts the other spellings a checkbox param arrives in", () => {
+    for (const value of ["true", "on", "yes", " TRUE "]) {
+      expect(normalizeAdminTimesheetFilters({ includePaid: value }).includePaid).toBe(true);
+    }
+
+    for (const value of ["", "0", "false", "off", "maybe"]) {
+      expect(normalizeAdminTimesheetFilters({ includePaid: value }).includePaid).toBe(false);
+    }
+  });
 });
 
 describe("buildTimesheetWhere", () => {
@@ -91,11 +111,18 @@ describe("buildTimesheetWhere", () => {
   it("matches any of the chosen statuses", () => {
     const where = buildTimesheetWhere({ ...empty, statuses: ["SUBMITTED", "REJECTED"] });
 
-    expect(where.AND).toEqual([{ status: { in: ["SUBMITTED", "REJECTED"] } }]);
+    expect(where.AND).toEqual([
+      { status: { in: ["SUBMITTED", "REJECTED"] } },
+      { status: { not: "PAID" } },
+    ]);
   });
 
   it("matches a timesheet with a line on any of the chosen projects", () => {
-    const where = buildTimesheetWhere({ ...empty, projectIds: ["project-1", "project-2"] });
+    const where = buildTimesheetWhere({
+      ...empty,
+      includePaid: true,
+      projectIds: ["project-1", "project-2"],
+    });
 
     expect(where.AND).toEqual([
       {
@@ -106,8 +133,38 @@ describe("buildTimesheetWhere", () => {
     ]);
   });
 
-  it("adds no clause for an empty filter", () => {
-    expect(buildTimesheetWhere(empty)).toEqual({});
+  /**
+   * The one filter that applies itself. A paid month is closed business, so it stays off the
+   * review queue until asked for — which means the default `where` is never empty, and the
+   * assertion that used to say so now pins the exclusion instead.
+   */
+  it("excludes paid timesheets by default", () => {
+    expect(buildTimesheetWhere(empty).AND).toEqual([{ status: { not: "PAID" } }]);
+  });
+
+  it("adds no clause once the paid filter is ticked", () => {
+    expect(buildTimesheetWhere({ ...empty, includePaid: true })).toEqual({});
+  });
+
+  /**
+   * Otherwise `?status=PAID` — the link the dashboard and a saved bookmark both produce —
+   * would combine into `status IN ('PAID') AND status <> 'PAID'` and return nothing, which
+   * reads as lost data rather than as a default.
+   */
+  it("keeps paid rows when the status filter names PAID, ticked or not", () => {
+    expect(buildTimesheetWhere({ ...empty, statuses: ["PAID"] }).AND).toEqual([
+      { status: { in: ["PAID"] } },
+    ]);
+    expect(buildTimesheetWhere({ ...empty, statuses: ["SUBMITTED", "PAID"] }).AND).toEqual([
+      { status: { in: ["SUBMITTED", "PAID"] } },
+    ]);
+  });
+
+  it("still excludes paid rows alongside a status filter that does not name it", () => {
+    expect(buildTimesheetWhere({ ...empty, statuses: ["SUBMITTED"] }).AND).toEqual([
+      { status: { in: ["SUBMITTED"] } },
+      { status: { not: "PAID" } },
+    ]);
   });
 });
 

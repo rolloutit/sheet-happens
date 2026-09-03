@@ -848,6 +848,8 @@
       "allProjects": "Minden projekt",
       "month": "Hónap",
       "allMonths": "Összes hónap",
+      "includePaid": "Kifizetettek mutatása",
+      "includePaidChip": "Kifizetettek is látszanak",
       "apply": "Szűrők alkalmazása",
       "clear": "Törlés",
       "active": "Aktív szűrők",

@@ -168,6 +168,14 @@
   --color-warning: var(--warning);
   --color-warning-soft: var(--warning-soft);
   --color-warning-foreground: var(--warning-foreground);
+  --color-pending: var(--pending);
+  --color-pending-soft: var(--pending-soft);
+  --color-verified: var(--verified);
+  --color-verified-soft: var(--verified-soft);
+  --color-settled: var(--settled);
+  --color-settled-soft: var(--settled-soft);
+  --color-blocked: var(--blocked);
+  --color-blocked-soft: var(--blocked-soft);
   --color-border: var(--border);
   --color-border-strong: var(--border-strong);
   --color-input: var(--input);
@@ -324,6 +332,41 @@
      surface. Use it for a label *on* a rose tint; keep `--destructive` for fills and for text on a
      plain card. */
   --destructive-bright: #ff91a3;
+
+  /* Four further signal families, added because the timesheet lifecycle has nine states and four
+     hues cannot label them without collisions: `invoiced` and `submitted` were both mint, both
+     rejections were both rose, and `approved`/`accepted`/`paid` were one green printed three
+     times. A status that shares its colour with another status carries no information.
+
+     The four existing hues are pinned (rose 15°, amber 65°, green 153°, mint 195°), so the new
+     ones take the gaps: yellow 96°, blue 238°, violet 294°, magenta 330°. Eight families cannot
+     hold the ≥42° hue spacing the original four had — 360° does not divide that way with four
+     positions fixed — so separation is verified as OKLab ΔE over the whole set rather than by hue
+     angle, which is what the chart ramp already does. Lightness is staggered for exactly that
+     reason: magenta sits at L 0.800 against rose's 0.714 and yellow at 0.880 against amber's
+     0.803, and those two staggers are what carry the set's two closest hue pairs. Worst pair over
+     all 28 is ΔE 0.104, above the 0.080 the chart ramp holds itself to.
+
+     Chroma follows the same rule as the rest of the chrome — 90% of the sRGB ceiling at its own
+     lightness, capped so the full set stays inside 1.9× the least-saturated family. It does: the
+     spread is 1.79× (`--accent` 0.103 to `--destructive` 0.182), unchanged from before.
+
+     The soft alphas are per-tone for the reason given above: each is the loudest tint whose own
+     full-strength label still clears 4.5:1 on every surface it can land on, `--popover` included
+     (worst case 4.53–4.63). Yellow tolerates 0.29 because it is the lightest of the four; the
+     other three cap at 0.20.
+
+     Under deuteranopia and protanopia this set does NOT separate — eight hues cannot — so no
+     component may use these as the only carrier. `StatusPill` prints the status name and the
+     dashboard legend labels every swatch; keep it that way. */
+  --pending: #f8d63f;
+  --pending-soft: rgb(248 214 63 / 0.29);
+  --verified: #6bc2f8;
+  --verified-soft: rgb(107 194 248 / 0.2);
+  --settled: #c1b1f9;
+  --settled-soft: rgb(193 177 249 / 0.2);
+  --blocked: #f993f1;
+  --blocked-soft: rgb(249 147 241 / 0.2);
 
   /* Edges, depth, chrome — neutral hairlines; a mint edge is reserved for elements that carry
      the accent. */
@@ -561,6 +604,32 @@
      ceiling as `--destructive`, ΔL 0.100 below it. Clears 4.57 on the darkest hover wash it can
      meet and 6.87 on the tint. */
   --destructive-bright: #8a323f;
+
+  /* The four added families, re-derived for this polarity exactly as the original four were: same
+     hue, darker and less chromatic, each spending the same 90% of the sRGB ceiling its dark
+     counterpart spends and capped at the same 1.9×. Every one clears 4.5:1 on every opaque
+     surface and on its own soft (worst 4.52). Yellow lands on olive for the same reason
+     `--warning` lands on brown — a light-enough yellow cannot carry text on white — and the pale
+     soft plus the 45% border are what still read it as yellow.
+
+     The softs are solid pastels held to the same ΔE 0.057–0.062 band from the card as the original
+     four, so all eight chips read as one set rather than four calibrated ones and four guesses.
+
+     Lightness is not simply "the lightest step that passes" the way the original four were searched.
+     Taking that step put yellow at L 0.529 against amber's 0.536, i.e. two browns ΔE 0.059 apart —
+     the pair reads as one colour in light even though it is unmistakable in dark, because both
+     hues collapse toward brown when a warm colour has to darken to carry text on white. Yellow and
+     violet are therefore placed at the bottom of the signal band (L 0.441 / 0.444) instead. Worst
+     pair over all 28 is now ΔE 0.084, which is `--success`/`--accent` — a pair that already
+     shipped. None of the four added families is the closest pair in light. */
+  --pending: #615212;
+  --pending-soft: #fef5cf;
+  --verified: #1e72a0;
+  --verified-soft: #ddf0fd;
+  --settled: #5a3f97;
+  --settled-soft: #edeafd;
+  --blocked: #94478f;
+  --blocked-soft: #fde7fa;
 
   /* Edges. In light, elevation cannot come from a lightness step — `--card` is white — so it comes
      from the hairline and the shadow, and the hairline has to do real work. `--border` moves to

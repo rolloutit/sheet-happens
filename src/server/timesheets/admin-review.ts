@@ -14,6 +14,7 @@ const DEFAULT_PAGE = 1;
 const DEFAULT_PAGE_SIZE = 20;
 const MAX_PAGE_SIZE = 100;
 const MONTH_INPUT_PATTERN = /^\d{4}-\d{2}$/;
+const FLAG_INPUT_VALUES = new Set(["1", "true", "on", "yes"]);
 const STATUS_FILTERS = new Set<TimesheetStatusRecord>([
   "SUBMITTED",
   "REJECTED",
@@ -33,6 +34,11 @@ export type AdminTimesheetFilters = {
   contractorMemberIds: string[];
   projectIds: string[];
   month: string;
+  /**
+   * Whether `PAID` timesheets are listed. `false` by default — a paid month is closed
+   * business, so it would otherwise pile up in front of the queue an admin came to review.
+   */
+  includePaid: boolean;
   page: number;
   pageSize: number;
 };
@@ -1252,6 +1258,7 @@ export function normalizeAdminTimesheetFilters(
     contractorMemberIds: listSearchParam(searchParams.contractor),
     projectIds: listSearchParam(searchParams.project),
     month: normalizeMonthInput(firstSearchParam(searchParams.month)),
+    includePaid: parseFlagInput(firstSearchParam(searchParams.includePaid)),
     page: parsePositiveInteger(firstSearchParam(searchParams.page), DEFAULT_PAGE),
     pageSize: Math.min(
       parsePositiveInteger(firstSearchParam(searchParams.pageSize), DEFAULT_PAGE_SIZE),
@@ -1314,6 +1321,15 @@ export function buildTimesheetWhere(filters: AdminTimesheetFilters): Prisma.Time
   if (filters.month) {
     and.push({
       periodStart: parseDateOnly(`${filters.month}-01`),
+    });
+  }
+
+  // Paid timesheets are hidden unless asked for. Naming `PAID` in the status filter counts
+  // as asking — otherwise `?status=PAID` would return an empty list, which reads as data
+  // loss rather than as a default.
+  if (!filters.includePaid && !filters.statuses.includes("PAID")) {
+    and.push({
+      status: { not: "PAID" },
     });
   }
 
@@ -1509,6 +1525,15 @@ async function createReviewAuditLog(
 export function normalizeMonthInput(value: string) {
   const trimmed = value.trim();
   return MONTH_INPUT_PATTERN.test(trimmed) ? trimmed : "";
+}
+
+/**
+ * Reads a checkbox-shaped search param. The toolbar submits `1`, but a hand-written or
+ * bookmarked URL is as likely to carry `true` or the browser default `on`, and all three
+ * mean the box is ticked.
+ */
+function parseFlagInput(value: string) {
+  return FLAG_INPUT_VALUES.has(value.trim().toLowerCase());
 }
 
 function parsePositiveInteger(value: string, fallback: number) {
