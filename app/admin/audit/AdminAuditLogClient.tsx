@@ -72,9 +72,10 @@ export function AdminAuditLogClient({ result }: AdminAuditLogClientProps) {
     const params = new URLSearchParams(searchParams.toString());
 
     setParam(params, "q", formData.get("q"));
-    setParam(params, "action", formData.get("action"));
-    setParam(params, "targetType", formData.get("targetType"));
-    setParam(params, "actor", formData.get("actor"));
+    // The three pickers are multi-selects, so each submits one entry per chosen value.
+    setListParam(params, "action", formData.getAll("action"));
+    setListParam(params, "targetType", formData.getAll("targetType"));
+    setListParam(params, "actor", formData.getAll("actor"));
     setParam(params, "from", formData.get("from"));
     setParam(params, "to", formData.get("to"));
     params.delete("page");
@@ -143,63 +144,57 @@ export function AdminAuditLogClient({ result }: AdminAuditLogClientProps) {
           <Field label={t("client.event")}>
             {({ id }) => (
               <Select
+                multiple
                 id={id}
                 name="action"
                 label={t("client.event")}
-                // Radix reads an empty value as unset, so the "all" label is also the
-                // placeholder — otherwise the trigger renders blank.
+                // No "all events" option to carry: an empty selection already is that state,
+                // so the label becomes the placeholder.
                 placeholder={t("client.allEvents")}
-                defaultValue={result.filters.action}
+                defaultValue={result.filters.actions}
                 labels={pickerLabels.combobox}
                 contentClassName="w-[28rem] max-w-[calc(100vw-2rem)]"
-                options={[
-                  { value: "", label: t("client.allEvents") },
-                  ...result.actionOptions.map((option) => ({
-                    ...option,
-                    label: `${labels.target(actionTargetType(option.value))} · ${labels.action(option.value)}`,
-                  })),
-                ]}
+                options={result.actionOptions.map((option) => ({
+                  ...option,
+                  label: `${labels.target(actionTargetType(option.value))} · ${labels.action(option.value)}`,
+                }))}
               />
             )}
           </Field>
           <Field label={t("client.target")}>
             {({ id }) => (
               <Select
+                multiple
                 id={id}
                 name="targetType"
                 label={t("client.target")}
                 placeholder={t("client.allTargets")}
-                defaultValue={result.filters.targetType}
+                defaultValue={result.filters.targetTypes}
                 labels={pickerLabels.combobox}
-                options={[
-                  { value: "", label: t("client.allTargets") },
-                  ...result.targetTypeOptions.map((option) => ({
-                    ...option,
-                    label: labels.target(option.value),
-                  })),
-                ]}
+                options={result.targetTypeOptions.map((option) => ({
+                  ...option,
+                  label: labels.target(option.value),
+                }))}
               />
             )}
           </Field>
           <Field label={t("client.actor")}>
             {({ id }) => (
               <Combobox
+                multiple
                 id={id}
                 name="actor"
                 label={t("client.actor")}
                 placeholder={t("client.allActors")}
-                defaultValue={result.filters.actorMemberId}
+                defaultValue={result.filters.actorMemberIds}
                 labels={pickerLabels.combobox}
-                options={[
-                  { value: "", label: t("client.allActors") },
-                  // Email moves from the label into meta so it stays searchable while the
-                  // trigger shows just the name.
-                  ...result.actorOptions.map((option) => ({
-                    value: option.value,
-                    label: option.value === "system" ? t("client.system") : option.label,
-                    meta: option.email ?? undefined,
-                  })),
-                ]}
+                // Email moves from the label into meta so it stays searchable while the
+                // trigger shows just the name.
+                options={result.actorOptions.map((option) => ({
+                  value: option.value,
+                  label: option.value === "system" ? t("client.system") : option.label,
+                  meta: option.email ?? undefined,
+                }))}
               />
             )}
           </Field>
@@ -463,6 +458,20 @@ function setParam(params: URLSearchParams, key: string, value: FormDataEntryValu
 
   if (normalized) params.set(key, normalized);
   else params.delete(key);
+}
+
+/**
+ * Replaces every value of one repeated parameter. `set` then `append` would leave the first
+ * value duplicated, and `set` alone would drop all but one.
+ */
+function setListParam(params: URLSearchParams, key: string, values: FormDataEntryValue[]) {
+  params.delete(key);
+
+  for (const value of values) {
+    const normalized = typeof value === "string" ? value.trim() : "";
+
+    if (normalized) params.append(key, normalized);
+  }
 }
 
 function buildUrl(pathname: string, params: URLSearchParams) {

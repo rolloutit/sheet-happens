@@ -76,9 +76,9 @@ describe("audit log service", () => {
       }),
     ).toEqual({
       query: "security",
-      action: "security.totp_reset",
-      targetType: "member",
-      actorMemberId: "system",
+      actions: ["security.totp_reset"],
+      targetTypes: ["member"],
+      actorMemberIds: ["system"],
       fromDate: "2026-07-01",
       toDate: "",
       page: 1,
@@ -89,9 +89,9 @@ describe("audit log service", () => {
   it("builds indexed audit filters for action, target, actor, and date range", () => {
     const where = buildAuditLogWhere({
       query: "",
-      action: "member.updated",
-      targetType: "member",
-      actorMemberId: "member-1",
+      actions: ["member.updated"],
+      targetTypes: ["member"],
+      actorMemberIds: ["member-1"],
       fromDate: "2026-07-01",
       toDate: "2026-07-10",
       page: 1,
@@ -100,9 +100,9 @@ describe("audit log service", () => {
 
     expect(where).toMatchObject({
       AND: [
-        { action: "member.updated" },
-        { targetType: "member" },
-        { actorMemberId: "member-1" },
+        { action: { in: ["member.updated"] } },
+        { targetType: { in: ["member"] } },
+        { actorMemberId: { in: ["member-1"] } },
         {
           createdAt: {
             gte: new Date("2026-07-01T00:00:00.000Z"),
@@ -117,9 +117,9 @@ describe("audit log service", () => {
     expect(
       buildAuditLogWhere({
         query: "",
-        action: "",
-        targetType: "",
-        actorMemberId: "system",
+        actions: [],
+        targetTypes: [],
+        actorMemberIds: ["system"],
         fromDate: "",
         toDate: "",
         page: 1,
@@ -128,6 +128,62 @@ describe("audit log service", () => {
     ).toEqual({
       actorMemberId: null,
     });
+  });
+
+  /**
+   * An investigation asks for an event group, not one action — every rate change, or every
+   * login event — so each of these filters takes several values. The actor filter is the one
+   * with a trap: `system` stands for rows no member owns, so it cannot be folded into the
+   * same `in` as real member ids.
+   */
+  it("matches any of several actions, targets and actors", () => {
+    const where = buildAuditLogWhere({
+      query: "",
+      actions: ["rate.created", "rate.updated"],
+      targetTypes: ["rate", "member"],
+      actorMemberIds: ["member-1", "member-2"],
+      fromDate: "",
+      toDate: "",
+      page: 1,
+      pageSize: 25,
+    });
+
+    expect(where).toEqual({
+      AND: [
+        { action: { in: ["rate.created", "rate.updated"] } },
+        { targetType: { in: ["rate", "member"] } },
+        { actorMemberId: { in: ["member-1", "member-2"] } },
+      ],
+    });
+  });
+
+  it("reads the system pseudo-actor picked alongside a person as either", () => {
+    const where = buildAuditLogWhere({
+      query: "",
+      actions: [],
+      targetTypes: [],
+      actorMemberIds: ["system", "member-1"],
+      fromDate: "",
+      toDate: "",
+      page: 1,
+      pageSize: 25,
+    });
+
+    expect(where).toEqual({
+      OR: [{ actorMemberId: null }, { actorMemberId: { in: ["member-1"] } }],
+    });
+  });
+
+  it("reads every value of a repeated event parameter", () => {
+    const filters = normalizeAuditLogFilters({
+      action: ["rate.created", "rate.updated"],
+      targetType: "rate",
+      actor: ["system", "member-1"],
+    });
+
+    expect(filters.actions).toEqual(["rate.created", "rate.updated"]);
+    expect(filters.targetTypes).toEqual(["rate"]);
+    expect(filters.actorMemberIds).toEqual(["system", "member-1"]);
   });
 
   it("redacts sensitive JSON keys recursively", () => {
