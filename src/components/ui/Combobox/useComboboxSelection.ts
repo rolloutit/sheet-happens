@@ -57,7 +57,10 @@ export function useComboboxSelection(props: ComboboxSelectionProps): ComboboxSel
 
       emit(values.includes(value) ? values.filter((entry) => entry !== value) : [...values, value]);
     },
-    clear: () => emit([]),
+    // Single mode's unset value is the empty string, not an empty list — see above. Nothing
+    // calls this in single mode today, but the invariant holds here rather than at the one
+    // call site that happens to gate the button on `multiple`.
+    clear: () => emit(props.multiple ? [] : [""]),
     reset: () => setInternalValues(defaultValues),
   };
 }

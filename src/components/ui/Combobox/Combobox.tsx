@@ -62,15 +62,22 @@ export function Combobox(props: ComboboxProps) {
     .filter((option) => values.includes(option.value))
     .map((option) => option.label);
   /**
-   * Past the first choice the trigger shows a count, not chips. It is a fixed-height control
-   * from `controlSurface.ts`, and every filter screen already renders the chosen values as
-   * removable chips under the bar (`FilterChips`), so chips in here would both overflow the
-   * button and say the same thing twice. The full list stays reachable as the `title`.
+   * Past the first choice the trigger shows a count, not chips: it is a fixed-height control
+   * from `controlSurface.ts`, and a row of chips would overflow it. The four URL-filtered
+   * admin lists repeat the chosen values as removable chips under the bar (`FilterChips`),
+   * so there the count is a summary of something already on screen; elsewhere the full list
+   * is reachable through the accessible name and the `title`.
    */
   const summary =
     multiple && values.length > 1
       ? (labels?.selected?.(values.length) ?? `${values.length} selected`)
       : selectedLabels[0];
+  /**
+   * The chosen value belongs in the accessible name because `aria-label` overrides the
+   * trigger's own text content. Without it a screen reader hears which filter this is and
+   * never what it is set to — and in multi mode that summary is the only readout there is.
+   */
+  const triggerName = [label, summary].filter(Boolean).join(": ");
 
   useFormReset(trigger, selection.reset);
 
@@ -110,7 +117,7 @@ export function Combobox(props: ComboboxProps) {
             role="combobox"
             aria-haspopup="listbox"
             aria-expanded={open}
-            aria-label={label}
+            aria-label={triggerName}
             aria-describedby={ariaDescribedBy}
             aria-invalid={invalid || undefined}
             disabled={disabled}
@@ -150,6 +157,14 @@ export function Combobox(props: ComboboxProps) {
             onValueChange={setActiveItem}
           >
             <CommandInput ref={searchRef} placeholder={labels?.searchPlaceholder ?? "Search..."} />
+            {/*
+              Deliberately no `aria-multiselectable`: it would tell a screen reader to read
+              `aria-selected` as the selection, and cmdk hardcodes that attribute for its own
+              highlight (see `Command`). Declaring it would make the contradiction
+              authoritative rather than resolve it, so selection is announced through each
+              row's `aria-checked` and through the trigger's name instead. Fixing this
+              properly means cmdk giving up `aria-selected`.
+            */}
             <CommandList>
               <CommandEmpty>{labels?.empty ?? "No results"}</CommandEmpty>
               {options.map((option, index) => (
@@ -259,9 +274,11 @@ function ComboboxItem({
  * inert. A visually hidden but still laid-out `<select>` keeps native validation, native
  * form participation, and `form.reset()`.
  *
- * In multi mode it also settles the URL contract for free: a native `<select multiple>`
- * serializes as one repeated parameter per chosen value, which is exactly what the filter
- * parsers read back.
+ * In multi mode a native `<select multiple>` serializes as one repeated parameter per chosen
+ * value, so a GET form needs no encoding of its own. Reading them back is the parser's job
+ * and today's parsers do not: `getSingleParam` in the admin list pages keeps only the first
+ * value, so a URL-backed multi filter needs its parser widened to `getAll` in the same
+ * change.
  */
 function ComboboxFormValue({
   name,

@@ -23,7 +23,7 @@ export type {
   CardTextProps,
   CardVariant,
 } from "./Card";
-export { Checkbox } from "./Checkbox";
+export { Checkbox, checkboxBoxClassName } from "./Checkbox";
 export type { CheckboxProps } from "./Checkbox";
 export { ChipButton, chipButtonVariants } from "./ChipButton";
 export type { ChipButtonProps } from "./ChipButton";

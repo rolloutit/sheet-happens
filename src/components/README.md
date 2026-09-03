@@ -78,9 +78,13 @@ Form control conventions:
   Select has no multiple mode — the panel stays open while picking, and rows grow a
   checkbox. Filters in multi mode drop the `{ value: "", label: "All …" }` option their
   single-select counterparts carry and pass that label as `placeholder` instead, because an
-  empty selection already means "unfiltered". The hidden control becomes a
-  `<select multiple>`, so a GET form serializes `?name=a&name=b` with no extra encoding.
-  Pass `labels.selected` and `labels.clear` (`usePickerLabels` already does).
+  empty selection already means "unfiltered". Pass `labels.selected` and `labels.clear`
+  (`usePickerLabels` already does).
+- A multi-select's hidden control is a `<select multiple>`, so a GET form serializes
+  `?name=a&name=b` without encoding anything itself. Reading it back is not free: the admin
+  pages' `getSingleParam` keeps only the first value, so putting a multi-select into a
+  URL-backed filter means widening that parser and the Prisma `where` (`equals` → `in`) in
+  the same change.
 - Dates are `YYYY-MM-DD` strings and months are `YYYY-MM` strings, never `Date` objects —
   `DatePicker`, `DateRangePicker`, and `MonthPicker` all convert at their own boundary. See
   `src/lib/date-values.ts`.
