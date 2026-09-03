@@ -1987,15 +1987,28 @@ Expected result:
 2. Open `https://{DOMAIN_NAME}/admin/reports`.
 3. Switch between month, week, day, year, and custom period filters.
 4. Filter by project, project group, and member.
-5. Switch between user view and project view.
-6. Clear filters.
+5. Pick **two** projects and **two** members in the same report, then apply.
+6. Copy the URL, open it in a new tab, and confirm both values come back on each filter.
+7. Export the report to PDF with two projects chosen, and read the header.
+8. Export again with exactly one project chosen.
+9. Switch between user view and project view.
+10. Clear filters.
 
 Expected result:
 
 - The report updates for each period mode and filter.
 - User view groups by people.
 - Project view groups by projects.
-- The selected filters are reflected in the URL and survive browser refresh.
+- The selected filters are reflected in the URL and survive browser refresh. A filter holding
+  several values appears once per value (`?project=…&project=…`), and every value comes back when
+  the URL is reopened — none is silently dropped.
+- The report totals cover **all** chosen projects and members, not only the first one.
+- The exported PDF header names every chosen project, in the order the picker lists them, joined the
+  way the document's language joins a list (`Apollo, Helix és Belső` in Hungarian). With one project
+  chosen it names that project and shows its colour dot; with two it names both and shows no dot.
+- With two projects chosen the detail table keeps its project column — the header says what the
+  scope is, the column says which line is which. With exactly one it drops that column, as before.
+- The preview inside the export dialog and the downloaded file describe the same scope.
 - Clearing filters returns to the default monthly report.
 - The donut chart's center label shows exactly one hour unit (e.g. `3.38 h`), never a doubled or
   mismatched unit, in every display-preference and locale combination.
@@ -2318,14 +2331,21 @@ Expected result:
 2. Open `{AUDIT_LOG_VIEW}`.
 3. Search for a known event action, for example `member.updated` or `security.totp_reset`.
 4. Filter by event, target type, actor, and a date range.
-5. Clear the filters.
+5. Pick **two** events (for example a rate created and a rate updated), then apply.
+6. Pick `Rendszer` / `System` **and** a named person in the actor filter, then apply.
+7. Page to the second page of results.
+8. Clear the filters.
 
 Expected result:
 
-- Search and filters update the URL query string.
-- Rows match the selected criteria.
+- Search and filters update the URL query string. A filter holding several values appears once per
+  value, and every value comes back when the URL is reopened.
+- Rows match the selected criteria, and a multi-value filter matches **any** of them: two events
+  show both events' rows.
+- `Rendszer` / `System` picked alongside a person shows both the system rows and that person's —
+  system is not a member, so it cannot be folded in with real actors.
 - Clearing filters returns to the unfiltered first page.
-- Pagination keeps the selected filters.
+- Pagination keeps the selected filters, including every value of a multi-select one.
 
 ### Audit Details Redaction
 
@@ -2956,7 +2976,11 @@ Run this on all four admin lists: `/admin/timesheets`, `/admin/payslips`, `/admi
 4. Use `Törlés` / `Clear`.
 5. Type a search term, submit, and read the chip it produces.
 6. On `/admin/projects`, filter by a project group.
-7. Narrow the window to tablet and phone widths.
+7. Pick **two** values in one of the multi-select filters — status on `/admin/timesheets`, state on
+   `/admin/people`, group or timeline on `/admin/projects`, employee on `/admin/payslips` — and
+   submit.
+8. Remove **one** of the two chips that filter produced.
+9. Narrow the window to tablet and phone widths.
 
 Expected result:
 
@@ -2980,6 +3004,16 @@ Expected result:
   `Project directory` header on one line, and opening it puts `?new=assignments` in the URL.
 - The controls wrap onto further lines on narrow viewports with the submit staying on the right, and
   no page scrolls sideways.
+- A multi-select filter shows one chip **per chosen value**, and removing one leaves the others
+  applied — the list stays filtered by what the remaining chips say.
+- The list matches **any** of the chosen values, not all of them: two statuses on
+  `/admin/timesheets` show both statuses' rows, and `Aktív` + `Meghívott` on `/admin/people` shows
+  everyone who is not archived.
+- On `/admin/people`, `Zárolt` / `Locked` picked alongside a real state still shows both — it is a
+  soft-delete marker rather than a status, so it cannot be folded in with the others. The same holds
+  for `Csoport nélkül` / `Ungrouped` next to a real group on `/admin/projects`.
+- Paging keeps every value of a multi-select filter: go to page 2 and confirm the chips and the URL
+  still carry both.
 
 ### Multi-Select Rate Filters
 
