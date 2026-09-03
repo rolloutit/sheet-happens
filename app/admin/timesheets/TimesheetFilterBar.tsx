@@ -31,9 +31,9 @@ type FilterKey = "q" | "status" | "contractor" | "project" | "month";
 
 export type TimesheetFilterBarProps = {
   query: string;
-  status: string;
-  contractorMemberId: string;
-  projectId: string;
+  statuses: readonly string[];
+  contractorMemberIds: readonly string[];
+  projectIds: readonly string[];
   /** `YYYY-MM`. */
   month: string;
   contractorOptions: readonly { value: string; label: string; email?: string | null }[];
@@ -53,12 +53,16 @@ export type TimesheetFilterBarProps = {
  * labels move onto the controls as accessible names, and whatever is actually filtering the
  * list shows up as a chip you can take off in one click — which is the part a hidden
  * "more filters" popover would have taken away.
+ *
+ * Status, contractor and project accept several values, so each contributes one chip per
+ * value and the whole filter reads as a union: the review queue is `SUBMITTED` **or**
+ * `REJECTED` in one URL rather than two.
  */
 export function TimesheetFilterBar({
   query,
-  status,
-  contractorMemberId,
-  projectId,
+  statuses,
+  contractorMemberIds,
+  projectIds,
   month,
   contractorOptions,
   projectOptions,
@@ -68,19 +72,31 @@ export function TimesheetFilterBar({
   const router = useRouter();
   const pickerLabels = usePickerLabels();
 
-  const current: Record<FilterKey, string> = {
+  const current: Record<FilterKey, string | readonly string[]> = {
     q: query,
-    status,
-    contractor: contractorMemberId,
-    project: projectId,
+    status: statuses,
+    contractor: contractorMemberIds,
+    project: projectIds,
     month,
   };
 
-  function hrefWithout(key: FilterKey) {
+  /**
+   * Drops one filter, or — when `value` is given — one value of a multi-select filter,
+   * leaving that filter's other values applied.
+   */
+  function hrefWithout(key: FilterKey, value?: string) {
     const params = new URLSearchParams();
 
-    for (const [name, value] of Object.entries(current)) {
-      if (name !== key && value) params.set(name, value);
+    for (const [name, entry] of Object.entries(current)) {
+      if (typeof entry === "string") {
+        if (name !== key && entry) params.set(name, entry);
+        continue;
+      }
+
+      for (const candidate of entry) {
+        if (name === key && (value === undefined || candidate === value)) continue;
+        params.append(name, candidate);
+      }
     }
 
     const search = params.toString();
@@ -98,25 +114,28 @@ export function TimesheetFilterBar({
       leading: <Search className="size-3" aria-hidden="true" />,
     });
   }
-  if (status) {
+  for (const status of statuses) {
     activeFilters.push({
       id: "status",
+      value: status,
       label: `${t("filters.status")}: ${t(`status.${status.toLowerCase()}`)}`,
     });
   }
-  if (contractorMemberId) {
+  for (const contractorMemberId of contractorMemberIds) {
     const option = contractorOptions.find((entry) => entry.value === contractorMemberId);
 
     activeFilters.push({
       id: "contractor",
+      value: contractorMemberId,
       label: `${t("filters.contractor")}: ${option?.label ?? contractorMemberId}`,
     });
   }
-  if (projectId) {
+  for (const projectId of projectIds) {
     const option = projectOptions.find((entry) => entry.value === projectId);
 
     activeFilters.push({
       id: "project",
+      value: projectId,
       label: `${t("filters.project")}: ${option?.label ?? projectId}`,
     });
   }
@@ -144,50 +163,47 @@ export function TimesheetFilterBar({
         </div>
         <div className="w-[calc(50%-0.25rem)] sm:w-auto sm:min-w-32 sm:max-w-64">
           <Select
+            multiple
             name="status"
             label={t("filters.status")}
-            // Radix reads an empty value as unset, so the "all" label doubles as the
-            // placeholder or the trigger renders blank.
+            // No "all statuses" option to carry: an empty selection already is that state,
+            // so the label becomes the placeholder.
             placeholder={t("filters.allStatuses")}
-            defaultValue={status}
+            defaultValue={statuses}
             labels={pickerLabels.combobox}
-            options={[
-              { value: "", label: t("filters.allStatuses") },
+            options={filterableStatuses.map((value) => ({
+              value,
               // The catalogue keys are lowercase; the filter values are the enum names.
-              ...filterableStatuses.map((value) => ({
-                value,
-                label: t(`status.${value.toLowerCase()}`),
-              })),
-            ]}
+              label: t(`status.${value.toLowerCase()}`),
+            }))}
           />
         </div>
         <div className="w-[calc(50%-0.25rem)] sm:w-auto sm:min-w-32 sm:max-w-64">
           <Combobox
+            multiple
             name="contractor"
             label={t("filters.contractor")}
             placeholder={t("filters.allContractors")}
-            defaultValue={contractorMemberId}
+            defaultValue={contractorMemberIds}
             labels={pickerLabels.combobox}
-            options={[
-              { value: "", label: t("filters.allContractors") },
-              // Email drops to the second line so the trigger stays readable while both
-              // the name and the address remain searchable.
-              ...contractorOptions.map((option) => ({
-                value: option.value,
-                label: option.label,
-                meta: option.email ?? undefined,
-              })),
-            ]}
+            // Email drops to the second line so the trigger stays readable while both the
+            // name and the address remain searchable.
+            options={contractorOptions.map((option) => ({
+              value: option.value,
+              label: option.label,
+              meta: option.email ?? undefined,
+            }))}
           />
         </div>
         <div className="w-[calc(50%-0.25rem)] sm:w-auto sm:min-w-32 sm:max-w-64">
           <Combobox
+            multiple
             name="project"
             label={t("filters.project")}
             placeholder={t("filters.allProjects")}
-            defaultValue={projectId}
+            defaultValue={projectIds}
             labels={pickerLabels.combobox}
-            options={[{ value: "", label: t("filters.allProjects") }, ...projectOptions]}
+            options={projectOptions}
           />
         </div>
         <div className="w-[calc(50%-0.25rem)] sm:w-auto sm:min-w-32 sm:max-w-64">
@@ -212,7 +228,7 @@ export function TimesheetFilterBar({
           clear: t("filters.clear"),
           remove: (filter) => t("filters.removeFilter", { filter }),
         }}
-        onRemove={(id) => router.push(hrefWithout(id))}
+        onRemove={(id, value) => router.push(hrefWithout(id, value))}
         onClear={() => router.push("/admin/timesheets" as Route)}
       />
     </div>

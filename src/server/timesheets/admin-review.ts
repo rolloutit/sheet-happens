@@ -1,4 +1,5 @@
 import { isProjectColorToken, projectColorValues } from "@/src/lib/project-colors";
+import { firstSearchParam, listSearchParam } from "@/src/lib/search-params";
 import { prisma } from "@/src/server/db/client";
 import type { Prisma } from "@/src/server/db/generated/client";
 import { formatDateOnly, normalizeDateOnly, parseDateOnly } from "@/src/server/time-tracking";
@@ -27,9 +28,10 @@ export type AdminTimesheetSearchParams = Record<string, string | string[] | unde
 
 export type AdminTimesheetFilters = {
   query: string;
-  status: TimesheetStatusRecord | "";
-  contractorMemberId: string;
-  projectId: string;
+  /** Empty means every status, the same way no filter at all does. */
+  statuses: TimesheetStatusRecord[];
+  contractorMemberIds: string[];
+  projectIds: string[];
   month: string;
   page: number;
   pageSize: number;
@@ -1232,28 +1234,32 @@ function getRequiredCancellationInvoiceIds(input: {
   );
 }
 
-function normalizeAdminTimesheetFilters(
+/** Exported for tests, like the audit log's equivalents. */
+export function normalizeAdminTimesheetFilters(
   searchParams: AdminTimesheetSearchParams,
 ): AdminTimesheetFilters {
-  const rawStatus = firstString(searchParams.status).trim().toUpperCase();
-
   return {
-    query: firstString(searchParams.q).trim().slice(0, 120),
-    status: STATUS_FILTERS.has(rawStatus as TimesheetStatusRecord)
-      ? (rawStatus as TimesheetStatusRecord)
-      : "",
-    contractorMemberId: firstString(searchParams.contractor).trim(),
-    projectId: firstString(searchParams.project).trim(),
-    month: normalizeMonthInput(firstString(searchParams.month)),
-    page: parsePositiveInteger(firstString(searchParams.page), DEFAULT_PAGE),
+    query: firstSearchParam(searchParams.q).trim().slice(0, 120),
+    // Unknown statuses drop out rather than emptying the filter: a stale link naming one
+    // real and one retired status should still narrow the list to the real one.
+    statuses: listSearchParam(searchParams.status)
+      .map((status) => status.toUpperCase())
+      .filter((status): status is TimesheetStatusRecord =>
+        STATUS_FILTERS.has(status as TimesheetStatusRecord),
+      ),
+    contractorMemberIds: listSearchParam(searchParams.contractor),
+    projectIds: listSearchParam(searchParams.project),
+    month: normalizeMonthInput(firstSearchParam(searchParams.month)),
+    page: parsePositiveInteger(firstSearchParam(searchParams.page), DEFAULT_PAGE),
     pageSize: Math.min(
-      parsePositiveInteger(firstString(searchParams.pageSize), DEFAULT_PAGE_SIZE),
+      parsePositiveInteger(firstSearchParam(searchParams.pageSize), DEFAULT_PAGE_SIZE),
       MAX_PAGE_SIZE,
     ),
   };
 }
 
-function buildTimesheetWhere(filters: AdminTimesheetFilters): Prisma.TimesheetWhereInput {
+/** Exported for tests, like the audit log's equivalents. */
+export function buildTimesheetWhere(filters: AdminTimesheetFilters): Prisma.TimesheetWhereInput {
   const and: Prisma.TimesheetWhereInput[] = [];
 
   if (filters.query) {
@@ -1276,25 +1282,26 @@ function buildTimesheetWhere(filters: AdminTimesheetFilters): Prisma.TimesheetWh
     });
   }
 
-  if (filters.status) {
+  if (filters.statuses.length > 0) {
     and.push({
-      status: filters.status,
+      status: { in: filters.statuses },
     });
   }
 
-  if (filters.contractorMemberId) {
+  if (filters.contractorMemberIds.length > 0) {
     and.push({
-      contractorMemberId: filters.contractorMemberId,
+      contractorMemberId: { in: filters.contractorMemberIds },
     });
   }
 
-  if (filters.projectId) {
+  if (filters.projectIds.length > 0) {
     and.push({
       currentRevision: {
         is: {
+          // A timesheet matches when any of its lines is on any of the chosen projects.
           snapshotLines: {
             some: {
-              projectId: filters.projectId,
+              projectId: { in: filters.projectIds },
             },
           },
         },
@@ -1500,11 +1507,6 @@ async function createReviewAuditLog(
 export function normalizeMonthInput(value: string) {
   const trimmed = value.trim();
   return MONTH_INPUT_PATTERN.test(trimmed) ? trimmed : "";
-}
-
-function firstString(value: string | string[] | undefined) {
-  if (Array.isArray(value)) return value.at(0) ?? "";
-  return value ?? "";
 }
 
 function parsePositiveInteger(value: string, fallback: number) {

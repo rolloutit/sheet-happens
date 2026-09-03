@@ -2,6 +2,8 @@ import { describe, expect, it, vi } from "vitest";
 
 import {
   approveTimesheetsForAdmin,
+  buildTimesheetWhere,
+  normalizeAdminTimesheetFilters,
   normalizeMonthInput,
   TimesheetReviewError,
 } from "./admin-review";
@@ -34,6 +36,67 @@ describe("normalizeMonthInput", () => {
 
   it("tolerates surrounding whitespace, as a hand-edited URL might carry", () => {
     expect(normalizeMonthInput("  2026-06  ")).toBe("2026-06");
+  });
+});
+
+/**
+ * Status, contractor and project accept several values, which arrive as repeated query
+ * parameters. The failure these pin down is silent in both directions: a filter that keeps
+ * only the first value narrows the list too far with no error, and one that reaches Prisma
+ * as `equals` instead of `in` returns nothing at all for two selections.
+ */
+describe("normalizeAdminTimesheetFilters", () => {
+  it("reads every value of a repeated parameter", () => {
+    const filters = normalizeAdminTimesheetFilters({
+      status: ["SUBMITTED", "REJECTED"],
+      contractor: ["member-1", "member-2"],
+      project: ["project-1", "project-2"],
+    });
+
+    expect(filters.statuses).toEqual(["SUBMITTED", "REJECTED"]);
+    expect(filters.contractorMemberIds).toEqual(["member-1", "member-2"]);
+    expect(filters.projectIds).toEqual(["project-1", "project-2"]);
+  });
+
+  it("keeps a single value working, so existing links do not change meaning", () => {
+    expect(normalizeAdminTimesheetFilters({ status: "PAID" }).statuses).toEqual(["PAID"]);
+  });
+
+  it("drops unknown statuses but keeps the real ones alongside them", () => {
+    const filters = normalizeAdminTimesheetFilters({ status: ["submitted", "RETIRED"] });
+
+    expect(filters.statuses).toEqual(["SUBMITTED"]);
+  });
+
+  it("treats an absent or blank filter as every status", () => {
+    expect(normalizeAdminTimesheetFilters({}).statuses).toEqual([]);
+    expect(normalizeAdminTimesheetFilters({ status: ["", " "] }).statuses).toEqual([]);
+  });
+});
+
+describe("buildTimesheetWhere", () => {
+  const empty = normalizeAdminTimesheetFilters({});
+
+  it("matches any of the chosen statuses", () => {
+    const where = buildTimesheetWhere({ ...empty, statuses: ["SUBMITTED", "REJECTED"] });
+
+    expect(where.AND).toEqual([{ status: { in: ["SUBMITTED", "REJECTED"] } }]);
+  });
+
+  it("matches a timesheet with a line on any of the chosen projects", () => {
+    const where = buildTimesheetWhere({ ...empty, projectIds: ["project-1", "project-2"] });
+
+    expect(where.AND).toEqual([
+      {
+        currentRevision: {
+          is: { snapshotLines: { some: { projectId: { in: ["project-1", "project-2"] } } } },
+        },
+      },
+    ]);
+  });
+
+  it("adds no clause for an empty filter", () => {
+    expect(buildTimesheetWhere(empty)).toEqual({});
   });
 });
 
