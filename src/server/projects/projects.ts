@@ -1,9 +1,11 @@
-import { prisma } from "@/src/server/db/client";
 import {
   DEFAULT_PROJECT_COLOR_TOKEN,
   isProjectColorToken,
   type ProjectColorToken,
 } from "@/src/lib/project-colors";
+import { firstSearchParam, listSearchParam } from "@/src/lib/search-params";
+import { prisma } from "@/src/server/db/client";
+import { anyOf } from "@/src/server/db/any-of";
 import type { Prisma } from "@/src/server/db/generated/client";
 
 const DEFAULT_PAGE = 1;
@@ -21,8 +23,10 @@ export type ProjectFilters = {
   query: string;
   status: ProjectStatusFilter;
   type: ProjectTypeFilter;
-  timeline: ProjectTimelineFilter;
-  group: string;
+  /** Empty means every timeline, the same way no filter at all does. */
+  timelines: Exclude<ProjectTimelineFilter, "">[];
+  /** May contain the `ungrouped` pseudo-group alongside real group ids. */
+  groups: string[];
   assignment: ProjectAssignmentFilter;
   page: number;
   pageSize: number;
@@ -424,15 +428,17 @@ export function normalizeProjectFilters(
   searchParams: ProjectListSearchParams = {},
 ): ProjectFilters {
   return {
-    query: firstString(searchParams.q).trim().slice(0, 120),
-    status: normalizeProjectStatusFilter(firstString(searchParams.status)),
-    type: normalizeProjectTypeFilter(firstString(searchParams.type)),
-    timeline: normalizeProjectTimelineFilter(firstString(searchParams.timeline)),
-    group: normalizeProjectGroupFilter(firstString(searchParams.group)),
-    assignment: normalizeProjectAssignmentFilter(firstString(searchParams.assignment)),
-    page: parsePositiveInteger(firstString(searchParams.page), DEFAULT_PAGE),
+    query: firstSearchParam(searchParams.q).trim().slice(0, 120),
+    status: normalizeProjectStatusFilter(firstSearchParam(searchParams.status)),
+    type: normalizeProjectTypeFilter(firstSearchParam(searchParams.type)),
+    timelines: listSearchParam(searchParams.timeline)
+      .map(normalizeProjectTimelineFilter)
+      .filter((timeline): timeline is Exclude<ProjectTimelineFilter, ""> => timeline !== ""),
+    groups: listSearchParam(searchParams.group).map(normalizeProjectGroupFilter),
+    assignment: normalizeProjectAssignmentFilter(firstSearchParam(searchParams.assignment)),
+    page: parsePositiveInteger(firstSearchParam(searchParams.page), DEFAULT_PAGE),
     pageSize: Math.min(
-      parsePositiveInteger(firstString(searchParams.pageSize), DEFAULT_PAGE_SIZE),
+      parsePositiveInteger(firstSearchParam(searchParams.pageSize), DEFAULT_PAGE_SIZE),
       MAX_PAGE_SIZE,
     ),
   };
@@ -500,44 +506,13 @@ export function buildProjectWhere(
     });
   }
 
-  if (filters.timeline === "current") {
-    and.push(buildCurrentProjectDateWhere(today));
-  } else if (filters.timeline === "future") {
-    and.push({
-      startsOn: {
-        gt: today,
-      },
-    });
-  } else if (filters.timeline === "ended") {
-    and.push({
-      endsOn: {
-        lt: today,
-      },
-    });
-  }
+  const timelineClause = buildTimelineClause(filters.timelines, today);
 
-  if (filters.group === "ungrouped") {
-    and.push({
-      groupProjects: {
-        none: {
-          projectGroup: {
-            deletedAt: null,
-          },
-        },
-      },
-    });
-  } else if (filters.group) {
-    and.push({
-      groupProjects: {
-        some: {
-          projectGroupId: filters.group,
-          projectGroup: {
-            deletedAt: null,
-          },
-        },
-      },
-    });
-  }
+  if (timelineClause) and.push(timelineClause);
+
+  const groupClause = buildGroupClause(filters.groups);
+
+  if (groupClause) and.push(groupClause);
 
   if (filters.assignment === "assigned") {
     and.push({
@@ -977,11 +952,6 @@ function buildCurrentAssignmentWhere(today: Date): Prisma.ProjectAssignmentWhere
   };
 }
 
-function firstString(value: string | string[] | undefined) {
-  if (Array.isArray(value)) return value[0] ?? "";
-  return value ?? "";
-}
-
 function parsePositiveInteger(value: string, fallback: number) {
   const parsed = Number.parseInt(value, 10);
   return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
@@ -995,6 +965,57 @@ function normalizeProjectStatusFilter(value: string): ProjectStatusFilter {
 function normalizeProjectTypeFilter(value: string): ProjectTypeFilter {
   if (value === "internal" || value === "external") return value;
   return "";
+}
+
+/**
+ * Each timeline is its own date comparison rather than a value of one column, so several of
+ * them are alternatives: `current` and `future` together is the live portfolio.
+ */
+function buildTimelineClause(timelines: Exclude<ProjectTimelineFilter, "">[], today: Date) {
+  return anyOf(
+    timelines.map<Prisma.ProjectWhereInput>((timeline) => {
+      if (timeline === "current") return buildCurrentProjectDateWhere(today);
+      if (timeline === "future") return { startsOn: { gt: today } };
+
+      return { endsOn: { lt: today } };
+    }),
+  );
+}
+
+/**
+ * `ungrouped` is the absence of a group rather than one of them, so it cannot join the same
+ * `in` as real group ids — picking it alongside a group means "either".
+ */
+function buildGroupClause(groups: string[]) {
+  const groupIds = groups.filter((group) => group !== "ungrouped");
+  const clauses: Prisma.ProjectWhereInput[] = [];
+
+  if (groupIds.length < groups.length) {
+    clauses.push({
+      groupProjects: {
+        none: {
+          projectGroup: {
+            deletedAt: null,
+          },
+        },
+      },
+    });
+  }
+
+  if (groupIds.length > 0) {
+    clauses.push({
+      groupProjects: {
+        some: {
+          projectGroupId: { in: groupIds },
+          projectGroup: {
+            deletedAt: null,
+          },
+        },
+      },
+    });
+  }
+
+  return anyOf(clauses);
 }
 
 function normalizeProjectTimelineFilter(value: string): ProjectTimelineFilter {
