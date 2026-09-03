@@ -34,12 +34,13 @@ export function FilterChips<Id extends string>({
             </span>
             {chips.map((chip) => (
               <ChipButton
-                key={chip.id}
+                // A multi-select filter contributes one chip per value under one id.
+                key={chip.value ? `${chip.id}:${chip.value}` : chip.id}
                 selected
                 removable
                 leading={chip.leading}
                 aria-label={labels.remove(chip.aria ?? chip.label)}
-                onClick={() => onRemove(chip.id)}
+                onClick={() => onRemove(chip.id, chip.value)}
               >
                 {chip.label}
               </ChipButton>
