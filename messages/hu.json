@@ -2547,6 +2547,7 @@
       "projectAll": "Minden projekt",
       "groupAll": "Minden csoport",
       "memberAll": "Minden tag",
+      "moreValues": "+{count} további",
       "apply": "Szűrés",
       "clear": "Törlés"
     },

@@ -762,30 +762,30 @@ async function loadReportFilterLabels(
       : Promise.resolve([]),
   ]);
 
-  /**
-   * Kept in the order the filter listed the ids rather than in whatever order the database
-   * returned them, so the header reads the same as the toolbar. An id with no row — a
-   * project deleted since the link was made — contributes no name rather than a gap.
-   */
-  const orderedNames = <Row extends { id: string }>(
-    ids: string[],
-    rows: Row[],
-    toName: (row: Row) => string,
-  ) => {
-    const byId = new Map(rows.map((row) => [row.id, row]));
-
-    return ids.flatMap((id) => {
-      const row = byId.get(id);
-
-      return row ? [toName(row)] : [];
-    });
-  };
-
   return {
     projectNames: orderedNames(filters.projectIds, projects, (project) => project.name),
     projectGroupNames: orderedNames(filters.projectGroupIds, projectGroups, (group) => group.name),
     memberNames: orderedNames(filters.memberIds, members, getMemberName),
   };
+}
+
+/**
+ * Names in the order the filter listed the ids rather than in whatever order the database
+ * returned them, so a report header reads the same as the toolbar above it. An id with no
+ * row — a project deleted since the link was made — contributes no name rather than a gap.
+ */
+function orderedNames<Row extends { id: string }>(
+  ids: string[],
+  rows: Row[],
+  toName: (row: Row) => string,
+) {
+  const byId = new Map(rows.map((row) => [row.id, row]));
+
+  return ids.flatMap((id) => {
+    const row = byId.get(id);
+
+    return row ? [toName(row)] : [];
+  });
 }
 
 function buildReportTimeEntrySelect(where: ReturnType<typeof buildRatePeriodOverlapWhere>) {

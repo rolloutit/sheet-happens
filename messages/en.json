@@ -2547,6 +2547,7 @@
       "projectAll": "All projects",
       "groupAll": "All groups",
       "memberAll": "All members",
+      "moreValues": "+{count} more",
       "apply": "Apply filters",
       "clear": "Clear"
     },

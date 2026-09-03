@@ -6,6 +6,24 @@ import type { ReportCostFreeSnapshot, ReportInternalSnapshot, ReportSnapshot } f
  * Test and development use only — nothing in the request path imports this.
  */
 
+/**
+ * A fresh object each call, not a shared constant.
+ *
+ * The factories below spread `baseSnapshot`, which copies references — so one shared
+ * `filters` would hand every snapshot the same six arrays, and a test that pushed onto one
+ * would quietly change what the others see, order-dependently.
+ */
+function emptyFilters() {
+  return {
+    projectIds: [],
+    projectNames: [],
+    projectGroupIds: [],
+    projectGroupNames: [],
+    memberIds: [],
+    memberNames: [],
+  };
+}
+
 const baseSnapshot = {
   schemaVersion: 1,
   generatedAt: "2026-07-31T12:00:00.000Z",
@@ -16,14 +34,7 @@ const baseSnapshot = {
     boundary: "member_timezone",
     timezones: ["Europe/Budapest"],
   },
-  filters: {
-    projectIds: [],
-    projectNames: [],
-    projectGroupIds: [],
-    projectGroupNames: [],
-    memberIds: [],
-    memberNames: [],
-  },
+  filters: emptyFilters(),
   summary: {
     totalMinutes: 180,
     entryCount: 1,
@@ -73,6 +84,7 @@ const baseSnapshot = {
 export function createCostFreeReportSnapshot(): ReportCostFreeSnapshot {
   return {
     ...baseSnapshot,
+    filters: emptyFilters(),
     mode: "COST_FREE",
     warnings: [],
   };
@@ -81,6 +93,7 @@ export function createCostFreeReportSnapshot(): ReportCostFreeSnapshot {
 export function createInternalReportSnapshot(): ReportInternalSnapshot {
   return {
     ...baseSnapshot,
+    filters: emptyFilters(),
     mode: "INTERNAL",
     summary: {
       ...baseSnapshot.summary,

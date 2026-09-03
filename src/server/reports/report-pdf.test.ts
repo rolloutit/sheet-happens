@@ -164,6 +164,44 @@ describe("report PDF payload", () => {
     ]);
   });
 
+  /**
+   * `report.typ` gives each facet an equal fraction of the page width, so a facet is about
+   * one narrow column. Eight spelled-out project names would wrap to several lines and grow
+   * the header on every page of a financial document.
+   */
+  it("caps how many scope values a header facet spells out", () => {
+    const snapshot = createCostFreeReportSnapshot();
+    const payload = buildPayload({
+      ...snapshot,
+      filters: {
+        ...snapshot.filters,
+        projectIds: ["p1", "p2", "p3", "p4", "p5"],
+        projectNames: ["Apollo", "Helix", "Atlas", "Orion", "Vega"],
+      },
+    });
+    const projectFacet = payload.header.facets.find((facet) => facet.label === "Project");
+
+    expect(projectFacet?.value).toBe("Apollo, Helix, Atlas, and +2 more");
+  });
+
+  it("names every scope value while they still fit", () => {
+    const snapshot = createCostFreeReportSnapshot();
+    const payload = buildPayload({
+      ...snapshot,
+      filters: {
+        ...snapshot.filters,
+        projectIds: ["p1", "p2"],
+        projectNames: ["Apollo", "Helix"],
+      },
+    });
+    const projectFacet = payload.header.facets.find((facet) => facet.label === "Project");
+
+    // Two projects: named in full, and no colour dot — one line's colour would speak for
+    // the other as well.
+    expect(projectFacet?.value).toBe("Apollo and Helix");
+    expect(projectFacet?.color).toBeNull();
+  });
+
   it("shows the dimension a cost-free report is not grouped by", () => {
     const userView = buildPayload(createCostFreeReportSnapshot());
     const projectView = buildPayload({ ...createCostFreeReportSnapshot(), view: "PROJECT" });

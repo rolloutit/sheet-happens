@@ -307,7 +307,7 @@ function buildHeaderFacets(
     { label: t("stats.period"), value: periodLabel, color: null },
     {
       label: t("filters.project"),
-      value: formatList(snapshot.filters.projectNames, locale) || t("filters.projectAll"),
+      value: formatScope(snapshot.filters.projectNames, locale, t) ?? t("filters.projectAll"),
       // Only the project facet is dotted: colour is how the app identifies a project everywhere
       // else, whereas a member's initials next to their own name would say nothing new.
       color: resolveFilteredProjectColor(snapshot),
@@ -317,18 +317,41 @@ function buildHeaderFacets(
   if (snapshot.filters.projectGroupNames.length > 0) {
     facets.push({
       label: t("filters.group"),
-      value: formatList(snapshot.filters.projectGroupNames, locale),
+      value: formatScope(snapshot.filters.projectGroupNames, locale, t) ?? "",
       color: null,
     });
   }
 
   facets.push({
     label: t("filters.member"),
-    value: formatList(snapshot.filters.memberNames, locale) || t("filters.memberAll"),
+    value: formatScope(snapshot.filters.memberNames, locale, t) ?? t("filters.memberAll"),
     color: null,
   });
 
   return facets;
+}
+
+/**
+ * The most names a facet spells out before the rest become a count.
+ *
+ * `report.typ` lays the header facets out as equal fractions of the page width, so a facet
+ * is roughly one narrow column. Three names fit; eight would wrap to several lines and grow
+ * the header block on every page of a financial document.
+ */
+const maxNamedScopeValues = 3;
+
+/** One facet's worth of chosen filter values, or `null` when nothing is filtered. */
+function formatScope(names: readonly string[], locale: string, t: ReportPdfTranslator) {
+  if (names.length === 0) return null;
+  if (names.length <= maxNamedScopeValues) return formatList(names, locale);
+
+  return formatList(
+    [
+      ...names.slice(0, maxNamedScopeValues),
+      t("filters.moreValues", { count: names.length - maxNamedScopeValues }),
+    ],
+    locale,
+  );
 }
 
 /**
