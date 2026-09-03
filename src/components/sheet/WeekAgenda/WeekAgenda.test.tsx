@@ -1,5 +1,6 @@
 import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { LazyMotion, domMax } from "motion/react";
 import { describe, expect, it, vi } from "vitest";
 
 import type { WeekAgendaDay, WeekAgendaEntry, WeekAgendaLabels } from "./WeekAgenda.types";
@@ -193,5 +194,69 @@ describe("WeekAgenda", () => {
 
     expect(screen.getByRole("img", { name: "Long continuous session" })).toBeInTheDocument();
     expect(screen.getByRole("img", { name: "Changed by an administrator" })).toBeInTheDocument();
+  });
+
+  /**
+   * The level animates on `/time` and nowhere else, so the component has to be legible in both
+   * worlds: wrapped in the `LazyMotion` boundary that `TimeZoomShell` puts around it, and bare —
+   * which is how Storybook, the visual baselines and every test above render it. `m` components
+   * degrade to plain DOM with no feature bundle in scope, so the same tree comes out either way.
+   */
+  describe("with and without the motion feature bundle", () => {
+    it("renders the same week bare as it does inside LazyMotion", () => {
+      const days = buildDays({ 1: [entry({ id: "a" })], 2: [entry({ id: "b" })] });
+      const props = {
+        days,
+        selectedDayIso: "2026-09-02",
+        locale: "en",
+        durationDisplayFormat: "DECIMAL_HOURS",
+        labels,
+        onSelectDay: vi.fn(),
+        onZoomToDay: vi.fn(),
+        onAddEntry: vi.fn(),
+        onEditEntry: vi.fn(),
+        onDeleteEntry: vi.fn(),
+      } satisfies React.ComponentProps<typeof WeekAgenda>;
+
+      const bare = render(<WeekAgenda {...props} />);
+      const bareRegions = screen.getAllByRole("region").length;
+      const bareItems = screen.getAllByRole("listitem").length;
+      bare.unmount();
+
+      render(
+        <LazyMotion features={domMax}>
+          <WeekAgenda {...props} />
+        </LazyMotion>,
+      );
+
+      expect(screen.getAllByRole("region")).toHaveLength(bareRegions);
+      expect(screen.getAllByRole("listitem")).toHaveLength(bareItems);
+      expect(screen.getByRole("region", { name: "Wednesday" })).toBeInTheDocument();
+    });
+
+    it("still lists every entry when the cards animate in", () => {
+      render(
+        <LazyMotion features={domMax}>
+          <WeekAgenda
+            days={buildDays({ 2: Array.from({ length: 12 }, (_, i) => entry({ id: `e${i}` })) })}
+            selectedDayIso="2026-09-02"
+            locale="en"
+            durationDisplayFormat="DECIMAL_HOURS"
+            labels={labels}
+            animateEntries
+            onSelectDay={vi.fn()}
+            onZoomToDay={vi.fn()}
+            onAddEntry={vi.fn()}
+            onEditEntry={vi.fn()}
+            onDeleteEntry={vi.fn()}
+          />
+        </LazyMotion>,
+      );
+
+      const wednesday = within(screen.getByRole("region", { name: "Wednesday" }));
+
+      // Every card is in the tree from the first frame; the stagger is a delay, not a gate.
+      expect(within(wednesday.getByRole("list")).getAllByRole("listitem")).toHaveLength(12);
+    });
   });
 });

@@ -4,9 +4,8 @@ import { NextIntlClientProvider } from "next-intl";
 import { afterAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 import messages from "@/messages/en.json";
-import type { TimeGridDay } from "@/src/server/time-tracking";
 
-import { TimeZoomShell } from "./TimeZoomShell";
+import { TimeZoomShell, type TimeZoomDay } from "./TimeZoomShell";
 import { zoomStorageKey, type ZoomLevel } from "./zoom";
 
 /**
@@ -58,7 +57,7 @@ afterAll(() => {
 const dayNames = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
 
 /** The design doc's own example week, which spans two months: Aug 31 - Sep 6, 2026. */
-const days: TimeGridDay[] = [
+const days: TimeZoomDay[] = [
   "2026-08-31",
   "2026-09-01",
   "2026-09-02",
@@ -73,6 +72,8 @@ const days: TimeGridDay[] = [
   dayNumber: String(Number.parseInt(isoDate.slice(8), 10)),
   state: index === 2 ? "today" : index > 2 ? "future" : "normal",
   locked: false,
+  // Mon-Wed logged, Wednesday over the 8h target; the rest of the week empty.
+  totalMinutes: [240, 480, 600, 0, 0, 0, 0][index],
 }));
 
 const onPreviousPeriod = vi.fn();
@@ -228,6 +229,60 @@ describe("TimeZoomShell", () => {
 
     expect(currentLevel()).toBe("grid");
     expect(document.activeElement).toBe(addEntry);
+  });
+
+  describe("motion and capacity", () => {
+    it("announces the level, its span and its total on a level change", async () => {
+      const user = userEvent.setup();
+      const { container } = renderShell();
+
+      const live = container.querySelector('[aria-live="polite"]');
+
+      // 240 + 480 + 600 across the week; the selected day is Wednesday's 600.
+      expect(live).toHaveTextContent("Week · 7 days · 22 h");
+
+      await user.keyboard("1");
+      expect(live).toHaveTextContent("Day · 1 day · 8 h");
+
+      await user.keyboard("3");
+      expect(live).toHaveTextContent("Grid · 7 days · 22 h");
+    });
+
+    it("keeps the live region out of the accessible name of the day strip", () => {
+      const { container } = renderShell();
+
+      expect(container.querySelector('[aria-live="polite"]')).toHaveClass("sr-only");
+      expect(screen.getByRole("button", { name: "Select Wednesday" })).toBeInTheDocument();
+    });
+
+    it("measures each day chip against the 8h soft target", () => {
+      renderShell();
+
+      // The bar is decoration; the figures reach the user through the chip's own description.
+      expect(screen.getByRole("button", { name: "Select Monday" })).toHaveAttribute(
+        "title",
+        "4 h of 8 h",
+      );
+      expect(screen.getByRole("button", { name: "Select Thursday" })).toHaveAttribute(
+        "title",
+        "0 h of 8 h",
+      );
+    });
+
+    it("caps a bar at the target rather than overflowing its track", () => {
+      renderShell();
+
+      const overTarget = screen
+        .getByRole("button", { name: "Select Wednesday" })
+        .querySelector("span > span");
+      const underTarget = screen
+        .getByRole("button", { name: "Select Monday" })
+        .querySelector("span > span");
+
+      // Wednesday logs 10h against an 8h target: full, and turned, but not 125% wide.
+      expect(overTarget).toHaveClass("bg-warning");
+      expect(underTarget).toHaveClass("bg-accent");
+    });
   });
 
   describe("keyboard", () => {

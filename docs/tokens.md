@@ -268,7 +268,19 @@ The trade-off is that such an entry is **not** emitted as a custom property. Two
     chassis. In light this shadow does more work than in dark, because elevation there cannot be a
     lightness step.
 - **Layout:** `--sidebar-w` 256px, `--sidebar-w-collapsed` 76px, `--header-h` 64px.
-- **Motion:** `--ease-standard`.
+- **Motion:** six tokens, and `app/globals.css` is the source of truth for all of them.
+  `--ease-standard` `cubic-bezier(0.2, 0.7, 0.2, 1)` is the default for everything; `--ease-exit`
+  `cubic-bezier(0.4, 0, 1, 1)` is for elements leaving, which should be quick and unremarkable.
+  Three durations — `--duration-level` 260ms for a `/time` zoom-level transition, `--duration-micro`
+  140ms for hover, chip state and badge crossfades, `--duration-bar` 300ms for a capacity bar
+  changing width — and `--stagger-entry` 18ms, the step between entry cards arriving.
+  - **These six are mirrored as TypeScript literals in `app/time/motion.ts`.** Motion (the library)
+    animates via JS outside CSS transitions and cannot interpolate a `var()`, so the `/time` zoom
+    axis reads the numbers rather than the tokens. The table here is the source of truth; the module
+    says so in a comment. Change one and change the other.
+  - The `prefers-reduced-motion` block at the end of `app/globals.css` collapses CSS durations and
+    **does nothing to Motion**. Anything animated with Motion needs
+    `<MotionConfig reducedMotion="user">` above it, which is why `/time` has one at its client root.
 
 ## Focus
 

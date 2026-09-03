@@ -21,6 +21,7 @@ import {
   Trash2,
   X,
 } from "lucide-react";
+import * as m from "motion/react-m";
 import type { Route } from "next";
 import { useRouter } from "next/navigation";
 import {
@@ -63,7 +64,9 @@ import {
   formatHoursWithUnit as formatDurationHoursWithUnit,
   type DurationDisplayFormat,
 } from "@/src/lib/formatting";
+import { dayLayoutId, levelTransition, useAfterFirstPaint } from "@/src/lib/motion";
 import { DAILY_HARD_LIMIT_MINUTES, DAILY_SOFT_WARNING_MINUTES } from "@/src/lib/time-entry-limits";
+import { useMediaQuery } from "@/src/lib/use-media-query";
 import { usePickerLabels } from "@/src/i18n/picker-labels";
 import { useElapsedLabel } from "@/src/lib/use-elapsed-label";
 import { useOverlayParam } from "@/src/lib/use-overlay-param";
@@ -94,7 +97,7 @@ import {
 } from "./actions.types";
 import { TimerCreateDialog } from "./TimerCreateDialog";
 import { TIME_OVERLAY_PARAM, TIMER_OVERLAY_VALUE } from "./time-overlays";
-import { TimeZoomShell } from "./TimeZoomShell";
+import { TimeZoomShell, type TimeZoomDay } from "./TimeZoomShell";
 import { useTimeZoom } from "./use-time-zoom";
 import { DAY_PARAM, ZOOM_PARAM, zoomLevels, type ZoomLevel } from "./zoom";
 
@@ -207,6 +210,31 @@ function TimeGridContent({ week }: { week: TimeGridWeek }) {
   const selectedDayTotalMinutes = selectedDay
     ? (dailyTotals[week.days.indexOf(selectedDay)] ?? 0)
     : 0;
+
+  /**
+   * The day strip's own view of the week: the same `TimeGridDay`s the shell already renders, each
+   * carrying the total its capacity bar measures against the 8h soft target.
+   */
+  const zoomDays: TimeZoomDay[] = week.days.map((day, dayIndex) => ({
+    ...day,
+    totalMinutes: dailyTotals[dayIndex] ?? 0,
+  }));
+
+  /**
+   * §9's `initial={false}`: a level arriving because the page just opened must not animate, a level
+   * arriving because the member changed level should.
+   */
+  const animateEntries = useAfterFirstPaint();
+
+  /**
+   * Whether the grid's day headers are the ones on screen.
+   *
+   * They are the L3 end of the `day-<iso>` pairing, and they are `hidden lg:block` — on a phone the
+   * grid renders project rows only (§10). A `display: none` element still holds its `layoutId` and
+   * still measures, as a box of zeros, so without this the week columns would fly in from the
+   * top-left corner on the one form factor where the morph does not exist.
+   */
+  const gridDayHeadersVisible = useMediaQuery("(min-width: 64rem)");
 
   /**
    * The day and week levels are presentational: they take rows and report intent. Resolving the
@@ -708,7 +736,7 @@ function TimeGridContent({ week }: { week: TimeGridWeek }) {
 
       {projectRows.length ? (
         <TimeZoomShell
-          days={week.days}
+          days={zoomDays}
           todayIso={week.todayIso}
           dayTotalMinutes={selectedDayTotalMinutes}
           formatMinutes={formatMinutesWithUnit}
@@ -726,6 +754,7 @@ function TimeGridContent({ week }: { week: TimeGridWeek }) {
                 locale={locale}
                 durationDisplayFormat={durationDisplayFormat}
                 disabled={isPending}
+                animateEntries={animateEntries}
                 labels={{
                   durationMode: t("mode.duration"),
                   futureDay: t("warnings.futureDateAllowed"),
@@ -747,6 +776,7 @@ function TimeGridContent({ week }: { week: TimeGridWeek }) {
                 locale={locale}
                 durationDisplayFormat={durationDisplayFormat}
                 disabled={isPending}
+                animateEntries={animateEntries}
                 labels={{
                   openDay: (day) => t("zoom.zoomToDay", { day: day.label }),
                   expandDay: (day) => t("week.expandDay", { day: day.label }),
@@ -769,8 +799,15 @@ function TimeGridContent({ week }: { week: TimeGridWeek }) {
                     <div className="grid grid-cols-[minmax(190px,1.5fr)_repeat(7,minmax(54px,1fr))_92px]">
                       <GridHeaderCell label={t("grid.projects")} />
                       {week.days.map((day) => (
-                        <div
+                        /* The third station of `day-<iso>` (§7 item 6): a week column at L2 becomes
+                           this header at L3. The seven headers are the *only* part of the grid that
+                           carries `layout` — §9 is explicit that the ~70 cells must not, and
+                           `layout="position"` keeps even these from scaling their contents. */
+                        <m.div
                           key={day.isoDate}
+                          layout="position"
+                          layoutId={gridDayHeadersVisible ? dayLayoutId(day.isoDate) : undefined}
+                          transition={levelTransition}
                           className={cn(
                             "border-b border-r border-border px-2 py-3 text-center",
                             day.state === "today" && "text-accent",
@@ -783,7 +820,7 @@ function TimeGridContent({ week }: { week: TimeGridWeek }) {
                           <span className="mt-0.5 block text-[15px] font-medium">
                             {day.dayNumber}
                           </span>
-                        </div>
+                        </m.div>
                       ))}
                       <GridHeaderCell label={t("grid.total")} noRightBorder />
 

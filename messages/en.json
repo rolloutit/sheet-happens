@@ -1949,7 +1949,8 @@
       "dayStrip": "Days of this week",
       "selectDay": "Select {day}",
       "zoomToDay": "Open {day}",
-      "zoomOut": "Back out to the week"
+      "zoomOut": "Back out to the week",
+      "announce": "{level} · {days, plural, one {# day} other {# days}} · {total}"
     },
     "week": {
       "columnEmpty": "Nothing logged",
@@ -1957,7 +1958,8 @@
       "addEntryOn": "Add entry on {day}",
       "editEntryNamed": "Edit {entry}",
       "deleteEntryNamed": "Delete {entry}",
-      "adminModified": "Changed by an administrator"
+      "adminModified": "Changed by an administrator",
+      "capacity": "{logged} of {target}"
     },
     "labels": {
       "thisWeek": "This week",

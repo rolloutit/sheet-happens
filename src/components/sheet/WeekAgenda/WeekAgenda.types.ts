@@ -50,6 +50,15 @@ export type WeekAgendaProps = {
   labels: WeekAgendaLabels;
   /** A pending mutation, which disables every affordance that would start another. */
   disabled?: boolean;
+  /**
+   * Whether entry cards animate in when they mount, staggered and capped.
+   *
+   * Off by default, which is what a level arriving on the page's first paint wants (§9's
+   * `initial={false}` rule) and what keeps Storybook, jsdom and the visual baselines showing the
+   * settled state rather than a frame of a transition. `/time` turns it on once the first paint is
+   * behind it, so a level *change* animates and a page load does not.
+   */
+  animateEntries?: boolean;
   className?: string;
   onSelectDay: (isoDate: string) => void;
   onZoomToDay: (isoDate: string) => void;

@@ -1949,7 +1949,8 @@
       "dayStrip": "A hét napjai",
       "selectDay": "{day} kiválasztása",
       "zoomToDay": "{day} megnyitása",
-      "zoomOut": "Vissza a heti nézetre"
+      "zoomOut": "Vissza a heti nézetre",
+      "announce": "{level} · {days} nap · {total}"
     },
     "week": {
       "columnEmpty": "Nincs rögzítve",
@@ -1957,7 +1958,8 @@
       "addEntryOn": "Bejegyzés hozzáadása – {day}",
       "editEntryNamed": "{entry} szerkesztése",
       "deleteEntryNamed": "{entry} törlése",
-      "adminModified": "Adminisztrátor módosította"
+      "adminModified": "Adminisztrátor módosította",
+      "capacity": "{logged} / {target}"
     },
     "labels": {
       "thisWeek": "Ez a hét",

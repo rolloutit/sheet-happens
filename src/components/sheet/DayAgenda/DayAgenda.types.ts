@@ -47,6 +47,11 @@ export type DayAgendaProps = {
   labels: DayAgendaLabels;
   /** A pending mutation, which disables every affordance that would start another. */
   disabled?: boolean;
+  /**
+   * Whether entry rows animate in when they mount, staggered and capped. Off by default — see the
+   * same prop on `WeekAgenda` for why the page's first paint must not animate.
+   */
+  animateEntries?: boolean;
   className?: string;
   onAddEntry: (isoDate: string) => void;
   onEditEntry: (entry: DayAgendaEntry) => void;

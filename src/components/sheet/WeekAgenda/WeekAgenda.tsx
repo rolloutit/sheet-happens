@@ -1,6 +1,18 @@
+"use client";
+
 import { AlertTriangle, Pencil, Plus, ShieldCheck, Trash2 } from "lucide-react";
+import { AnimatePresence } from "motion/react";
+import * as m from "motion/react-m";
 
 import { formatHoursWithUnit, type DurationDisplayFormat } from "@/src/lib/formatting";
+import {
+  dayLayoutId,
+  entryCardMotion,
+  entryEnterTransition,
+  entryLayoutId,
+  exitTransition,
+  levelTransition,
+} from "@/src/lib/motion";
 import { cn } from "@/src/lib/utils";
 import type { WeekAgendaEntry, WeekAgendaProps } from "./WeekAgenda.types";
 import { weekAgendaColumnVariants, weekAgendaHeaderVariants } from "./WeekAgenda.variants";
@@ -31,6 +43,7 @@ export function WeekAgenda({
   durationDisplayFormat,
   labels,
   disabled = false,
+  animateEntries = false,
   className,
   onSelectDay,
   onZoomToDay,
@@ -47,8 +60,17 @@ export function WeekAgenda({
         const total = formatHoursWithUnit(day.totalMinutes, locale, durationDisplayFormat);
 
         return (
-          <section
+          /* `layout="position"`, not plain `layout`: a column becoming a grid column header is a
+             large size change, and a size-animating parent scales everything inside it — the day
+             number, the total, the card text — for the length of the transition. Position-only
+             snaps the box and animates where it sits, which is what carries the meaning anyway and
+             is also what keeps §9's "numbers never tween" true of a figure that happens to sit in a
+             box that is moving. One participant per day, seven per transition. */
+          <m.section
             key={day.isoDate}
+            layout="position"
+            layoutId={dayLayoutId(day.isoDate)}
+            transition={levelTransition}
             aria-label={day.label}
             className={weekAgendaColumnVariants({ state: day.state, selected: expanded })}
           >
@@ -94,19 +116,32 @@ export function WeekAgenda({
             <div className={cn("flex flex-1 flex-col gap-2 p-2", !expanded && "hidden lg:flex")}>
               {day.entries.length ? (
                 <ul className="grid gap-2">
-                  {day.entries.map((entry) => (
-                    <li key={entry.id}>
-                      <EntryCard
-                        entry={entry}
-                        locale={locale}
-                        durationDisplayFormat={durationDisplayFormat}
-                        labels={labels}
-                        disabled={disabled}
-                        onEditEntry={onEditEntry}
-                        onDeleteEntry={onDeleteEntry}
-                      />
-                    </li>
-                  ))}
+                  <AnimatePresence initial={animateEntries}>
+                    {day.entries.map((entry, index) => (
+                      <m.li
+                        key={entry.id}
+                        /* Only the selected day's entries take a shared id. They are the ones that
+                           also exist at L1, so they are the only ones with anything to morph into;
+                           a card in another column would pay for a measure pass and buy nothing. */
+                        layoutId={expanded ? entryLayoutId(entry.id) : undefined}
+                        layout="position"
+                        initial={entryCardMotion.initial}
+                        animate={entryCardMotion.animate}
+                        exit={{ ...entryCardMotion.exit, transition: exitTransition }}
+                        transition={{ ...entryEnterTransition(index), layout: levelTransition }}
+                      >
+                        <EntryCard
+                          entry={entry}
+                          locale={locale}
+                          durationDisplayFormat={durationDisplayFormat}
+                          labels={labels}
+                          disabled={disabled}
+                          onEditEntry={onEditEntry}
+                          onDeleteEntry={onDeleteEntry}
+                        />
+                      </m.li>
+                    ))}
+                  </AnimatePresence>
                 </ul>
               ) : (
                 <p className="px-1 py-3 text-center text-xs text-muted-foreground">
@@ -124,7 +159,7 @@ export function WeekAgenda({
                 <Plus className="size-3.5" aria-hidden="true" />
               </button>
             </div>
-          </section>
+          </m.section>
         );
       })}
     </div>

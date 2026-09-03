@@ -1,8 +1,11 @@
 "use client";
 
 import { useEffect, useRef, type ReactNode } from "react";
+import { LazyMotion, MotionConfig } from "motion/react";
+import * as m from "motion/react-m";
 import { useTranslations } from "next-intl";
 
+import { barTransition } from "@/src/lib/motion";
 import { DAILY_SOFT_WARNING_MINUTES } from "@/src/lib/time-entry-limits";
 import { cn } from "@/src/lib/utils";
 import type { TimeGridDay } from "@/src/server/time-tracking";
@@ -10,8 +13,11 @@ import type { TimeGridDay } from "@/src/server/time-tracking";
 import { useTimeZoom } from "./use-time-zoom";
 import { resolveZoomShortcut, stepZoomLevel, type ZoomLevel } from "./zoom";
 
+/** A day of the visible week, plus the total the capacity bar under its chip measures. */
+export type TimeZoomDay = TimeGridDay & { totalMinutes: number };
+
 type TimeZoomShellProps = {
-  days: TimeGridDay[];
+  days: TimeZoomDay[];
   todayIso: string;
   /** The selected day's logged minutes, which the persistent total reads. */
   dayTotalMinutes: number;
@@ -23,16 +29,32 @@ type TimeZoomShellProps = {
 };
 
 /**
+ * `domMax`, loaded after first paint. See `motion-features.ts` for why it is not `domAnimation`.
+ */
+const loadMotionFeatures = () => import("./motion-features").then((module) => module.default);
+
+/**
  * The chrome that stays put while the resolution changes underneath it.
  *
  * The continuity contract in §7 of `docs/time-view-zoom-axis.md` is not about animation — it is
  * about what survives a level change, and all of it is structural. The day strip is rendered here,
  * above the level, precisely so that it never unmounts: the selected day, the day total and the
  * focus ring on a day chip all outlive a transition because the elements holding them are never
- * torn down. Motion arrives on top of this later; nothing here depends on it.
+ * torn down. The motion added on top makes that survival legible; nothing here depends on it.
  *
  * The level content comes in through `renderLevel` rather than as three nodes, so the grid's ~70
  * cells are only built when the grid is the level being shown.
+ *
+ * This is also the `/time` client root, so it is where the two Motion providers live:
+ *
+ * - `MotionConfig reducedMotion="user"` is **required, not belt-and-braces**. The global
+ *   `prefers-reduced-motion` block in `app/globals.css` zeroes CSS durations and does nothing at
+ *   all to Motion, which animates via JS outside CSS transitions. Without this, `/time` would be
+ *   the one screen in the app that ignores the OS setting. `"user"` keeps opacity and drops
+ *   transform and layout, which is the right degradation: the level still crossfades, nothing
+ *   flies.
+ * - `LazyMotion strict` keeps the feature bundle off every other route and makes a stray full
+ *   `motion.*` import fail loudly instead of silently re-inflating it.
  */
 export function TimeZoomShell({
   days,
@@ -90,64 +112,134 @@ export function TimeZoomShell({
     if (typeof chip?.scrollIntoView === "function") chip.scrollIntoView({ block: "nearest" });
   }, [level, selectedDayIso]);
 
+  /**
+   * §15: a sighted user sees the transition, so a screen reader user has to be told about it.
+   *
+   * One day at L1, the whole week at L2 and L3, and the total that goes with whichever it is — the
+   * same two facts the eye takes from the layout.
+   */
+  const announcement = t("zoom.announce", {
+    level: t(`zoom.${level}`),
+    days: level === "day" ? 1 : days.length,
+    total: formatMinutes(
+      level === "day" ? dayTotalMinutes : days.reduce((sum, day) => sum + day.totalMinutes, 0),
+    ),
+  });
+
   return (
-    <div className="grid gap-4">
-      <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
-        <div
-          role="group"
-          aria-label={t("zoom.dayStrip")}
-          className="grid grid-cols-7 gap-1.5 sm:w-auto"
-        >
-          {days.map((day) => {
-            const selected = day.isoDate === selectedDayIso;
-            // Clicking the day you are already on is the one gesture that has nowhere finer to go,
-            // so at L1 it means the opposite: step back out to the week.
-            const zoomsOut = selected && level === "day";
+    <MotionConfig reducedMotion="user">
+      <LazyMotion strict features={loadMotionFeatures}>
+        <div className="grid gap-4">
+          <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
+            <div
+              role="group"
+              aria-label={t("zoom.dayStrip")}
+              className="grid grid-cols-7 gap-1.5 sm:w-auto"
+            >
+              {days.map((day) => {
+                const selected = day.isoDate === selectedDayIso;
+                // Clicking the day you are already on is the one gesture that has nowhere finer to
+                // go, so at L1 it means the opposite: step back out to the week.
+                const zoomsOut = selected && level === "day";
 
-            return (
-              <button
-                key={day.isoDate}
-                ref={(node) => {
-                  if (node) dayChipRefs.current.set(day.isoDate, node);
-                  else dayChipRefs.current.delete(day.isoDate);
-                }}
-                type="button"
-                aria-pressed={selected}
-                aria-label={zoomsOut ? t("zoom.zoomOut") : t("zoom.selectDay", { day: day.label })}
+                return (
+                  <button
+                    key={day.isoDate}
+                    ref={(node) => {
+                      if (node) dayChipRefs.current.set(day.isoDate, node);
+                      else dayChipRefs.current.delete(day.isoDate);
+                    }}
+                    type="button"
+                    aria-pressed={selected}
+                    aria-label={
+                      zoomsOut ? t("zoom.zoomOut") : t("zoom.selectDay", { day: day.label })
+                    }
+                    /* The bar itself is decoration, so the figures it stands for reach a pointer
+                       user as a tooltip and assistive technology as the button's description —
+                       neither of which disturbs the accessible name the day strip is navigated by. */
+                    title={t("week.capacity", {
+                      logged: formatMinutes(day.totalMinutes),
+                      target: formatMinutes(DAILY_SOFT_WARNING_MINUTES),
+                    })}
+                    className={cn(
+                      "rounded-[var(--radius-md)] border border-border bg-card px-3 py-2 text-center transition hover:border-accent/45 hover:bg-accent-soft",
+                      selected && "border-accent bg-accent-soft text-accent",
+                      day.state === "future" && "opacity-65",
+                    )}
+                    onClick={() =>
+                      zoomsOut
+                        ? setLevel(stepZoomLevel(level, "out"))
+                        : setSelectedDayIso(day.isoDate)
+                    }
+                  >
+                    <span className="block font-ui text-[10px] font-semibold uppercase tracking-[0.06em] text-muted-foreground">
+                      {day.shortLabel}
+                    </span>
+                    <span className="block text-base font-semibold">{day.dayNumber}</span>
+                    <CapacityBar minutes={day.totalMinutes} />
+                  </button>
+                );
+              })}
+            </div>
+
+            <div className="flex items-center gap-3 sm:justify-end">
+              <span className="font-ui text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
+                {t("labels.dayTotal")}
+              </span>
+              {/* No layout animation and no tween. §9: a rolling odometer on a figure that feeds a
+                  timesheet revision reads as imprecise, so the number simply swaps. */}
+              <span
                 className={cn(
-                  "rounded-[var(--radius-md)] border border-border bg-card px-3 py-2 text-center transition hover:border-accent/45 hover:bg-accent-soft",
-                  selected && "border-accent bg-accent-soft text-accent",
-                  day.state === "future" && "opacity-65",
+                  "text-[26px] font-semibold",
+                  dayTotalMinutes > DAILY_SOFT_WARNING_MINUTES ? "text-warning" : "text-foreground",
                 )}
-                onClick={() =>
-                  zoomsOut ? setLevel(stepZoomLevel(level, "out")) : setSelectedDayIso(day.isoDate)
-                }
               >
-                <span className="block font-ui text-[10px] font-semibold uppercase tracking-[0.06em] text-muted-foreground">
-                  {day.shortLabel}
-                </span>
-                <span className="block text-base font-semibold">{day.dayNumber}</span>
-              </button>
-            );
-          })}
-        </div>
+                {formatMinutes(dayTotalMinutes)}
+              </span>
+            </div>
+          </div>
 
-        <div className="flex items-center gap-3 sm:justify-end">
-          <span className="font-ui text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
-            {t("labels.dayTotal")}
-          </span>
-          <span
-            className={cn(
-              "text-[26px] font-semibold",
-              dayTotalMinutes > DAILY_SOFT_WARNING_MINUTES ? "text-warning" : "text-foreground",
-            )}
-          >
-            {formatMinutes(dayTotalMinutes)}
-          </span>
-        </div>
-      </div>
+          {renderLevel(level)}
 
-      {renderLevel(level)}
-    </div>
+          <p aria-live="polite" className="sr-only">
+            {announcement}
+          </p>
+        </div>
+      </LazyMotion>
+    </MotionConfig>
+  );
+}
+
+/**
+ * How full a day is against the 8h soft target, drawn under its chip.
+ *
+ * `DAILY_SOFT_WARNING_MINUTES` is the implicit daily capacity (§17 decision 4) — the same number
+ * the day view already warns against, so the bar and the warning can never disagree. Past the
+ * target the bar fills and turns, rather than overflowing its track: the fact worth reading at a
+ * glance is "over", not "over by how much".
+ *
+ * `scaleX`, not `width`, because §9's performance rule is transform and opacity only — a width
+ * tween is a layout pass per frame, seven times over. `initial={false}` so the bars do not grow
+ * from nothing when the page opens; they animate when a day's total actually changes.
+ */
+function CapacityBar({ minutes }: { minutes: number }) {
+  const ratio = Math.min(1, Math.max(0, minutes / DAILY_SOFT_WARNING_MINUTES));
+  const over = minutes > DAILY_SOFT_WARNING_MINUTES;
+
+  return (
+    <span
+      aria-hidden="true"
+      className="mt-1.5 block h-1 overflow-hidden rounded-[var(--radius-pill)] bg-secondary"
+    >
+      <m.span
+        initial={false}
+        animate={{ scaleX: ratio }}
+        transition={barTransition}
+        className={cn(
+          "block h-full origin-left rounded-[var(--radius-pill)]",
+          over ? "bg-warning" : "bg-accent",
+        )}
+      />
+    </span>
   );
 }
