@@ -262,18 +262,6 @@ const multiLabels = {
 const statusTrigger = { role: "combobox" as const, name: /status/i };
 
 /**
- * Closes the panel before reading the trigger.
- *
- * A modal Radix popover `aria-hidden`s the rest of the document while it is open, and role
- * queries skip hidden subtrees — so the trigger is only reachable once the panel is gone.
- * The single-select stories never needed this because picking an option closes the panel by
- * itself, which is exactly what multi mode does not do.
- */
-async function closePanel(userEvent: { keyboard: (keys: string) => Promise<void> }) {
-  await userEvent.keyboard("{Escape}");
-}
-
-/**
  * The behaviour that separates multi from single: the panel survives a pick, so several
  * choices are one visit rather than one visit each.
  */
@@ -307,7 +295,10 @@ export const MultipleSelection: StoryObj<ComboboxMultipleProps> = {
     );
     await userEvent.click(screen.getByRole("option", { name: /rejected/i }));
 
-    await closePanel(userEvent);
+    // A modal Radix popover `aria-hidden`s the rest of the document, and role queries skip
+    // hidden subtrees — so the trigger is only readable once the panel is gone. The
+    // single-select stories never needed this: there, picking an option closes the panel.
+    await userEvent.keyboard("{Escape}");
     await expect(
       canvas.getByRole(statusTrigger.role, { name: statusTrigger.name }),
     ).toHaveTextContent(/2 selected/i);
@@ -356,7 +347,7 @@ export const MultipleClearsFromPanel: StoryObj<ComboboxMultipleProps> = {
     // The action removes itself with the last value rather than sitting there inert.
     await expect(screen.queryByRole("button", { name: /clear/i })).not.toBeInTheDocument();
 
-    await closePanel(userEvent);
+    await userEvent.keyboard("{Escape}");
     await expect(
       canvas.getByRole(statusTrigger.role, { name: statusTrigger.name }),
     ).toHaveTextContent(/all statuses/i);
@@ -405,7 +396,7 @@ export const MultipleSubmitsInAForm: StoryObj<ComboboxMultipleProps> = {
   play: async ({ canvas, userEvent }) => {
     await userEvent.click(canvas.getByRole(statusTrigger.role, { name: statusTrigger.name }));
     await userEvent.click(screen.getByRole("option", { name: /approved/i }));
-    await closePanel(userEvent);
+    await userEvent.keyboard("{Escape}");
     await userEvent.click(canvas.getByRole("button", { name: /submit/i }));
 
     // Option order, not click order: the hidden select is the serializer.
