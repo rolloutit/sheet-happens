@@ -674,6 +674,52 @@ Expected result:
 - The selected day is scrolled into view rather than the page jumping to the top.
 - The day strip, the week total and the day total stay in place at every level.
 
+### Detail Level Motion And Capacity Bars
+
+1. Open `https://{DOMAIN_NAME}/time?week={TIME_TRACKING_WEEK_START}&zoom=week` on a desktop browser
+   and watch the page arrive.
+2. Press `3`, then `2`, then `1`, then `2`, watching what each column and card does in between.
+3. On the `Week` level, watch a dense day's column — one with eight or more entries — as it arrives.
+4. Look at the bar under each day chip on the day strip. Compare a day under 8 hours, a day at
+   roughly 8 hours, and a day over 8 hours, and hover each chip.
+5. Add an entry to a day so its total crosses 8 hours, and watch that day's bar.
+6. Repeat step 2 at a phone-width viewport.
+7. Turn on the operating system's reduce-motion setting — macOS _Settings → Accessibility → Display
+   → Reduce motion_, Windows _Settings → Accessibility → Visual effects → Animation effects_ — and
+   repeat steps 1-5. Use the real OS setting, not the browser devtools emulation.
+8. Turn the setting back off, and with a screen reader running (VoiceOver on macOS) press `1`, `2`
+   and `3` in turn and listen.
+9. Repeat the whole scenario in Hungarian and in both light and dark themes.
+
+Expected result:
+
+- **Nothing animates on the first paint.** The page arrives settled; no card flies in and no column
+  slides on load, at any level.
+- Changing level reads as one surface moving, not three screens swapping: a day's column visibly
+  becomes its grid column header and back, rather than one list fading out while another fades in.
+- The day strip itself never animates. It is the fixed point everything else moves against, and the
+  focus ring on a day chip stays exactly where it was through a level change.
+- Entry cards arriving after a level change fade up a few pixels, one shortly after the next.
+  A column with many entries finishes its cascade quickly — it must not drizzle in for the better
+  part of a second. Cards leaving fade out without moving.
+- **No number ever counts up or rolls.** The day total, a card's duration and a grid cell's value
+  change by swapping, never by tweening. Watch the day total specifically while pressing `1` and
+  `2` with different days selected.
+- The bar under each day chip fills in proportion to that day's hours against the 8-hour target.
+  Under target it is mint and partly filled; at or over target it is full and amber. It never
+  overflows its track, however many hours the day holds. Hovering a chip shows the two figures the
+  bar stands for, in the same format as the rest of the page.
+- A bar whose day crosses 8 hours animates from mint to amber rather than snapping.
+- On a phone the level change still works and nothing flies in from the corner of the screen — the
+  grid has no day headers at that width, so the week columns must simply appear rather than sliding
+  in from the top-left.
+- **With OS reduce-motion on, nothing moves.** Levels crossfade, cards appear and disappear without
+  sliding, and the capacity bars snap to their new width. This is the check most likely to be
+  missed: the app's global CSS reduce-motion rule does not reach this animation library, so a
+  failure here means the level transitions will fly for every user who has the setting on.
+- The screen reader announces the new level after each of `1`, `2` and `3` — the level's name, how
+  many days it covers, and the total for that span — in the language the page is in.
+
 ## Contractor Timesheets
 
 Run these tests as `{CONTRACTOR_EMAIL}` unless the scenario says otherwise.
@@ -3249,3 +3295,5 @@ Expected result:
   stopped from there; starting one happens in an overlay opened from the time-tracking toolbar.
 - `/time` has one detail-level control with three stops, the level and the selected day live in the
   address bar, and the selected day survives every level change in both directions.
+- A `/time` level change animates as one surface moving, nothing animates on first paint, no figure
+  ever tweens, and with the operating system's reduce-motion setting on nothing moves at all.
