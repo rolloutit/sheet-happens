@@ -2981,6 +2981,35 @@ Expected result:
 - The controls wrap onto further lines on narrow viewports with the submit staying on the right, and
   no page scrolls sideways.
 
+### Multi-Select Rate Filters
+
+1. Open `https://{DOMAIN_NAME}/admin/rates`.
+2. Open the `Projekt` / `Project` filter and read the trigger before choosing anything.
+3. Pick one project. Confirm the panel stays open.
+4. Pick a second project without reopening the panel, then close it with `Esc`.
+5. Reopen the panel and confirm both chosen rows are still ticked.
+6. Use the panel's `Törlés` / `Clear` action.
+7. Repeat steps 2-6 on the `Csoport` / `Group` filter, including its `Csoport nélkül` /
+   `Ungrouped` entry alongside a real group.
+8. Type into the panel's search field with two projects already chosen.
+9. Narrow the window to tablet and phone widths.
+
+Expected result:
+
+- With nothing chosen the trigger reads `Mind` / `All` as placeholder text, and the table shows
+  every row — an empty selection means "no filter", not "no results".
+- Choosing an option does not close the panel; each row carries a checkbox that fills in when
+  ticked, so it is visible up front that several can be picked.
+- One choice shows that option's own label. From the second onwards the trigger shows
+  `2 kiválasztva` / `2 selected`, and hovering it lists the chosen names in full.
+- The table lists members matching **any** of the chosen projects, not only the last one. The same
+  holds for groups, and `Csoport nélkül` matches members whose assigned projects have no group.
+- `Törlés` / `Clear` empties the filter and disappears with the last chosen value.
+- Searching filters the rows but never hides the `Törlés` / `Clear` action, and ticked rows that
+  fall outside the search term stay chosen.
+- Check this in **both** locales, and confirm the trigger keeps the control's height at every
+  width: a long count or label ellipsises, it never wraps out of its box.
+
 ## Regression Checklist For Every Release
 
 - Invitation activation works for a new invited user.
