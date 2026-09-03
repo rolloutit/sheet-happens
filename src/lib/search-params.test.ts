@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 
-import { firstSearchParam, listSearchParam } from "./search-params";
+import {
+  deleteSearchParamValue,
+  firstSearchParam,
+  listSearchParam,
+  setSearchParamList,
+} from "./search-params";
 
 describe("firstSearchParam", () => {
   it("reads a single value", () => {
@@ -33,5 +38,51 @@ describe("listSearchParam", () => {
   it("returns nothing for an absent parameter", () => {
     expect(listSearchParam(undefined)).toEqual([]);
     expect(listSearchParam("")).toEqual([]);
+  });
+});
+
+describe("setSearchParamList", () => {
+  it("replaces every value rather than appending to them", () => {
+    const params = new URLSearchParams("status=PAID&status=APPROVED&month=2026-06");
+
+    setSearchParamList(params, "status", ["SUBMITTED", "REJECTED"]);
+
+    expect(params.getAll("status")).toEqual(["SUBMITTED", "REJECTED"]);
+    expect(params.get("month")).toBe("2026-06");
+  });
+
+  it("removes the parameter for an empty list", () => {
+    const params = new URLSearchParams("status=PAID");
+
+    setSearchParamList(params, "status", []);
+
+    expect(params.has("status")).toBe(false);
+  });
+
+  it("skips blanks", () => {
+    const params = new URLSearchParams();
+
+    setSearchParamList(params, "status", [" PAID ", "  "]);
+
+    expect(params.getAll("status")).toEqual(["PAID"]);
+  });
+});
+
+describe("deleteSearchParamValue", () => {
+  it("drops one value and leaves the rest applied", () => {
+    const params = new URLSearchParams("status=PAID&status=APPROVED&q=ann");
+
+    deleteSearchParamValue(params, "status", "PAID");
+
+    expect(params.getAll("status")).toEqual(["APPROVED"]);
+    expect(params.get("q")).toBe("ann");
+  });
+
+  it("drops the whole parameter without a value", () => {
+    const params = new URLSearchParams("status=PAID&status=APPROVED");
+
+    deleteSearchParamValue(params, "status");
+
+    expect(params.has("status")).toBe(false);
   });
 });

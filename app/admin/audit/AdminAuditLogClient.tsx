@@ -23,6 +23,7 @@ import { Pager } from "@/src/components/ui/Pager";
 import { Select } from "@/src/components/ui/Select";
 import { DataTable, type TableColumn } from "@/src/components/ui/Table";
 import { usePickerLabels } from "@/src/i18n/picker-labels";
+import { setSearchParamList } from "@/src/lib/search-params";
 import { cn } from "@/src/lib/utils";
 import type { AuditLogListResult, AuditLogRow } from "@/src/server/audit";
 
@@ -73,9 +74,9 @@ export function AdminAuditLogClient({ result }: AdminAuditLogClientProps) {
 
     setParam(params, "q", formData.get("q"));
     // The three pickers are multi-selects, so each submits one entry per chosen value.
-    setListParam(params, "action", formData.getAll("action"));
-    setListParam(params, "targetType", formData.getAll("targetType"));
-    setListParam(params, "actor", formData.getAll("actor"));
+    setFormList(params, "action", formData.getAll("action"));
+    setFormList(params, "targetType", formData.getAll("targetType"));
+    setFormList(params, "actor", formData.getAll("actor"));
     setParam(params, "from", formData.get("from"));
     setParam(params, "to", formData.get("to"));
     params.delete("page");
@@ -460,18 +461,13 @@ function setParam(params: URLSearchParams, key: string, value: FormDataEntryValu
   else params.delete(key);
 }
 
-/**
- * Replaces every value of one repeated parameter. `set` then `append` would leave the first
- * value duplicated, and `set` alone would drop all but one.
- */
-function setListParam(params: URLSearchParams, key: string, values: FormDataEntryValue[]) {
-  params.delete(key);
-
-  for (const value of values) {
-    const normalized = typeof value === "string" ? value.trim() : "";
-
-    if (normalized) params.append(key, normalized);
-  }
+/** `FormData` hands back files as well as strings; only the strings are filter values. */
+function setFormList(params: URLSearchParams, key: string, values: FormDataEntryValue[]) {
+  setSearchParamList(
+    params,
+    key,
+    values.filter((value): value is string => typeof value === "string"),
+  );
 }
 
 function buildUrl(pathname: string, params: URLSearchParams) {

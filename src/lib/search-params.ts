@@ -41,3 +41,43 @@ export function listSearchParam(value: SearchParamValue): string[] {
     ),
   ];
 }
+
+/**
+ * Replaces every value of one repeated parameter, dropping blanks.
+ *
+ * `set` followed by `append` would leave the first value duplicated and `set` alone would
+ * keep only one, so writing a multi-value filter always means clearing the key first.
+ */
+export function setSearchParamList(
+  params: URLSearchParams,
+  key: string,
+  values: readonly string[],
+) {
+  params.delete(key);
+
+  for (const value of values) {
+    const trimmed = value.trim();
+
+    if (trimmed) params.append(key, trimmed);
+  }
+}
+
+/**
+ * Drops one value of a repeated parameter, or the whole parameter when no value is given —
+ * which is what taking one chip off a multi-select filter needs.
+ *
+ * `URLSearchParams.delete` accepts a value as its second argument in current runtimes, but
+ * not in every browser this app still renders in, so the rewrite happens by hand.
+ */
+export function deleteSearchParamValue(params: URLSearchParams, key: string, value?: string) {
+  if (value === undefined) {
+    params.delete(key);
+    return;
+  }
+
+  setSearchParamList(
+    params,
+    key,
+    params.getAll(key).filter((entry) => entry !== value),
+  );
+}

@@ -1,4 +1,5 @@
 import { firstSearchParam, listSearchParam } from "@/src/lib/search-params";
+import { anyOf } from "@/src/server/db/any-of";
 import type { Prisma } from "@/src/server/db/generated/client";
 import { prisma } from "@/src/server/db/client";
 
@@ -291,18 +292,14 @@ export function buildAuditLogWhere(filters: AuditLogFilters): Prisma.AuditLogWhe
  * `system` is a pseudo-actor standing for rows no member owns, so it cannot ride along in
  * the same `in` as real member ids — picking it together with a person means "either".
  */
-function buildActorClause(actorMemberIds: string[]): Prisma.AuditLogWhereInput | null {
+function buildActorClause(actorMemberIds: string[]) {
   const memberIds = actorMemberIds.filter((actorMemberId) => actorMemberId !== SYSTEM_ACTOR_VALUE);
   const clauses: Prisma.AuditLogWhereInput[] = [];
 
   if (memberIds.length < actorMemberIds.length) clauses.push({ actorMemberId: null });
   if (memberIds.length > 0) clauses.push({ actorMemberId: { in: memberIds } });
 
-  const [only] = clauses;
-
-  if (!only) return null;
-
-  return clauses.length === 1 ? only : { OR: clauses };
+  return anyOf(clauses);
 }
 
 function capValueLength(value: string) {
@@ -360,11 +357,6 @@ function formatAuditDate(date: Date, timeZone?: string) {
     timeStyle: "medium",
     timeZone,
   }).format(date);
-}
-
-function firstString(value: string | string[] | undefined) {
-  if (Array.isArray(value)) return value[0] ?? "";
-  return value ?? "";
 }
 
 function normalizeDateInput(value: string) {
