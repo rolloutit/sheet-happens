@@ -7,6 +7,7 @@
     "search": "Search",
     "searchPlaceholder": "Search...",
     "noResults": "No results",
+    "selectedCount": "{count} selected",
     "clear": "Clear",
     "done": "Done",
     "today": "Today",

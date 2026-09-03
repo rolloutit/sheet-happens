@@ -7,6 +7,7 @@
     "search": "Keresés",
     "searchPlaceholder": "Keresés...",
     "noResults": "Nincs találat",
+    "selectedCount": "{count} kiválasztva",
     "clear": "Törlés",
     "done": "Kész",
     "today": "Ma",
