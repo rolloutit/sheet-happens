@@ -38,9 +38,9 @@ export default async function AdminReportsPage({ searchParams }: AdminReportsPag
     periodEnd: filters.periodEnd,
     view: filters.view,
     mode: "COST_FREE",
-    projectId: filters.projectId,
-    projectGroupId: filters.projectGroupId,
-    memberId: filters.memberId,
+    projectIds: filters.projectIds,
+    projectGroupIds: filters.projectGroupIds,
+    memberIds: filters.memberIds,
   });
   const exportTitles = await buildExportTitles(snapshot.period);
 
@@ -67,9 +67,9 @@ export default async function AdminReportsPage({ searchParams }: AdminReportsPag
             periodStart={snapshot.period.start}
             periodEnd={snapshot.period.end}
             periodSummary={formatPeriod(snapshot.period.start, snapshot.period.end, locale)}
-            projectId={snapshot.filters.projectId ?? ""}
-            groupId={snapshot.filters.projectGroupId ?? ""}
-            memberId={snapshot.filters.memberId ?? ""}
+            projectIds={snapshot.filters.projectIds}
+            groupIds={snapshot.filters.projectGroupIds}
+            memberIds={snapshot.filters.memberIds}
             projects={options.projects}
             projectGroups={options.projectGroups}
             members={options.members}
@@ -99,9 +99,7 @@ function buildViewHref(
   } else {
     params.set("anchor", filters.anchor);
   }
-  if (snapshot.filters.projectId) params.set("project", snapshot.filters.projectId);
-  if (snapshot.filters.projectGroupId) params.set("group", snapshot.filters.projectGroupId);
-  if (snapshot.filters.memberId) params.set("member", snapshot.filters.memberId);
+  appendScopeParams(params, snapshot.filters);
   return `/admin/reports?${params.toString()}`;
 }
 
@@ -127,9 +125,7 @@ function buildPeriodHrefs(
   snapshot: ReportSnapshot,
 ) {
   const baseParams = new URLSearchParams();
-  if (snapshot.filters.projectId) baseParams.set("project", snapshot.filters.projectId);
-  if (snapshot.filters.projectGroupId) baseParams.set("group", snapshot.filters.projectGroupId);
-  if (snapshot.filters.memberId) baseParams.set("member", snapshot.filters.memberId);
+  appendScopeParams(baseParams, snapshot.filters);
   baseParams.set("view", snapshot.view);
 
   return {
@@ -139,6 +135,17 @@ function buildPeriodHrefs(
     year: buildPeriodHref("year", filters, snapshot, baseParams),
     custom: buildPeriodHref("custom", filters, snapshot, baseParams),
   };
+}
+
+/**
+ * The three scope filters are multi-selects, so each rides as one repeated parameter per
+ * value — which is what `listSearchParam` reads back and what the toolbar's hidden
+ * `<select multiple>` emits.
+ */
+function appendScopeParams(params: URLSearchParams, filters: ReportSnapshot["filters"]) {
+  for (const projectId of filters.projectIds) params.append("project", projectId);
+  for (const projectGroupId of filters.projectGroupIds) params.append("group", projectGroupId);
+  for (const memberId of filters.memberIds) params.append("member", memberId);
 }
 
 function normalizeAnchorForPeriod(anchor: string, period: ReportPeriodMode) {

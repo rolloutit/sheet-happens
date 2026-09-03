@@ -5,6 +5,7 @@ import {
   parseReportSearchParams,
   reportExportFieldsFromFilters,
   resolveReportExportTitle,
+  type ReportExportFields,
 } from "./report-filter-params";
 
 const TIMEZONE = "Europe/Budapest";
@@ -13,11 +14,11 @@ describe("reportExportFieldsFromFilters", () => {
   it("carries an anchored period as the anchor alone", () => {
     const filters = parseReportSearchParams({ period: "month", anchor: "2026-07-01" }, TIMEZONE);
 
-    expect(reportExportFieldsFromFilters(filters)).toEqual({
-      period: "month",
-      view: "USER",
-      anchor: "2026-07-01",
-    });
+    expect(reportExportFieldsFromFilters(filters)).toEqual([
+      ["period", "month"],
+      ["view", "USER"],
+      ["anchor", "2026-07-01"],
+    ]);
   });
 
   it("carries a custom period as explicit bounds instead of an anchor", () => {
@@ -27,13 +28,12 @@ describe("reportExportFieldsFromFilters", () => {
     );
     const fields = reportExportFieldsFromFilters(filters);
 
-    expect(fields).toEqual({
-      period: "custom",
-      view: "USER",
-      start: "2026-07-03",
-      end: "2026-07-21",
-    });
-    expect(fields.anchor).toBeUndefined();
+    expect(fields).toEqual([
+      ["period", "custom"],
+      ["view", "USER"],
+      ["start", "2026-07-03"],
+      ["end", "2026-07-21"],
+    ]);
   });
 
   it("omits filters that are not set", () => {
@@ -43,7 +43,7 @@ describe("reportExportFieldsFromFilters", () => {
     );
     const fields = reportExportFieldsFromFilters(filters);
 
-    expect(Object.keys(fields).sort()).toEqual(["anchor", "period", "view"]);
+    expect(fields.map(([name]) => name).sort()).toEqual(["anchor", "period", "view"]);
   });
 
   it("round-trips back to the same filter set", () => {
@@ -58,9 +58,34 @@ describe("reportExportFieldsFromFilters", () => {
       },
       TIMEZONE,
     );
-    const roundTripped = parseReportSearchParams(reportExportFieldsFromFilters(filters), TIMEZONE);
+    const roundTripped = parseReportSearchParams(
+      toSearchParams(reportExportFieldsFromFilters(filters)),
+      TIMEZONE,
+    );
 
     expect(roundTripped).toEqual(filters);
+  });
+
+  /**
+   * The scope filters take several values each, and the export fields reach the preview
+   * route as a query string — so a pair list that collapsed a repeated name would silently
+   * export a narrower report than the screen showed.
+   */
+  it("round-trips several values per scope filter", () => {
+    const filters = parseReportSearchParams(
+      {
+        period: "month",
+        anchor: "2026-07-01",
+        project: ["project-1", "project-2"],
+        member: ["member-1", "member-2", "member-3"],
+      },
+      TIMEZONE,
+    );
+    const fields = reportExportFieldsFromFilters(filters);
+
+    expect(new URLSearchParams(fields).toString()).toContain("project=project-1&project=project-2");
+
+    expect(parseReportSearchParams(toSearchParams(fields), TIMEZONE)).toEqual(filters);
   });
 
   it("round-trips a custom period back to the same bounds", () => {
@@ -68,11 +93,21 @@ describe("reportExportFieldsFromFilters", () => {
       { period: "custom", start: "2026-02-10", end: "2026-03-04", view: "PROJECT" },
       TIMEZONE,
     );
-    const roundTripped = parseReportSearchParams(reportExportFieldsFromFilters(filters), TIMEZONE);
+    const roundTripped = parseReportSearchParams(
+      toSearchParams(reportExportFieldsFromFilters(filters)),
+      TIMEZONE,
+    );
 
     expect(roundTripped).toEqual(filters);
   });
 });
+
+/** How the export fields actually reach the preview route: through a query string. */
+function toSearchParams(fields: ReportExportFields) {
+  const params = new URLSearchParams(fields);
+
+  return Object.fromEntries([...new Set(params.keys())].map((key) => [key, params.getAll(key)]));
+}
 
 describe("parseReportExportLocale", () => {
   it("keeps a supported language", () => {

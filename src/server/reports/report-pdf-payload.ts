@@ -6,6 +6,7 @@ import {
   formatDateTime,
   formatDecimalHours,
   formatHoursWithUnit,
+  formatList,
   formatMoney,
   formatPeriodRange,
   formatRate,
@@ -213,10 +214,11 @@ export function buildReportPdfPayload(input: BuildReportPdfPayloadInput): Report
       : (minutes: number) => formatHoursWithUnit(minutes, locale, input.durationDisplayFormat);
 
   // A single-project or single-member export states that dimension once in the header instead of
-  // repeating it down a column and counting it as "1" in the summary band.
+  // repeating it down a column and counting it as "1" in the summary band. Two chosen projects
+  // still need the column: the header names the scope, the column says which line is which.
   const scope = {
-    singleProject: snapshot.filters.projectId !== null,
-    singleMember: snapshot.filters.memberId !== null,
+    singleProject: snapshot.filters.projectIds.length === 1,
+    singleMember: snapshot.filters.memberIds.length === 1,
   };
 
   const base = {
@@ -226,7 +228,7 @@ export function buildReportPdfPayload(input: BuildReportPdfPayloadInput): Report
     labels,
     header: {
       generatedAt: formatDateTime(input.generatedAt, locale),
-      facets: buildHeaderFacets(snapshot, periodLabel, t),
+      facets: buildHeaderFacets(snapshot, periodLabel, locale, t),
     },
     summary: buildSummary(snapshot, locale, formatHours, scope, t),
     detailColumns: buildDetailColumns(snapshot, scope),
@@ -293,6 +295,7 @@ function resolveReportPdfLabels(t: ReportPdfTranslator): ReportPdfLabels {
 function buildHeaderFacets(
   snapshot: ReportSnapshot,
   periodLabel: string,
+  locale: string,
   t: ReportPdfTranslator,
 ): ReportPdfFacet[] {
   const facets = [
@@ -304,24 +307,24 @@ function buildHeaderFacets(
     { label: t("stats.period"), value: periodLabel, color: null },
     {
       label: t("filters.project"),
-      value: snapshot.filters.projectName ?? t("filters.projectAll"),
+      value: formatList(snapshot.filters.projectNames, locale) || t("filters.projectAll"),
       // Only the project facet is dotted: colour is how the app identifies a project everywhere
       // else, whereas a member's initials next to their own name would say nothing new.
       color: resolveFilteredProjectColor(snapshot),
     },
   ];
 
-  if (snapshot.filters.projectGroupName) {
+  if (snapshot.filters.projectGroupNames.length > 0) {
     facets.push({
       label: t("filters.group"),
-      value: snapshot.filters.projectGroupName,
+      value: formatList(snapshot.filters.projectGroupNames, locale),
       color: null,
     });
   }
 
   facets.push({
     label: t("filters.member"),
-    value: snapshot.filters.memberName ?? t("filters.memberAll"),
+    value: formatList(snapshot.filters.memberNames, locale) || t("filters.memberAll"),
     color: null,
   });
 
@@ -329,11 +332,11 @@ function buildHeaderFacets(
 }
 
 /**
- * The snapshot filters name the project but not its colour, so it comes off a line. Every line
- * belongs to that one project once the filter is set, so any of them will do.
+ * The snapshot filters name the project but not its colour, so it comes off a line. Only one
+ * chosen project earns a dot: with two, any line's colour would speak for the other as well.
  */
 function resolveFilteredProjectColor(snapshot: ReportSnapshot) {
-  if (snapshot.filters.projectId === null) return null;
+  if (snapshot.filters.projectIds.length !== 1) return null;
 
   return sanitizeColor(snapshot.lines[0]?.project.color ?? null);
 }

@@ -149,9 +149,9 @@ describe("report PDF payload", () => {
       ...snapshot,
       filters: {
         ...snapshot.filters,
-        projectName: "Client Portal",
-        projectGroupName: "Key accounts",
-        memberName: "Contractor Example",
+        projectNames: ["Client Portal"],
+        projectGroupNames: ["Key accounts"],
+        memberNames: ["Contractor Example"],
       },
     });
 
@@ -183,12 +183,16 @@ describe("report PDF payload", () => {
     const snapshot = createCostFreeReportSnapshot();
     const singleProject = buildPayload({
       ...snapshot,
-      filters: { ...snapshot.filters, projectId: "project-1", projectName: "Client Portal" },
+      filters: { ...snapshot.filters, projectIds: ["project-1"], projectNames: ["Client Portal"] },
     });
     const singleMember = buildPayload({
       ...snapshot,
       view: "PROJECT",
-      filters: { ...snapshot.filters, memberId: "member-1", memberName: "Contractor Example" },
+      filters: {
+        ...snapshot.filters,
+        memberIds: ["member-1"],
+        memberNames: ["Contractor Example"],
+      },
     });
 
     // A user-view report normally lists projects. With one project selected it lists members
@@ -203,10 +207,10 @@ describe("report PDF payload", () => {
       ...snapshot,
       filters: {
         ...snapshot.filters,
-        projectId: "project-1",
-        projectName: "Client Portal",
-        memberId: "member-1",
-        memberName: "Contractor Example",
+        projectIds: ["project-1"],
+        projectNames: ["Client Portal"],
+        memberIds: ["member-1"],
+        memberNames: ["Contractor Example"],
       },
     });
 
@@ -220,7 +224,11 @@ describe("report PDF payload", () => {
     expect(
       buildPayload({
         ...snapshot,
-        filters: { ...snapshot.filters, projectId: "project-1", projectName: "Client Portal" },
+        filters: {
+          ...snapshot.filters,
+          projectIds: ["project-1"],
+          projectNames: ["Client Portal"],
+        },
       }).detailColumns,
     ).toEqual({ member: true, project: false });
   });
@@ -229,7 +237,11 @@ describe("report PDF payload", () => {
     const snapshot = createCostFreeReportSnapshot();
     const payload = buildPayload({
       ...snapshot,
-      filters: { ...snapshot.filters, projectGroupId: "group-1", projectGroupName: "Key accounts" },
+      filters: {
+        ...snapshot.filters,
+        projectGroupIds: ["group-1"],
+        projectGroupNames: ["Key accounts"],
+      },
     });
 
     // A group still spans several projects, so the column is doing work.
@@ -240,7 +252,7 @@ describe("report PDF payload", () => {
     const snapshot = createCostFreeReportSnapshot();
     const payload = buildPayload({
       ...snapshot,
-      filters: { ...snapshot.filters, projectId: "project-1", projectName: "Client Portal" },
+      filters: { ...snapshot.filters, projectIds: ["project-1"], projectNames: ["Client Portal"] },
     });
 
     expect(payload.summary.metrics.map((metric) => metric.label)).toEqual(["Entries", "People"]);
@@ -255,7 +267,11 @@ describe("report PDF payload", () => {
     const snapshot = createCostFreeReportSnapshot();
     const payload = buildPayload({
       ...snapshot,
-      filters: { ...snapshot.filters, memberId: "member-1", memberName: "Contractor Example" },
+      filters: {
+        ...snapshot.filters,
+        memberIds: ["member-1"],
+        memberNames: ["Contractor Example"],
+      },
     });
 
     expect(payload.summary.metrics.map((metric) => metric.label)).toEqual(["Entries", "Projects"]);
@@ -414,10 +430,10 @@ describe("report PDF payload", () => {
             ...costFree,
             filters: {
               ...costFree.filters,
-              projectId: "project-1",
-              projectName: "Client Portal",
-              memberId: "member-1",
-              memberName: "Contractor Example",
+              projectIds: ["project-1"],
+              projectNames: ["Client Portal"],
+              memberIds: ["member-1"],
+              memberNames: ["Contractor Example"],
             },
           },
         ],

@@ -17,12 +17,12 @@ const baseSnapshot = {
     timezones: ["Europe/Budapest"],
   },
   filters: {
-    projectId: null,
-    projectName: null,
-    projectGroupId: null,
-    projectGroupName: null,
-    memberId: null,
-    memberName: null,
+    projectIds: [],
+    projectNames: [],
+    projectGroupIds: [],
+    projectGroupNames: [],
+    memberIds: [],
+    memberNames: [],
   },
   summary: {
     totalMinutes: 180,

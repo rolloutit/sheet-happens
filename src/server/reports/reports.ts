@@ -13,9 +13,9 @@ export type ReportFiltersInput = {
   periodEnd: Date;
   mode?: ReportMode;
   view?: ReportView;
-  projectId?: string | null;
-  projectGroupId?: string | null;
-  memberId?: string | null;
+  projectIds?: readonly string[];
+  projectGroupIds?: readonly string[];
+  memberIds?: readonly string[];
 };
 
 export type NormalizedReportFilters = {
@@ -23,24 +23,30 @@ export type NormalizedReportFilters = {
   periodEnd: Date;
   mode: ReportMode;
   view: ReportView;
-  projectId: string | null;
-  projectGroupId: string | null;
-  memberId: string | null;
+  /** Empty means every project, the same way no filter at all does. */
+  projectIds: string[];
+  projectGroupIds: string[];
+  memberIds: string[];
 };
 
 export type ReportFilterLabels = {
-  projectName: string | null;
-  projectGroupName: string | null;
-  memberName: string | null;
+  /** In the order the ids were given, so a name lines up with the id beside it. */
+  projectNames: string[];
+  projectGroupNames: string[];
+  memberNames: string[];
 };
 
+/**
+ * Readonly because a snapshot is a finished record: it gets serialized to JSON for the Typst
+ * template and read back for the PDF payload, never edited in place.
+ */
 export type ReportSnapshotFilters = {
-  projectId: string | null;
-  projectName: string | null;
-  projectGroupId: string | null;
-  projectGroupName: string | null;
-  memberId: string | null;
-  memberName: string | null;
+  projectIds: readonly string[];
+  projectNames: readonly string[];
+  projectGroupIds: readonly string[];
+  projectGroupNames: readonly string[];
+  memberIds: readonly string[];
+  memberNames: readonly string[];
 };
 
 export type ReportSnapshotPeriod = {
@@ -231,11 +237,16 @@ type ReportDb = {
   timeEntry: {
     findMany(args: ReportTimeEntryFindManyArgs): Promise<ReportTimeEntryRecord[]>;
   };
+  /**
+   * Two reads per model: the filter's own labels, now looked up by id list because the scope
+   * filters take several values, and the full option list the toolbar renders. Declared as
+   * overloads so each keeps its exact select and return shape.
+   */
   project: {
-    findUnique(args: {
-      where: { id: string };
-      select: { name: true };
-    }): Promise<{ name: string } | null>;
+    findMany(args: {
+      where: { id: { in: string[] } };
+      select: { id: true; name: true };
+    }): Promise<Array<{ id: string; name: string }>>;
     findMany(args: {
       where: { deletedAt: null };
       orderBy: Array<Record<string, "asc" | "desc">>;
@@ -243,10 +254,10 @@ type ReportDb = {
     }): Promise<Array<{ id: string; name: string; status: string }>>;
   };
   projectGroup: {
-    findUnique(args: {
-      where: { id: string };
-      select: { name: true };
-    }): Promise<{ name: string } | null>;
+    findMany(args: {
+      where: { id: { in: string[] } };
+      select: { id: true; name: true };
+    }): Promise<Array<{ id: string; name: string }>>;
     findMany(args: {
       where: { deletedAt: null };
       orderBy: Array<Record<string, "asc" | "desc">>;
@@ -254,10 +265,10 @@ type ReportDb = {
     }): Promise<Array<{ id: string; name: string; active: boolean }>>;
   };
   member: {
-    findUnique(args: {
-      where: { id: string };
-      select: MemberLabelSelect;
-    }): Promise<MemberLabelRecord | null>;
+    findMany(args: {
+      where: { id: { in: string[] } };
+      select: MemberLabelSelect & { id: true };
+    }): Promise<Array<MemberLabelRecord & { id: string }>>;
     findMany(args: {
       where: { deletedAt: null };
       orderBy: Array<Record<string, "asc" | "desc">>;
@@ -387,9 +398,9 @@ export function normalizeReportFilters(input: ReportFiltersInput): NormalizedRep
     periodEnd,
     mode: input.mode ?? "COST_FREE",
     view: input.view ?? "USER",
-    projectId: input.projectId ?? null,
-    projectGroupId: input.projectGroupId ?? null,
-    memberId: input.memberId ?? null,
+    projectIds: [...(input.projectIds ?? [])],
+    projectGroupIds: [...(input.projectGroupIds ?? [])],
+    memberIds: [...(input.memberIds ?? [])],
   };
 }
 
@@ -402,20 +413,20 @@ export function buildReportTimeEntryWhere(filters: NormalizedReportFilters) {
     },
   };
 
-  if (filters.memberId) {
-    where.memberId = filters.memberId;
+  if (filters.memberIds.length > 0) {
+    where.memberId = { in: filters.memberIds };
   }
 
   const projectFilter: Record<string, unknown> = {};
 
-  if (filters.projectId) {
-    where.projectId = filters.projectId;
+  if (filters.projectIds.length > 0) {
+    where.projectId = { in: filters.projectIds };
   }
 
-  if (filters.projectGroupId) {
+  if (filters.projectGroupIds.length > 0) {
     projectFilter.groupProjects = {
       some: {
-        projectGroupId: filters.projectGroupId,
+        projectGroupId: { in: filters.projectGroupIds },
       },
     };
   }
@@ -509,12 +520,12 @@ function buildSnapshotBase(input: BuildReportSnapshotInput): ReportSnapshotBase 
         .sort(),
     },
     filters: {
-      projectId: input.filters.projectId,
-      projectName: input.filterLabels?.projectName ?? null,
-      projectGroupId: input.filters.projectGroupId,
-      projectGroupName: input.filterLabels?.projectGroupName ?? null,
-      memberId: input.filters.memberId,
-      memberName: input.filterLabels?.memberName ?? null,
+      projectIds: input.filters.projectIds,
+      projectNames: input.filterLabels?.projectNames ?? [],
+      projectGroupIds: input.filters.projectGroupIds,
+      projectGroupNames: input.filterLabels?.projectGroupNames ?? [],
+      memberIds: input.filters.memberIds,
+      memberNames: input.filterLabels?.memberNames ?? [],
     },
   };
 }
@@ -724,36 +735,56 @@ async function loadReportFilterLabels(
   db: ReportDb,
   filters: NormalizedReportFilters,
 ): Promise<ReportFilterLabels> {
-  const [project, projectGroup, member] = await Promise.all([
-    filters.projectId
-      ? db.project.findUnique({
-          where: { id: filters.projectId },
-          select: { name: true },
+  const [projects, projectGroups, members] = await Promise.all([
+    filters.projectIds.length > 0
+      ? db.project.findMany({
+          where: { id: { in: filters.projectIds } },
+          select: { id: true, name: true },
         })
-      : Promise.resolve(null),
-    filters.projectGroupId
-      ? db.projectGroup.findUnique({
-          where: { id: filters.projectGroupId },
-          select: { name: true },
+      : Promise.resolve([]),
+    filters.projectGroupIds.length > 0
+      ? db.projectGroup.findMany({
+          where: { id: { in: filters.projectGroupIds } },
+          select: { id: true, name: true },
         })
-      : Promise.resolve(null),
-    filters.memberId
-      ? db.member.findUnique({
-          where: { id: filters.memberId },
+      : Promise.resolve([]),
+    filters.memberIds.length > 0
+      ? db.member.findMany({
+          where: { id: { in: filters.memberIds } },
           select: {
+            id: true,
             email: true,
             firstName: true,
             lastName: true,
             displayName: true,
           },
         })
-      : Promise.resolve(null),
+      : Promise.resolve([]),
   ]);
 
+  /**
+   * Kept in the order the filter listed the ids rather than in whatever order the database
+   * returned them, so the header reads the same as the toolbar. An id with no row — a
+   * project deleted since the link was made — contributes no name rather than a gap.
+   */
+  const orderedNames = <Row extends { id: string }>(
+    ids: string[],
+    rows: Row[],
+    toName: (row: Row) => string,
+  ) => {
+    const byId = new Map(rows.map((row) => [row.id, row]));
+
+    return ids.flatMap((id) => {
+      const row = byId.get(id);
+
+      return row ? [toName(row)] : [];
+    });
+  };
+
   return {
-    projectName: project?.name ?? null,
-    projectGroupName: projectGroup?.name ?? null,
-    memberName: member ? getMemberName(member) : null,
+    projectNames: orderedNames(filters.projectIds, projects, (project) => project.name),
+    projectGroupNames: orderedNames(filters.projectGroupIds, projectGroups, (group) => group.name),
+    memberNames: orderedNames(filters.memberIds, members, getMemberName),
   };
 }
 
