@@ -400,10 +400,14 @@ Expected result:
 Run these tests as `{CONTRACTOR_EMAIL}` or `{EMPLOYEE_EMAIL}`. The user must be active and assigned
 to `{TIME_TRACKING_PROJECT_A}` and `{TIME_TRACKING_PROJECT_B}` for `{TIME_TRACKING_WEEK_START}`.
 
+`/time` opens on the `Week` stop of the detail-level control unless the URL carries `?zoom=` or the
+browser remembers another level, so any scenario below that works in the grid selects `Grid` first.
+Clearing site data for the domain resets the remembered level.
+
 ### Weekly Grid Loads Assigned Projects
 
 1. Open `https://{DOMAIN_NAME}/time?week={TIME_TRACKING_WEEK_START}`.
-2. Confirm the weekly grid is visible.
+2. Select `Grid` on the detail-level control and confirm the weekly grid is visible.
 3. Confirm `{TIME_TRACKING_PROJECT_A}` and `{TIME_TRACKING_PROJECT_B}` are listed.
 4. Use the previous-week and next-week controls.
 5. Return to `{TIME_TRACKING_WEEK_START}`.
@@ -416,7 +420,7 @@ Expected result:
 
 ### Create, Edit, And Delete Duration Entry
 
-1. Open `https://{DOMAIN_NAME}/time?week={TIME_TRACKING_WEEK_START}`.
+1. Open `https://{DOMAIN_NAME}/time?week={TIME_TRACKING_WEEK_START}&zoom=grid`.
 2. Click an empty cell for `{TIME_TRACKING_PROJECT_A}` on a non-future day.
 3. Enter `{TIME_ENTRY_DESCRIPTION}`.
 4. Enter duration `3h 20m`.
@@ -455,13 +459,13 @@ Expected result:
 
 ### Timer Start And Stop
 
-1. Open `https://{DOMAIN_NAME}/time?week={TIME_TRACKING_WEEK_START}` and stay in `Grid` view.
+1. Open `https://{DOMAIN_NAME}/time?week={TIME_TRACKING_WEEK_START}&zoom=grid`.
 2. Click `New timer`.
 3. Enter `{TIME_ENTRY_DESCRIPTION}` in the description field.
 4. Choose `{TIME_TRACKING_PROJECT_A}`.
 5. Click `Start`.
-6. Confirm the running timer appears on the page and in the app header, in `Grid` view as well as
-   in `Day` view.
+6. Confirm the running timer appears on the page and in the app header, at the `Grid` stop as well
+   as at the `Day` and `Week` stops.
 7. Confirm `New timer` is now disabled, and that hovering it explains that the running timer has to
    be stopped first.
 8. Stop the timer from the card on the page.
@@ -528,7 +532,7 @@ Expected result:
 
 ### Duplicate Last Week Does Not Duplicate Existing Cells
 
-1. Open `https://{DOMAIN_NAME}/time?week={TIME_TRACKING_PREVIOUS_WEEK_START}`.
+1. Open `https://{DOMAIN_NAME}/time?week={TIME_TRACKING_PREVIOUS_WEEK_START}&zoom=grid`.
 2. Create entries for `{TIME_TRACKING_PROJECT_A}` and `{TIME_TRACKING_PROJECT_B}`.
 3. Open `https://{DOMAIN_NAME}/time?week={TIME_TRACKING_WEEK_START}`.
 4. Click `Duplicate last week`.
@@ -569,7 +573,7 @@ Expected result:
 
 ### Inactive Project Week
 
-1. Open `https://{DOMAIN_NAME}/time?week={TIME_TRACKING_WEEK_START}`.
+1. Open `https://{DOMAIN_NAME}/time?week={TIME_TRACKING_WEEK_START}&zoom=grid`.
 2. Choose an assigned project row with no entries in the week.
 3. Mark the project as inactive for the week.
 4. Undo the inactive mark.
@@ -595,6 +599,80 @@ Expected result:
 - Keyboard focus stays inside the open dialog.
 - `Escape` closes the dialog.
 - Focus returns to the control that opened the dialog.
+
+### Detail Level Axis And Its URL State
+
+1. Open `https://{DOMAIN_NAME}/time?week={TIME_TRACKING_WEEK_START}`.
+2. Confirm the detail-level control shows `Day`, `Week` and `Grid`, with `Week` selected.
+3. Select a day other than today on the day strip above the level, then select `Day`, then `Grid`,
+   then `Week` again.
+4. Copy the address bar, open it in a new tab, and confirm the same level and the same selected day.
+5. Select `Grid`, reload the page, then open `https://{DOMAIN_NAME}/time` with no query string.
+6. Use the browser Back button.
+
+Expected result:
+
+- The chosen day stays chosen through every level change, in both directions.
+- The address bar gains `zoom=` and `day=` as they change, and the page never reloads or flashes
+  while they do — only the week controls reload the page.
+- A copied address opens on the level and day it names.
+- With no `zoom=` in the address, the page opens on the level last used in this browser.
+- Back moves between weeks and pages, not between levels.
+
+### Detail Level Keyboard Shortcuts
+
+1. Open `https://{DOMAIN_NAME}/time?week={TIME_TRACKING_WEEK_START}`.
+2. Press `1`, `2` and `3` in turn.
+3. Press `-` and then `+` twice each.
+4. Press `[` and `]`.
+5. Press `t`.
+6. Select `Grid`, click into a grid cell, and type `3.5` without saving.
+7. Open `New entry`, and with the dialog open type `1`, `3` and `t` into the description field.
+
+Expected result:
+
+- `1`, `2` and `3` jump to `Day`, `Week` and `Grid`.
+- `-` moves one level out and `+` one level in, and neither wraps around at either end.
+- `[` and `]` move one week back and forward, keeping the current level and the same weekday.
+- `t` returns to this week with today selected.
+- Typing in a grid cell or in the entry dialog changes no level: the digits land in the field.
+- The arrow keys are not claimed by the level control anywhere on the page.
+
+### Week Level On Desktop And Mobile
+
+1. Open `https://{DOMAIN_NAME}/time?week={TIME_TRACKING_WEEK_START}&zoom=week` on a desktop browser.
+2. Confirm seven day columns, each with its day, its total, its entry cards, and an add affordance.
+3. Scroll the page and confirm the day headers stay visible while the columns scroll together.
+4. Add, edit and delete an entry from a column.
+5. Click a day column's header.
+6. Repeat step 1 on a phone-width viewport.
+7. Tap a collapsed day, then tap the open day's header again.
+8. Repeat the whole scenario in Hungarian and in both light and dark themes.
+
+Expected result:
+
+- A day with no entries says so rather than showing an empty column.
+- Entry cards show the project, the description, the duration, and a marker for a warning or an
+  administrator's correction.
+- Clicking a day header opens that day at the `Day` level, with that day selected.
+- On a phone the level is an accordion: the selected day is open, the others collapse to one row
+  with the day and its total. Tapping a collapsed day opens it; tapping the open one zooms in.
+- Every label is translated in both languages, and the level is legible in both themes.
+
+### Detail Level Focus And Scroll Continuity
+
+1. Open `https://{DOMAIN_NAME}/time?week={TIME_TRACKING_WEEK_START}&zoom=week`.
+2. Tab to a day chip on the day strip, then press `3` and `2`.
+3. Click a day column's header to zoom into that day.
+4. Scroll to the bottom of a dense week, then press `1`.
+5. Confirm the week total and the day total do not blank out or jump as levels change.
+
+Expected result:
+
+- Focus stays on the day chip across a level change, and never falls back to the top of the page.
+- Zooming in from a day header leaves focus on that day's chip rather than nowhere.
+- The selected day is scrolled into view rather than the page jumping to the top.
+- The day strip, the week total and the day total stay in place at every level.
 
 ## Contractor Timesheets
 
@@ -3169,3 +3247,5 @@ Expected result:
 - Admin list filters read as a single toolbar row with removable chips for whatever is applied.
 - A running timer sits in the app header on every signed-in page and at every width, and can be
   stopped from there; starting one happens in an overlay opened from the time-tracking toolbar.
+- `/time` has one detail-level control with three stops, the level and the selected day live in the
+  address bar, and the selected day survives every level change in both directions.
