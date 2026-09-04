@@ -668,6 +668,35 @@ Expected result:
   with the day and its total. Tapping a collapsed day opens it; tapping the open one zooms in.
 - Every label is translated in both languages, and the level is legible in both themes.
 
+### Week Columns Contain Their Cards, And Use A Wide Display
+
+1. Open `https://{DOMAIN_NAME}/time?week={TIME_TRACKING_WEEK_START}&zoom=week` on the widest
+   display available, and log entries so that at least one day holds an entry with a start and end
+   time (`09:00`–`18:00`, not a duration-only entry) and one holds an entry with a long
+   single-word description.
+2. Look along the seven columns at the right-hand edge of each one.
+3. Measure how much empty page there is left and right of the content, and compare it with
+   `https://{DOMAIN_NAME}/admin/projects` at the same window size.
+4. Narrow the browser window down through roughly 1500px, 1300px and 1100px, watching the entry
+   cards each time.
+5. Widen it back out, then repeat at a phone-width viewport.
+6. Repeat in Hungarian and in both light and dark themes.
+
+Expected result:
+
+- No entry card is wider than the column it sits in. Nothing hangs over the day to its right, and
+  no card is clipped by the next column — at any window width, and with any description.
+- A card's edit and delete buttons stay at the card's right edge at every width. They never sit
+  outside the card and never drift as the window changes.
+- On a wide display the page uses the same width as the admin screens rather than a narrower
+  reading column, so the seven day columns are visibly wider than they were.
+- Where a column is too narrow for the duration and the time range on one line, the time range
+  moves under the duration. The duration itself is never shortened or ellipsised, and the card
+  grows by one text line at most.
+- A long single-word description wraps or is clipped to two lines inside the card; it never widens
+  the card or the column.
+- The phone accordion is unchanged: one open day, the rest collapsed to a summary row.
+
 ### Detail Level Focus And Scroll Continuity
 
 1. Open `https://{DOMAIN_NAME}/time?week={TIME_TRACKING_WEEK_START}&zoom=week`.
