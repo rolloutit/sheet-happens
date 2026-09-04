@@ -2747,7 +2747,8 @@
     },
     "empty": {
       "title": "Nincs rögzített idő ezekkel a szűrőkkel.",
-      "description": "Módosítsd az időszakot vagy törölj egy szűrőt."
+      "description": "Módosítsd az időszakot vagy törölj egy szűrőt.",
+      "declaredOnly": "Ebben a szűrésben minden órát havonta vallottak be egy másik cég rendszerében, ezért a riport nem tartalmazza. A bevallott órák az időelszámolásnál nézhetők át, nem itt."
     },
     "pdf": {
       "brand": "Sheet Happens",
@@ -2770,7 +2771,11 @@
       "warnings": {
         "missingRates": "{count, plural, one {# bejegyzéshez hiányzik az óradíj.} other {# bejegyzéshez hiányzik az óradíj.}}",
         "mixedCurrency": "A riport több pénznemet tartalmaz: {currencies}."
-      }
+      },
+      "declaredHoursNote": "Nem tartalmazza a másik cég rendszerében havonta bevallott órákat: {members, plural, other {# munkatárs}}, {projects, plural, other {# projekt}}."
+    },
+    "exclusions": {
+      "declaredHours": "Nem tartalmazza a másik cég rendszerében havonta bevallott órákat: {members, plural, other {# munkatárs}}, {projects, plural, other {# projekt}}."
     }
   },
   "SettingsActions": {

@@ -147,6 +147,21 @@ export type ReportWarning =
       currencyCodes: string[];
     };
 
+/**
+ * What the report left out, stated as counts and never as amounts.
+ *
+ * §4 is explicit that excluding declared hours is the decision and hiding the exclusion is not part
+ * of it: a project with both tracked and declared members now reports *part* of its hours, and an
+ * admin reading "Atlas Platform — 94 h in September" has no way to know the number is incomplete.
+ * Counts rather than amounts so the line survives being read outside the company.
+ */
+export type ReportExclusions = {
+  declaredHours: {
+    memberCount: number;
+    projectCount: number;
+  };
+};
+
 export type ReportSnapshotBase = {
   schemaVersion: 1;
   generatedAt: string;
@@ -154,6 +169,7 @@ export type ReportSnapshotBase = {
   view: ReportView;
   period: ReportSnapshotPeriod;
   filters: ReportSnapshotFilters;
+  exclusions: ReportExclusions;
 };
 
 export type ReportCostFreeSnapshot = ReportSnapshotBase & {
@@ -237,6 +253,13 @@ type ReportDb = {
   timeEntry: {
     findMany(args: ReportTimeEntryFindManyArgs): Promise<ReportTimeEntryRecord[]>;
   };
+  /** Optional so an existing test stub keeps type-checking; see `countDeclaredExclusions`. */
+  monthlyHourDeclaration?: {
+    findMany(args: {
+      where: Record<string, unknown>;
+      select: { memberId: true; projectId: true };
+    }): Promise<Array<{ memberId: string; projectId: string }>>;
+  };
   /**
    * Two reads per model: the filter's own labels, now looked up by id list because the scope
    * filters take several values, and the full option list the toolbar renders. Declared as
@@ -301,6 +324,8 @@ export type BuildReportSnapshotInput = {
   filters: NormalizedReportFilters;
   generatedAt: Date;
   filterLabels?: Partial<ReportFilterLabels>;
+  /** Omitted by a caller that has not counted; the snapshot then discloses nothing. */
+  exclusions?: ReportExclusions;
 };
 
 export class ReportSnapshotError extends Error {
@@ -320,13 +345,14 @@ export async function getTimeEntryReportSnapshot(
   const ratePeriodWhere = buildRatePeriodOverlapWhere(filters.periodStart, filters.periodEnd);
   const select = buildReportTimeEntrySelect(ratePeriodWhere);
 
-  const [entries, filterLabels] = await Promise.all([
+  const [entries, filterLabels, exclusions] = await Promise.all([
     db.timeEntry.findMany({
       where,
       orderBy: [{ localDate: "asc" }, { createdAt: "asc" }, { id: "asc" }],
       select,
     }),
     loadReportFilterLabels(db, filters),
+    countDeclaredExclusions(db, filters),
   ]);
 
   return buildReportSnapshot({
@@ -334,7 +360,63 @@ export async function getTimeEntryReportSnapshot(
     filters,
     generatedAt: deps.now?.() ?? new Date(),
     filterLabels,
+    exclusions,
   });
+}
+
+/**
+ * How many members and projects the report left out, for the disclosure line.
+ *
+ * It needs its own query because the exclusion has already happened by the time the report is
+ * assembled: `buildReportTimeEntryWhere` removes those rows, so the omitted set is simply gone from
+ * `entries`. Counted from `MonthlyHourDeclaration` rather than from declared *assignments*, because
+ * a declared assignment nobody declared against omitted nothing and saying otherwise would overstate
+ * what is missing.
+ *
+ * It runs inside the same `Promise.all` as the report's own read, so it costs a round-trip but no
+ * wall-clock — and it has to run unconditionally, since there is no way to know the set is empty
+ * without looking. The select is two id columns over an indexed period range.
+ *
+ * A caller passing a `db` stub without this model gets a disclosure of zero rather than a crash:
+ * the counts are additional information about a report, and a report is still a report without
+ * them.
+ */
+async function countDeclaredExclusions(
+  db: ReportDb,
+  filters: NormalizedReportFilters,
+): Promise<ReportExclusions> {
+  if (!db.monthlyHourDeclaration) return emptyReportExclusions;
+
+  const where: Record<string, unknown> = {
+    // A declaration covers a whole month, so it counts whenever its month overlaps the report
+    // period at all — a report over one week of September still omits September's declared hours.
+    periodStart: { lte: filters.periodEnd },
+    periodEnd: { gte: filters.periodStart },
+  };
+
+  if (filters.memberIds.length > 0) where.memberId = { in: filters.memberIds };
+  if (filters.projectIds.length > 0) where.projectId = { in: filters.projectIds };
+  if (filters.projectGroupIds.length > 0) {
+    where.project = {
+      groupProjects: {
+        some: {
+          projectGroupId: { in: filters.projectGroupIds },
+        },
+      },
+    };
+  }
+
+  const declarations = await db.monthlyHourDeclaration.findMany({
+    where,
+    select: { memberId: true, projectId: true },
+  });
+
+  return {
+    declaredHours: {
+      memberCount: new Set(declarations.map((row) => row.memberId)).size,
+      projectCount: new Set(declarations.map((row) => row.projectId)).size,
+    },
+  };
 }
 
 export async function listReportFilterOptions(
@@ -404,9 +486,25 @@ export function normalizeReportFilters(input: ReportFiltersInput): NormalizedRep
   };
 }
 
+/**
+ * The reporting chain's half of §4's boundary rule: declared hours belong to the timesheet and
+ * invoice chain, and not to reports.
+ *
+ * One `where`, one call site, so every report consumer inherits the exclusion at once — the admin
+ * report UI, the Typst export, and the read-only MCP endpoint when it is built, provided it uses
+ * this builder rather than a query of its own. Two consequences fall out for free: a declared
+ * figure can never be edited through the report line editor, which is correct because it is
+ * corrected at L4; and past exports are unaffected, because `ReportExport.renderSnapshot` freezes
+ * its own JSON.
+ *
+ * What this does **not** do is hide the exclusion. See {@link countDeclaredExclusions}.
+ */
 export function buildReportTimeEntryWhere(filters: NormalizedReportFilters) {
   const where: Record<string, unknown> = {
     deletedAt: null,
+    source: {
+      not: "DECLARED",
+    },
     localDate: {
       gte: filters.periodStart,
       lte: filters.periodEnd,
@@ -527,8 +625,17 @@ function buildSnapshotBase(input: BuildReportSnapshotInput): ReportSnapshotBase 
       memberIds: input.filters.memberIds,
       memberNames: input.filterLabels?.memberNames ?? [],
     },
+    exclusions: input.exclusions ?? emptyReportExclusions,
   };
 }
+
+/** No declared hours were excluded, which is the truth for every report before this feature. */
+const emptyReportExclusions: ReportExclusions = {
+  declaredHours: {
+    memberCount: 0,
+    projectCount: 0,
+  },
+};
 
 function mapCostFreeLine(entry: ReportTimeEntryRecord): ReportCostFreeLine {
   return mapBaseLine(entry);

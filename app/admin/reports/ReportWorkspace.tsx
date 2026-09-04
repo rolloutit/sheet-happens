@@ -80,6 +80,18 @@ export function ReportWorkspace({
     () => applyReportLineEdits(snapshot, lineEdits),
     [lineEdits, snapshot],
   );
+  /**
+   * The declared hours this report left out, or `null` when it left none out.
+   *
+   * Read off the snapshot rather than recounted here: the rows are already gone from `lines` by the
+   * time the client sees them, which is exactly why the count travels with the snapshot. An older
+   * frozen snapshot has no `exclusions` at all, so the optional chain is what keeps it renderable.
+   */
+  const declaredHours = snapshot.exclusions?.declaredHours;
+  const declaredExclusion =
+    declaredHours && (declaredHours.memberCount > 0 || declaredHours.projectCount > 0)
+      ? declaredHours
+      : null;
 
   function updateDescription(id: string, description: string) {
     setSavedNotice(null);
@@ -228,11 +240,33 @@ export function ReportWorkspace({
         />
       </div>
 
+      {/*
+          §4's disclosure. Excluding declared hours is the decision; hiding the exclusion is not part
+          of it — a project with both tracked and declared members reports part of its hours, and
+          nothing else on this screen would say so. Counts, never amounts, so the same sentence can
+          be read outside the company. It sits above the data rather than in a footnote because it
+          qualifies every figure below it.
+      */}
+      {declaredExclusion ? (
+        <p className="flex items-start gap-2 rounded-[var(--radius-md)] border border-border bg-secondary/45 px-4 py-3 text-sm text-muted-foreground">
+          <Info className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
+          {t("exclusions.declaredHours", {
+            members: declaredExclusion.memberCount,
+            projects: declaredExclusion.projectCount,
+          })}
+        </p>
+      ) : null}
+
       {workingSnapshot.lines.length === 0 ? (
         <div className="rounded-[var(--radius-lg)] border border-border bg-card p-6 shadow-soft">
           <div className="rounded-[var(--radius-lg)] border border-dashed border-border bg-secondary/45 px-5 py-10 text-center">
             <p className="font-ui text-sm font-semibold text-foreground">{t("empty.title")}</p>
-            <p className="mt-2 text-sm text-muted-foreground">{t("empty.description")}</p>
+            {/* A member whose assignments are all declared stays selectable in the filters, so an
+                empty result here is often correct rather than a mistake — and has to say why, or
+                it reads as missing data. */}
+            <p className="mt-2 text-sm text-muted-foreground">
+              {declaredExclusion ? t("empty.declaredOnly") : t("empty.description")}
+            </p>
           </div>
         </div>
       ) : (

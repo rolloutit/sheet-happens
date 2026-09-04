@@ -2747,7 +2747,8 @@
     },
     "empty": {
       "title": "No tracked time matches these filters.",
-      "description": "Adjust the period or remove a filter."
+      "description": "Adjust the period or remove a filter.",
+      "declaredOnly": "Every hour in this scope was declared monthly for another company's system, so the report excludes it. Declared hours are reviewed with the timesheet, not here."
     },
     "pdf": {
       "brand": "Sheet Happens",
@@ -2770,7 +2771,11 @@
       "warnings": {
         "missingRates": "{count, plural, one {# entry is missing a rate.} other {# entries are missing rates.}}",
         "mixedCurrency": "The report contains multiple currencies: {currencies}."
-      }
+      },
+      "declaredHoursNote": "Excludes hours declared monthly for another company's system: {members, plural, one {# member} other {# members}}, {projects, plural, one {# project} other {# projects}}."
+    },
+    "exclusions": {
+      "declaredHours": "Excludes hours declared monthly for another company's system: {members, plural, one {# member} other {# members}}, {projects, plural, one {# project} other {# projects}}."
     }
   },
   "SettingsActions": {
