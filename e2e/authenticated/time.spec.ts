@@ -8,8 +8,22 @@
  *  - entry controls are addressable *within a day*, because the same entry description repeats
  *    across days and a page-wide locator would resolve to several elements;
  *  - opening a day is visible in the accessibility tree, not only on screen.
+ *
+ * Everything here holds for any signed-in member, so every role project runs it. The one part of
+ * `/time` that cannot — the committed aria snapshot of a populated week, which is the admin's own
+ * seeded data — lives in admin/time-week.spec.ts.
  */
 import { expect, test, visit } from "../fixtures";
+
+const WEEKDAYS = [
+  "Monday",
+  "Tuesday",
+  "Wednesday",
+  "Thursday",
+  "Friday",
+  "Saturday",
+  "Sunday",
+] as const;
 
 test.beforeEach(async ({ page }) => {
   await visit(page, "/time");
@@ -20,33 +34,37 @@ test("exposes the week as landmarks, one h1 and a region per weekday", async ({ 
   await expect(page.getByRole("navigation", { name: "Primary navigation" })).toBeVisible();
   await expect(page.getByRole("banner")).toBeVisible();
 
-  for (const day of [
-    "Monday",
-    "Tuesday",
-    "Wednesday",
-    "Thursday",
-    "Friday",
-    "Saturday",
-    "Sunday",
-  ]) {
-    await expect(page.getByRole("region", { name: day })).toBeVisible();
+  for (const day of WEEKDAYS) {
+    const region = page.getByRole("region", { name: day });
+    await expect(region).toBeVisible();
+    // Every day can be logged into, including the empty ones — the control is structure, not
+    // a consequence of the day happening to hold entries.
+    await expect(region.getByRole("button", { name: `Add entry on ${day}` })).toBeVisible();
   }
 });
 
 test("scopes entry controls to their day", async ({ page }) => {
-  const monday = page.getByRole("region", { name: "Monday" });
+  // Which weekdays hold entries is fixture data, not structure: the dev seed skips days per member
+  // and builds them relative to its own run date, so the contractor's Monday is routinely empty
+  // where the admin's is not. The contract is that a day's entries are addressable *through its
+  // region* — the same description legitimately repeats on other days — so this asserts it on
+  // whichever days the fixture populated rather than naming one.
+  const populated: string[] = [];
 
-  // Every entry in a day is a list item with a named edit and delete control. Asserting through
-  // the region is the contract: the same description legitimately repeats on other days.
-  const entries = monday.getByRole("listitem");
-  await expect(entries.first()).toBeVisible();
+  for (const day of WEEKDAYS) {
+    const entries = page.getByRole("region", { name: day }).getByRole("listitem");
 
-  for (const entry of await entries.all()) {
-    await expect(entry.getByRole("button", { name: /^Edit / })).toHaveCount(1);
-    await expect(entry.getByRole("button", { name: /^Delete / })).toHaveCount(1);
+    if ((await entries.count()) === 0) continue;
+
+    populated.push(day);
+
+    for (const entry of await entries.all()) {
+      await expect(entry.getByRole("button", { name: /^Edit / })).toHaveCount(1);
+      await expect(entry.getByRole("button", { name: /^Delete / })).toHaveCount(1);
+    }
   }
 
-  await expect(monday.getByRole("button", { name: "Add entry on Monday" })).toBeVisible();
+  expect(populated, "no day of the visible week holds a time entry").not.toEqual([]);
 });
 
 test("puts the selected day in the accessibility tree, not just the styling", async ({ page }) => {
@@ -71,12 +89,6 @@ test("marks exactly one day as selected", async ({ page }) => {
 
   const dayPicker = page.getByRole("group", { name: "Days of this week" });
   await expect(dayPicker.getByRole("button", { pressed: true })).toHaveCount(1);
-});
-
-test("matches the committed aria snapshot of a populated week", async ({ page }) => {
-  await expect(page.getByRole("main")).toMatchAriaSnapshot({
-    name: "time-week-populated.aria.yml",
-  });
 });
 
 test(

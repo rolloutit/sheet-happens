@@ -8,8 +8,25 @@ import { E2E_OUTBOX_PATH } from "./e2e/outbox";
 const port = Number(process.env.E2E_PORT ?? 3000);
 const baseURL = `http://localhost:${port}`;
 
-/** Specs needing a signed-in session live here and run once per role project. */
-const authenticated = /authenticated\/.*\.spec\.ts/;
+/**
+ * Signed-in specs are grouped by *audience*, because "which role runs this" is a property of the
+ * spec, not of the route it exercises.
+ *
+ * `authenticated/` holds what must hold for any signed-in member, and every role project runs it.
+ * A spec belongs in one of the role directories only when it is genuinely role-bound, and the two
+ * reasons that happens are worth keeping apart:
+ *
+ *  - `authenticated/admin/` — the surface is admin-only, or the assertion is against the admin's
+ *    own fixture data. The committed aria snapshot of a populated `/time` week is the latter: the
+ *    dev seed gives each member a different set of entries, so the snapshot can only ever match
+ *    one role, while the structural assertions around it (landmarks, one `h1`, a region per
+ *    weekday, controls addressed within their day, `aria-pressed`) hold for both.
+ *  - `authenticated/member/` — what a non-admin must *not* be able to see or reach, which only
+ *    means anything when asserted as a non-admin.
+ */
+const everyRole = /authenticated\/[^/]+\.spec\.ts$/;
+const adminOnly = /authenticated\/admin\/[^/]+\.spec\.ts$/;
+const memberOnly = /authenticated\/member\/[^/]+\.spec\.ts$/;
 const anonymousOnly = [/auth\.setup\.ts/, /authenticated\//];
 
 export default defineConfig({
@@ -70,7 +87,13 @@ export default defineConfig({
     {
       name: "admin",
       use: { ...devices["Desktop Chrome"], storageState: "e2e/.auth/admin.json" },
-      testMatch: authenticated,
+      testMatch: [everyRole, adminOnly],
+      dependencies: ["setup"],
+    },
+    {
+      name: "member",
+      use: { ...devices["Desktop Chrome"], storageState: "e2e/.auth/member.json" },
+      testMatch: [everyRole, memberOnly],
       dependencies: ["setup"],
     },
   ],
