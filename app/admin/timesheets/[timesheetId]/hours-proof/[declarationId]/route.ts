@@ -48,7 +48,6 @@ export async function GET(_request: Request, { params }: HoursProofRouteContext)
           storageBucket: true,
           storageKey: true,
           originalFilename: true,
-          contentType: true,
         },
       },
     },
@@ -82,7 +81,13 @@ export async function GET(_request: Request, { params }: HoursProofRouteContext)
       "Cache-Control": "private, no-store",
       "Content-Disposition": `inline; filename="${filename}"`,
       "Content-Length": String(object.body.byteLength),
-      "Content-Type": object.contentType ?? declaration.proofDocument.contentType,
+      /* Pinned, not echoed. An hours proof is a PDF by construction — `validateHoursProofFile`
+         checks the declared type, the extension *and* the leading `%PDF-` bytes, and the upload
+         hard-codes `application/pdf` onto both the stored object and the document row — so this is
+         the same value either of those would give. Stating it here rather than reading it back
+         keeps the invariant local: a document served `inline` on this origin must never take its
+         content type from a value that travelled through object storage. */
+      "Content-Type": "application/pdf",
       "X-Content-Type-Options": "nosniff",
     },
   });

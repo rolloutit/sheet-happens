@@ -331,6 +331,9 @@ function TimeGridContent({ week, months }: { week: TimeGridWeek; months: MemberM
    * and keeps one answer to "is this month locked?" on the page.
    */
   const monthLocked = week.lockedMonthStarts.includes(selectedMonthStart);
+  /** 24 h x days in the selected month — the bound §4 makes a warning rather than a block. */
+  const declarationSanityLimitMinutes = countDaysInMonth(selectedMonthStart) * 24 * 60;
+
   const declaredRows: MonthOverviewDeclaredProject[] = (monthOverview?.declared ?? []).map(
     (project) => ({
       projectId: project.projectId,
@@ -463,9 +466,6 @@ function TimeGridContent({ week, months }: { week: TimeGridWeek; months: MemberM
       durationMinutes: 60,
     });
   }
-
-  /** 24 h x days in the selected month — the bound §4 makes a warning rather than a block. */
-  const declarationSanityLimitMinutes = countDaysInMonth(selectedMonthStart) * 24 * 60;
 
   function saveDeclaration(input: { projectId: string; minutes: number; note: string }) {
     setDeclarationState({
