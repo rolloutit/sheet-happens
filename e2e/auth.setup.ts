@@ -121,14 +121,21 @@ setup("authenticate as a member", async ({ browser, page, context, request }) =>
  * Both halves matter: /dashboard is guarded by `requireActiveAppMember`, so reaching it proves the
  * app — not merely Better Auth — is willing to serve this session, while the session's own email
  * proves the file holds the identity the caller asked for rather than another role's.
+ *
+ * Any failure answers "no". The question this asks is whether a shortcut is safe to take, so the
+ * honest reply to a dropped connection or an unreadable state file is to onboard again — never to
+ * fail the setup and with it every authenticated project.
  */
 async function isStoredSessionUsable(browser: Browser, path: string, email: string) {
   if (!existsSync(path)) return false;
 
-  const context = await browser.newContext({ storageState: path });
+  let opened: BrowserContext | undefined;
 
   try {
-    const session = await context.request.get("/api/auth/get-session");
+    const context = await browser.newContext({ storageState: path });
+    opened = context;
+
+    const session = await withConnectionRetry(() => context.request.get("/api/auth/get-session"));
     const user = session.ok()
       ? ((await session.json()) as { user?: { email?: string } } | null)
       : null;
@@ -139,8 +146,29 @@ async function isStoredSessionUsable(browser: Browser, path: string, email: stri
     await page.goto("/dashboard", { waitUntil: "domcontentloaded" });
 
     return isOn(page, "/dashboard");
+  } catch {
+    return false;
   } finally {
-    await context.close();
+    await opened?.close();
+  }
+}
+
+/**
+ * Retries a request the dev server dropped at the connection level.
+ *
+ * A Turbopack dev server that is still warming up answers some requests with ECONNRESET rather
+ * than a status, and Playwright's APIRequestContext does not retry. One reset in this file takes
+ * the whole setup with it, so the two calls on the critical path get a few attempts. Only thrown
+ * errors are retried: a real HTTP status is an answer, and the caller decides what it means.
+ */
+async function withConnectionRetry<T>(attempt: () => Promise<T>, tries = 3): Promise<T> {
+  for (let index = 1; ; index += 1) {
+    try {
+      return await attempt();
+    } catch (error) {
+      if (index >= tries) throw error;
+      await new Promise((resolve) => setTimeout(resolve, 500));
+    }
   }
 }
 
@@ -243,9 +271,11 @@ async function signInWithMagicLink(
 ) {
   const sentBefore = await countLinks(email, MAGIC_LINK);
 
-  const response = await request.post("/api/auth/sign-in/magic-link", {
-    data: { email, callbackURL },
-  });
+  const response = await withConnectionRetry(() =>
+    request.post("/api/auth/sign-in/magic-link", {
+      data: { email, callbackURL },
+    }),
+  );
 
   // The status and body are worth carrying into the failure message: a 429 here means the suite
   // has spent the 5-per-15-minutes budget this endpoint allows per IP, which looks nothing like a
