@@ -40,9 +40,29 @@ export type {
   MemberMonthOverview,
   MonthOverviewAssignment,
   MonthOverviewDeclaration,
+  MonthOverviewDeclarationProof,
   MonthOverviewDeclarationRow,
   MonthOverviewProject,
 } from "./month-overview";
+export {
+  buildHoursProofObjectKey,
+  DeclarationError,
+  deleteMonthlyHourDeclaration,
+  HOURS_PROOF_MAX_BYTES,
+  isDeclarationImplausible,
+  resolveDeclarationSanityLimit,
+  saveMonthlyHourDeclaration,
+  uploadDeclarationProof,
+  validateHoursProofFile,
+} from "./declarations";
+export type {
+  DeclarationErrorCode,
+  DeclarationProofFileInput,
+  DeleteMonthlyHourDeclarationInput,
+  SaveMonthlyHourDeclarationInput,
+  SaveMonthlyHourDeclarationResult,
+  UploadDeclarationProofInput,
+} from "./declarations";
 export { getShellRunningTimer } from "./shell-timer";
 export {
   assertTrackingModeSwitchAllowed,

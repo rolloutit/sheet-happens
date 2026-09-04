@@ -28,9 +28,31 @@ export type MonthOverviewProject = {
   minutes: number;
 };
 
-/** A declared row also carries the member's own account of what the hours were. */
-export type MonthOverviewDeclaration = MonthOverviewProject & {
+/** The proof PDF standing in for the per-day detail a declared project does not have. */
+export type MonthOverviewDeclarationProof = {
+  declarationId: string;
+  documentId: string;
+  filename: string;
+  contentType: string;
+  byteSize: number;
+  uploadedAt: string;
+};
+
+/**
+ * A declared project's month: the figure, the member's own account of it, and the proof.
+ *
+ * `minutes` is `null` before anything has been declared, because the row **is** the form — a
+ * declared assignment that is live in the month earns one whether or not a figure exists yet, and
+ * `0` would be a claim ("I worked no hours") where `null` is the truth ("nothing declared yet").
+ */
+export type MonthOverviewDeclaration = {
+  projectId: string;
+  assignmentId: string;
+  name: string;
+  color: string;
+  minutes: number | null;
   note: string;
+  proof: MonthOverviewDeclarationProof | null;
 };
 
 export type MemberMonthOverview = {
@@ -72,6 +94,7 @@ export type MonthOverviewAssignment = {
   projectRetired: boolean;
 };
 
+/** A declaration as the database holds it: a figure exists, so `minutes` is never `null` here. */
 export type MonthOverviewDeclarationRow = {
   projectId: string;
   assignmentId: string;
@@ -79,6 +102,7 @@ export type MonthOverviewDeclarationRow = {
   color: string;
   minutes: number;
   note: string;
+  proof: MonthOverviewDeclarationProof | null;
 };
 
 export type BuildMonthOverviewInput = {
@@ -108,6 +132,12 @@ export type BuildMonthOverviewInput = {
  * A project with two assignment periods inside one month collapses to one row — the sums are
  * per project, so two rows would double-read. The later-starting period wins, which is the same
  * assignment a write to that project on that day would resolve to.
+ *
+ * The declared band follows the same two rules, for the same reasons, with one addition: a live
+ * declared assignment earns a row **before** anything is declared against it, because that row is
+ * the form the figure gets entered into. A declaration whose assignment no longer overlaps the
+ * month still shows — its hours are in the timesheet either way, and a month total that quietly
+ * disagreed with the one a timesheet was submitted from would be the worst failure this level has.
  */
 export function buildMonthOverview(input: BuildMonthOverviewInput): MemberMonthOverview {
   const latestByProject = new Map<string, MonthOverviewAssignment>();
@@ -138,9 +168,29 @@ export function buildMonthOverview(input: BuildMonthOverviewInput): MemberMonthO
     });
   }
 
-  const declared = [...input.declarations].sort(byName);
+  const declaredByProject = new Map<string, MonthOverviewDeclaration>(
+    input.declarations.map((declaration) => [declaration.projectId, declaration]),
+  );
+
+  for (const assignment of latestByProject.values()) {
+    if (resolveTrackingMode(assignment.member, assignment).mode !== "DECLARED") continue;
+    if (declaredByProject.has(assignment.projectId)) continue;
+    if (!isLiveInMonth(assignment, input.monthStart, input.monthEnd)) continue;
+
+    declaredByProject.set(assignment.projectId, {
+      projectId: assignment.projectId,
+      assignmentId: assignment.assignmentId,
+      name: assignment.name,
+      color: assignment.color,
+      minutes: null,
+      note: "",
+      proof: null,
+    });
+  }
+
+  const declared = [...declaredByProject.values()].sort(byName);
   const trackedMinutes = [...input.trackedMinutesByProjectId.values()].reduce(sum, 0);
-  const declaredMinutes = declared.reduce((total, row) => total + row.minutes, 0);
+  const declaredMinutes = declared.reduce((total, row) => total + (row.minutes ?? 0), 0);
 
   return {
     monthStart: input.monthStart,
@@ -234,6 +284,7 @@ export async function getMemberMonthOverview(input: {
         periodStart: monthStart,
       },
       select: {
+        id: true,
         projectId: true,
         projectAssignmentId: true,
         minutes: true,
@@ -242,6 +293,20 @@ export async function getMemberMonthOverview(input: {
           select: {
             name: true,
             colorToken: true,
+          },
+        },
+        /* A join rather than a fourth query. `deletedAt` and `status` come along so a replaced or
+           removed document reads as a missing proof instead of as a link to nothing — a to-one
+           relation cannot be filtered in the query, so that test lives in the mapper. */
+        proofDocument: {
+          select: {
+            id: true,
+            originalFilename: true,
+            contentType: true,
+            byteSize: true,
+            createdAt: true,
+            deletedAt: true,
+            status: true,
           },
         },
       },
@@ -278,8 +343,25 @@ export async function getMemberMonthOverview(input: {
       color: resolveProjectColor(declaration.project.colorToken),
       minutes: declaration.minutes,
       note: declaration.note,
+      proof: isLiveProof(declaration.proofDocument)
+        ? {
+            declarationId: declaration.id,
+            documentId: declaration.proofDocument.id,
+            filename: declaration.proofDocument.originalFilename,
+            contentType: declaration.proofDocument.contentType,
+            byteSize: Number(declaration.proofDocument.byteSize),
+            uploadedAt: declaration.proofDocument.createdAt.toISOString(),
+          }
+        : null,
     })),
   });
+}
+
+/** A proof only counts while its document is still the live one — see the query's comment. */
+function isLiveProof<T extends { deletedAt: Date | null; status: string }>(
+  document: T | null,
+): document is T {
+  return Boolean(document && !document.deletedAt && document.status === "AVAILABLE");
 }
 
 /** Whether a day of the month exists that this assignment would accept an entry on. */

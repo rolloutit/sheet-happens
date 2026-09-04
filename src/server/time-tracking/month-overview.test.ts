@@ -42,6 +42,7 @@ function declaration(
     color: "#f2b8ff",
     minutes,
     note: "Platform migration support",
+    proof: null,
     ...overrides,
   };
 }
@@ -182,6 +183,74 @@ describe("buildMonthOverview", () => {
 
     expect(month.tracked.map((project) => project.name)).toEqual(["Atlas Platform", "Zephyr"]);
     expect(month.declared.map((project) => project.name)).toEqual(["Borealis", "Nimbus"]);
+  });
+
+  /**
+   * The declared band is a form as much as a report: the row has to exist before the figure does,
+   * or a member with a new declared assignment has nowhere to type.
+   */
+  it("gives a live declared assignment a row before anything is declared", () => {
+    const month = build({
+      assignments: [assignment("Nimbus", { trackingMode: "DECLARED" })],
+    });
+
+    expect(month.declared).toEqual([
+      expect.objectContaining({ projectId: "Nimbus", minutes: null, note: "", proof: null }),
+    ]);
+    // `null`, not `0`: nothing has been declared, which is not the same as declaring no hours.
+    expect(month.declaredMinutes).toBe(0);
+  });
+
+  it("leaves out a declared assignment that is no longer live and holds no declaration", () => {
+    const month = build({
+      assignments: [assignment("Nimbus", { trackingMode: "DECLARED", validTo: "2026-08-31" })],
+    });
+
+    expect(month.declared).toEqual([]);
+  });
+
+  /**
+   * The declared mirror of "hours always show". A declaration's entry is in the timesheet whatever
+   * happened to its assignment window afterwards, so a month total that dropped it would disagree
+   * with the one the timesheet was submitted from.
+   */
+  it("keeps a declaration whose assignment no longer overlaps the month", () => {
+    const month = build({
+      assignments: [assignment("Nimbus", { trackingMode: "DECLARED", validTo: "2026-08-31" })],
+      declarations: [declaration("Nimbus", 3_120)],
+    });
+
+    expect(month.declared).toEqual([
+      expect.objectContaining({ projectId: "Nimbus", minutes: 3_120 }),
+    ]);
+    expect(month.declaredMinutes).toBe(3_120);
+  });
+
+  it("prefers the declaration over the empty row when both would apply", () => {
+    const month = build({
+      assignments: [assignment("Nimbus", { trackingMode: "DECLARED" })],
+      declarations: [declaration("Nimbus", 3_120)],
+    });
+
+    expect(month.declared).toHaveLength(1);
+    expect(month.declared[0]?.minutes).toBe(3_120);
+  });
+
+  it("carries a proof through to the row", () => {
+    const proof = {
+      declarationId: "declaration-1",
+      documentId: "document-1",
+      filename: "nimbus-sep.pdf",
+      contentType: "application/pdf",
+      byteSize: 24_000,
+      uploadedAt: "2026-09-30T09:00:00.000Z",
+    };
+    const month = build({
+      assignments: [assignment("Nimbus", { trackingMode: "DECLARED" })],
+      declarations: [declaration("Nimbus", 3_120, { proof })],
+    });
+
+    expect(month.declared[0]?.proof).toEqual(proof);
   });
 
   it("carries the month it was built for", () => {

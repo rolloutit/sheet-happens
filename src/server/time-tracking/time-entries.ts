@@ -251,6 +251,8 @@ type AssignmentForTimeGrid = {
 type AssignmentForMutation = {
   id: string;
   projectId: string;
+  trackingMode: TrackingMode | null;
+  member: TrackingModeMember;
   project: {
     id: string;
   };
@@ -423,6 +425,15 @@ export async function getMemberWeeklyTimeGrid(input: {
         where: {
           memberId: member.id,
           deletedAt: null,
+          /* §4 item 3, and the reason it is a `where` rather than a filter on the way out: a
+             declared month is one 52-hour entry sitting on the 1st, and every `/time` aggregate
+             and warning — the 8h soft target, the 24h hard limit, `getCellWarnings`,
+             `getEntryWarnings`, `hasOverlaps`, every day and week total — would absorb it.
+             Excluding it here means L1-L3 literally cannot see one, so no downstream filter can be
+             forgotten later. The month reports declarations separately. */
+          source: {
+            not: "DECLARED",
+          },
           localDate: {
             gte: weekStart,
             lte: weekEnd,
@@ -455,6 +466,11 @@ export async function getMemberWeeklyTimeGrid(input: {
         where: {
           memberId: member.id,
           deletedAt: null,
+          // A declared project is never a "recent" chip: the chip opens the entry form, which is
+          // the one thing a declared project must not offer.
+          source: {
+            not: "DECLARED",
+          },
           localDate: {
             gte: addDays(weekEnd, -90),
             lte: weekEnd,
@@ -623,6 +639,7 @@ export async function updateTimeEntry(input: TimeEntryUpdateInput) {
         timezone: true,
         startedAt: true,
         endedAt: true,
+        source: true,
         lockedByTimesheetRevisionId: true,
         deletedAt: true,
       },
@@ -631,6 +648,8 @@ export async function updateTimeEntry(input: TimeEntryUpdateInput) {
     if (!current || current.memberId !== input.memberId || current.deletedAt) {
       throw new TimeTrackingError("Time entry not found.");
     }
+
+    assertEntryIsNotDeclared(current.source);
 
     if (current.lockedByTimesheetRevisionId) {
       throw new TimeTrackingError("This entry is locked by a submitted timesheet.");
@@ -751,6 +770,7 @@ export async function deleteTimeEntry(input: TimeEntryDeleteInput) {
         localDate: true,
         durationMinutes: true,
         description: true,
+        source: true,
         lockedByTimesheetRevisionId: true,
         deletedAt: true,
       },
@@ -759,6 +779,8 @@ export async function deleteTimeEntry(input: TimeEntryDeleteInput) {
     if (!current || current.memberId !== input.memberId || current.deletedAt) {
       throw new TimeTrackingError("Time entry not found.");
     }
+
+    assertEntryIsNotDeclared(current.source);
 
     if (current.lockedByTimesheetRevisionId) {
       throw new TimeTrackingError("This entry is locked by a submitted timesheet.");
@@ -894,6 +916,10 @@ export async function stopRunningTimer(input: RunningTimerStopInput) {
 
     const localDate = parseDateOnly(getTodayIsoInTimezone(timer.timezone, timer.startedAt));
     await assertDateOpen(tx, input.memberId, localDate);
+    /* A timer cannot be *started* on a declared assignment, but the mode-switch guard counts
+       entries and a running timer is not one yet — so the assignment can change under a timer that
+       is already running. Re-reading it here is the last point before the entry is written. */
+    await assertAssignmentStillTracked(tx, timer.projectAssignmentId);
 
     const durationMinutes = Math.max(
       1,
@@ -1213,6 +1239,12 @@ async function copyEntriesByDateShift(input: {
       where: {
         memberId: input.memberId,
         deletedAt: null,
+        /* "Duplicate last week" over a week containing the 1st would otherwise copy a whole
+           month's declared figure onto the following month as an ordinary entry — a double count
+           with no declaration behind it, created by a button nobody thought was near this. */
+        source: {
+          not: "DECLARED",
+        },
         localDate: {
           gte: sourceStartDate,
           lte: sourceEndDate,
@@ -1587,6 +1619,83 @@ async function clearInactiveMarkerForEntryDate(
   });
 }
 
+/**
+ * Everything the three assignment finders need, including what {@link assertAssignmentIsTracked}
+ * reads. One select rather than three so a finder cannot be added without the mode coming with it.
+ */
+const assignmentForMutationSelect = {
+  id: true,
+  projectId: true,
+  trackingMode: true,
+  member: {
+    select: {
+      defaultTrackingMode: true,
+    },
+  },
+  project: {
+    select: {
+      id: true,
+    },
+  },
+} as const;
+
+async function assertAssignmentStillTracked(
+  tx: TimeTrackingTransaction,
+  projectAssignmentId: string,
+) {
+  const assignment = await tx.projectAssignment.findUnique({
+    where: {
+      id: projectAssignmentId,
+    },
+    select: {
+      trackingMode: true,
+      member: {
+        select: {
+          defaultTrackingMode: true,
+        },
+      },
+    },
+  });
+
+  if (assignment && resolveTrackingMode(assignment.member, assignment).mode !== "TRACKED") {
+    throw new TimeTrackingError("This project declares its hours monthly.");
+  }
+}
+
+function isTrackedAssignment(assignment: AssignmentForMutation) {
+  return resolveTrackingMode(assignment.member, assignment).mode === "TRACKED";
+}
+
+/**
+ * The double-count guard, on the ordinary side.
+ *
+ * A declared assignment may not have ordinary time entries and a tracked assignment may not have a
+ * declaration — enforced on **both** write paths, because without it a hybrid month reports the
+ * same hours twice. This is the ordinary half; `declarations.ts` holds the other. Placing it in the
+ * assignment finders rather than in each mutation is what makes it total: every create, update,
+ * timer and copy resolves an assignment through one of the three.
+ */
+function assertAssignmentIsTracked(assignment: AssignmentForMutation) {
+  if (!isTrackedAssignment(assignment)) {
+    throw new TimeTrackingError("This project declares its hours monthly.");
+  }
+}
+
+/**
+ * A declared entry is corrected at L4 and nowhere else.
+ *
+ * L1-L3 never receive one — `getMemberWeeklyTimeGrid` excludes it at the query — but these two
+ * mutations take an id from the client, so the id of an entry the client was never shown is still
+ * reachable. Editing one through the ordinary path would leave its `MonthlyHourDeclaration` stating
+ * a figure the entry no longer holds; soft-deleting one would leave a declaration pointing at a
+ * deleted entry, silently zeroing the month while the declared band still showed the hours.
+ */
+function assertEntryIsNotDeclared(source: TimeEntrySource) {
+  if (source === "DECLARED") {
+    throw new TimeTrackingError("Declared hours are corrected on the month level.");
+  }
+}
+
 async function findAssignmentForDate(
   tx: TimeTrackingTransaction,
   input: {
@@ -1616,20 +1725,14 @@ async function findAssignmentForDate(
     orderBy: {
       validFrom: "desc",
     },
-    select: {
-      id: true,
-      projectId: true,
-      project: {
-        select: {
-          id: true,
-        },
-      },
-    },
+    select: assignmentForMutationSelect,
   });
 
   if (!assignment) {
     throw new TimeTrackingError("This project is not active for the selected date.");
   }
+
+  assertAssignmentIsTracked(assignment);
 
   return assignment;
 }
@@ -1663,18 +1766,13 @@ async function findOptionalAssignmentForDate(
     orderBy: {
       validFrom: "desc",
     },
-    select: {
-      id: true,
-      projectId: true,
-      project: {
-        select: {
-          id: true,
-        },
-      },
-    },
+    select: assignmentForMutationSelect,
   });
 
-  return assignment;
+  /* A copy skips what it cannot write rather than failing the whole batch, which is what it
+     already does for a project whose assignment has ended — so a declared assignment is skipped
+     here rather than throwing. */
+  return assignment && isTrackedAssignment(assignment) ? assignment : null;
 }
 
 async function findAssignmentForWeek(
@@ -1700,14 +1798,16 @@ async function findAssignmentForWeek(
         status: "ACTIVE",
       },
     },
-    select: {
-      id: true,
-    },
+    select: assignmentForMutationSelect,
   });
 
   if (!assignment) {
     throw new TimeTrackingError("This project is not assigned for the selected week.");
   }
+
+  // §4 item 4: an `InactiveProjectWeek` says "nothing happened on this project this week", which
+  // is meaningless for a project whose hours arrive once a month. Not offered, and not accepted.
+  assertAssignmentIsTracked(assignment);
 
   return assignment;
 }
