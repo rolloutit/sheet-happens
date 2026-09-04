@@ -116,18 +116,14 @@ test("marks exactly one day as selected", async ({ page }) => {
   await expect(dayPicker.getByRole("button", { pressed: true })).toHaveCount(1);
 });
 
-test(
-  "has no WCAG 2.2 AA violations",
-  { tag: "@a11y" },
-  async ({ page, makeAxeBuilder }, testInfo) => {
-    const results = await makeAxeBuilder().analyze();
+test("has no WCAG 2.2 AA violations", { tag: "@a11y" }, async ({ makeAxeBuilder }, testInfo) => {
+  const results = await makeAxeBuilder().analyze();
 
-    // Attached so a failure is diagnosable from the report without re-running the suite.
-    await testInfo.attach("axe-results.json", {
-      body: JSON.stringify(results.violations, null, 2),
-      contentType: "application/json",
-    });
+  // Attached so a failure is diagnosable from the report without re-running the suite.
+  await testInfo.attach("axe-results.json", {
+    body: JSON.stringify(results.violations, null, 2),
+    contentType: "application/json",
+  });
 
-    expect(results.violations).toEqual([]);
-  },
-);
+  expect(results.violations).toEqual([]);
+});

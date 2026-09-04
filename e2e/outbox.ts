@@ -11,9 +11,8 @@ import { readFile } from "node:fs/promises";
 
 import { expect } from "@playwright/test";
 
-export const E2E_OUTBOX_PATH = ".mail/e2e-outbox.jsonl";
-
 // Kept in step with the `dev:e2e` script in package.json, which cannot import this file.
+export const E2E_OUTBOX_PATH = ".mail/e2e-outbox.jsonl";
 
 /** One line of the outbox, as written by `createFileMailer` in src/server/email/mailer.ts. */
 export type OutboxEntry = {
