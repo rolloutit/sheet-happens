@@ -135,6 +135,13 @@ unique accessible name, a change can be read back as text instead of eyeballed.
 - Visual baselines in `visual/storybook.spec.ts-snapshots/` are checked in and platform-suffixed
   (`-darwin`). Refresh with `pnpm test:visual:update` **only** for an intentional visual change, and
   say so in the commit.
+- `vitest` and `@vitest/browser-playwright` are **pinned to 4.1.11** while every other dep floats on
+  `latest`. Not a compatibility problem in our code — the whole chain is green on 5.0.0 once
+  `vitest.storybook.config.ts` declares a viewport, which it now does. The blocker is
+  `@storybook/addon-vitest`: every published version, up to `11.0.0-alpha.0`, declares
+  `vitest: ^3 || ^4` and `@vitest/browser-playwright: ^4`, so vitest 5 leaves a second
+  `@vitest/browser@4` in the tree and the story runner peer-mismatched. Lift the pins when that
+  addon ships a release accepting vitest 5, and check `pnpm peers check` before believing it.
 - User-visible changes get a matching scenario appended to `docs/manual-qa-test-plan.md`, committed
   separately as `docs(qa): ...` (established repo convention).
 
