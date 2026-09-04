@@ -15,6 +15,18 @@ env:
   # The e2e job overrides this with its service database.
   DATABASE_URL: postgresql://sheet_happens:sheet_happens@localhost:5432/sheet_happens
 
+# Every job installs the same dependencies, so all four share the same three setup steps — and
+# their order is the whole point:
+#
+#   1. `pnpm/setup` with `install: false`. It defaults to running `pnpm install` itself, and it
+#      runs *before* the store cache below is restored — so the cache never applied and every job
+#      paid for a cold install of all 957 packages, then re-ran the install step as a no-op.
+#   2. `actions/setup-node` with `cache: pnpm`. Pins Node from .nvmrc and restores the pnpm store,
+#      which needs pnpm already on PATH — hence step 1 first.
+#   3. `pnpm install --frozen-lockfile`. Now links out of a warm store instead of the registry.
+#
+# Keep the three together, in this order, when adding a job.
+
 jobs:
   # Cheapest gates first: a formatting slip should not wait for a browser to boot.
   static:
@@ -22,6 +34,8 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - uses: pnpm/setup@v2
+        with:
+          install: false
       - uses: actions/setup-node@v7
         with:
           node-version-file: .nvmrc
@@ -36,6 +50,8 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - uses: pnpm/setup@v2
+        with:
+          install: false
       - uses: actions/setup-node@v7
         with:
           node-version-file: .nvmrc
@@ -48,11 +64,22 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - uses: pnpm/setup@v2
+        with:
+          install: false
       - uses: actions/setup-node@v7
         with:
           node-version-file: .nvmrc
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+      # Chromium and its headless shell are ~300 MB, and this job and e2e each download their own
+      # copy on every run. The prefix fallback matters more than the exact key: after a dependency
+      # bump it restores the previous browsers, and `playwright install` then skips whatever is
+      # already there rather than re-fetching the set.
+      - uses: actions/cache@v6
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
+          restore-keys: playwright-${{ runner.os }}-
       - run: pnpm exec playwright install --with-deps chromium
       - run: pnpm build-storybook
       - run: pnpm test-storybook
@@ -91,11 +118,19 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - uses: pnpm/setup@v2
+        with:
+          install: false
       - uses: actions/setup-node@v7
         with:
           node-version-file: .nvmrc
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+      # Shares the Storybook job's browser cache — same key, same runner OS, same lockfile.
+      - uses: actions/cache@v6
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
+          restore-keys: playwright-${{ runner.os }}-
       - run: pnpm exec playwright install --with-deps chromium
       # Creates, migrates and seeds the suite's own database — `sheet_happens_e2e`, derived from
       # DATABASE_URL above — on the service container. It touches Docker not at all, so this is the
