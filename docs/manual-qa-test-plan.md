@@ -3546,6 +3546,27 @@ Expected result:
   own hardcoded dark-theme colours.
 - Every colour is accompanied by its status name; nothing requires colour alone to be identified.
 
+## Page Heading Semantics And The Automated Accessibility Gate
+
+- Every page rendered through the app shell exposes its title as the page's only level-1 heading.
+  A screen reader announces it on arrival, and the title still looks exactly as before - same size,
+  weight and spacing - on desktop and mobile, in light and dark, in both locales.
+- No page has two level-1 headings, and no page body introduces a heading that skips a level below
+  the shell's.
+- The week view on Time tracking reads as a structure without looking at it: one level-1 heading,
+  the primary navigation, and one named region per weekday. Each entry inside a day offers an edit
+  and a delete control whose names carry the entry description, so two identical descriptions on
+  different days stay distinguishable by their day.
+- Selecting a different day in the week strip changes that button's pressed state, not only its
+  colour, and exactly one day is ever pressed.
+- Auth emails with `AUTH_EMAIL_DELIVERY_MODE=file`: the magic link, invitation and password-reset
+  messages land as one JSON line each in the outbox file and are not printed to the console. With
+  the variable unset they print to the console as before. A production build refuses file delivery
+  and falls back to the console, so plaintext links cannot be written to disk on a deploy.
+- `pnpm e2e` with nothing running on port 3000 starts its own server and finishes green. With
+  `pnpm dev:e2e` already running it reuses that one. With a plain `pnpm dev` running it fails on the
+  first authenticated spec and the message names the fix rather than timing out.
+
 ## Regression Checklist For Every Release
 
 - Invitation activation works for a new invited user.
