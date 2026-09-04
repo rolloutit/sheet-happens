@@ -58,6 +58,7 @@
       "projects": "Projects",
       "people": "People",
       "rates": "Rates",
+      "declaredHours": "Declared hours",
       "audit": "Audit log",
       "system": "System",
       "info": "Information page",
@@ -1740,6 +1741,107 @@
       "supportedCurrency": "Choose a supported currency.",
       "noteMax": "Note must be 1000 characters or less.",
       "rateEndAfterStart": "Rate end date must be after the start date."
+    }
+  },
+  "AdminDeclaredHours": {
+    "eyebrow": "Admin",
+    "title": "Declared hours",
+    "subtitle": "Monthly declared hours for everyone. Review what each person declared, and correct a figure on their behalf — with a reason.",
+    "months": {
+      "previous": "Previous month",
+      "next": "Next month",
+      "thisMonth": "This month"
+    },
+    "summary": {
+      "declared": "Declared",
+      "missing": "Not declared",
+      "missingProof": "Without proof"
+    },
+    "profile": {
+      "EMPLOYEE": "Employee",
+      "CONTRACTOR": "Contractor"
+    },
+    "modeSource": {
+      "memberDefault": "from the member default"
+    },
+    "labels": {
+      "nothingDeclared": "Nothing declared",
+      "proofMissing": "No proof",
+      "locked": "Month locked",
+      "ownDeclaration": "Your own declaration",
+      "assignmentEnded": "The assignment no longer covers this month",
+      "corrected": "Corrected by {name} · {when}",
+      "correctedByRemoved": "a removed admin"
+    },
+    "actions": {
+      "correct": "Correct",
+      "cancel": "Cancel",
+      "save": "Save correction"
+    },
+    "drawer": {
+      "title": "{project} — correct declared hours",
+      "description": "{name} · {month}. The member is notified about the correction.",
+      "openProof": "Open",
+      "noProof": "No hours proof has been uploaded for this month."
+    },
+    "fields": {
+      "hours": "Declared hours",
+      "hoursHint": "Hours for the whole month — 52, 52h or 52:30.",
+      "hoursPlaceholder": "52",
+      "note": "What the hours cover",
+      "noteHint": "Carried into the timesheet and the reports, so it is required. Prefilled with the member's own words.",
+      "notePlaceholder": "Platform migration support",
+      "reason": "Why you are correcting it",
+      "reasonHint": "The member reads this in their notification, and it is written to the audit log.",
+      "reasonPlaceholder": "The hours proof shows 52 hours, not 48.",
+      "sanityWarning": "That is more than {hours}, the hours in this whole month. You can still save it — check the figure."
+    },
+    "table": {
+      "caption": "Declared hours — {month}",
+      "empty": "No project is set to monthly declaration in this month.",
+      "proofNote": "The hours proof is uploaded by the member on their own Time tracking page, at the Month level. An admin can open it but not replace it.",
+      "columns": {
+        "member": "Member",
+        "project": "Project",
+        "hours": "Hours",
+        "proof": "Proof",
+        "actions": "Actions"
+      }
+    }
+  },
+  "AdminDeclaredHoursActions": {
+    "validation": {
+      "member": "Choose a member.",
+      "project": "Choose a project.",
+      "month": "Choose a valid month.",
+      "minutesPositive": "Declared hours must be greater than zero.",
+      "minutesTooLarge": "Declared hours are too large.",
+      "noteRequired": "Describe what the declared hours cover.",
+      "noteTooLong": "Description must be 1000 characters or less.",
+      "reasonRequired": "Give a reason for the correction.",
+      "reasonTooLong": "The reason must be 1000 characters or less."
+    },
+    "success": {
+      "corrected": "The declared hours were corrected and the member has been notified."
+    },
+    "errors": {
+      "fixFields": "Fix the highlighted fields.",
+      "ownDeclaration": "Correct your own declared hours on the Time tracking page, at the Month level — that way your reason is not lost.",
+      "correctFailed": "The declared hours could not be corrected."
+    },
+    "declarationErrors": {
+      "INVALID_PERIOD": "Choose a valid month.",
+      "INVALID_MINUTES": "Declared hours must be greater than zero.",
+      "NOTE_REQUIRED": "Describe what the declared hours cover.",
+      "PERIOD_LOCKED": "A submitted timesheet locks this month. Unlock it for correction before changing the figure.",
+      "ASSIGNMENT_NOT_FOUND": "No live assignment covers this month on that project, so no declaration can be written against it.",
+      "NOT_DECLARED": "This project tracks its hours in Sheet Happens, so they cannot be declared. Switch it to monthly declaration on the Projects page first.",
+      "TRACKED_ENTRIES_EXIST": "This month already holds tracked time entries for this project. Remove them first.",
+      "DECLARATION_NOT_FOUND": "No hours are declared for this month yet.",
+      "REASON_REQUIRED": "An administrator correction needs a reason.",
+      "PROOF_REQUIRED": "Choose a PDF to upload.",
+      "PROOF_TOO_LARGE": "The hours proof PDF is larger than 10 MB.",
+      "PROOF_NOT_PDF": "The hours proof must be a PDF."
     }
   },
   "AdminAudit": {

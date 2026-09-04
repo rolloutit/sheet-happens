@@ -58,6 +58,7 @@
       "projects": "Projektek",
       "people": "Emberek",
       "rates": "Óradíjak",
+      "declaredHours": "Bevallott órák",
       "audit": "Napló",
       "system": "Rendszer",
       "info": "Információs oldal",
@@ -1740,6 +1741,107 @@
       "supportedCurrency": "Válassz támogatott pénznemet.",
       "noteMax": "A megjegyzés legfeljebb 1000 karakter lehet.",
       "rateEndAfterStart": "Az óradíj befejezési dátuma későbbi kell legyen a kezdési dátumnál."
+    }
+  },
+  "AdminDeclaredHours": {
+    "eyebrow": "Admin",
+    "title": "Bevallott órák",
+    "subtitle": "Havonta bevallott órák minden munkatársra. Itt nézhető át, ki mit vallott be, és innen javítható egy szám a munkatárs helyett — indoklással.",
+    "months": {
+      "previous": "Előző hónap",
+      "next": "Következő hónap",
+      "thisMonth": "Ez a hónap"
+    },
+    "summary": {
+      "declared": "Bevallva",
+      "missing": "Hiányzó bevallás",
+      "missingProof": "Igazolás nélkül"
+    },
+    "profile": {
+      "EMPLOYEE": "Alkalmazott",
+      "CONTRACTOR": "Kontraktor"
+    },
+    "modeSource": {
+      "memberDefault": "a munkatárs alapértelmezéséből"
+    },
+    "labels": {
+      "nothingDeclared": "Nincs bevallva",
+      "proofMissing": "Nincs igazolás",
+      "locked": "Zárolt hónap",
+      "ownDeclaration": "A saját bevallásod",
+      "assignmentEnded": "A hozzárendelés már nem fedi ezt a hónapot",
+      "corrected": "Javította: {name} · {when}",
+      "correctedByRemoved": "törölt admin"
+    },
+    "actions": {
+      "correct": "Javítás",
+      "cancel": "Mégsem",
+      "save": "Javítás mentése"
+    },
+    "drawer": {
+      "title": "{project} — bevallott órák javítása",
+      "description": "{name} · {month}. A munkatárs értesítést kap a javításról.",
+      "openProof": "Megnyitás",
+      "noProof": "Ehhez a hónaphoz nincs feltöltött óraigazolás."
+    },
+    "fields": {
+      "hours": "Bevallott órák",
+      "hoursHint": "A teljes hónap órái — 52, 52h vagy 52:30.",
+      "hoursPlaceholder": "52",
+      "note": "Mit fedeznek az órák",
+      "noteHint": "Bekerül az időelszámolásba és a riportokba, ezért kötelező. A munkatárs saját szövegével van előtöltve.",
+      "notePlaceholder": "Platformmigráció támogatása",
+      "reason": "A javítás indoklása",
+      "reasonHint": "A munkatárs ezt olvassa az értesítésben, és a naplóba is bekerül.",
+      "reasonPlaceholder": "Az óraigazolás 52 órát mutat, nem 48-at.",
+      "sanityWarning": "Ez több mint {hours}, ennyi óra van az egész hónapban. Mentheted — ellenőrizd a számot."
+    },
+    "table": {
+      "caption": "Bevallott órák — {month}",
+      "empty": "Ebben a hónapban egyetlen projekt sincs havi bevallásra állítva.",
+      "proofNote": "Az óraigazolást a munkatárs tölti fel a saját Időkövetés oldalán, a Hónap nézetben. Az admin megnyithatja, de nem cserélheti.",
+      "columns": {
+        "member": "Munkatárs",
+        "project": "Projekt",
+        "hours": "Órák",
+        "proof": "Igazolás",
+        "actions": "Műveletek"
+      }
+    }
+  },
+  "AdminDeclaredHoursActions": {
+    "validation": {
+      "member": "Válassz munkatársat.",
+      "project": "Válassz projektet.",
+      "month": "Válassz érvényes hónapot.",
+      "minutesPositive": "A bevallott óraszámnak nullánál nagyobbnak kell lennie.",
+      "minutesTooLarge": "A bevallott óraszám túl nagy.",
+      "noteRequired": "Írd le, mit fedeznek a bevallott órák.",
+      "noteTooLong": "A leírás legfeljebb 1000 karakter lehet.",
+      "reasonRequired": "Add meg a javítás indoklását.",
+      "reasonTooLong": "Az indoklás legfeljebb 1000 karakter lehet."
+    },
+    "success": {
+      "corrected": "A bevallott órákat javítottuk, és a munkatárs értesítést kapott."
+    },
+    "errors": {
+      "fixFields": "Javítsd a jelölt mezőket.",
+      "ownDeclaration": "A saját bevallott óráidat az Időkövetés oldalon, a Hónap nézetben javítsd — így az indoklás nem veszik el.",
+      "correctFailed": "A bevallott órák javítása nem sikerült."
+    },
+    "declarationErrors": {
+      "INVALID_PERIOD": "Válassz érvényes hónapot.",
+      "INVALID_MINUTES": "A bevallott óraszámnak nullánál nagyobbnak kell lennie.",
+      "NOTE_REQUIRED": "Írd le, mit fedeznek a bevallott órák.",
+      "PERIOD_LOCKED": "Beküldött időelszámolás zárolja ezt a hónapot. Előbb nyisd fel javításra, utána javítható a szám.",
+      "ASSIGNMENT_NOT_FOUND": "Ehhez a hónaphoz nincs élő hozzárendelés a projekten, ezért nem írható rá bevallás.",
+      "NOT_DECLARED": "Ez a projekt a Sheet Happensben rögzíti az óráit, ezért nem vallhatók be. Előbb a Projektek oldalon állítsd havi bevallásra.",
+      "TRACKED_ENTRIES_EXIST": "Ez a hónap már tartalmaz itt rögzített időbejegyzéseket erre a projektre. Előbb töröld ezeket.",
+      "DECLARATION_NOT_FOUND": "Ehhez a hónaphoz még nincs bevallás.",
+      "REASON_REQUIRED": "Az admin javításhoz indoklás kell.",
+      "PROOF_REQUIRED": "Válassz egy PDF-et a feltöltéshez.",
+      "PROOF_TOO_LARGE": "Az óraigazolás PDF nagyobb, mint 10 MB.",
+      "PROOF_NOT_PDF": "Az óraigazolásnak PDF-nek kell lennie."
     }
   },
   "AdminAudit": {

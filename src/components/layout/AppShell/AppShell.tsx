@@ -5,6 +5,7 @@ import {
   BarChart3,
   BadgeDollarSign,
   BookOpen,
+  CalendarClock,
   CalendarDays,
   Clock3,
   FolderKanban,
@@ -102,6 +103,13 @@ const navItems = [
   },
   { id: "people", labelKey: "nav.people", icon: Users, group: "admin", href: "/admin/people" },
   { id: "rates", labelKey: "nav.rates", icon: WalletCards, group: "admin", href: "/admin/rates" },
+  {
+    id: "declared-hours",
+    labelKey: "nav.declaredHours",
+    icon: CalendarClock,
+    group: "admin",
+    href: "/admin/declared-hours",
+  },
   {
     id: "payslips-admin",
     labelKey: "nav.payslips",

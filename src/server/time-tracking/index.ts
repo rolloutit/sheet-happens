@@ -34,6 +34,16 @@ export type {
   TimeGridWeek,
   TimeTrackingRequestMetadata,
 } from "./time-entries";
+export { buildDeclaredHoursRoster, listDeclaredHoursForMonth } from "./admin-declarations";
+export type {
+  AdminDeclaredHoursAssignment,
+  AdminDeclaredHoursCorrection,
+  AdminDeclaredHoursDeclarationRow,
+  AdminDeclaredHoursMonth,
+  AdminDeclaredHoursProof,
+  AdminDeclaredHoursRow,
+  BuildDeclaredHoursRosterInput,
+} from "./admin-declarations";
 export { buildMonthOverview, getMemberMonthOverview } from "./month-overview";
 export type {
   BuildMonthOverviewInput,
