@@ -1,9 +1,14 @@
 import type { ProjectColorToken } from "@/src/lib/project-colors";
+import type { TrackingMode } from "@/src/server/time-tracking";
+
+/** `""` is the inherit state: clear the override and follow the member default. */
+export type TrackingModeOverrideValue = "" | TrackingMode;
 
 export type ProjectFormField =
   "name" | "slug" | "colorToken" | "startsOn" | "endsOn" | "isInternal" | "notes";
 
-export type ProjectAssignmentFormField = "memberId" | "validFrom" | "validTo" | "active" | "notes";
+export type ProjectAssignmentFormField =
+  "memberId" | "validFrom" | "validTo" | "active" | "trackingMode" | "notes";
 
 export type ProjectBulkAssignmentFormField =
   "memberIds" | "projectIds" | "validFrom" | "validTo" | "active" | "notes";
@@ -78,6 +83,7 @@ export type UpdateProjectAssignmentActionInput = {
   validFrom: string;
   validTo: string;
   active: boolean;
+  trackingMode: TrackingModeOverrideValue;
   notes: string;
 };
 

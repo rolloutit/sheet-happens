@@ -24,6 +24,16 @@ function emptyFilters() {
   };
 }
 
+/** Nothing declared, so nothing was omitted — the default shape a disclosure-free report has. */
+function noExclusions() {
+  return {
+    declaredHours: {
+      memberCount: 0,
+      projectCount: 0,
+    },
+  };
+}
+
 const baseSnapshot = {
   schemaVersion: 1,
   generatedAt: "2026-07-31T12:00:00.000Z",
@@ -35,6 +45,7 @@ const baseSnapshot = {
     timezones: ["Europe/Budapest"],
   },
   filters: emptyFilters(),
+  exclusions: noExclusions(),
   summary: {
     totalMinutes: 180,
     entryCount: 1,
@@ -85,6 +96,7 @@ export function createCostFreeReportSnapshot(): ReportCostFreeSnapshot {
   return {
     ...baseSnapshot,
     filters: emptyFilters(),
+    exclusions: noExclusions(),
     mode: "COST_FREE",
     warnings: [],
   };
@@ -94,6 +106,7 @@ export function createInternalReportSnapshot(): ReportInternalSnapshot {
   return {
     ...baseSnapshot,
     filters: emptyFilters(),
+    exclusions: noExclusions(),
     mode: "INTERNAL",
     summary: {
       ...baseSnapshot.summary,

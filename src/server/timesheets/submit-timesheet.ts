@@ -38,9 +38,19 @@ export type SubmitContractorTimesheetResult = {
 };
 
 export class TimesheetSubmissionError extends Error {
-  constructor(message: string) {
+  /**
+   * The projects a refusal is about, when naming them is what makes it actionable.
+   *
+   * Carried beside the message rather than interpolated into it, so the action layer keeps looking
+   * the message up in one table of stable keys — the same shape `TrackingModeSwitchError` uses for
+   * its conflicts.
+   */
+  readonly projectNames: string[];
+
+  constructor(message: string, projectNames: string[] = []) {
     super(message);
     this.name = "TimesheetSubmissionError";
+    this.projectNames = projectNames;
   }
 }
 
@@ -48,7 +58,26 @@ type TimesheetSubmissionDb = {
   $transaction<T>(callback: (tx: TimesheetSubmissionTransaction) => Promise<T>): Promise<T>;
 };
 
+type SubmissionDeclarationRecord = {
+  minutes: number;
+  proofDocumentId: string | null;
+  project: { name: string };
+};
+
 type TimesheetSubmissionTransaction = {
+  monthlyHourDeclaration: {
+    findMany(args: {
+      where: {
+        memberId: string;
+        periodStart: Date;
+      };
+      select: {
+        minutes: true;
+        proofDocumentId: true;
+        project: { select: { name: true } };
+      };
+    }): Promise<SubmissionDeclarationRecord[]>;
+  };
   member: {
     findUnique(args: {
       where: { id: string };
@@ -349,7 +378,7 @@ export async function submitContractorTimesheet(
       throw new TimesheetSubmissionError("Contractor profile required.");
     }
 
-    const [activeLock, existingTimesheet, memberRates, entries] = await Promise.all([
+    const [activeLock, existingTimesheet, memberRates, entries, declarations] = await Promise.all([
       tx.periodLock.findFirst({
         where: {
           memberId: member.id,
@@ -415,6 +444,25 @@ export async function submitContractorTimesheet(
           },
         },
       }),
+      /* The proof is what replaces the per-day detail a declared project does not have. Without
+         it there is nothing for an admin to check, so a contractor cannot submit the month — a new
+         guard beside the existing missing-description and missing-rate ones. Employees have no
+         submission gate at all, so for them a missing proof stays a warning on `/time`. */
+      tx.monthlyHourDeclaration.findMany({
+        where: {
+          memberId: member.id,
+          periodStart,
+        },
+        select: {
+          minutes: true,
+          proofDocumentId: true,
+          project: {
+            select: {
+              name: true,
+            },
+          },
+        },
+      }),
     ]);
 
     if (activeLock) {
@@ -424,6 +472,8 @@ export async function submitContractorTimesheet(
     if (existingTimesheet && existingTimesheet.status !== "REJECTED") {
       throw new TimesheetSubmissionError("This month is not open for submission.");
     }
+
+    assertDeclaredHoursHaveProof(declarations);
 
     const lines = resolveSubmissionLines({
       entries,
@@ -602,6 +652,25 @@ export async function submitContractorTimesheet(
       currencyCode: totals.currencyCode,
     };
   });
+}
+
+/**
+ * Every declared figure in the month has its proof, or the month does not submit.
+ *
+ * Only a declaration with **hours** blocks: a declared assignment nobody declared against is a
+ * project with no work this month, not a missing document. Names the projects, because "upload the
+ * proof" with nothing to point at is the kind of error that sends someone back to the screen to
+ * guess which row it meant.
+ */
+function assertDeclaredHoursHaveProof(declarations: SubmissionDeclarationRecord[]) {
+  const missing = declarations
+    .filter((declaration) => declaration.minutes > 0 && !declaration.proofDocumentId)
+    .map((declaration) => declaration.project.name)
+    .sort();
+
+  if (missing.length > 0) {
+    throw new TimesheetSubmissionError("Declared hours are missing their proof.", missing);
+  }
 }
 
 function resolveSubmissionLines(input: {

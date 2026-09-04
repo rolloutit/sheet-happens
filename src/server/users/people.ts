@@ -4,6 +4,7 @@ import { prisma } from "@/src/server/db/client";
 import { requireAdminAppMemberForAction } from "@/src/server/auth/app-access";
 import type { Prisma } from "@/src/server/db/generated/client";
 import type { PersonRowState, PersonTableRow } from "@/src/components/sheet/PeopleTable";
+import type { TrackingMode } from "@/src/server/time-tracking";
 
 const DEFAULT_PAGE = 1;
 const DEFAULT_PAGE_SIZE = 20;
@@ -38,6 +39,7 @@ export type PeopleMemberRow = {
   defaultCurrencyCode: string;
   timezone: string;
   locale: string;
+  defaultTrackingMode: TrackingMode;
   deletedAt: Date | null;
   profilePeriods?: Array<{
     profile: PeopleMemberProfile;
@@ -56,6 +58,7 @@ export type AdminPersonRow = PersonTableRow & {
   defaultCurrencyCode: string;
   timezone: string;
   locale: string;
+  defaultTrackingMode: TrackingMode;
 };
 
 export type PeopleStats = {
@@ -113,6 +116,7 @@ export async function listPeopleForAdmin(
       defaultCurrencyCode: true,
       timezone: true,
       locale: true,
+      defaultTrackingMode: true,
       deletedAt: true,
       profilePeriods: {
         where: {
@@ -231,6 +235,7 @@ export function mapMemberToPersonRow(member: PeopleMemberRow): AdminPersonRow {
     defaultCurrencyCode: member.defaultCurrencyCode,
     timezone: member.timezone,
     locale: member.locale,
+    defaultTrackingMode: member.defaultTrackingMode,
     hasAuthUser: Boolean(member.authUserId),
   };
 }

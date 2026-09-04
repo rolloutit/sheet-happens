@@ -10,14 +10,19 @@ import { isDateValue } from "@/src/lib/date-values";
 import { DAILY_HARD_LIMIT_MINUTES } from "@/src/lib/time-entry-limits";
 import { requireActiveAppMemberForAction } from "@/src/server/auth/app-access";
 import { AuthenticationError, AuthorizationError } from "@/src/server/auth/session";
+import { ObjectStorageConfigurationError } from "@/src/server/storage";
 import {
   copyPreviousDayEntries,
   createTimeEntry,
+  DeclarationError,
+  deleteMonthlyHourDeclaration,
   deleteTimeEntry,
   deleteTimeEntryDraft,
   duplicatePreviousWeek,
+  HOURS_PROOF_MAX_BYTES,
   markInactiveProjectWeek,
   parseDateOnly,
+  saveMonthlyHourDeclaration,
   saveTimeEntryDraft,
   startRunningTimer,
   stopRunningTimer,
@@ -25,6 +30,7 @@ import {
   TimeTrackingError,
   unmarkInactiveProjectWeek,
   updateTimeEntry,
+  uploadDeclarationProof,
   type CopyTimeEntriesResult,
   type TimeTrackingRequestMetadata,
 } from "@/src/server/time-tracking";
@@ -33,9 +39,11 @@ import type {
   ClearTimeEntryDraftActionInput,
   CopyPreviousDayEntriesActionInput,
   CreateTimeEntryActionInput,
+  DeleteMonthlyHourDeclarationActionInput,
   DeleteTimeEntryActionInput,
   DuplicatePreviousWeekActionInput,
   InactiveProjectWeekActionInput,
+  SaveMonthlyHourDeclarationActionInput,
   SaveTimeEntryDraftActionInput,
   StartRunningTimerActionInput,
   TimeEntryFormField,
@@ -141,6 +149,34 @@ const timeEntryDraftSchema = z.object({
   draftKey: z.string().trim().min(1).max(80),
   payload: timeEntryDraftPayloadSchema,
 });
+
+/**
+ * The month is a `YYYY-MM-01` string rather than a free date: L4 only ever names a month start, and
+ * a schema that accepted the 17th would leave the normalization to the domain layer where a caller
+ * could not see it.
+ */
+const monthlyDeclarationTargetSchema = {
+  projectId: z.string().uuid("Choose a project."),
+  periodStart: z.string().regex(/^\d{4}-\d{2}-01$/, "Choose a valid month."),
+};
+
+const saveMonthlyHourDeclarationSchema = z.object({
+  ...monthlyDeclarationTargetSchema,
+  minutes: z
+    .number()
+    .int()
+    .positive("Declared hours must be greater than zero.")
+    // A year of hours is not a month's figure; the *plausible* bound is the warning in
+    // `declarations.ts`, and this is only the outer edge of what the column can hold.
+    .max(366 * 24 * 60, "Declared hours are too large."),
+  note: z
+    .string()
+    .trim()
+    .min(1, "Describe what the declared hours cover.")
+    .max(1_000, "Description must be 1000 characters or less."),
+});
+
+const deleteMonthlyHourDeclarationSchema = z.object(monthlyDeclarationTargetSchema);
 
 const clearTimeEntryDraftSchema = z.object({
   draftKey: z.string().trim().min(1).max(80),
@@ -507,6 +543,149 @@ export async function unmarkInactiveProjectWeekAction(
   }
 }
 
+/**
+ * Save one month's declared figure for one project.
+ *
+ * A member's own declaration only — an admin correction goes through the same domain function with
+ * a differing `actorMemberId`, which this action deliberately cannot produce: it always passes the
+ * signed-in member as both, so no request shape can turn it into a write against someone else.
+ */
+export async function saveMonthlyHourDeclarationAction(
+  input: SaveMonthlyHourDeclarationActionInput,
+): Promise<TimeTrackingActionState> {
+  const t = await getTranslations("TimeTrackingActions");
+  const parsed = saveMonthlyHourDeclarationSchema.safeParse(input);
+
+  if (!parsed.success) {
+    return {
+      status: "error",
+      message: translateKnownMessage(parsed.error.issues[0]?.message, t),
+    };
+  }
+
+  try {
+    const { member } = await requireActiveAppMemberForAction();
+    await saveMonthlyHourDeclaration({
+      memberId: member.id,
+      actorMemberId: member.id,
+      projectId: parsed.data.projectId,
+      periodStart: parseDateOnly(parsed.data.periodStart, "Choose a valid month."),
+      minutes: parsed.data.minutes,
+      note: parsed.data.note,
+      requestMetadata: await getTimeTrackingRequestMetadata(),
+    });
+
+    revalidatePath("/time");
+
+    return {
+      status: "success",
+      message: t("success.declarationSaved"),
+    };
+  } catch (error) {
+    return mapTimeTrackingActionError(error, t("errors.declarationSaveFailed"), t);
+  }
+}
+
+export async function deleteMonthlyHourDeclarationAction(
+  input: DeleteMonthlyHourDeclarationActionInput,
+): Promise<TimeTrackingActionState> {
+  const t = await getTranslations("TimeTrackingActions");
+  const parsed = deleteMonthlyHourDeclarationSchema.safeParse(input);
+
+  if (!parsed.success) {
+    return {
+      status: "error",
+      message: translateKnownMessage(parsed.error.issues[0]?.message, t),
+    };
+  }
+
+  try {
+    const { member } = await requireActiveAppMemberForAction();
+    await deleteMonthlyHourDeclaration({
+      memberId: member.id,
+      actorMemberId: member.id,
+      projectId: parsed.data.projectId,
+      periodStart: parseDateOnly(parsed.data.periodStart, "Choose a valid month."),
+      requestMetadata: await getTimeTrackingRequestMetadata(),
+    });
+
+    revalidatePath("/time");
+
+    return {
+      status: "success",
+      message: t("success.declarationWithdrawn"),
+    };
+  } catch (error) {
+    return mapTimeTrackingActionError(error, t("errors.declarationWithdrawFailed"), t);
+  }
+}
+
+/**
+ * Attach or replace the proof PDF, as `FormData` so the file never passes through JSON.
+ *
+ * The size is checked here as well as in the domain validator, and that is not redundancy: the
+ * Server Action body limit is 12 MB, so a file over it never reaches this function at all. Checking
+ * against a **smaller** ceiling first is what turns a silent transport failure into a sentence
+ * naming the actual problem, which is what §3 asks for.
+ */
+export async function uploadDeclarationProofAction(
+  _previousState: TimeTrackingActionState,
+  formData: FormData,
+): Promise<TimeTrackingActionState> {
+  const t = await getTranslations("TimeTrackingActions");
+  const parsed = deleteMonthlyHourDeclarationSchema.safeParse({
+    projectId: formData.get("projectId"),
+    periodStart: formData.get("periodStart"),
+  });
+
+  if (!parsed.success) {
+    return {
+      status: "error",
+      message: translateKnownMessage(parsed.error.issues[0]?.message, t),
+    };
+  }
+
+  const file = formData.get("proofFile");
+
+  if (!(file instanceof File) || file.size <= 0) {
+    return { status: "error", message: t("errors.proofRequired") };
+  }
+
+  if (file.size > HOURS_PROOF_MAX_BYTES) {
+    return { status: "error", message: t("errors.proofTooLarge") };
+  }
+
+  try {
+    const { member } = await requireActiveAppMemberForAction();
+    await uploadDeclarationProof({
+      memberId: member.id,
+      actorMemberId: member.id,
+      projectId: parsed.data.projectId,
+      periodStart: parseDateOnly(parsed.data.periodStart, "Choose a valid month."),
+      file: {
+        bytes: Buffer.from(await file.arrayBuffer()),
+        originalFilename: file.name || "hours-proof.pdf",
+        contentType:
+          file.type === "application/pdf" || file.name.toLowerCase().endsWith(".pdf")
+            ? "application/pdf"
+            : file.type,
+        byteSize: file.size,
+      },
+      requestMetadata: await getTimeTrackingRequestMetadata(),
+    });
+
+    revalidatePath("/time");
+
+    return {
+      status: "success",
+      message: t("success.proofUploaded"),
+    };
+  } catch (error) {
+    console.error("[time] hours proof upload failed", error);
+    return mapTimeTrackingActionError(error, t("errors.proofUploadFailed"), t);
+  }
+}
+
 function validateTimeEntryTiming(
   value: {
     timingMode?: "DURATION" | "INTERVAL";
@@ -636,6 +815,22 @@ function mapTimeTrackingActionError(
     };
   }
 
+  if (error instanceof ObjectStorageConfigurationError) {
+    return {
+      status: "error",
+      message: t("errors.storageMissing"),
+    };
+  }
+
+  /* Keyed on the code rather than on the message, unlike the errors above: these are new, so there
+     is no English sentence already in flight that a lookup table has to keep matching. */
+  if (error instanceof DeclarationError) {
+    return {
+      status: "error",
+      message: t(`declarationErrors.${error.code}`),
+    };
+  }
+
   return {
     status: "error",
     message: fallback,
@@ -679,6 +874,8 @@ const knownMessageKeys: Record<string, string> = {
   "No timer is running.": "errors.noTimerRunning",
   "This project is not active for the selected date.": "errors.projectNotActiveForDate",
   "This project is not assigned for the selected week.": "errors.projectNotAssignedForWeek",
+  "This project declares its hours monthly.": "errors.projectDeclaresMonthly",
+  "Declared hours are corrected on the month level.": "errors.declaredCorrectedAtMonth",
   "Could not format date in timezone.": "errors.dateTimezoneFormatFailed",
 };
 

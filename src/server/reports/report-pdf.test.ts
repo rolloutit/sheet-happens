@@ -443,6 +443,31 @@ describe("report PDF payload", () => {
     ]);
   });
 
+  /**
+   * §4's disclosure has to reach the document, not just the screen it was exported from — a PDF
+   * leaves the building. Counts only, no amounts, and worded so it survives being read outside the
+   * company. A footnote rather than a warning: nothing went wrong, this is a statement of scope.
+   */
+  it("discloses the declared hours it excluded, in both locales", () => {
+    const snapshot = {
+      ...createCostFreeReportSnapshot(),
+      exclusions: { declaredHours: { memberCount: 2, projectCount: 1 } },
+    };
+
+    expect(buildPayload(snapshot).footnotes).toContain(
+      "Excludes hours declared monthly for another company's system: 2 members, 1 project.",
+    );
+    expect(buildPayload(snapshot, "hu").footnotes).toContain(
+      "Nem tartalmazza a másik cég rendszerében havonta bevallott órákat: 2 munkatárs, 1 projekt.",
+    );
+  });
+
+  it("says nothing about declared hours when none were excluded", () => {
+    expect(buildPayload(createCostFreeReportSnapshot()).footnotes).toEqual([
+      "Member-local date boundaries. Time zones: Europe/Budapest",
+    ]);
+  });
+
   it("falls back to a placeholder when no time zone is present", () => {
     const snapshot = createCostFreeReportSnapshot();
     const payload = buildPayload({ ...snapshot, period: { ...snapshot.period, timezones: [] } });

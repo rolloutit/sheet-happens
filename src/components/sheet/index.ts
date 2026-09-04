@@ -30,8 +30,25 @@ export type {
   DocumentPreviewProps,
   DocumentPreviewRow,
 } from "./DocumentPreview";
-export { DayDetailPanel } from "./DayDetailPanel";
-export type { DayDetailEntry, DayDetailPanelLabels, DayDetailPanelProps } from "./DayDetailPanel";
+export { DayAgenda } from "./DayAgenda";
+export type {
+  DayAgendaAdminNotice,
+  DayAgendaDayState,
+  DayAgendaEntry,
+  DayAgendaLabels,
+  DayAgendaProps,
+} from "./DayAgenda";
+export {
+  DeclaredHoursRow,
+  declaredHoursRowVariants,
+  declaredProofSlotVariants,
+} from "./DeclaredHoursRow";
+export type {
+  DeclaredHoursProject,
+  DeclaredHoursProof,
+  DeclaredHoursRowLabels,
+  DeclaredHoursRowProps,
+} from "./DeclaredHoursRow";
 export { EmptyState, emptyStateVariants } from "./EmptyState";
 export type { EmptyStateProps } from "./EmptyState";
 export { FilterChips } from "./FilterChips";
@@ -63,6 +80,13 @@ export { ManagementViews } from "./ManagementViews";
 export type { ManagementView, ManagementViewsProps } from "./ManagementViews";
 export { MarkdownArticle } from "./MarkdownArticle";
 export type { MarkdownArticleProps } from "./MarkdownArticle";
+export { MonthOverview, monthOverviewRowVariants } from "./MonthOverview";
+export type {
+  MonthOverviewDeclaredProject,
+  MonthOverviewLabels,
+  MonthOverviewProject,
+  MonthOverviewProps,
+} from "./MonthOverview";
 export { MonthRow } from "./MonthRow";
 export type { MonthRowProps } from "./MonthRow";
 export { NotificationPreferences } from "./NotificationPreferences";
@@ -221,6 +245,14 @@ export { TotpSetupDialog } from "./TotpSetupDialog";
 export type { TotpSetupDialogProps } from "./TotpSetupDialog";
 export { TweaksPanel } from "./TweaksPanel";
 export type { TweaksPanelProps } from "./TweaksPanel";
+export { WeekAgenda, weekAgendaColumnVariants, weekAgendaHeaderVariants } from "./WeekAgenda";
+export type {
+  WeekAgendaDay,
+  WeekAgendaDayState,
+  WeekAgendaEntry,
+  WeekAgendaLabels,
+  WeekAgendaProps,
+} from "./WeekAgenda";
 export { WeeklyTimeGrid } from "./WeeklyTimeGrid";
 export type {
   TimeGridCellContext,

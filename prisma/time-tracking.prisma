@@ -25,6 +25,7 @@ model TimeEntry {
   member            Member                  @relation(fields: [memberId], references: [id], onDelete: Restrict)
   project           Project                 @relation(fields: [projectId], references: [id], onDelete: Restrict)
   projectAssignment ProjectAssignment       @relation(fields: [projectAssignmentId], references: [id], onDelete: Restrict)
+  hoursDeclaration  MonthlyHourDeclaration?
   snapshotLines     TimesheetSnapshotLine[]
 
   @@index([memberId, localDate])
@@ -33,6 +34,45 @@ model TimeEntry {
   @@index([lockedByTimesheetRevisionId])
   @@index([adminModifiedByMemberId, adminModifiedAt])
   @@map("time_entries")
+}
+
+/// One declared figure per member, project and month, materialized as exactly one `TimeEntry`
+/// (`source = DECLARED`, `localDate = periodStart`) so the timesheet and invoice chain keeps
+/// reading `TimeEntry` unchanged. This row carries what that entry cannot: the proof document,
+/// the one-number-per-month key, and its own audit trail. No `deletedAt` — that key has to be
+/// free again after a withdrawal, so withdrawing deletes this row and soft-deletes its entry.
+model MonthlyHourDeclaration {
+  id                      String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  memberId                String    @map("member_id") @db.Uuid
+  projectId               String    @map("project_id") @db.Uuid
+  projectAssignmentId     String    @map("project_assignment_id") @db.Uuid
+  periodStart             DateTime  @map("period_start") @db.Date
+  periodEnd               DateTime  @map("period_end") @db.Date
+  minutes                 Int
+  note                    String
+  timezone                String
+  proofDocumentId         String?   @unique @map("proof_document_id") @db.Uuid
+  timeEntryId             String    @unique @map("time_entry_id") @db.Uuid
+  createdAt               DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt               DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+  createdByMemberId       String?   @map("created_by_member_id") @db.Uuid
+  updatedByMemberId       String?   @map("updated_by_member_id") @db.Uuid
+  adminModifiedAt         DateTime? @map("admin_modified_at") @db.Timestamptz(6)
+  adminModifiedByMemberId String?   @map("admin_modified_by_member_id") @db.Uuid
+  adminModificationReason String?   @map("admin_modification_reason")
+
+  adminModifiedBy   Member?           @relation("HoursDeclarationAdminModifiedBy", fields: [adminModifiedByMemberId], references: [id], onDelete: SetNull)
+  member            Member            @relation(fields: [memberId], references: [id], onDelete: Restrict)
+  project           Project           @relation(fields: [projectId], references: [id], onDelete: Restrict)
+  projectAssignment ProjectAssignment @relation(fields: [projectAssignmentId], references: [id], onDelete: Restrict)
+  proofDocument     Document?         @relation(fields: [proofDocumentId], references: [id], onDelete: Restrict)
+  timeEntry         TimeEntry         @relation(fields: [timeEntryId], references: [id], onDelete: Restrict)
+
+  @@unique([memberId, projectId, periodStart])
+  @@index([memberId, periodStart])
+  @@index([projectId, periodStart])
+  @@index([projectAssignmentId, periodStart], map: "monthly_hour_declarations_assignment_period_idx")
+  @@map("monthly_hour_declarations")
 }
 
 model RunningTimer {

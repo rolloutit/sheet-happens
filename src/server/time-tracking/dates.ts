@@ -66,6 +66,16 @@ export function getMonthStart(date: Date) {
   return new Date(Date.UTC(normalized.getUTCFullYear(), normalized.getUTCMonth(), 1));
 }
 
+/**
+ * The last day of the month `date` falls in, which is the closed upper bound a month-scoped
+ * `localDate` query needs. Derived from day 0 of the following month so February, leap years and
+ * December all fall out of the same arithmetic.
+ */
+export function getMonthEnd(date: Date) {
+  const start = getMonthStart(date);
+  return new Date(Date.UTC(start.getUTCFullYear(), start.getUTCMonth() + 1, 0));
+}
+
 export function getMonthStartsInRange(start: Date, end: Date) {
   const cursor = getMonthStart(start);
   const last = getMonthStart(end);

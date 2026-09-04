@@ -266,6 +266,83 @@ describe("report snapshots", () => {
     });
   });
 
+  /**
+   * The disclosure §4 asks for, and the reason it needs its own query.
+   *
+   * By the time the report is assembled the omitted rows are gone — `buildReportTimeEntryWhere`
+   * removed them — so the count cannot be derived from `entries`. Counted from declarations rather
+   * than from declared assignments, because an assignment nobody declared against omitted nothing.
+   */
+  it("counts the members and projects whose declared hours it left out", async () => {
+    const db = {
+      timeEntry: { findMany: vi.fn().mockResolvedValue([]) },
+      project: { findMany: vi.fn().mockResolvedValue([]) },
+      projectGroup: { findMany: vi.fn().mockResolvedValue([]) },
+      member: { findMany: vi.fn().mockResolvedValue([]) },
+      monthlyHourDeclaration: {
+        findMany: vi.fn().mockResolvedValue([
+          { memberId: "member-1", projectId: "project-nimbus" },
+          { memberId: "member-2", projectId: "project-nimbus" },
+          // The same member twice: two months of one project is still one member, one project.
+          { memberId: "member-1", projectId: "project-nimbus" },
+        ]),
+      },
+    };
+
+    const snapshot = await getTimeEntryReportSnapshot(
+      { periodStart: dateOnly("2026-09-01"), periodEnd: dateOnly("2026-09-30") },
+      { db, now: () => new Date("2026-10-01T12:00:00.000Z") },
+    );
+
+    expect(snapshot.exclusions.declaredHours).toEqual({ memberCount: 2, projectCount: 1 });
+  });
+
+  /** A declaration covers a whole month, so it is omitted from a report over any part of it. */
+  it("counts a declaration whose month merely overlaps the report period", async () => {
+    const db = {
+      timeEntry: { findMany: vi.fn().mockResolvedValue([]) },
+      project: { findMany: vi.fn().mockResolvedValue([]) },
+      projectGroup: { findMany: vi.fn().mockResolvedValue([]) },
+      member: { findMany: vi.fn().mockResolvedValue([]) },
+      monthlyHourDeclaration: { findMany: vi.fn().mockResolvedValue([]) },
+    };
+
+    await getTimeEntryReportSnapshot(
+      {
+        periodStart: dateOnly("2026-09-07"),
+        periodEnd: dateOnly("2026-09-13"),
+        memberIds: ["member-1"],
+      },
+      { db, now: () => new Date("2026-10-01T12:00:00.000Z") },
+    );
+
+    expect(db.monthlyHourDeclaration.findMany).toHaveBeenCalledWith({
+      where: {
+        periodStart: { lte: dateOnly("2026-09-13") },
+        periodEnd: { gte: dateOnly("2026-09-07") },
+        memberId: { in: ["member-1"] },
+      },
+      select: { memberId: true, projectId: true },
+    });
+  });
+
+  it("discloses nothing when nothing was declared", async () => {
+    const db = {
+      timeEntry: { findMany: vi.fn().mockResolvedValue([]) },
+      project: { findMany: vi.fn().mockResolvedValue([]) },
+      projectGroup: { findMany: vi.fn().mockResolvedValue([]) },
+      member: { findMany: vi.fn().mockResolvedValue([]) },
+      monthlyHourDeclaration: { findMany: vi.fn().mockResolvedValue([]) },
+    };
+
+    const snapshot = await getTimeEntryReportSnapshot(
+      { periodStart: dateOnly("2026-09-01"), periodEnd: dateOnly("2026-09-30") },
+      { db, now: () => new Date("2026-10-01T12:00:00.000Z") },
+    );
+
+    expect(snapshot.exclusions.declaredHours).toEqual({ memberCount: 0, projectCount: 0 });
+  });
+
   it("builds project group filters against project memberships", () => {
     const filters = normalizeReportFilters({
       periodStart: dateOnly("2026-07-01"),
@@ -276,6 +353,7 @@ describe("report snapshots", () => {
 
     expect(buildReportTimeEntryWhere(filters)).toEqual({
       deletedAt: null,
+      source: { not: "DECLARED" },
       localDate: {
         gte: dateOnly("2026-07-01"),
         lte: dateOnly("2026-07-31"),
@@ -427,6 +505,7 @@ describe("report snapshots", () => {
       expect.objectContaining({
         where: {
           deletedAt: null,
+          source: { not: "DECLARED" },
           localDate: {
             gte: dateOnly("2026-07-01"),
             lte: dateOnly("2026-07-01"),

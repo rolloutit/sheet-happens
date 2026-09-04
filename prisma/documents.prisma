@@ -15,7 +15,8 @@ model Document {
   deletedByMemberId  String?        @map("deleted_by_member_id") @db.Uuid
 
   contractorInvoice ContractorInvoice?
-  owner             Member?            @relation("DocumentOwner", fields: [ownerMemberId], references: [id], onDelete: SetNull)
+  hoursDeclaration  MonthlyHourDeclaration?
+  owner             Member?                 @relation("DocumentOwner", fields: [ownerMemberId], references: [id], onDelete: SetNull)
   payslip           Payslip?
   reportExport      ReportExport?
 

@@ -114,6 +114,7 @@ Assignment:
 - Controls whether the member can record time on that project.
 - Has an active date range and active flag.
 - Owns project-level contractor rate overrides.
+- Owns the optional tracking-mode override.
 - Must remain historically available after removal.
 
 ## Internal Rates
@@ -151,11 +152,32 @@ month boundaries.
 
 ## Time Tracking
 
+Tracking mode:
+
+- Two ways a member's hours reach the system. `tracked` means Sheet Happens holds them entry by
+  entry — the grid, the form, the timer. `declared` means another company's system holds them, and
+  the member records one figure per project per month plus a proof PDF.
+- `members.default_tracking_mode` is the member-level default; `project_assignments.tracking_mode`
+  is a nullable override where `null` inherits the default. A hybrid member — some projects tracked
+  here, some declared — falls out of that for free.
+- `resolveTrackingMode(member, assignment)` is the single authority, the way
+  `resolveTimesheetLineRate` is for rates.
+- **Deliberately not effective-dated**, unlike rates. It governs what a member may create now, not
+  how past records are read, because a declaration and a time entry are distinct records, so
+  history is self-describing. Assignment-level history is still available where it matters, since an
+  assignment already has a valid-from/valid-to range.
+- Switching the mode is **refused** while an open month already holds data of the other kind, with
+  an error naming what has to be removed first — orphaning a month's entries or a declaration
+  silently is worse than refusing. An open month is any month that is not locked: for a contractor
+  that is every month without an active period lock, and for an employee, who has no lock at all,
+  every month holding data. A change to the member default only checks the assignments that inherit
+  it; one carrying an explicit override is unaffected.
+
 Time entry:
 
 - Belongs to one member, one project, and the assignment used at entry time.
 - Has a local work date, timezone, optional start/end instants, duration in minutes, description, and
-  input source: grid, form, or timer.
+  input source: grid, form, timer, or declared.
 - Project is mandatory.
 - The source records are not individually approved.
 - Warnings such as more than 24 hours/day, overlaps, future dates, or very long sessions are data

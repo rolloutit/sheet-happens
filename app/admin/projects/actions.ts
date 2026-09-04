@@ -2,10 +2,11 @@
 
 import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
-import { getTranslations } from "next-intl/server";
+import { getLocale, getTranslations } from "next-intl/server";
 import { z } from "zod";
 
 import { isDateValue } from "@/src/lib/date-values";
+import { formatList, formatMonthLabel } from "@/src/lib/formatting";
 
 import { requireAdminAppMemberForAction } from "@/src/server/auth/app-access";
 import { AuthenticationError, AuthorizationError } from "@/src/server/auth/session";
@@ -30,6 +31,7 @@ import {
   updateProject,
   type ProjectRequestMetadata,
 } from "@/src/server/projects";
+import { TrackingModeSwitchError, type TrackingModeConflict } from "@/src/server/time-tracking";
 import type {
   AddProjectToGroupActionInput,
   AssignProjectMemberActionInput,
@@ -47,6 +49,7 @@ import type {
   ProjectGroupProjectActionState,
   ProjectGroupProjectFormField,
   RemoveProjectFromGroupActionInput,
+  TrackingModeOverrideValue,
   UpdateProjectAssignmentActionInput,
   UpdateProjectGroupActionInput,
   UpdateProjectActionInput,
@@ -106,6 +109,11 @@ function createUpdateAssignmentFormSchema(t: AdminProjectsActionsTranslator) {
   return createAssignmentBaseSchema(t)
     .omit({
       memberId: true,
+    })
+    .extend({
+      // Only the edit form carries the override: a new assignment inherits the member default,
+      // and the admin overrides it from the same drawer straight afterwards.
+      trackingMode: z.enum(["", "TRACKED", "DECLARED"], t("validation.trackingModeInvalid")),
     })
     .superRefine(validateAssignmentDateRange(t));
 }
@@ -420,6 +428,7 @@ export async function updateProjectAssignmentAction(
       assignmentId: input.assignmentId,
       validFrom: parseRequiredDate(parsed.data.validFrom),
       validTo: parseOptionalDate(parsed.data.validTo),
+      trackingMode: parseTrackingModeOverride(parsed.data.trackingMode),
       actorMemberId: admin.id,
       requestMetadata: await getProjectRequestMetadata(),
     });
@@ -431,7 +440,7 @@ export async function updateProjectAssignmentAction(
       message: result.changed ? t("success.assignmentUpdated") : t("success.noAssignmentChanges"),
     };
   } catch (error) {
-    return mapProjectAssignmentActionError(error, t("errors.assignmentUpdateFailed"), t);
+    return await mapProjectAssignmentUpdateError(error, t);
   }
 }
 
@@ -756,6 +765,7 @@ function isProjectAssignmentFormField(field: unknown): field is ProjectAssignmen
     field === "validFrom" ||
     field === "validTo" ||
     field === "active" ||
+    field === "trackingMode" ||
     field === "notes"
   );
 }
@@ -812,6 +822,47 @@ function mapProjectGroupProjectActionError(
     status: result.status,
     message: result.message,
   };
+}
+
+function parseTrackingModeOverride(value: TrackingModeOverrideValue) {
+  return value === "" ? null : value;
+}
+
+/**
+ * `TrackingModeSwitchError` carries the offending months as data rather than a sentence, so the
+ * message is assembled here where `getTranslations` and the member's locale are available.
+ */
+async function mapProjectAssignmentUpdateError(
+  error: unknown,
+  t: AdminProjectsActionsTranslator,
+): Promise<ProjectAssignmentActionState> {
+  if (error instanceof TrackingModeSwitchError) {
+    return {
+      status: "error",
+      message: await formatTrackingModeSwitchError(error, t),
+      fieldErrors: {
+        trackingMode: t("errors.trackingModeSwitchField"),
+      },
+    };
+  }
+
+  return mapProjectAssignmentActionError(error, t("errors.assignmentUpdateFailed"), t);
+}
+
+async function formatTrackingModeSwitchError(
+  error: TrackingModeSwitchError,
+  t: AdminProjectsActionsTranslator,
+) {
+  const locale = await getLocale();
+  const months = formatList(listConflictMonths(error.conflicts, locale), locale);
+
+  return error.targetMode === "DECLARED"
+    ? t("errors.trackingModeSwitchToDeclared", { months })
+    : t("errors.trackingModeSwitchToTracked", { months });
+}
+
+function listConflictMonths(conflicts: TrackingModeConflict[], locale: string) {
+  return [...new Set(conflicts.map((conflict) => formatMonthLabel(conflict.periodStart, locale)))];
 }
 
 function mapProjectAssignmentActionError(

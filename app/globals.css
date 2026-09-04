@@ -430,7 +430,17 @@
   --sidebar-w-collapsed: 76px;
   --header-h: 64px;
 
+  /* Motion. `--ease-standard` is the default for everything; the rest exist because the `/time`
+     zoom axis needs a named vocabulary rather than a scatter of magic numbers
+     (`docs/time-view-zoom-axis.md` §9). These six are the source of truth: `app/time/motion.ts`
+     mirrors them as TypeScript literals because Motion animates outside CSS and cannot interpolate
+     a `var()`. Changing a value here means changing it there. */
   --ease-standard: cubic-bezier(0.2, 0.7, 0.2, 1);
+  --ease-exit: cubic-bezier(0.4, 0, 1, 1);
+  --duration-level: 260ms;
+  --duration-micro: 140ms;
+  --duration-bar: 300ms;
+  --stagger-entry: 18ms;
 }
 
 .dark {

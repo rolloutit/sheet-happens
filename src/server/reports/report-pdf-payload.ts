@@ -426,6 +426,24 @@ function buildFootnotes(snapshot: ReportSnapshot, t: ReportPdfTranslator) {
     }),
   ];
 
+  /*
+   * §4's disclosure, in the document rather than only on the screen it was exported from.
+   *
+   * A footnote and not a warning: nothing went wrong, and a reader outside the company has to be
+   * able to read it as a statement of scope. Counts only, never amounts. The sentence is built here
+   * because the Typst template reads a display-ready payload and contains no locale logic at all.
+   */
+  const declared = snapshot.exclusions?.declaredHours;
+
+  if (declared && (declared.memberCount > 0 || declared.projectCount > 0)) {
+    footnotes.push(
+      t("pdf.declaredHoursNote", {
+        members: declared.memberCount,
+        projects: declared.projectCount,
+      }),
+    );
+  }
+
   if (snapshot.mode === "INTERNAL" && snapshot.summary.missingRateLineCount > 0) {
     footnotes.push(t("pdf.missingRateNote", { marker: MISSING_VALUE }));
   }

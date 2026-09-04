@@ -35,8 +35,14 @@ Replace placeholder values before sharing a concrete test run:
 - `{PASSKEY_DEVICE}`: passkey-capable test device or browser profile.
 - `{TIME_TRACKING_WEEK_START}`: Monday date of a test week, formatted as `YYYY-MM-DD`.
 - `{TIME_TRACKING_PREVIOUS_WEEK_START}`: Monday date one week before `{TIME_TRACKING_WEEK_START}`.
+- `{TIME_TRACKING_MONTH_SPANNING_WEEK_START}`: Monday date of a week that spans two calendar
+  months, formatted as `YYYY-MM-DD` — for example `2026-08-31`, the week Aug 31 - Sep 6.
 - `{TIME_TRACKING_PROJECT_A}`: active project assigned to the time-tracking test user.
 - `{TIME_TRACKING_PROJECT_B}`: second active project assigned to the time-tracking test user.
+- `{DECLARED_HOURS}`: monthly hour figure used for declared-hours testing, for example `52`.
+- `{DECLARED_NOTE}`: note text describing what the declared hours cover.
+- `{HOURS_PROOF_PDF_FILE}`: local PDF file used as the declared-hours proof document.
+- `{HOURS_PROOF_REPLACEMENT_PDF_FILE}`: second local PDF file, for replacing a proof.
 - `{TIME_ENTRY_DESCRIPTION}`: description text used for test time entries.
 - `{TIME_ENTRY_UPDATED_DESCRIPTION}`: edited description text used for test time entries.
 - `{TIMESHEET_MONTH}`: contractor timesheet month formatted as `YYYY-MM`.
@@ -400,10 +406,14 @@ Expected result:
 Run these tests as `{CONTRACTOR_EMAIL}` or `{EMPLOYEE_EMAIL}`. The user must be active and assigned
 to `{TIME_TRACKING_PROJECT_A}` and `{TIME_TRACKING_PROJECT_B}` for `{TIME_TRACKING_WEEK_START}`.
 
+`/time` opens on the `Week` stop of the detail-level control unless the URL carries `?zoom=` or the
+browser remembers another level, so any scenario below that works in the grid selects `Grid` first.
+Clearing site data for the domain resets the remembered level.
+
 ### Weekly Grid Loads Assigned Projects
 
 1. Open `https://{DOMAIN_NAME}/time?week={TIME_TRACKING_WEEK_START}`.
-2. Confirm the weekly grid is visible.
+2. Select `Grid` on the detail-level control and confirm the weekly grid is visible.
 3. Confirm `{TIME_TRACKING_PROJECT_A}` and `{TIME_TRACKING_PROJECT_B}` are listed.
 4. Use the previous-week and next-week controls.
 5. Return to `{TIME_TRACKING_WEEK_START}`.
@@ -416,7 +426,7 @@ Expected result:
 
 ### Create, Edit, And Delete Duration Entry
 
-1. Open `https://{DOMAIN_NAME}/time?week={TIME_TRACKING_WEEK_START}`.
+1. Open `https://{DOMAIN_NAME}/time?week={TIME_TRACKING_WEEK_START}&zoom=grid`.
 2. Click an empty cell for `{TIME_TRACKING_PROJECT_A}` on a non-future day.
 3. Enter `{TIME_ENTRY_DESCRIPTION}`.
 4. Enter duration `3h 20m`.
@@ -455,13 +465,13 @@ Expected result:
 
 ### Timer Start And Stop
 
-1. Open `https://{DOMAIN_NAME}/time?week={TIME_TRACKING_WEEK_START}` and stay in `Grid` view.
+1. Open `https://{DOMAIN_NAME}/time?week={TIME_TRACKING_WEEK_START}&zoom=grid`.
 2. Click `New timer`.
 3. Enter `{TIME_ENTRY_DESCRIPTION}` in the description field.
 4. Choose `{TIME_TRACKING_PROJECT_A}`.
 5. Click `Start`.
-6. Confirm the running timer appears on the page and in the app header, in `Grid` view as well as
-   in `Day` view.
+6. Confirm the running timer appears on the page and in the app header, at the `Grid` stop as well
+   as at the `Day` and `Week` stops.
 7. Confirm `New timer` is now disabled, and that hovering it explains that the running timer has to
    be stopped first.
 8. Stop the timer from the card on the page.
@@ -528,7 +538,7 @@ Expected result:
 
 ### Duplicate Last Week Does Not Duplicate Existing Cells
 
-1. Open `https://{DOMAIN_NAME}/time?week={TIME_TRACKING_PREVIOUS_WEEK_START}`.
+1. Open `https://{DOMAIN_NAME}/time?week={TIME_TRACKING_PREVIOUS_WEEK_START}&zoom=grid`.
 2. Create entries for `{TIME_TRACKING_PROJECT_A}` and `{TIME_TRACKING_PROJECT_B}`.
 3. Open `https://{DOMAIN_NAME}/time?week={TIME_TRACKING_WEEK_START}`.
 4. Click `Duplicate last week`.
@@ -569,7 +579,7 @@ Expected result:
 
 ### Inactive Project Week
 
-1. Open `https://{DOMAIN_NAME}/time?week={TIME_TRACKING_WEEK_START}`.
+1. Open `https://{DOMAIN_NAME}/time?week={TIME_TRACKING_WEEK_START}&zoom=grid`.
 2. Choose an assigned project row with no entries in the week.
 3. Mark the project as inactive for the week.
 4. Undo the inactive mark.
@@ -595,6 +605,429 @@ Expected result:
 - Keyboard focus stays inside the open dialog.
 - `Escape` closes the dialog.
 - Focus returns to the control that opened the dialog.
+
+### Detail Level Axis And Its URL State
+
+1. Open `https://{DOMAIN_NAME}/time?week={TIME_TRACKING_WEEK_START}`.
+2. Confirm the detail-level control shows `Day`, `Week`, `Grid` and `Month`, with `Week` selected.
+3. Select a day other than today on the day strip above the level, then select `Day`, then `Grid`,
+   then `Week` again.
+4. Copy the address bar, open it in a new tab, and confirm the same level and the same selected day.
+5. Select `Grid`, reload the page, then open `https://{DOMAIN_NAME}/time` with no query string.
+6. Use the browser Back button.
+
+Expected result:
+
+- The chosen day stays chosen through every level change, in both directions.
+- The address bar gains `zoom=` and `day=` as they change, and the page never reloads or flashes
+  while they do — only the week controls reload the page.
+- A copied address opens on the level and day it names.
+- With no `zoom=` in the address, the page opens on the level last used in this browser.
+- Back moves between weeks and pages, not between levels.
+
+### Detail Level Keyboard Shortcuts
+
+1. Open `https://{DOMAIN_NAME}/time?week={TIME_TRACKING_WEEK_START}`.
+2. Press `1`, `2`, `3` and `4` in turn.
+3. Press `-` and then `+` three times each.
+4. Press `[` and `]` at the `Week` level, then again at the `Month` level.
+5. Press `t`.
+6. Select `Grid`, click into a grid cell, and type `3.5` without saving.
+7. Open `New entry`, and with the dialog open type `1`, `3` and `t` into the description field.
+
+Expected result:
+
+- `1`, `2`, `3` and `4` jump to `Day`, `Week`, `Grid` and `Month`.
+- `-` moves one level out and `+` one level in, and neither wraps around at either end.
+- `[` and `]` move one **week** back and forward at `Day`, `Week` and `Grid`, keeping the current
+  level and the same weekday — and one **month** back and forward at `Month`, landing on the 1st of
+  that month.
+- The hint beside the control says which of the two `[` and `]` will do at the level you are on.
+- `t` returns to this week with today selected, from any level.
+- Typing in a grid cell or in the entry dialog changes no level: the digits land in the field.
+- The arrow keys are not claimed by the level control anywhere on the page.
+
+### Week Level On Desktop And Mobile
+
+1. Open `https://{DOMAIN_NAME}/time?week={TIME_TRACKING_WEEK_START}&zoom=week` on a desktop browser.
+2. Confirm seven day columns, each with its day, its total, its entry cards, and an add affordance.
+3. Scroll the page and confirm the day headers stay visible while the columns scroll together.
+4. Add, edit and delete an entry from a column.
+5. Click a day column's header.
+6. Repeat step 1 on a phone-width viewport.
+7. Tap a collapsed day, then tap the open day's header again.
+8. Repeat the whole scenario in Hungarian and in both light and dark themes.
+
+Expected result:
+
+- A day with no entries says so rather than showing an empty column.
+- Entry cards show the project, the description, the duration, and a marker for a warning or an
+  administrator's correction.
+- Clicking a day header opens that day at the `Day` level, with that day selected.
+- On a phone the level is an accordion: the selected day is open, the others collapse to one row
+  with the day and its total. Tapping a collapsed day opens it; tapping the open one zooms in.
+- Every label is translated in both languages, and the level is legible in both themes.
+
+### Detail Level Focus And Scroll Continuity
+
+1. Open `https://{DOMAIN_NAME}/time?week={TIME_TRACKING_WEEK_START}&zoom=week`.
+2. Tab to a day chip on the day strip, then press `3` and `2`.
+3. Click a day column's header to zoom into that day.
+4. Scroll to the bottom of a dense week, then press `1`.
+5. Confirm the week total and the day total do not blank out or jump as levels change.
+
+Expected result:
+
+- Focus stays on the day chip across a level change, and never falls back to the top of the page.
+- Zooming in from a day header leaves focus on that day's chip rather than nowhere.
+- The selected day is scrolled into view rather than the page jumping to the top.
+- The day strip, the week total and the day total stay in place at every level.
+
+### Detail Level Motion And Capacity Bars
+
+1. Open `https://{DOMAIN_NAME}/time?week={TIME_TRACKING_WEEK_START}&zoom=week` on a desktop browser
+   and watch the page arrive.
+2. Press `3`, then `2`, then `1`, then `2`, watching what each column and card does in between.
+3. On the `Week` level, watch a dense day's column — one with eight or more entries — as it arrives.
+4. Look at the bar under each day chip on the day strip. Compare a day under 8 hours, a day at
+   roughly 8 hours, and a day over 8 hours, and hover each chip.
+5. Add an entry to a day so its total crosses 8 hours, and watch that day's bar.
+6. Repeat step 2 at a phone-width viewport.
+7. Turn on the operating system's reduce-motion setting — macOS _Settings → Accessibility → Display
+   → Reduce motion_, Windows _Settings → Accessibility → Visual effects → Animation effects_ — and
+   repeat steps 1-5. Use the real OS setting, not the browser devtools emulation.
+8. Turn the setting back off, and with a screen reader running (VoiceOver on macOS) press `1`, `2`
+   and `3` in turn and listen.
+9. Repeat the whole scenario in Hungarian and in both light and dark themes.
+
+Expected result:
+
+- **Nothing animates on the first paint.** The page arrives settled; no card flies in and no column
+  slides on load, at any level.
+- Changing level reads as one surface moving, not three screens swapping: a day's column visibly
+  becomes its grid column header and back, rather than one list fading out while another fades in.
+- The day strip itself never animates. It is the fixed point everything else moves against, and the
+  focus ring on a day chip stays exactly where it was through a level change.
+- Entry cards arriving after a level change fade up a few pixels, one shortly after the next.
+  A column with many entries finishes its cascade quickly — it must not drizzle in for the better
+  part of a second. Cards leaving fade out without moving.
+- **No number ever counts up or rolls.** The day total, a card's duration and a grid cell's value
+  change by swapping, never by tweening. Watch the day total specifically while pressing `1` and
+  `2` with different days selected.
+- The bar under each day chip fills in proportion to that day's hours against the 8-hour target.
+  Under target it is mint and partly filled; at or over target it is full and amber. It never
+  overflows its track, however many hours the day holds. Hovering a chip shows the two figures the
+  bar stands for, in the same format as the rest of the page.
+- A bar whose day crosses 8 hours animates from mint to amber rather than snapping.
+- On a phone the level change still works and nothing flies in from the corner of the screen — the
+  grid has no day headers at that width, so the week columns must simply appear rather than sliding
+  in from the top-left.
+- **With OS reduce-motion on, nothing moves.** Levels crossfade, cards appear and disappear without
+  sliding, and the capacity bars snap to their new width. This is the check most likely to be
+  missed: the app's global CSS reduce-motion rule does not reach this animation library, so a
+  failure here means the level transitions will fly for every user who has the setting on.
+- The screen reader announces the new level after each of `1`, `2` and `3` — the level's name, how
+  many days it covers, and the total for that span — in the language the page is in. After `4` it
+  names the month instead of a number of days.
+
+### Month Level And The Month It Shows
+
+Use a week that spans two months for this one — the month is taken from the selected day, not from
+the week, and a week inside a single month cannot tell the two apart.
+
+1. Open `https://{DOMAIN_NAME}/time?week={TIME_TRACKING_MONTH_SPANNING_WEEK_START}&zoom=month`.
+2. Read the period row above the day strip, and the band below it.
+3. On the day strip, select a day on the **earlier** month's side of the week, then a day on the
+   **later** month's side. Watch the period row, the total and the band each time.
+4. Confirm nothing spins, blanks out or reloads while you do — the address bar gains `day=` but the
+   page stays put.
+5. Press `[` and then `]`, then use the visible previous/next buttons beside the month name.
+6. Press `t`.
+7. Click a project row.
+8. Press `4` again, then `2`, and watch the day strip and the total across both changes.
+9. Repeat with a project you logged nothing against this month, and with a phone-width viewport.
+10. Repeat the whole scenario in Hungarian and in both light and dark themes.
+
+Expected result:
+
+- The period row names the month, steps by month, and its total reads `Month total`. It is the same
+  row that reads `Aug 31 - Sep 6, 2026` and `Week total` at the other three levels — one row, one
+  total, changing only its label and its number.
+- The month named is the month the **selected day** falls in. Moving the day strip across the month
+  boundary changes the month, its total and its rows, with no page load and no spinner.
+- The tracked band lists one row per project with the hours tracked against it in that month. A
+  project you logged nothing against this month is still listed, at `0 h`, and reads quieter than
+  the others.
+- If the member has any declared assignment, a second band follows it. A declared project with
+  nothing declared yet still gets a row, because that row is the form the figure is typed into.
+- The month total counts every hour the month holds, tracked **and** declared, so the rows across
+  both bands add up to it.
+- `[` and `]` and the visible previous/next buttons do exactly the same thing: one month back or
+  forward, landing on the 1st of that month with the week that contains it loaded. This is a real
+  page load, unlike moving within the visible week.
+- The `This month` pill appears only when the month shown is the current one; otherwise it is a
+  button that returns to today, and `t` does the same.
+- Clicking a project row returns to the `Grid` level on the week the day strip was already pointing
+  at — the whole week, not a view filtered to that project.
+- The day strip stays on screen at the month level, visibly quieter than at the other levels, and
+  stays clickable. The day total beside it stays in place and keeps reading the selected day.
+- Every label reads correctly in Hungarian and English, and the month name is in the page's own
+  language — `2026. szeptember`, not `September 2026`, in Hungarian.
+
+### Declare A Month's Hours On A Hybrid Project
+
+Set up: as an administrator, set **one** of a member's project assignments to declared hours and
+leave the rest tracked. Use `{TIME_TRACKING_PROJECT_B}` as the declared one. The month must hold no
+tracked time entries for that project — the write refuses one that does, which is the double-count
+guard and is checked separately below.
+
+Run this as the member.
+
+1. Open `https://{DOMAIN_NAME}/time` and read the line under the day strip.
+2. Follow the link in that line.
+3. Read the two bands and their headings.
+4. In the declared row, press Save without typing anything, then type `{DECLARED_HOURS}` into the
+   hours field and press Save again.
+5. Type `{DECLARED_NOTE}` into the note field and press Save.
+6. Read the month total in the period row, and add up the two bands yourself.
+7. Type `{DECLARED_HOURS}:30` into the hours field, then `{DECLARED_HOURS}h`, saving each time.
+8. Attach `{HOURS_PROOF_PDF_FILE}` in the proof slot, then open it with the view link.
+9. Replace it with `{HOURS_PROOF_REPLACEMENT_PDF_FILE}` and open it again.
+10. Press `1`, `2` and `3`, and look for the declared project in each level.
+11. Reload the page and confirm the figure, the note and the proof are still there.
+12. Repeat the whole scenario in Hungarian and in both light and dark themes, and at phone width.
+
+Expected result:
+
+- At Day, Week and Grid the declared project is **absent** from everything — the grid rows, the
+  "Assigned" chips, the recent chips, the entry form's project picker and the timer dialog — and one
+  line under the day strip explains why, naming the project and linking to the month. The line is
+  information, not a banner, and it disappears at the month level where the project is on screen.
+- The month has two bands: the tracked one first with a row per project, then the declared one.
+- Save is unavailable until **both** the hours and the note have a value. A figure with no note
+  cannot be saved at all, which is deliberate — the note becomes the entry's description, and a
+  timesheet cannot be submitted without one.
+- `52`, `52:30` and `52h` are all accepted and mean what they say, the same as everywhere else in
+  the app. What is stored is minutes; what is shown is your own duration format.
+- **The month total equals the tracked hours plus the declared hours**, and the rows add up to it.
+  Check this arithmetic explicitly — it is the number a month is closed against.
+- The proof shows its filename, size and upload time, opens as a PDF in a new tab, and can be
+  replaced while the month is unlocked. Replacing it leaves exactly one proof, not two.
+- Everything survives a reload, and every label reads correctly in both languages.
+
+### Declared Hours Refuse The Ways They Could Double-Count
+
+Run these as the member, on the declared project from the previous scenario.
+
+1. At the Grid level, try to type hours into a cell for the declared project.
+2. Press "New entry" and open the project picker.
+3. Press "New timer" and open its project picker.
+4. Press "Duplicate last week" in a week containing the 1st of a month that has a declared figure.
+5. As an administrator, try to switch the assignment back to tracked hours while the declaration
+   exists.
+6. As an administrator, set a **second** project to declared for a month that already holds ordinary
+   time entries for it, then have the member try to declare hours on it.
+
+Expected result:
+
+- The declared project is not offered anywhere at Day, Week or Grid, so steps 1-3 have nothing to
+  select. There is no cell to type into and no entry to create.
+- "Duplicate last week" copies the tracked entries and **not** the declared figure. The following
+  month does not gain a 52-hour entry.
+- The mode switch is refused with a message naming the month and what has to be removed first.
+- Declaring hours on a month that already holds tracked entries for that project is refused, with a
+  message saying to remove them first. This is the guard that keeps a month from counting the same
+  hours twice; it is the single most important refusal in this feature.
+
+### A Contractor Cannot Submit Declared Hours Without Their Proof
+
+Run this as `{CONTRACTOR_EMAIL}`, with one declared assignment in `{TIMESHEET_MONTH}`.
+
+1. Declare `{DECLARED_HOURS}` hours with a note, and do **not** attach a proof.
+2. Open `https://{DOMAIN_NAME}/timesheets?month={TIMESHEET_MONTH}` and submit the month.
+3. Attach `{HOURS_PROOF_PDF_FILE}` and submit again.
+4. Return to `https://{DOMAIN_NAME}/time` at the month level.
+5. Repeat with a declared assignment that has **no** hours declared against it at all.
+6. Repeat step 1 and 2 as an employee rather than a contractor.
+
+Expected result:
+
+- Submission is refused while a declared figure has no proof, and the message **names the projects**
+  whose proof is missing rather than saying only that something is wrong.
+- With the proof attached the month submits normally, and the declared figure is one line on the
+  timesheet with the right hours and the right amount.
+- After submission the declared row is read-only: the figure, the note and the proof are still
+  legible and the proof still opens, but nothing can be edited or replaced. That is the same
+  `PeriodLock` that freezes ordinary entries — no new mechanism.
+- A declared assignment with **no** hours does not block submission. That is a quiet month, not a
+  missing document.
+- An employee has no submission gate at all, so a missing proof stays a warning on their month and
+  never blocks anything. That asymmetry is deliberate.
+
+### An Administrator Reviews Declared Hours Against The Invoice
+
+Run this as `{ADMIN_EMAIL}`, on the submitted month from the previous scenario.
+
+1. Open `https://{DOMAIN_NAME}/admin/timesheets` and open that contractor's `{TIMESHEET_MONTH}`.
+2. Read the submitted snapshot, project by project.
+3. Read the date on the declared project's line.
+4. Open the proof from the review page.
+5. Compare the snapshot total with the uploaded invoice amount.
+
+Expected result:
+
+- The declared project is marked as declared monthly, so a reviewer is not left inferring it from
+  an entry count of one.
+- Its caption reads as hours declared for the month rather than as a count of entries.
+- **The line's date reads as the month and the word "declared", not `Sep 1`.** A reviewer must not
+  be able to take it for work done on the first of the month.
+- The proof opens as a PDF in a new tab from the review page, the same way the invoice does, and
+  the filename, size and upload time are shown beside it.
+- The declared hours are counted into the project total, the snapshot total and the figure the
+  invoice is checked against — exactly like tracked hours, because they are the same kind of record.
+
+### Reports Exclude Declared Hours And Say So
+
+Run this as `{ADMIN_EMAIL}`, with the hybrid project from the first scenario.
+
+1. Open `https://{DOMAIN_NAME}/admin/reports` for the month that holds the declared figure.
+2. Read the total hours and the line above the table.
+3. Filter to the declared project only.
+4. Filter to a member whose assignments are **all** declared.
+5. Export the report as a PDF, in both languages, and read the footnotes.
+6. Open the report row editor for a **tracked** entry dated the 1st of that month, change its
+   duration, and save.
+
+Expected result:
+
+- The report totals **only** the tracked hours. The declared figure is absent from the totals, the
+  charts, the table and the export.
+- A line above the report states that declared hours were excluded and how many members and
+  projects that covers. It gives **counts and never amounts**, and is worded so it can be read
+  outside the company.
+- A member with only declared assignments stays selectable in the filters, and the empty result says
+  _why_ it is empty rather than showing a blank table.
+- The exported PDF carries the same disclosure as a footnote, in the language the export was made
+  in.
+- **The tracked entry dated the 1st saves normally.** This is the one to watch: the declared figure
+  sits on that same date, and if it were counted into the day's total the edit would fail with a
+  24-hour message about hours nothing on the screen shows.
+
+### Declared Assignments Are Flagged Monthly, Not Weekly
+
+Run this as `{ADMIN_EMAIL}`.
+
+1. Open `https://{DOMAIN_NAME}/dashboard` mid-month, with a declared assignment that has nothing
+   declared for the **current** month but does for the previous one.
+2. Then remove the previous month's declaration and reload.
+3. Mark that project inactive for the current week, if the option is offered, and reload.
+4. Compare against a tracked assignment with nothing logged this week.
+
+Expected result:
+
+- A declared assignment with the **last ended month** declared is not flagged, whatever the current
+  week looks like. It must not nag for three weeks out of four while a member waits for month end.
+- A declared assignment with nothing declared for the last ended month **is** flagged.
+- An inactive-week marker is not offered for a declared assignment and does not excuse a missing
+  declaration if one exists — "nothing happened this week" says nothing about a monthly figure.
+- A tracked assignment keeps the weekly rhythm it has always had.
+
+### The Proof Upload Rejects What It Should
+
+Run this as the member with a declared assignment and hours already declared.
+
+1. Try to attach the proof **before** declaring any hours.
+2. Attach a PNG or a Word file.
+3. Rename a non-PDF file to end in `.pdf` and attach it.
+4. Attach a PDF larger than 10 MB.
+5. Attach a valid PDF and then open the proof link while signed in as a **different** member.
+
+Expected result:
+
+- The proof slot is not offered before hours are declared, and says so rather than being silently
+  absent.
+- A non-PDF is rejected by type, and a renamed non-PDF is rejected too — the check reads the file's
+  own bytes, not its name.
+- An oversized file gives a real message naming the size limit. It must not fail silently or with a
+  generic error, which is what would happen if it reached the 12 MB server-action limit instead.
+- Every rejection is reported on the row that asked for it, not on the whole month.
+- Another member's proof link is a 404, not a document.
+
+### A Declared-Only Member Sees Only The Month
+
+Set up: as an administrator, set every one of a member's project assignments to declared hours (or
+set the member default to declared and leave every assignment inheriting it).
+
+1. Sign in as that member and open `https://{DOMAIN_NAME}/time`.
+2. Then open `https://{DOMAIN_NAME}/time?zoom=week` and `?zoom=grid` directly.
+3. Press `1`, `2`, `3`, `-` and `+`.
+4. Press `[`, `]` and `t`.
+5. Read the bands and their headings.
+6. Declare `{DECLARED_HOURS}` hours with `{DECLARED_NOTE}` and attach `{HOURS_PROOF_PDF_FILE}`.
+7. Confirm with a hybrid member — some assignments tracked, some declared — that nothing changed
+   for them.
+
+Expected result:
+
+- There is **no** detail-level control at all: one stop is not a choice.
+- The page opens on the month, and a `zoom=` in the address naming any other level still opens on
+  the month.
+- No digit or step key reaches another level.
+- `[`, `]` and `t` still work, and the hint beside where the control would be lists only those.
+- **Both band headings are gone**, and so is the tracked band: with one kind of hours there is
+  nothing to distinguish, so this member sees one form and no labels above it. There is also no
+  handoff line, because there is nothing to hand off to.
+- The month total is the declared figure, and declaring, noting and proving work exactly as they do
+  for a hybrid member.
+- A hybrid member keeps all four stops, opens on the week as before, sees **both** bands with their
+  headings, and sees their tracked projects in the tracked band.
+
+### An Administrator Corrects A Declared Figure On A Member's Behalf
+
+Run this as `{ADMIN_EMAIL}`. Set up: one member with a declared assignment who has declared
+`{DECLARED_HOURS}` hours for the current month with `{HOURS_PROOF_PDF_FILE}` attached, one declared
+assignment that nobody has declared against yet, and — for step 8 — one contractor whose month is
+held by a submitted timesheet.
+
+1. Open `https://{DOMAIN_NAME}/admin/declared-hours` and read the three counters beside the month.
+2. Step to the previous month and back with the arrows, then use "This month". Watch the address bar,
+   and then press the browser's Back button twice.
+3. Open `https://{DOMAIN_NAME}/admin/declared-hours?month=1999-13-99` and then `?month=` with nothing
+   after it.
+4. Find the row that has nothing declared, and the one with a figure but no proof.
+5. On the row with a proof, open the proof from the table, then press Correct and open it again from
+   inside the drawer.
+6. In the drawer, clear the note and try to save. Put the note back, clear the reason and try again.
+7. Type `{DECLARED_HOURS}:30` into the hours field, give a reason, and save.
+8. Look at the locked contractor's row, at your own row if you have a declared assignment, and at a
+   row whose assignment has been ended so it no longer covers the month.
+9. Sign in as the corrected member: open their notifications, then `/time` at the month level.
+10. Sign in as a non-admin and open `https://{DOMAIN_NAME}/admin/declared-hours` directly.
+11. Repeat in Hungarian, in both light and dark themes, and at phone width.
+
+Expected result:
+
+- The page lists one row per member and declared project for the month — including rows with
+  **nothing declared yet**, which is the main thing it exists to make visible. The counters read
+  declared total, how many figures are missing, and how many figures have no proof.
+- The month lives in the address as `?month=YYYY-MM-01`, so a month is linkable and the browser's
+  Back button means "the previous month I was looking at". A nonsense or empty `month=` falls back to
+  the current month rather than erroring.
+- The proof opens as a PDF from both the table and the drawer. An admin can **open** a proof but
+  never upload or replace one — that stays with the member, and the note under the table says so.
+- Save is unavailable until the hours, the note **and** the reason all have a value. The reason is
+  mandatory: it is what the member reads in their notification.
+- Hours accept `52`, `52:30` and `52h`, the same grammar the member's own row takes. A figure above
+  24 h × the days in that month warns and still saves.
+- Three rows offer no correction, each saying **why** rather than showing a dead button: a locked
+  month, your own declaration (correct it on your own `/time`, so the reason is not lost), and an
+  assignment that no longer covers the month.
+- The corrected member gets a time-entry admin-modification notification carrying the reason, and
+  their own month level shows the new figure. The audit log has the correction with before/after
+  values.
+- A non-admin cannot reach the page at all.
+- Reports still exclude the corrected hours, and the contractor's timesheet still includes them —
+  a correction changes the figure, never which chain it belongs to.
 
 ## Contractor Timesheets
 
@@ -3169,3 +3602,38 @@ Expected result:
 - Admin list filters read as a single toolbar row with removable chips for whatever is applied.
 - A running timer sits in the app header on every signed-in page and at every width, and can be
   stopped from there; starting one happens in an overlay opened from the time-tracking toolbar.
+- `/time` has one detail-level control with four stops, the level and the selected day live in the
+  address bar, and the selected day survives every level change in both directions.
+- At the month level the period row above the day strip names the month, steps by month and reads
+  `Month total`, and the visible previous/next buttons and `[` / `]` never disagree about whether a
+  period is a week or a month.
+- The month shown follows the selected day rather than the week, so moving the day strip across a
+  month boundary changes the month with no page load.
+- A member whose every assignment is declared monthly gets the month and no level control at all.
+- A `/time` level change animates as one surface moving, nothing animates on first paint, no figure
+  ever tweens, and with the operating system's reduce-motion setting on nothing moves at all.
+- Each assignment in a project's drawer shows its hours-tracking mode beside its rate source, and
+  says whether the mode is inherited from the member default or set for that assignment only.
+- The per-assignment mode control offers an explicit inherit option that names the member default,
+  so an admin can tell a deliberate override from an inherited setting.
+- The member-level default is set on the People page, not from inside one project, and both controls
+  state their scope: the member default applies to every project, the override to one assignment.
+- Changing the member default leaves any assignment carrying its own override exactly as it was.
+- Switching a mode is refused while an unlocked month still holds hours of the other kind, and the
+  message names the months - for the member default, the projects too - that have to be cleared
+  first. A month already locked by a submitted timesheet revision does not block the switch.
+- Every one of those labels, hints and refusal messages reads correctly in Hungarian and English.
+- A declared project is absent from Day, Week and Grid entirely, and one line under the day strip
+  names it and links to the month rather than leaving the absence unexplained.
+- A month's declared figure needs both a number and a note before it can be saved, and the month
+  total equals the tracked hours plus the declared ones.
+- Declaring hours is refused for a month that already holds tracked entries for that project, and
+  ordinary time entry is refused for a declared project — the double count is blocked from both
+  sides.
+- A contractor cannot submit a month while a declared figure has no proof, and the refusal names
+  the projects. An employee is never blocked, only warned.
+- The admin review marks a declared project as declared, dates its line as the month rather than the
+  1st, and opens its proof beside the invoice.
+- Reports and exports total only the tracked hours, and state how many members and projects of
+  declared hours they left out — counts, never amounts.
+- Editing a tracked report line dated the 1st of a month that holds a declared figure still saves.

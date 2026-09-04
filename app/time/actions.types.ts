@@ -78,3 +78,16 @@ export type SaveTimeEntryDraftActionInput = {
 export type ClearTimeEntryDraftActionInput = {
   draftKey: string;
 };
+
+export type SaveMonthlyHourDeclarationActionInput = {
+  projectId: string;
+  /** Always a `YYYY-MM-01` month start — L4 never names any other day. */
+  periodStart: string;
+  minutes: number;
+  note: string;
+};
+
+export type DeleteMonthlyHourDeclarationActionInput = {
+  projectId: string;
+  periodStart: string;
+};

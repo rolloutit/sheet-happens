@@ -7,6 +7,13 @@ import {
   normalizeTimeZone,
 } from "@/src/lib/member-preferences";
 import { prisma } from "@/src/server/db/client";
+import {
+  assertTrackingModeSwitchAllowed,
+  findInheritingAssignmentIds,
+  type TrackingMode,
+  type TrackingModeAssignmentClient,
+  type TrackingModeConflictClient,
+} from "@/src/server/time-tracking";
 
 export type UpdateMemberDetailsInput = {
   memberId: string;
@@ -17,6 +24,7 @@ export type UpdateMemberDetailsInput = {
   defaultCurrencyCode: string;
   timezone: string;
   locale: string;
+  defaultTrackingMode: TrackingMode;
 };
 
 type EditableMemberDetails = Omit<UpdateMemberDetailsInput, "memberId" | "actorMemberId">;
@@ -25,51 +33,54 @@ type UpdateMemberDetailsDb = {
   $transaction<T>(callback: (tx: UpdateMemberDetailsTransaction) => Promise<T>): Promise<T>;
 };
 
-type UpdateMemberDetailsTransaction = {
-  member: {
-    findUnique(args: {
-      where: { id: string };
-      select: {
-        id: true;
-        firstName: true;
-        lastName: true;
-        displayName: true;
-        defaultCurrencyCode: true;
-        timezone: true;
-        locale: true;
-        status: true;
-        deletedAt: true;
-      };
-    }): Promise<{
-      id: string;
-      firstName: string;
-      lastName: string;
-      displayName: string;
-      defaultCurrencyCode: string;
-      timezone: string;
-      locale: string;
-      status: string;
-      deletedAt: Date | null;
-    } | null>;
-    update(args: {
-      where: { id: string };
-      data: Partial<EditableMemberDetails>;
-      select: { id: true };
-    }): Promise<{ id: string }>;
+type UpdateMemberDetailsTransaction = TrackingModeAssignmentClient &
+  TrackingModeConflictClient & {
+    member: {
+      findUnique(args: {
+        where: { id: string };
+        select: {
+          id: true;
+          firstName: true;
+          lastName: true;
+          displayName: true;
+          defaultCurrencyCode: true;
+          timezone: true;
+          locale: true;
+          defaultTrackingMode: true;
+          status: true;
+          deletedAt: true;
+        };
+      }): Promise<{
+        id: string;
+        firstName: string;
+        lastName: string;
+        displayName: string;
+        defaultCurrencyCode: string;
+        timezone: string;
+        locale: string;
+        defaultTrackingMode: TrackingMode;
+        status: string;
+        deletedAt: Date | null;
+      } | null>;
+      update(args: {
+        where: { id: string };
+        data: Partial<EditableMemberDetails>;
+        select: { id: true };
+      }): Promise<{ id: string }>;
+    };
+    auditLog: {
+      create(args: {
+        data: {
+          actorMemberId: string;
+          action: string;
+          targetType: string;
+          targetId: string;
+          before: Record<string, unknown>;
+          after: Record<string, unknown>;
+        };
+      }): Promise<unknown>;
+    };
   };
-  auditLog: {
-    create(args: {
-      data: {
-        actorMemberId: string;
-        action: string;
-        targetType: string;
-        targetId: string;
-        before: Record<string, unknown>;
-        after: Record<string, unknown>;
-      };
-    }): Promise<unknown>;
-  };
-};
 
 export type UpdateMemberDetailsDeps = {
   db?: UpdateMemberDetailsDb;
@@ -102,6 +113,7 @@ export async function updateMemberDetails(
         defaultCurrencyCode: true,
         timezone: true,
         locale: true,
+        defaultTrackingMode: true,
         status: true,
         deletedAt: true,
       },
@@ -122,6 +134,16 @@ export async function updateMemberDetails(
         memberId: member.id,
         changed: false,
       };
+    }
+
+    if (changes.after.defaultTrackingMode) {
+      // Only assignments that inherit the default move with it; one carrying an explicit override
+      // is unaffected and must not block the switch.
+      await assertTrackingModeSwitchAllowed(tx, {
+        memberId: member.id,
+        assignmentIds: await findInheritingAssignmentIds(tx, member.id),
+        targetMode: changes.after.defaultTrackingMode,
+      });
     }
 
     await tx.member.update({
@@ -160,6 +182,7 @@ function getNextDetails(input: UpdateMemberDetailsInput): EditableMemberDetails 
     defaultCurrencyCode: normalizeCurrencyCode(input.defaultCurrencyCode),
     timezone: normalizeTimeZone(input.timezone),
     locale: normalizeLocale(input.locale),
+    defaultTrackingMode: input.defaultTrackingMode,
   } satisfies EditableMemberDetails;
 
   if (
@@ -180,14 +203,26 @@ function getChangedDetails(current: EditableMemberDetails, next: EditableMemberD
   const after: Partial<EditableMemberDetails> = {};
 
   for (const key of Object.keys(next) as Array<keyof EditableMemberDetails>) {
-    if (current[key] !== next[key]) {
-      before[key] = current[key];
-      after[key] = next[key];
-    }
+    collectChangedDetail(key, current, next, before, after);
   }
 
   return {
     before,
     after,
   };
+}
+
+// A generic per-key step, so a field that is not a `string` — `defaultTrackingMode` — still
+// narrows on assignment instead of widening the whole record to `string`.
+function collectChangedDetail<K extends keyof EditableMemberDetails>(
+  key: K,
+  current: EditableMemberDetails,
+  next: EditableMemberDetails,
+  before: Record<string, unknown>,
+  after: Partial<EditableMemberDetails>,
+) {
+  if (current[key] === next[key]) return;
+
+  before[key] = current[key];
+  after[key] = next[key];
 }

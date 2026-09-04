@@ -180,11 +180,105 @@ const storyCases: StoryVisualCase[] = [
     projects: ["desktop", "mobile"],
   },
   {
-    id: "sheet-daydetailpanel--default",
-    slug: "day-detail-panel-dark",
+    id: "sheet-weekagenda--typical-week",
+    slug: "week-agenda-dark",
     theme: "dark",
     locale: "en",
     projects: ["desktop"],
+  },
+  {
+    id: "sheet-weekagenda--typical-week",
+    slug: "week-agenda-light",
+    theme: "light",
+    locale: "hu",
+    projects: ["desktop"],
+  },
+  {
+    id: "sheet-weekagenda--mobile-accordion",
+    slug: "week-agenda-mobile-dark",
+    theme: "dark",
+    locale: "en",
+    projects: ["mobile"],
+  },
+  {
+    id: "sheet-dayagenda--default",
+    slug: "day-agenda-dark",
+    theme: "dark",
+    locale: "en",
+    projects: ["desktop"],
+  },
+  /**
+   * The month level. `ForgottenProject` rather than `TrackedBand` because it carries both row
+   * states — a project with hours and a live one with none — and because `TrackedBand` has a `play`
+   * function that Storybook runs on load, which would leave a focus ring inside the baseline.
+   */
+  {
+    id: "sheet-monthoverview--forgotten-project",
+    slug: "month-overview-dark",
+    theme: "dark",
+    locale: "en",
+    projects: ["desktop"],
+  },
+  {
+    id: "sheet-monthoverview--forgotten-project",
+    slug: "month-overview-light",
+    theme: "light",
+    locale: "hu",
+    projects: ["desktop"],
+  },
+  {
+    id: "sheet-monthoverview--empty-month",
+    slug: "month-overview-empty-dark",
+    theme: "dark",
+    locale: "en",
+    projects: ["desktop"],
+  },
+  {
+    id: "sheet-monthoverview--mobile-rows",
+    slug: "month-overview-mobile-dark",
+    theme: "dark",
+    locale: "en",
+    projects: ["mobile"],
+  },
+  /**
+   * The three L4 member shapes, which is what §16 asks the baselines to cover. Hybrid is both
+   * bands with their headings; declared-only is the one case that drops both headings and the
+   * tracked band entirely; locked is the read-only form a submitted month leaves behind.
+   */
+  {
+    id: "sheet-monthoverview--hybrid-month",
+    slug: "month-overview-hybrid-dark",
+    theme: "dark",
+    locale: "en",
+    projects: ["desktop"],
+  },
+  {
+    id: "sheet-monthoverview--hybrid-month-light",
+    slug: "month-overview-hybrid-light",
+    theme: "light",
+    locale: "hu",
+    projects: ["desktop"],
+  },
+  {
+    id: "sheet-monthoverview--declared-only",
+    slug: "month-overview-declared-only-dark",
+    theme: "dark",
+    locale: "en",
+    projects: ["desktop"],
+  },
+  {
+    id: "sheet-monthoverview--declared-locked",
+    slug: "month-overview-declared-locked-dark",
+    theme: "dark",
+    locale: "en",
+    projects: ["desktop"],
+  },
+  {
+    id: "sheet-monthoverview--hybrid-month-mobile",
+    slug: "month-overview-hybrid-mobile-dark",
+    theme: "dark",
+    locale: "en",
+    projects: ["mobile"],
   },
   {
     id: "sheet-timerstartdialog--open",
