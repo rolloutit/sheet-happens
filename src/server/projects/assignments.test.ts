@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 
+import { TrackingModeSwitchError, type TrackingMode } from "@/src/server/time-tracking";
 import {
   assignMemberToProject,
   bulkAssignMembersToProjects,
@@ -24,6 +25,7 @@ type TestMember = {
   displayName: string;
   status: "INVITED" | "ACTIVE" | "INACTIVE" | "DELETED";
   currentProfile: "CONTRACTOR" | "EMPLOYEE";
+  defaultTrackingMode: TrackingMode;
   deletedAt: Date | null;
 };
 
@@ -34,7 +36,11 @@ type TestAssignment = {
   active: boolean;
   validFrom: Date;
   validTo: Date | null;
+  trackingMode: TrackingMode | null;
   notes: string | null;
+  member: {
+    defaultTrackingMode: TrackingMode;
+  };
 };
 
 const baseProject: TestProject = {
@@ -51,6 +57,7 @@ const invitedMember: TestMember = {
   displayName: "Contractor Example",
   status: "INVITED",
   currentProfile: "CONTRACTOR",
+  defaultTrackingMode: "TRACKED",
   deletedAt: null,
 };
 
@@ -61,7 +68,11 @@ const baseAssignment: TestAssignment = {
   active: true,
   validFrom: new Date("2026-07-01T00:00:00.000Z"),
   validTo: null,
+  trackingMode: null,
   notes: null,
+  member: {
+    defaultTrackingMode: "TRACKED",
+  },
 };
 
 function createAssignmentDb(
@@ -77,6 +88,9 @@ function createAssignmentDb(
         member: TestMember;
       }
     >;
+    entries?: Array<{ projectId: string; localDate: Date; project: { name: string } }>;
+    declarations?: Array<{ projectId: string; periodStart: Date; project: { name: string } }>;
+    locks?: Array<{ periodStart: Date }>;
   } = {},
 ) {
   const tx = {
@@ -99,6 +113,15 @@ function createAssignmentDb(
     },
     auditLog: {
       create: vi.fn().mockResolvedValue({ id: "audit-1" }),
+    },
+    timeEntry: {
+      findMany: vi.fn().mockResolvedValue(overrides.entries ?? []),
+    },
+    monthlyHourDeclaration: {
+      findMany: vi.fn().mockResolvedValue(overrides.declarations ?? []),
+    },
+    periodLock: {
+      findMany: vi.fn().mockResolvedValue(overrides.locks ?? []),
     },
   };
 
@@ -174,6 +197,10 @@ describe("project assignment services", () => {
         active: true,
         validFrom: "2026-07-01",
         validTo: "2026-12-31",
+        trackingMode: null,
+        memberDefaultTrackingMode: "TRACKED",
+        effectiveTrackingMode: "TRACKED",
+        trackingModeSource: "MEMBER_DEFAULT",
         notes: "Main client work",
       },
     ]);
@@ -399,6 +426,130 @@ describe("project assignment services", () => {
         }),
       }),
     );
+  });
+
+  it("stores a tracking mode override and leaves the member default alone", async () => {
+    const { db, tx } = createAssignmentDb();
+
+    await updateProjectAssignment(
+      {
+        assignmentId: "assignment-1",
+        validFrom: new Date("2026-07-01T00:00:00.000Z"),
+        validTo: null,
+        active: true,
+        trackingMode: "DECLARED",
+        notes: null,
+        actorMemberId: "admin-1",
+      },
+      { db },
+    );
+
+    expect(tx.projectAssignment.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          trackingMode: "DECLARED",
+        }),
+      }),
+    );
+  });
+
+  it("refuses a switch to declared while an open month still holds tracked entries", async () => {
+    const { db, tx } = createAssignmentDb({
+      entries: [
+        {
+          projectId: "project-1",
+          localDate: new Date("2026-09-03T00:00:00.000Z"),
+          project: { name: "Nimbus" },
+        },
+      ],
+    });
+
+    const error = await updateProjectAssignment(
+      {
+        assignmentId: "assignment-1",
+        validFrom: new Date("2026-07-01T00:00:00.000Z"),
+        validTo: null,
+        active: true,
+        trackingMode: "DECLARED",
+        notes: null,
+        actorMemberId: "admin-1",
+      },
+      { db },
+    ).catch((thrown: unknown) => thrown);
+
+    expect(error).toBeInstanceOf(TrackingModeSwitchError);
+    expect((error as TrackingModeSwitchError).conflicts).toEqual([
+      {
+        kind: "TRACKED_ENTRIES",
+        projectId: "project-1",
+        projectName: "Nimbus",
+        periodStart: "2026-09-01",
+        count: 1,
+      },
+    ]);
+    expect(tx.projectAssignment.update).not.toHaveBeenCalled();
+    expect(tx.auditLog.create).not.toHaveBeenCalled();
+  });
+
+  it("allows a switch when the month holding entries is already locked", async () => {
+    const { db, tx } = createAssignmentDb({
+      entries: [
+        {
+          projectId: "project-1",
+          localDate: new Date("2026-08-11T00:00:00.000Z"),
+          project: { name: "Nimbus" },
+        },
+      ],
+      locks: [{ periodStart: new Date("2026-08-01T00:00:00.000Z") }],
+    });
+
+    await expect(
+      updateProjectAssignment(
+        {
+          assignmentId: "assignment-1",
+          validFrom: new Date("2026-07-01T00:00:00.000Z"),
+          validTo: null,
+          active: true,
+          trackingMode: "DECLARED",
+          notes: null,
+          actorMemberId: "admin-1",
+        },
+        { db },
+      ),
+    ).resolves.toEqual({ assignmentId: "assignment-1", changed: true });
+    expect(tx.projectAssignment.update).toHaveBeenCalled();
+  });
+
+  /**
+   * Pinning the inherited mode as an explicit override changes provenance, not what the member may
+   * record, so the guard must not read it as a switch and refuse it.
+   */
+  it("does not run the guard when only the override provenance changes", async () => {
+    const { db, tx } = createAssignmentDb({
+      entries: [
+        {
+          projectId: "project-1",
+          localDate: new Date("2026-09-03T00:00:00.000Z"),
+          project: { name: "Nimbus" },
+        },
+      ],
+    });
+
+    await expect(
+      updateProjectAssignment(
+        {
+          assignmentId: "assignment-1",
+          validFrom: new Date("2026-07-01T00:00:00.000Z"),
+          validTo: null,
+          active: true,
+          trackingMode: "TRACKED",
+          notes: null,
+          actorMemberId: "admin-1",
+        },
+        { db },
+      ),
+    ).resolves.toEqual({ assignmentId: "assignment-1", changed: true });
+    expect(tx.timeEntry.findMany).not.toHaveBeenCalled();
   });
 
   it("closes assignments by setting an end date and inactive state", async () => {

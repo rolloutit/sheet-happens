@@ -36,6 +36,26 @@ export type {
 } from "./time-entries";
 export { getShellRunningTimer } from "./shell-timer";
 export {
+  assertTrackingModeSwitchAllowed,
+  collectTrackingModeConflicts,
+  findInheritingAssignmentIds,
+  findTrackingModeConflicts,
+  resolveTrackingMode,
+  TrackingModeSwitchError,
+} from "./tracking-mode";
+export type {
+  ResolvedTrackingMode,
+  TrackingMode,
+  TrackingModeAssignment,
+  TrackingModeAssignmentClient,
+  TrackingModeConflict,
+  TrackingModeConflictClient,
+  TrackingModeConflictKind,
+  TrackingModeMember,
+  TrackingModeMonthData,
+  TrackingModeSource,
+} from "./tracking-mode";
+export {
   addDays,
   buildWeekDays,
   formatDateOnly,

@@ -1115,7 +1115,9 @@
       "timezone": "Timezone",
       "locale": "Locale",
       "displayName": "Display name",
-      "displayNameHint": "Leave empty to use first and last name."
+      "displayNameHint": "Leave empty to use first and last name.",
+      "defaultTrackingMode": "Hours tracking default",
+      "defaultTrackingModeHint": "Applies to every project this member is assigned to. A single assignment can override it on the Projects page."
     },
     "profiles": {
       "contractor": "Contractor",
@@ -1194,6 +1196,10 @@
       "reason": "Reason",
       "reasonHint": "Add a reason for this profile change."
     },
+    "trackingMode": {
+      "tracked": "Tracked here",
+      "declared": "Declared monthly"
+    },
     "discardDialog": {
       "title": "Discard this invitation?",
       "description": "The details you filled in will not be saved.",
@@ -1235,7 +1241,11 @@
       "invitationFailed": "The invitation could not be sent. Try again later.",
       "memberUpdateFailed": "The member details could not be updated. Try again later.",
       "profileTransitionFailed": "The profile transition could not be scheduled. Try again later.",
-      "memberActionFailed": "The member action could not be completed. Try again later."
+      "memberActionFailed": "The member action could not be completed. Try again later.",
+      "trackingModeSwitchField": "One of this member's months still holds hours of the other kind.",
+      "trackingModeConflictItem": "{project} ({month})",
+      "trackingModeSwitchToDeclared": "The default cannot switch to declared monthly hours while {items} still hold time entries. Remove them first, or override the affected assignments on the Projects page.",
+      "trackingModeSwitchToTracked": "The default cannot switch to hours tracked here while {items} still hold a monthly declaration. Remove the declarations first, or override the affected assignments on the Projects page."
     },
     "validation": {
       "validEmail": "Enter a valid email address.",
@@ -1251,7 +1261,8 @@
       "memberIdMissing": "Member id is missing.",
       "displayNameMax": "Display name must be 120 characters or less.",
       "validEffectiveDate": "Choose a valid effective date.",
-      "reasonMax": "Reason must be 500 characters or less."
+      "reasonMax": "Reason must be 500 characters or less.",
+      "validTrackingMode": "Choose how this member records hours."
     }
   },
   "AdminProjects": {
@@ -1506,6 +1517,17 @@
       "scheduledOverrideDetail": "{count, plural, one {# override period scheduled.} other {# override periods scheduled.}}",
       "contractorCentralRate": "Contractor assignment currently uses the member central rate."
     },
+    "trackingMode": {
+      "tracked": "Tracked here",
+      "declared": "Declared monthly",
+      "trackedOption": "Tracked here",
+      "declaredOption": "Declared monthly",
+      "inherit": "Inherit member default ({mode})",
+      "inheritedDetail": "Hours are {mode} by the member default.",
+      "overriddenDetail": "Hours are {mode} for this assignment only.",
+      "overrideLabel": "Hours tracking",
+      "overrideHint": "Applies to this assignment only. The member default is set on the People page."
+    },
     "discardDialog": {
       "title": "Discard this project?",
       "description": "The details you filled in will not be saved.",
@@ -1561,7 +1583,10 @@
       "projectSlugExists": "A project with this slug already exists.",
       "projectLinkFailed": "The project could not be linked to the current admin member. Refresh the page and try again.",
       "projectsUnavailable": "Projects are temporarily unavailable. Try again later or contact support.",
-      "projectMissing": "This project no longer exists or was already archived."
+      "projectMissing": "This project no longer exists or was already archived.",
+      "trackingModeSwitchField": "This month still holds hours of the other kind.",
+      "trackingModeSwitchToDeclared": "This assignment cannot switch to declared monthly hours while {months} still hold time entries here. Remove them first, or switch from the following month.",
+      "trackingModeSwitchToTracked": "This assignment cannot switch to hours tracked here while {months} still hold a monthly declaration. Remove the declaration first, or switch from the following month."
     },
     "validation": {
       "validDate": "Choose a valid date.",
@@ -1583,7 +1608,8 @@
       "groupNameRequired": "Group name is required.",
       "descriptionMax": "Description must be 1000 characters or less.",
       "projectGroupIdMissing": "Project group id is missing.",
-      "chooseProject": "Choose a project."
+      "chooseProject": "Choose a project.",
+      "trackingModeInvalid": "Choose how this assignment records hours."
     }
   },
   "AdminRates": {
@@ -2101,7 +2127,8 @@
       "form": "Form",
       "timer": "Timer",
       "timed": "Timed",
-      "hours": "Hours"
+      "hours": "Hours",
+      "declared": "Declared"
     },
     "fieldErrors": {
       "durationPositive": "Duration must be greater than zero.",

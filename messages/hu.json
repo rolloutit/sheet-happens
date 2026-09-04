@@ -1115,7 +1115,9 @@
       "timezone": "Időzóna",
       "locale": "Nyelv",
       "displayName": "Megjelenített név",
-      "displayNameHint": "Hagyd üresen a vezetéknév és keresztnév használatához."
+      "displayNameHint": "Hagyd üresen a vezetéknév és keresztnév használatához.",
+      "defaultTrackingMode": "Óranyilvántartás alapértelmezése",
+      "defaultTrackingModeHint": "A tag minden projektjére érvényes. Egy-egy hozzárendelés a Projektek oldalon felülírhatja."
     },
     "profiles": {
       "contractor": "Kontraktor",
@@ -1194,6 +1196,10 @@
       "reason": "Indoklás",
       "reasonHint": "Adj meg indoklást ehhez a profilváltáshoz."
     },
+    "trackingMode": {
+      "tracked": "Itt rögzített",
+      "declared": "Havi bevallás"
+    },
     "discardDialog": {
       "title": "Elveted ezt a meghívót?",
       "description": "A kitöltött adatok nem lesznek elmentve.",
@@ -1235,7 +1241,11 @@
       "invitationFailed": "A meghívót nem sikerült elküldeni. Próbáld újra később.",
       "memberUpdateFailed": "A tag adatait nem sikerült frissíteni. Próbáld újra később.",
       "profileTransitionFailed": "A profilváltást nem sikerült ütemezni. Próbáld újra később.",
-      "memberActionFailed": "A tagműveletet nem sikerült végrehajtani. Próbáld újra később."
+      "memberActionFailed": "A tagműveletet nem sikerült végrehajtani. Próbáld újra később.",
+      "trackingModeSwitchField": "A tag egyik hónapjában még más típusú órák szerepelnek.",
+      "trackingModeConflictItem": "{project} ({month})",
+      "trackingModeSwitchToDeclared": "Az alapértelmezés nem állítható havi bevallásra, amíg {items} még időbejegyzéseket tartalmaz. Először töröld ezeket, vagy írd felül az érintett hozzárendeléseket a Projektek oldalon.",
+      "trackingModeSwitchToTracked": "Az alapértelmezés nem állítható itt rögzített órákra, amíg {items} még havi bevallást tartalmaz. Először töröld a bevallásokat, vagy írd felül az érintett hozzárendeléseket a Projektek oldalon."
     },
     "validation": {
       "validEmail": "Adj meg érvényes email címet.",
@@ -1251,7 +1261,8 @@
       "memberIdMissing": "Hiányzik a tag azonosítója.",
       "displayNameMax": "A megjelenített név legfeljebb 120 karakter lehet.",
       "validEffectiveDate": "Válassz érvényes hatálybalépési dátumot.",
-      "reasonMax": "Az indoklás legfeljebb 500 karakter lehet."
+      "reasonMax": "Az indoklás legfeljebb 500 karakter lehet.",
+      "validTrackingMode": "Válaszd ki, hogyan rögzíti az órákat ez a tag."
     }
   },
   "AdminProjects": {
@@ -1506,6 +1517,17 @@
       "scheduledOverrideDetail": "{count, plural, one {# felülírási időszak ütemezve.} other {# felülírási időszak ütemezve.}}",
       "contractorCentralRate": "A kontraktor-hozzárendelés jelenleg a tag központi óradíját használja."
     },
+    "trackingMode": {
+      "tracked": "Itt rögzített",
+      "declared": "Havi bevallás",
+      "trackedOption": "Itt rögzített",
+      "declaredOption": "Havi bevallás",
+      "inherit": "Tag alapértelmezése ({mode})",
+      "inheritedDetail": "Az órák módja a tag alapértelmezése szerint: {mode}.",
+      "overriddenDetail": "Az órák módja csak ennél a hozzárendelésnél: {mode}.",
+      "overrideLabel": "Óranyilvántartás",
+      "overrideHint": "Csak erre a hozzárendelésre érvényes. A tag alapértelmezését a Tagok oldalon lehet beállítani."
+    },
     "discardDialog": {
       "title": "Elveted ezt a projektet?",
       "description": "A kitöltött adatok nem lesznek elmentve.",
@@ -1561,7 +1583,10 @@
       "projectSlugExists": "Már létezik projekt ezzel a sluggal.",
       "projectLinkFailed": "A projektet nem sikerült a jelenlegi admin taghoz kapcsolni. Frissítsd az oldalt és próbáld újra.",
       "projectsUnavailable": "A projektek átmenetileg nem érhetők el. Próbáld újra később, vagy keresd a supportot.",
-      "projectMissing": "Ez a projekt már nem létezik, vagy már archiválták."
+      "projectMissing": "Ez a projekt már nem létezik, vagy már archiválták.",
+      "trackingModeSwitchField": "Ebben a hónapban még más típusú órák szerepelnek.",
+      "trackingModeSwitchToDeclared": "Ez a hozzárendelés nem állítható havi bevallásra, amíg {months} még itt rögzített időbejegyzéseket tartalmaz. Először töröld ezeket, vagy a következő hónaptól válts.",
+      "trackingModeSwitchToTracked": "Ez a hozzárendelés nem állítható itt rögzített órákra, amíg {months} még havi bevallást tartalmaz. Először töröld a bevallást, vagy a következő hónaptól válts."
     },
     "validation": {
       "validDate": "Válassz érvényes dátumot.",
@@ -1583,7 +1608,8 @@
       "groupNameRequired": "A csoport nevének megadása kötelező.",
       "descriptionMax": "A leírás legfeljebb 1000 karakter lehet.",
       "projectGroupIdMissing": "Hiányzik a projektcsoport azonosítója.",
-      "chooseProject": "Válassz projektet."
+      "chooseProject": "Válassz projektet.",
+      "trackingModeInvalid": "Válaszd ki, hogyan rögzíti az órákat ez a hozzárendelés."
     }
   },
   "AdminRates": {
@@ -2101,7 +2127,8 @@
       "form": "Űrlap",
       "timer": "Időmérő",
       "timed": "Időzített",
-      "hours": "Órák"
+      "hours": "Órák",
+      "declared": "Bevallott"
     },
     "fieldErrors": {
       "durationPositive": "Az időtartamnak nullánál nagyobbnak kell lennie.",

@@ -20,7 +20,13 @@ import {
 } from "./dates";
 import type { TimeGridDay } from "./dates";
 
-export type TimeEntrySource = "GRID" | "FORM" | "TIMER";
+/**
+ * Mirrors the `EntrySource` enum, `DECLARED` included: a declared month is materialized as a
+ * `TimeEntry` too (see `tracking-mode.ts`). Nothing here writes `DECLARED` — the narrow write
+ * paths below stay `Extract<..., "GRID" | "FORM">` — but the union has to carry it so a reader
+ * that meets one has to say what it does with it instead of falling through.
+ */
+export type TimeEntrySource = "GRID" | "FORM" | "TIMER" | "DECLARED";
 export type TimeEntryTimingMode = "DURATION" | "INTERVAL";
 
 export type TimeTrackingRequestMetadata = {

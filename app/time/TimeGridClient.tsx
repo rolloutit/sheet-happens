@@ -2383,10 +2383,20 @@ function formatAdminModifiedAt(
   }).format(new Date(modification.modifiedAt));
 }
 
+// A switch rather than a fall-through: `EntrySource` gained `DECLARED`, and a fall-through would
+// have labelled a declared month "Grid" instead of failing. Adding a fifth value now widens the
+// return type to `string | undefined` and breaks the call site.
 function formatEntrySource(source: TimeGridEntry["source"], t: TimeTrackingTranslator) {
-  if (source === "FORM") return t("source.form");
-  if (source === "TIMER") return t("source.timer");
-  return t("source.grid");
+  switch (source) {
+    case "FORM":
+      return t("source.form");
+    case "TIMER":
+      return t("source.timer");
+    case "DECLARED":
+      return t("source.declared");
+    case "GRID":
+      return t("source.grid");
+  }
 }
 
 function hasOverlaps(entries: TimeGridEntry[]) {

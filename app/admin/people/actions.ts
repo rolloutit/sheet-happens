@@ -1,10 +1,11 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { getTranslations } from "next-intl/server";
+import { getLocale, getTranslations } from "next-intl/server";
 import { z } from "zod";
 
 import { isDateValue, parseDateValue } from "@/src/lib/date-values";
+import { formatList, formatMonthLabel } from "@/src/lib/formatting";
 
 import { requireAdminAppMemberForAction } from "@/src/server/auth/app-access";
 import { AuthenticationError, AuthorizationError } from "@/src/server/auth/session";
@@ -34,6 +35,7 @@ import {
   softDeleteMember,
   updateMemberDetails,
 } from "@/src/server/users";
+import { TrackingModeSwitchError, type TrackingModeConflict } from "@/src/server/time-tracking";
 import type {
   AdminPeopleActionState,
   InviteMemberActionState,
@@ -92,6 +94,9 @@ function createUpdateMemberDetailsSchema(t: AdminPeopleActionsTranslator) {
       .string()
       .transform(normalizeLocale)
       .refine(isSupportedLocale, t("validation.supportedLanguage")),
+    defaultTrackingMode: z.enum(["TRACKED", "DECLARED"], {
+      error: t("validation.validTrackingMode"),
+    }),
   });
 }
 
@@ -194,6 +199,16 @@ export async function updateMemberDetailsAction(
       message: result.changed ? t("success.memberUpdated") : t("success.noChanges"),
     };
   } catch (error) {
+    if (error instanceof TrackingModeSwitchError) {
+      return {
+        status: "error",
+        message: await formatTrackingModeSwitchError(error, t),
+        fieldErrors: {
+          defaultTrackingMode: t("errors.trackingModeSwitchField"),
+        },
+      };
+    }
+
     if (
       error instanceof MemberDetailsError ||
       error instanceof AuthenticationError ||
@@ -210,6 +225,40 @@ export async function updateMemberDetailsAction(
       message: t("errors.memberUpdateFailed"),
     };
   }
+}
+
+/**
+ * `TrackingModeSwitchError` carries the offending project/month pairs as data rather than a
+ * sentence, so the message is assembled here where the reader's locale is available. The member
+ * default spans projects, so it names both the project and the month.
+ */
+async function formatTrackingModeSwitchError(
+  error: TrackingModeSwitchError,
+  t: AdminPeopleActionsTranslator,
+) {
+  const locale = await getLocale();
+  const items = formatList(listConflictLabels(error.conflicts, locale, t), locale);
+
+  return error.targetMode === "DECLARED"
+    ? t("errors.trackingModeSwitchToDeclared", { items })
+    : t("errors.trackingModeSwitchToTracked", { items });
+}
+
+function listConflictLabels(
+  conflicts: TrackingModeConflict[],
+  locale: string,
+  t: AdminPeopleActionsTranslator,
+) {
+  return [
+    ...new Set(
+      conflicts.map((conflict) =>
+        t("errors.trackingModeConflictItem", {
+          project: conflict.projectName,
+          month: formatMonthLabel(conflict.periodStart, locale),
+        }),
+      ),
+    ),
+  ];
 }
 
 export async function scheduleProfileTransitionAction(
@@ -528,7 +577,8 @@ function isUpdateMemberDetailsField(field: unknown): field is UpdateMemberDetail
     field === "displayName" ||
     field === "defaultCurrencyCode" ||
     field === "timezone" ||
-    field === "locale"
+    field === "locale" ||
+    field === "defaultTrackingMode"
   );
 }
 

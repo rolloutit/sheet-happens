@@ -16,6 +16,7 @@ const baseMember: PeopleMemberRow = {
   defaultCurrencyCode: "EUR",
   timezone: "Europe/Budapest",
   locale: "en",
+  defaultTrackingMode: "TRACKED",
   deletedAt: null,
 };
 
@@ -37,6 +38,7 @@ describe("mapMemberToPersonRow", () => {
       defaultCurrencyCode: "EUR",
       timezone: "Europe/Budapest",
       locale: "en",
+      defaultTrackingMode: "TRACKED",
       hasAuthUser: true,
     });
   });

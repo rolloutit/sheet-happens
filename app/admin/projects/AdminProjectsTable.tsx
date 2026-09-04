@@ -89,6 +89,7 @@ import type {
   ProjectListResult,
   ProjectLifecycleStatus,
 } from "@/src/server/projects";
+import type { TrackingMode } from "@/src/server/time-tracking";
 import type { AdminAssignmentRateRow } from "@/src/server/rates";
 import {
   archiveProjectAction,
@@ -107,6 +108,7 @@ import type {
   ProjectAssignmentFormField,
   ProjectActionState,
   ProjectBulkAssignmentActionState,
+  TrackingModeOverrideValue,
   UpdateProjectAssignmentActionInput,
   UpdateProjectActionInput,
 } from "./actions.types";
@@ -152,6 +154,11 @@ const assignmentStatusTone: Record<ProjectAssignmentMemberStatus, BadgeProps["to
   ACTIVE: "success",
   INACTIVE: "neutral",
   DELETED: "warning",
+};
+
+const trackingModeTone: Record<TrackingMode, BadgeProps["tone"]> = {
+  TRACKED: "neutral",
+  DECLARED: "cta",
 };
 
 const assignmentProfileTone: Record<ProjectAssignmentMemberProfile, BadgeProps["tone"]> = {
@@ -1606,6 +1613,7 @@ function ProjectDetailDrawer({
                   const closePending = pendingKey === `${assignment.id}:close`;
                   const canEndToday = assignment.active && todayDate >= assignment.validFrom;
                   const rateSource = getAssignmentRateSource(assignment, assignmentRates, t);
+                  const trackingMode = getAssignmentTrackingMode(assignment, t);
 
                   return (
                     <div
@@ -1633,11 +1641,13 @@ function ProjectDetailDrawer({
                               {assignment.active ? t("states.active") : t("states.inactive")}
                             </Badge>
                             <Badge tone={rateSource.tone}>{rateSource.label}</Badge>
+                            <Badge tone={trackingMode.tone}>{trackingMode.label}</Badge>
                           </div>
                         </div>
                         <div className="grid gap-2 text-sm text-muted-foreground lg:text-right">
                           <span>{formatAssignmentTimeline(assignment)}</span>
                           <span>{rateSource.detail}</span>
+                          <span>{trackingMode.detail}</span>
                           {assignment.notes ? <span>{assignment.notes}</span> : null}
                           <div className="flex flex-wrap justify-start gap-2 lg:justify-end">
                             <Button
@@ -1733,6 +1743,7 @@ function ProjectAssignmentEditForm({
           validFrom: getAssignmentFormString(formData, "validFrom"),
           validTo: getAssignmentFormString(formData, "validTo"),
           active: formData.get("active") === "true",
+          trackingMode: getTrackingModeFormValue(formData),
           notes: getAssignmentFormString(formData, "notes"),
         });
       }}
@@ -1787,6 +1798,25 @@ function ProjectAssignmentEditForm({
           {t("states.active")}
         </label>
       </div>
+      <Field
+        label={t("trackingMode.overrideLabel")}
+        reserveMessageSpace
+        hint={t("trackingMode.overrideHint")}
+        error={actionState?.fieldErrors?.trackingMode}
+      >
+        {({ id, describedBy, invalid }) => (
+          <Select
+            id={id}
+            name="trackingMode"
+            label={t("trackingMode.overrideLabel")}
+            defaultValue={assignment.trackingMode ?? ""}
+            aria-describedby={describedBy}
+            invalid={invalid}
+            searchable={false}
+            options={getTrackingModeOverrideOptions(assignment.memberDefaultTrackingMode, t)}
+          />
+        )}
+      </Field>
       <Field label={t("form.notes")} reserveMessageSpace error={actionState?.fieldErrors?.notes}>
         {({ id, describedBy, invalid }) => (
           <Input
@@ -2208,6 +2238,51 @@ function formatProjectTimeline(
 function formatAssignmentTimeline(assignment: AdminProjectAssignmentRow) {
   if (assignment.validTo) return `${assignment.validFrom} to ${assignment.validTo}`;
   return `From ${assignment.validFrom}`;
+}
+
+function getAssignmentTrackingMode(
+  assignment: AdminProjectAssignmentRow,
+  t: AdminProjectsTranslator,
+): {
+  label: string;
+  detail: string;
+  tone: BadgeProps["tone"];
+} {
+  const label = getTrackingModeLabel(assignment.effectiveTrackingMode, t);
+
+  return {
+    label,
+    detail:
+      assignment.trackingModeSource === "ASSIGNMENT_OVERRIDE"
+        ? t("trackingMode.overriddenDetail", { mode: label })
+        : t("trackingMode.inheritedDetail", { mode: label }),
+    tone: trackingModeTone[assignment.effectiveTrackingMode],
+  };
+}
+
+function getTrackingModeLabel(mode: TrackingMode, t: AdminProjectsTranslator) {
+  return mode === "DECLARED" ? t("trackingMode.declared") : t("trackingMode.tracked");
+}
+
+/**
+ * `""` is the inherit state, kept as an explicit option rather than an empty placeholder so an
+ * admin can see which assignments are deliberately different from the member default.
+ */
+function getTrackingModeOverrideOptions(memberDefault: TrackingMode, t: AdminProjectsTranslator) {
+  return [
+    {
+      value: "",
+      label: t("trackingMode.inherit", { mode: getTrackingModeLabel(memberDefault, t) }),
+    },
+    { value: "TRACKED", label: t("trackingMode.trackedOption") },
+    { value: "DECLARED", label: t("trackingMode.declaredOption") },
+  ];
+}
+
+function getTrackingModeFormValue(formData: FormData): TrackingModeOverrideValue {
+  const value = formData.get("trackingMode");
+
+  return value === "TRACKED" || value === "DECLARED" ? value : "";
 }
 
 function getAssignmentRateSource(
