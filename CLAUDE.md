@@ -25,6 +25,9 @@ pnpm only — `packageManager: pnpm@11.5.3`, Node `24.14.0` (`.nvmrc`). Never np
   written to `.mail/e2e-outbox.jsonl` instead of the console. Use it instead of `pnpm dev` when you
   intend to run e2e; Next refuses a second dev server for the same directory, so the suite cannot
   start its own alongside a plain `pnpm dev`.
+- `pnpm db:test` — create/migrate/seed `sheet_happens_e2e`, the suite's own database, on the same
+  Postgres as the dev one. Idempotent; `db:test:reset` drops and rebuilds it. Run once per clone
+  before the first `pnpm e2e`. No Docker involved, so CI runs the same command.
 - `pnpm e2e` — Playwright. Starts the server itself if nothing is on `:3000`, otherwise reuses what
   is there. The `setup` project requests a magic link over HTTP and reads it back out of the outbox
   — that is how authenticated specs get a session, and why the outbox matters. Also `e2e:a11y`
@@ -103,6 +106,10 @@ unique accessible name, a change can be read back as text instead of eyeballed.
   region per weekday, entry controls addressable within their day. Copy that shape.
 - Aria baselines live in `e2e/__aria__/`. Date-derived values are matched with regexes, not
   literals — never "fix" a failing baseline by regenerating it without reading the diff first.
+- The suite runs against **its own database** (`sheet_happens_e2e`, see `e2e/database.ts`), never
+  the one you browse. It writes — onboarding flips member rows — and its aria fixture must not be
+  editable by hand. `playwright.config.ts` pins `DATABASE_URL` for a server it starts; `pnpm dev:e2e`
+  pins the same one for a server you start. So `pnpm db:dev:reset` is now safe to run freely.
 - Two signed-in roles, each with its own `storageState` minted by `e2e/auth.setup.ts`: `admin`
   (`admin@example.com`) and `member` (`contractor@example.com`). Specs in `e2e/authenticated/` run
   under **both**; `authenticated/admin/` and `authenticated/member/` are the role-bound exceptions,
@@ -111,6 +118,11 @@ unique accessible name, a change can be read back as text instead of eyeballed.
   and unlinked, so a magic-link session alone gets bounced to `/account-status`. The setup accepts
   an invitation first — the admin from the seeded token, the member from a real admin-driven resend
   — and that is the only reason a fresh database can run the suite at all.
+- Anything asserted **literally** must come from the **frozen week** (`e2e/seed.ts`,
+  `FROZEN_WEEKS` in `scripts/dev-seed.mjs`), not from the generated data. The generator fills days
+  only up to the day it runs — the current week holds one day of data on a Monday and five on a
+  Friday — and its PRNG re-aligns when its twelve-month window slides, so nothing it produces can be
+  pinned. The frozen week is fixed dates, durations and descriptions outside that window.
 - `/sign-in/magic-link` allows **5 requests per 15 minutes per IP** and the whole suite shares one
   localhost budget. That is why the member session is reused while it still works. A 429 in the
   setup means the suite has been run too often, not that something broke.
