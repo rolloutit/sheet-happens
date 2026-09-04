@@ -12,6 +12,7 @@ model Member {
   timezone              String
   locale                String
   durationDisplayFormat DurationDisplayFormat @default(DECIMAL_HOURS) @map("duration_display_format")
+  defaultTrackingMode   TrackingMode          @default(TRACKED) @map("default_tracking_mode")
   avatarStorageBucket   String?               @map("avatar_storage_bucket")
   avatarStorageKey      String?               @unique @map("avatar_storage_key")
   avatarContentType     String?               @map("avatar_content_type")
@@ -31,6 +32,8 @@ model Member {
   createdDefaultRates               MemberDefaultRatePeriod[]   @relation("MemberDefaultRateCreatedBy")
   defaultRatePeriods                MemberDefaultRatePeriod[]   @relation("MemberDefaultRateOwner")
   documents                         Document[]                  @relation("DocumentOwner")
+  hourDeclarations                  MonthlyHourDeclaration[]
+  adminHourDeclarationEdits         MonthlyHourDeclaration[]    @relation("HoursDeclarationAdminModifiedBy")
   inactiveProjectWeeks              InactiveProjectWeek[]
   infoPagesCreated                  InfoPage[]                  @relation("InfoPageCreatedBy")
   infoPagesUpdated                  InfoPage[]                  @relation("InfoPageUpdatedBy")
