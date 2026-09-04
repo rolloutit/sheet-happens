@@ -2,7 +2,12 @@ import { isProjectColorToken, projectColorValues } from "@/src/lib/project-color
 import { firstSearchParam, listSearchParam, uniqueValues } from "@/src/lib/search-params";
 import { prisma } from "@/src/server/db/client";
 import type { Prisma } from "@/src/server/db/generated/client";
-import { formatDateOnly, normalizeDateOnly, parseDateOnly } from "@/src/server/time-tracking";
+import {
+  formatDateOnly,
+  normalizeDateOnly,
+  parseDateOnly,
+  type TrackingMode,
+} from "@/src/server/time-tracking";
 
 type TimesheetStatusRecord =
   "SUBMITTED" | "REJECTED" | "APPROVED" | "INVOICED" | "INVOICE_REJECTED" | "ACCEPTED" | "PAID";
@@ -92,6 +97,16 @@ export type AdminTimesheetReviewLine = {
   lineAmount: string;
 };
 
+/** The proof PDF behind a declared project's month, viewed like an invoice. */
+export type AdminTimesheetReviewProof = {
+  declarationId: string;
+  documentId: string;
+  originalFilename: string;
+  contentType: string;
+  byteSize: number;
+  uploadedAt: string;
+};
+
 export type AdminTimesheetReviewProject = {
   projectId: string;
   projectName: string;
@@ -100,6 +115,19 @@ export type AdminTimesheetReviewProject = {
   totalAmount: string;
   currencyCode: string;
   entryCount: number;
+  /**
+   * How this project's hours reached the timesheet.
+   *
+   * Read from whether the month holds a declaration rather than from the assignment's mode today:
+   * the mode is deliberately not time-versioned (§3), so re-resolving it would let a switch made in
+   * November change what a September revision appears to say. The declaration is the record.
+   *
+   * A reviewer needs it because a declared project's `entryCount` is 1, which otherwise reads as
+   * "this person logged one entry all month".
+   */
+  trackingMode: TrackingMode;
+  /** The declared month's proof, or `null` — including for a declared project still missing one. */
+  declaredProof: AdminTimesheetReviewProof | null;
   lines: AdminTimesheetReviewLine[];
 };
 
@@ -426,8 +454,33 @@ export async function getTimesheetReviewForAdmin(
 
   if (!timesheet) return null;
 
+  /* §4 item 6. The declared figure reaches the review for free — it is a snapshot line like any
+     other — but the proof does not, because `AdminTimesheetReview` carries invoices and nothing
+     else document-shaped. One query keyed on the contractor and the period, which is exactly the
+     scope the review already is. */
+  const declarations = await prisma.monthlyHourDeclaration.findMany({
+    where: {
+      memberId: timesheet.contractorMemberId,
+      periodStart: timesheet.periodStart,
+    },
+    select: {
+      id: true,
+      projectId: true,
+      proofDocument: {
+        select: {
+          id: true,
+          originalFilename: true,
+          contentType: true,
+          byteSize: true,
+          createdAt: true,
+          deletedAt: true,
+          status: true,
+        },
+      },
+    },
+  });
   const revision = timesheet.currentRevision;
-  const projects = groupSnapshotLinesByProject(revision?.snapshotLines ?? []);
+  const projects = groupSnapshotLinesByProject(revision?.snapshotLines ?? [], declarations);
   const invoices = timesheet.invoices.map((invoice) => ({
     id: invoice.id,
     invoiceNumber: invoice.invoiceNumber,
@@ -1353,10 +1406,15 @@ function groupSnapshotLinesByProject(
       colorToken: string | null;
     };
   }>,
+  declarations: ReviewDeclarationRecord[] = [],
 ): AdminTimesheetReviewProject[] {
+  const declarationsByProject = new Map(
+    declarations.map((declaration) => [declaration.projectId, declaration]),
+  );
   const projects = new Map<string, AdminTimesheetReviewProject & { totalAmountCents: number }>();
 
   for (const line of lines) {
+    const declaration = declarationsByProject.get(line.projectId);
     const project =
       projects.get(line.projectId) ??
       ({
@@ -1368,6 +1426,19 @@ function groupSnapshotLinesByProject(
         totalAmountCents: 0,
         currencyCode: line.currencyCode,
         entryCount: 0,
+        trackingMode: declaration ? "DECLARED" : "TRACKED",
+        // `null` for a declared project whose proof is missing or was removed — which is a state a
+        // reviewer has to be able to see, not one to hide behind an absent field.
+        declaredProof: isLiveProofDocument(declaration?.proofDocument)
+          ? {
+              declarationId: declaration.id,
+              documentId: declaration.proofDocument.id,
+              originalFilename: declaration.proofDocument.originalFilename,
+              contentType: declaration.proofDocument.contentType,
+              byteSize: Number(declaration.proofDocument.byteSize),
+              uploadedAt: declaration.proofDocument.createdAt.toISOString(),
+            }
+          : null,
         lines: [],
       } satisfies AdminTimesheetReviewProject & { totalAmountCents: number });
 
@@ -1398,8 +1469,31 @@ function groupSnapshotLinesByProject(
     totalAmount: project.totalAmount,
     currencyCode: project.currencyCode,
     entryCount: project.entryCount,
+    trackingMode: project.trackingMode,
+    declaredProof: project.declaredProof,
     lines: project.lines.sort((left, right) => left.localDate.localeCompare(right.localDate)),
   }));
+}
+
+type ReviewDeclarationRecord = {
+  id: string;
+  projectId: string;
+  proofDocument: {
+    id: string;
+    originalFilename: string;
+    contentType: string;
+    byteSize: bigint | number;
+    createdAt: Date;
+    deletedAt: Date | null;
+    status: string;
+  } | null;
+};
+
+/** A replaced or removed proof reads as missing, not as a link to a document that is gone. */
+function isLiveProofDocument<T extends { deletedAt: Date | null; status: string }>(
+  document: T | null | undefined,
+): document is T {
+  return Boolean(document && !document.deletedAt && document.status === "AVAILABLE");
 }
 
 function buildReviewMetadata(input: {

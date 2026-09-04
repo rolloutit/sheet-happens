@@ -814,7 +814,8 @@
       "invoiceAmountInvalid": "Adj meg pozitív számlaösszeget.",
       "invoiceCurrencyInvalid": "A számla pénzneme nem támogatott.",
       "invoiceStorageMissing": "Ebben a környezetben nincs beállítva a számlatárolás.",
-      "invoiceFailed": "A számlát nem sikerült feltölteni."
+      "invoiceFailed": "A számlát nem sikerült feltölteni.",
+      "declaredProofMissing": "Beküldés előtt töltsd fel az óraigazolást minden bevallott projekthez: {projects}."
     }
   },
   "AdminTimesheets": {
@@ -902,7 +903,12 @@
       "unlocked": "Feloldva",
       "empty": "Ehhez a revízióhoz nincs snapshot sor.",
       "projectSummary": "{hours} óra, {entries} bejegyzés",
-      "lineCaption": "Timesheet snapshot forrássorok"
+      "lineCaption": "Timesheet snapshot forrássorok",
+      "declared": "Havonta bevallott",
+      "declaredSummary": "{hours} óra a hónapra bevallva",
+      "declaredLineDate": "{month} · bevallott",
+      "openProof": "Igazolás megnyitása",
+      "proofMissing": "Ezekhez a bevallott órákhoz nincs igazoló dokumentum."
     },
     "lineTable": {
       "date": "Dátum",

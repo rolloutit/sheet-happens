@@ -814,7 +814,8 @@
       "invoiceAmountInvalid": "Enter a positive invoice amount.",
       "invoiceCurrencyInvalid": "The invoice currency is not supported.",
       "invoiceStorageMissing": "Invoice storage is not configured for this environment.",
-      "invoiceFailed": "The invoice could not be uploaded."
+      "invoiceFailed": "The invoice could not be uploaded.",
+      "declaredProofMissing": "Upload the hours proof for every declared project before submitting: {projects}."
     }
   },
   "AdminTimesheets": {
@@ -902,7 +903,12 @@
       "unlocked": "Unlocked",
       "empty": "This revision has no snapshot lines.",
       "projectSummary": "{hours} h, {entries} entries",
-      "lineCaption": "Timesheet snapshot source lines"
+      "lineCaption": "Timesheet snapshot source lines",
+      "declared": "Declared monthly",
+      "declaredSummary": "{hours} h declared for the month",
+      "declaredLineDate": "{month} · declared",
+      "openProof": "Open proof",
+      "proofMissing": "These declared hours have no proof document."
     },
     "lineTable": {
       "date": "Date",

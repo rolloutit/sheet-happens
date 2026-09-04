@@ -3,9 +3,10 @@
 import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
-import { getTranslations } from "next-intl/server";
+import { getLocale, getTranslations } from "next-intl/server";
 import { z } from "zod";
 
+import { formatList } from "@/src/lib/formatting";
 import { isSupportedCurrencyCode, normalizeCurrencyCode } from "@/src/lib/member-preferences";
 import { requireActiveAppMemberForAction } from "@/src/server/auth/app-access";
 import { AuthenticationError, AuthorizationError } from "@/src/server/auth/session";
@@ -59,6 +60,7 @@ const submissionErrorKeys: Record<string, string> = {
   "Missing rates for one or more entries.": "errors.missingRates",
   "Timesheet month contains multiple currencies.": "errors.mixedCurrency",
   "Timesheet source entries changed during submission. Try again.": "errors.entriesChanged",
+  "Declared hours are missing their proof.": "errors.declaredProofMissing",
 };
 
 const invoiceUploadErrorResults: Record<string, string> = {
@@ -131,7 +133,7 @@ export async function submitTimesheetAction(input: {
       message: t("success.submitted"),
     };
   } catch (error) {
-    return mapTimesheetActionError(error, t);
+    return mapTimesheetActionError(error, t, await getLocale());
   }
 }
 
@@ -265,6 +267,7 @@ function redirectToTimesheetsWithResult(month: string, result: string): never {
 function mapTimesheetActionError(
   error: unknown,
   t: TimesheetActionsTranslator,
+  locale: string,
 ): TimesheetActionState {
   console.error("[timesheets] action failed", error);
 
@@ -273,7 +276,12 @@ function mapTimesheetActionError(
 
     return {
       status: "error",
-      message: t(key),
+      /* "Upload the proof" with nothing to point at sends someone back to guess which row it
+         meant, so the refusal names the projects it is about. Only this message takes them, and
+         `formatList` is what keeps the joining a locale decision rather than a comma. */
+      message: error.projectNames.length
+        ? t(key, { projects: formatList(error.projectNames, locale) })
+        : t(key),
     };
   }
 

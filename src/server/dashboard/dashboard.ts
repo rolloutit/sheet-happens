@@ -9,6 +9,8 @@ import {
   getTodayIsoInTimezone,
   getWeekEnd,
   parseDateOnly,
+  resolveTrackingMode,
+  type TrackingMode,
 } from "@/src/server/time-tracking";
 import {
   calculateLineAmountCents,
@@ -227,18 +229,29 @@ type DashboardDeps = {
 type DashboardAssignment = {
   memberId: string;
   projectId: string;
+  /** `null` inherits the member default — resolved through `resolveTrackingMode`, never inline. */
+  trackingMode: TrackingMode | null;
+  /** Carried per row so the resolver needs no second query, as in `month-overview.ts`. */
+  validFrom: Date;
   member: {
     id: string;
     displayName: string;
     firstName: string;
     lastName: string;
     email: string;
+    defaultTrackingMode: TrackingMode;
   };
   project: {
     id: string;
     name: string;
     colorToken: string;
   };
+};
+
+/** One declared month, as the flagging rhythm reads it: the pair, and which month it covers. */
+type DashboardDeclarationPresence = {
+  memberId: string;
+  projectId: string;
 };
 
 type DashboardTimeEntryPresence = {
@@ -363,14 +376,36 @@ export function getDashboardPeriod(timezone: string, now = new Date()): Dashboar
   };
 }
 
+/**
+ * Which member/project pairs have nothing against them, on the rhythm each pair actually works to.
+ *
+ * A **tracked** pair is flagged when the current week holds no entry and no inactive-week marker,
+ * which is the check this has always made.
+ *
+ * A **declared** pair is flagged on a monthly rhythm instead (§4 item 4). Its materialized entry
+ * would satisfy the weekly check unchanged, but a declared project is *expected* to have nothing
+ * until the member declares near month end — so a weekly flag would nag for three weeks out of
+ * four and train people to ignore the panel. The month that matters is therefore the last one that
+ * has **ended**: by the end of a month its figure should exist, and the current month is not yet
+ * late. A pair whose assignment only began after that month closed is not flagged either, because
+ * there was nothing to declare.
+ *
+ * `InactiveProjectWeek` plays no part for a declared pair: "nothing happened this week" is not a
+ * statement anyone can make about a monthly figure, and it is not offered for one.
+ */
 export function deriveFlaggedUsers(input: {
   assignments: DashboardAssignment[];
   entries: DashboardTimeEntryPresence[];
   inactiveWeeks: DashboardInactiveWeekPresence[];
   lastLoggedEntries: DashboardLastLoggedEntry[];
+  /** Declarations for the last ended month. Empty when the caller does not read them. */
+  declarations?: DashboardDeclarationPresence[];
+  /** The last ended month's end, `YYYY-MM-DD`, against which a declared assignment is judged. */
+  declaredMonthEnd?: string;
 }): DashboardFlaggedUser[] {
   const loggedPairs = new Set(input.entries.map(getMemberProjectKey));
   const inactivePairs = new Set(input.inactiveWeeks.map(getMemberProjectKey));
+  const declaredPairs = new Set((input.declarations ?? []).map(getMemberProjectKey));
   const lastLoggedByPair = new Map(
     input.lastLoggedEntries.map((entry) => [
       getMemberProjectKey(entry),
@@ -383,22 +418,26 @@ export function deriveFlaggedUsers(input: {
   for (const assignment of input.assignments) {
     const pairKey = getMemberProjectKey(assignment);
 
-    if (seenPairs.has(pairKey) || loggedPairs.has(pairKey) || inactivePairs.has(pairKey)) {
+    if (seenPairs.has(pairKey)) continue;
+
+    if (resolveTrackingMode(assignment.member, assignment).mode === "DECLARED") {
+      if (declaredPairs.has(pairKey)) continue;
+      // No month has ended since the assignment began, so nothing is yet overdue.
+      if (input.declaredMonthEnd && formatDateOnly(assignment.validFrom) > input.declaredMonthEnd) {
+        continue;
+      }
+
+      seenPairs.add(pairKey);
+      flagged.push(buildFlaggedUser(assignment, pairKey, lastLoggedByPair.get(pairKey) ?? null));
+      continue;
+    }
+
+    if (loggedPairs.has(pairKey) || inactivePairs.has(pairKey)) {
       continue;
     }
 
     seenPairs.add(pairKey);
-    flagged.push({
-      id: pairKey,
-      memberId: assignment.memberId,
-      memberName: getDisplayName(assignment.member),
-      memberEmail: assignment.member.email,
-      initials: getInitials(getDisplayName(assignment.member)),
-      projectId: assignment.projectId,
-      projectName: assignment.project.name,
-      projectColor: resolveProjectColor(assignment.project.colorToken),
-      lastLoggedDate: lastLoggedByPair.get(pairKey) ?? null,
-    });
+    flagged.push(buildFlaggedUser(assignment, pairKey, lastLoggedByPair.get(pairKey) ?? null));
   }
 
   return flagged.sort((left, right) => {
@@ -406,6 +445,26 @@ export function deriveFlaggedUsers(input: {
     if (nameCompare !== 0) return nameCompare;
     return left.projectName.localeCompare(right.projectName);
   });
+}
+
+function buildFlaggedUser(
+  assignment: DashboardAssignment,
+  pairKey: string,
+  lastLoggedDate: string | null,
+): DashboardFlaggedUser {
+  const memberName = getDisplayName(assignment.member);
+
+  return {
+    id: pairKey,
+    memberId: assignment.memberId,
+    memberName,
+    memberEmail: assignment.member.email,
+    initials: getInitials(memberName),
+    projectId: assignment.projectId,
+    projectName: assignment.project.name,
+    projectColor: resolveProjectColor(assignment.project.colorToken),
+    lastLoggedDate,
+  };
 }
 
 export function deriveMissingTimesheetCount(input: {
@@ -1130,6 +1189,8 @@ async function getFlaggedUsers(period: DashboardPeriod) {
     select: {
       memberId: true,
       projectId: true,
+      trackingMode: true,
+      validFrom: true,
       member: {
         select: {
           id: true,
@@ -1137,6 +1198,7 @@ async function getFlaggedUsers(period: DashboardPeriod) {
           firstName: true,
           lastName: true,
           email: true,
+          defaultTrackingMode: true,
         },
       },
       project: {
@@ -1153,7 +1215,10 @@ async function getFlaggedUsers(period: DashboardPeriod) {
 
   const memberIds = unique(assignments.map((assignment) => assignment.memberId));
   const projectIds = unique(assignments.map((assignment) => assignment.projectId));
-  const [entries, inactiveWeeks, lastEntries] = await Promise.all([
+  /* The last month that has *ended*. A declared figure arrives at month end, so the current month
+     is never late and flagging against it would nag for most of every month. */
+  const declaredMonthStart = parseDateOnly(period.previousMonthStart);
+  const [entries, inactiveWeeks, lastEntries, declarations] = await Promise.all([
     prisma.timeEntry.findMany({
       where: {
         memberId: {
@@ -1209,6 +1274,21 @@ async function getFlaggedUsers(period: DashboardPeriod) {
         localDate: true,
       },
     }),
+    prisma.monthlyHourDeclaration.findMany({
+      where: {
+        memberId: {
+          in: memberIds,
+        },
+        projectId: {
+          in: projectIds,
+        },
+        periodStart: declaredMonthStart,
+      },
+      select: {
+        memberId: true,
+        projectId: true,
+      },
+    }),
   ]);
   const latestEntriesByPair = new Map<string, DashboardLastLoggedEntry>();
 
@@ -1222,6 +1302,8 @@ async function getFlaggedUsers(period: DashboardPeriod) {
     entries,
     inactiveWeeks,
     lastLoggedEntries: [...latestEntriesByPair.values()],
+    declarations,
+    declaredMonthEnd: period.previousMonthEnd,
   });
 }
 
