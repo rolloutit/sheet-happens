@@ -58,7 +58,14 @@ export default async function TimePage({ searchParams }: TimePageProps) {
       profile={mapMemberToShellProfile(member)}
       user={mapMemberToShellUser(member)}
     >
-      <section className="mx-auto w-full max-w-[73.75rem] px-4 py-8 sm:px-6 lg:px-8">
+      {/*
+       * Wider than the reading-width default from `xl` up, matching the admin surfaces
+       * (`max-w-[92rem]`). This page is not prose — its widest level is seven day columns side by
+       * side, and at 73.75rem a large display spends a third of the content area on empty margins
+       * while the columns are too narrow for a description and a time range. The cap stays, so the
+       * week does not turn into seven sparse strips on a 4K panel.
+       */}
+      <section className="mx-auto w-full max-w-[73.75rem] px-4 py-8 sm:px-6 lg:px-8 xl:max-w-[92rem]">
         <TimeGridClient
           week={week}
           months={months}
