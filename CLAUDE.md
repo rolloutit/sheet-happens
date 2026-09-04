@@ -21,9 +21,19 @@ pnpm only — `packageManager: pnpm@11.5.3`, Node `24.14.0` (`.nvmrc`). Never np
 - `pnpm test:browser` — Vitest browser mode, `src/**/*.browser.{test,spec}.{ts,tsx}`
 - `pnpm storybook` · `pnpm test-storybook`
 - `pnpm test:visual` — rebuilds Storybook, compares checked-in screenshots
-- `pnpm e2e` — Playwright; boots `pnpm dev` itself, no separate server needed
-- `pnpm verify` — the full gate chain. Run it before calling a feature done. (Not `pnpm ci`: pnpm
-  has a built-in `ci` that shadows package scripts and silently runs a clean install instead.)
+- `pnpm dev:e2e` — the dev server the e2e suite needs: same as `pnpm dev` but with auth emails
+  written to `.mail/e2e-outbox.jsonl` instead of the console. Use it instead of `pnpm dev` when you
+  intend to run e2e; Next refuses a second dev server for the same directory, so the suite cannot
+  start its own alongside a plain `pnpm dev`.
+- `pnpm e2e` — Playwright. Starts the server itself if nothing is on `:3000`, otherwise reuses what
+  is there. The `setup` project requests a magic link over HTTP and reads it back out of the outbox
+  — that is how authenticated specs get a session, and why the outbox matters. Also `e2e:a11y`
+  (axe only), `e2e:failed` (re-run failures), `e2e:update` (refresh aria snapshots)
+- `pnpm verify` — the full gate chain and the definition of done. Run it before calling a feature
+  done. (Not `pnpm ci`: pnpm has a built-in `ci` that shadows package scripts and silently runs a
+  clean install instead.) `pnpm verify:fast` (typecheck + lint + unit) is the mid-task loop.
+- CI (`.github/workflows/ci.yml`) runs the same gates except `test:visual` — those baselines are
+  `-darwin`-suffixed and can only be compared on macOS.
 
 ## Environment
 
@@ -76,6 +86,23 @@ Follow `src/components/README.md`. In short:
   light theme, and mobile states. Behavior needs a Storybook `play` test or a Vitest test.
 - Theme is a light/dark/**system** preference (next-themes, `system` by default). `:root` is the
   dark palette, `.light` overrides it — check both.
+
+## Browser verification
+
+The accessibility tree is the machine-readable surface of this app: if every control has a stable,
+unique accessible name, a change can be read back as text instead of eyeballed.
+
+- `pnpm exec playwright cli` (ships with playwright-core, no install) drives a persistent headless
+  session: `open <url>` → `find "text"` → `click e61`. Snapshots go to `.playwright-cli/*.yml`
+  rather than into the transcript. The `/playwright-cli` skill has the full command set.
+- Browse on `http://localhost`, never `127.0.0.1`: the Better Auth client posts to the origin in
+  `authOrigin`, so the other host fails every auth call on a CORS preflight.
+- A fresh browser has no locale cookie and renders **EN**, not the HU default. Committed aria
+  snapshots pin `sheet-happens-locale` in `e2e/fixtures.ts` for exactly this reason.
+- `/time` is the exemplar route (`e2e/authenticated/time.spec.ts`): landmarks, one `h1`, a named
+  region per weekday, entry controls addressable within their day. Copy that shape.
+- Aria baselines live in `e2e/__aria__/`. Date-derived values are matched with regexes, not
+  literals — never "fix" a failing baseline by regenerating it without reading the diff first.
 
 ## Testing conventions
 
