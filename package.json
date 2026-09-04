@@ -8,6 +8,7 @@
     "pnpm": ">=11.5.0"
   },
   "scripts": {
+    "dev:e2e": "AUTH_EMAIL_DELIVERY_MODE=file AUTH_EMAIL_FILE=.mail/e2e-outbox.jsonl AUTH_SECURITY_SETUP_MODE=optional pnpm dev",
     "dev": "next dev --turbopack",
     "build": "next build && node scripts/copy-standalone-assets.mjs",
     "start": "node .next/standalone/server.js",
@@ -40,6 +41,9 @@
     "test:visual:update": "pnpm build-storybook && playwright test --config playwright.visual.config.ts --update-snapshots",
     "e2e": "playwright test",
     "e2e:update": "playwright test --update-snapshots",
+    "e2e:a11y": "playwright test --grep @a11y",
+    "e2e:failed": "playwright test --last-failed",
+    "verify:fast": "pnpm typecheck && pnpm lint && pnpm test",
     "verify": "pnpm typecheck && pnpm lint && pnpm format && pnpm test && pnpm build-storybook && pnpm test-storybook && pnpm test:visual:static && pnpm e2e"
   },
   "dependencies": {
@@ -75,6 +79,7 @@
     "zod": "latest"
   },
   "devDependencies": {
+    "@axe-core/playwright": "^4.13.0",
     "@chromatic-com/storybook": "latest",
     "@playwright/test": "latest",
     "@storybook/addon-a11y": "latest",
@@ -93,7 +98,7 @@
     "@types/react": "latest",
     "@types/react-dom": "latest",
     "@vitejs/plugin-react": "latest",
-    "@vitest/browser-playwright": "latest",
+    "@vitest/browser-playwright": "4.1.11",
     "chromatic": "latest",
     "eslint": "^9.0.0",
     "eslint-config-next": "16.3.3",
@@ -106,6 +111,6 @@
     "storybook": "latest",
     "tailwindcss": "latest",
     "typescript": "^6.0.3",
-    "vitest": "latest"
+    "vitest": "4.1.11"
   }
 }

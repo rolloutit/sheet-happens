@@ -32,3 +32,6 @@ src/server/db/generated
 .DS_Store
 
 claude_design_proto/
+.playwright-cli/
+e2e/.auth/
+.mail/
