@@ -3567,6 +3567,36 @@ Expected result:
   `pnpm dev:e2e` already running it reuses that one. With a plain `pnpm dev` running it fails on the
   first authenticated spec and the message names the fix rather than timing out.
 
+## Role Boundaries Seen From A Non-Admin Member
+
+- Signed in as `{CONTRACTOR_EMAIL}`, the sidebar has no Admin group at all. Approvals, Reports,
+  Projects, People, Rates, Declared hours, Audit log, System and Information page are absent from
+  the navigation rather than shown disabled, and a screen reader walking the primary navigation
+  never announces them.
+- Opening an admin URL directly as that member - `/admin/people`, `/admin/timesheets`,
+  `/admin/system` - lands on the account status screen titled "Admin access required", never on the
+  admin page and never on a blank or error page.
+- That refusal keeps the route it refused in the address bar, so the screen states what was asked
+  for rather than silently dropping it.
+- The refusal reads correctly in Hungarian and English, and the same member can still reach their
+  own pages - Dashboard, Time tracking, Timesheets - immediately afterwards.
+- An admin opening the same URLs sees the admin page, so the refusal is about the role and not about
+  the route being broken.
+- Invitation resend from the People row menu: the action reports "Invitation resent to {email}" and
+  a fresh invitation email arrives. The link in the _previous_ email no longer activates the
+  account, because a resend replaces the stored token.
+- Resend is offered only for a member whose state is `invited`. For an active, inactive or archived
+  member the menu does not offer it.
+- Accepting an invitation while signed in with a different email leaves the activate button
+  disabled and says which address the invitation belongs to.
+- Re-opening an already accepted invitation link says the invitation has already been used instead
+  of activating anything a second time.
+- After activation the member's People row reads `active` and the member can sign in with a plain
+  magic link from then on.
+- A magic link is delivered to any active member, but redeeming one for a member who has never
+  accepted an invitation does not produce a working session - it ends on the account status screen.
+  Delivery is not proof of access.
+
 ## Regression Checklist For Every Release
 
 - Invitation activation works for a new invited user.
