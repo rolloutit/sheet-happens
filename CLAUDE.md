@@ -32,7 +32,9 @@ and left two copies of react, zod and chromatic in the lockfile; the ranges dedu
   start its own alongside a plain `pnpm dev`.
 - `pnpm db:test` — create/migrate/seed `sheet_happens_e2e`, the suite's own database, on the same
   Postgres as the dev one. Idempotent; `db:test:reset` drops and rebuilds it. Run once per clone
-  before the first `pnpm e2e`. No Docker involved, so CI runs the same command.
+  before the first `pnpm e2e`. No Docker involved, so CI runs the same command. It needs object
+  storage as well as Postgres and creates the bucket itself: the seed uploads a contractor invoice
+  PDF per invoiced month, so without a reachable `S3_ENDPOINT` the whole seed rolls back.
 - `pnpm e2e` — Playwright. Starts the server itself if nothing is on `:3000`, otherwise reuses what
   is there. The `setup` project requests a magic link over HTTP and reads it back out of the outbox
   — that is how authenticated specs get a session, and why the outbox matters. Also `e2e:a11y`

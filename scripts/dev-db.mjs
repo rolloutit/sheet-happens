@@ -6,6 +6,7 @@ import { spawn } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 import process from "node:process";
+import { CreateBucketCommand, S3Client } from "@aws-sdk/client-s3";
 import pg from "pg";
 
 import { SEED_INVITATIONS, seedDevDatabase } from "./dev-seed.mjs";
@@ -81,6 +82,7 @@ try {
     // `migrate deploy` rather than `db push`: this is the database the release path is validated
     // against, and the init migration creates the citext and pgcrypto extensions the seed needs.
     await prismaMigrateDeploy();
+    await ensureBucket();
   } else if (command !== "seed") {
     await dockerCompose(["up", "-d", "db", "minio"]);
     await dockerCompose(["run", "--rm", "minio-init"]);
@@ -93,8 +95,11 @@ try {
 
   printSummary(summary);
 } catch (error) {
-  console.error(error instanceof Error ? error.message : error);
-  process.exit(1);
+  // The whole error, not just its message. A failure here is usually several layers down — an
+  // upload inside the seed, a query inside a transaction — and the stack is the only part that
+  // names the layer. `exitCode` rather than `process.exit()`, which would cut the write short.
+  console.error(error);
+  process.exitCode = 1;
 }
 
 async function dockerCompose(args) {
@@ -202,6 +207,64 @@ async function ensureExtensions() {
     await client.query('CREATE EXTENSION IF NOT EXISTS "citext"');
     await client.query('CREATE EXTENSION IF NOT EXISTS "pgcrypto"');
   });
+}
+
+/**
+ * Creates the bucket the seed uploads contractor invoices into.
+ *
+ * The dev path never needs this: `docker compose up` runs a `minio-init` service that creates the
+ * bucket before anything asks for it. The e2e path touches Docker not at all — that is what makes
+ * it the same command locally and in CI — so nothing else would, and the seed's first
+ * `PutObjectCommand` would fail against a bucket that was never there.
+ *
+ * Waits the way `waitForDatabase` does, because object storage started moments earlier in the same
+ * CI job is not listening yet. An already-existing bucket is the success case, not an error.
+ */
+async function ensureBucket() {
+  const client = new S3Client({
+    endpoint: objectStorage.endpoint,
+    region: objectStorage.region,
+    // Matches createStorageClient in scripts/dev-seed-timesheets.mjs: anything but the string
+    // "false" means path style, which MinIO requires.
+    forcePathStyle: objectStorage.forcePathStyle !== "false",
+    credentials: {
+      accessKeyId: objectStorage.accessKeyId,
+      secretAccessKey: objectStorage.secretAccessKey,
+    },
+  });
+
+  const deadline = Date.now() + 60_000;
+  let lastError;
+
+  try {
+    while (Date.now() < deadline) {
+      try {
+        await client.send(new CreateBucketCommand({ Bucket: objectStorage.bucket }));
+        return;
+      } catch (error) {
+        // Which of the two a provider answers with depends on whether it scopes bucket names per
+        // account; both mean the bucket is there, which is all this function wanted.
+        if (error?.name === "BucketAlreadyOwnedByYou" || error?.name === "BucketAlreadyExists") {
+          return;
+        }
+
+        lastError = error;
+        await sleep(1_000);
+      }
+    }
+  } finally {
+    client.destroy();
+  }
+
+  // The reason travels as `cause` rather than interpolated: an AWS SDK connection failure can
+  // carry an empty `message`, which is exactly how today's CI failure managed to print a blank
+  // line instead of a reason. `console.error` renders the cause chain in full.
+  throw new Error(
+    `Timed out creating the bucket "${objectStorage.bucket}" at ${objectStorage.endpoint}. ` +
+      "The seed uploads a contractor invoice PDF per invoiced month, so it needs object storage — " +
+      "`pnpm db:dev` starts MinIO locally.",
+    { cause: lastError },
+  );
 }
 
 async function seedDatabase() {

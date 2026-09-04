@@ -103,11 +103,14 @@ jobs:
           --health-timeout 5s
           --health-retries 5
     env:
-      # Ephemeral, throwaway values for a database that is destroyed with the runner. Not secrets.
+      # Ephemeral, throwaway values for a database and an object store that are destroyed with the
+      # runner. Not secrets.
       BETTER_AUTH_SECRET: ci-only-auth-secret-not-used-anywhere-else
       AUTH_LOGIN_ATTEMPT_SECRET: ci-only-login-attempt-secret-value
       # The app's own URLs come from playwright.config.ts's webServer.env, which knows the port.
-      # No object storage in CI; nothing these specs touch reads from it.
+      # The object storage below is real and has to be: the seed uploads a contractor invoice PDF
+      # for every invoiced month and writes a `documents` row pointing at it, so a job without one
+      # cannot get as far as running a single spec.
       OBJECT_STORAGE_PROVIDER: s3
       S3_ENDPOINT: http://localhost:9000
       S3_REGION: us-east-1
@@ -132,6 +135,16 @@ jobs:
           key: playwright-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
           restore-keys: playwright-${{ runner.os }}-
       - run: pnpm exec playwright install --with-deps chromium
+      # The image the dev compose uses, started as a step rather than a service container because
+      # `services:` cannot pass the `server /data` command minio/minio needs. Credentials are the
+      # S3_* values above, so the seed and the app under test both authenticate against it, and
+      # `pnpm db:test:reset` waits for it and creates the bucket — hence no readiness step here.
+      - name: Start MinIO
+        run: |
+          docker run -d --name minio -p 9000:9000 \
+            -e MINIO_ROOT_USER="$S3_ACCESS_KEY_ID" \
+            -e MINIO_ROOT_PASSWORD="$S3_SECRET_ACCESS_KEY" \
+            minio/minio:latest server /data
       # Creates, migrates and seeds the suite's own database — `sheet_happens_e2e`, derived from
       # DATABASE_URL above — on the service container. It touches Docker not at all, so this is the
       # same code path a developer runs locally, and `migrate deploy` keeps the release path
