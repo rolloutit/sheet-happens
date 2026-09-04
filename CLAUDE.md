@@ -8,6 +8,11 @@ Prisma/Postgres, Better Auth, Tailwind v4, next-intl (HU/EN), Storybook.
 
 pnpm only — `packageManager: pnpm@11.5.3`, Node `24.14.0` (`.nvmrc`). Never npm or yarn.
 
+Dependency specifiers are caret ranges on the major in use (`^4.5.4`), never `latest`: `pnpm
+install` and `pnpm update` move minors and patches, a major only ever moves on a deliberate
+`pnpm update --latest <pkg>` with the lockfile diff read. `latest` also resolved twice per install
+and left two copies of react, zod and chromatic in the lockfile; the ranges dedupe the tree.
+
 - `pnpm setup:git` — run once per clone: installs the pre-push guard and the push defaults that
   keep a feature branch off `develop`. Local git config only, never global.
 - `pnpm dev` — Next dev server (Turbopack) on `:3000`
@@ -135,8 +140,8 @@ unique accessible name, a change can be read back as text instead of eyeballed.
 - Visual baselines in `visual/storybook.spec.ts-snapshots/` are checked in and platform-suffixed
   (`-darwin`). Refresh with `pnpm test:visual:update` **only** for an intentional visual change, and
   say so in the commit.
-- `vitest` and `@vitest/browser-playwright` are **pinned to 4.1.11** while every other dep floats on
-  `latest`. Not a compatibility problem in our code — the whole chain is green on 5.0.0 once
+- `vitest` and `@vitest/browser-playwright` are **pinned exactly to 4.1.11**, tighter than the
+  caret range everything else gets. Not a compatibility problem in our code — the whole chain is green on 5.0.0 once
   `vitest.storybook.config.ts` declares a viewport, which it now does. The blocker is
   `@storybook/addon-vitest`: every published version, up to `11.0.0-alpha.0`, declares
   `vitest: ^3 || ^4` and `@vitest/browser-playwright: ^4`, so vitest 5 leaves a second
