@@ -3597,6 +3597,21 @@ Expected result:
   accepted an invitation does not produce a working session - it ends on the account status screen.
   Delivery is not proof of access.
 
+## Pagination Control Names
+
+- On People and Projects, walking the pager with a screen reader announces four distinct things:
+  "Previous page", "Next page", "Go to page N" for each numbered button, and "Current page, page N"
+  for the one you are on. No two controls in the pager announce the same name.
+- The visible labels are unchanged - the step buttons still read "Prev" and "Next" (HU: "Előző",
+  "Következő") - and the announced name contains that visible text, so voice control still works by
+  saying what is written on the button.
+- The step buttons no longer claim a page number. Previously both announced "Go to page N" for
+  their destination, which is what the numbered buttons are called, so the same name pointed at two
+  different controls.
+- Both names read correctly in Hungarian and English.
+- Keyboard tabbing through the pager reaches Prev, every numbered button, then Next, and the
+  current page button is the one marked as current.
+
 ## Regression Checklist For Every Release
 
 - Invitation activation works for a new invited user.
