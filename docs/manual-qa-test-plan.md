@@ -3297,3 +3297,14 @@ Expected result:
   address bar, and the selected day survives every level change in both directions.
 - A `/time` level change animates as one surface moving, nothing animates on first paint, no figure
   ever tweens, and with the operating system's reduce-motion setting on nothing moves at all.
+- Each assignment in a project's drawer shows its hours-tracking mode beside its rate source, and
+  says whether the mode is inherited from the member default or set for that assignment only.
+- The per-assignment mode control offers an explicit inherit option that names the member default,
+  so an admin can tell a deliberate override from an inherited setting.
+- The member-level default is set on the People page, not from inside one project, and both controls
+  state their scope: the member default applies to every project, the override to one assignment.
+- Changing the member default leaves any assignment carrying its own override exactly as it was.
+- Switching a mode is refused while an unlocked month still holds hours of the other kind, and the
+  message names the months - for the member default, the projects too - that have to be cleared
+  first. A month already locked by a submitted timesheet revision does not block the switch.
+- Every one of those labels, hints and refusal messages reads correctly in Hungarian and English.
