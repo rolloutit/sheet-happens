@@ -35,6 +35,8 @@ Replace placeholder values before sharing a concrete test run:
 - `{PASSKEY_DEVICE}`: passkey-capable test device or browser profile.
 - `{TIME_TRACKING_WEEK_START}`: Monday date of a test week, formatted as `YYYY-MM-DD`.
 - `{TIME_TRACKING_PREVIOUS_WEEK_START}`: Monday date one week before `{TIME_TRACKING_WEEK_START}`.
+- `{TIME_TRACKING_MONTH_SPANNING_WEEK_START}`: Monday date of a week that spans two calendar
+  months, formatted as `YYYY-MM-DD` — for example `2026-08-31`, the week Aug 31 - Sep 6.
 - `{TIME_TRACKING_PROJECT_A}`: active project assigned to the time-tracking test user.
 - `{TIME_TRACKING_PROJECT_B}`: second active project assigned to the time-tracking test user.
 - `{TIME_ENTRY_DESCRIPTION}`: description text used for test time entries.
@@ -603,7 +605,7 @@ Expected result:
 ### Detail Level Axis And Its URL State
 
 1. Open `https://{DOMAIN_NAME}/time?week={TIME_TRACKING_WEEK_START}`.
-2. Confirm the detail-level control shows `Day`, `Week` and `Grid`, with `Week` selected.
+2. Confirm the detail-level control shows `Day`, `Week`, `Grid` and `Month`, with `Week` selected.
 3. Select a day other than today on the day strip above the level, then select `Day`, then `Grid`,
    then `Week` again.
 4. Copy the address bar, open it in a new tab, and confirm the same level and the same selected day.
@@ -622,19 +624,22 @@ Expected result:
 ### Detail Level Keyboard Shortcuts
 
 1. Open `https://{DOMAIN_NAME}/time?week={TIME_TRACKING_WEEK_START}`.
-2. Press `1`, `2` and `3` in turn.
-3. Press `-` and then `+` twice each.
-4. Press `[` and `]`.
+2. Press `1`, `2`, `3` and `4` in turn.
+3. Press `-` and then `+` three times each.
+4. Press `[` and `]` at the `Week` level, then again at the `Month` level.
 5. Press `t`.
 6. Select `Grid`, click into a grid cell, and type `3.5` without saving.
 7. Open `New entry`, and with the dialog open type `1`, `3` and `t` into the description field.
 
 Expected result:
 
-- `1`, `2` and `3` jump to `Day`, `Week` and `Grid`.
+- `1`, `2`, `3` and `4` jump to `Day`, `Week`, `Grid` and `Month`.
 - `-` moves one level out and `+` one level in, and neither wraps around at either end.
-- `[` and `]` move one week back and forward, keeping the current level and the same weekday.
-- `t` returns to this week with today selected.
+- `[` and `]` move one **week** back and forward at `Day`, `Week` and `Grid`, keeping the current
+  level and the same weekday — and one **month** back and forward at `Month`, landing on the 1st of
+  that month.
+- The hint beside the control says which of the two `[` and `]` will do at the level you are on.
+- `t` returns to this week with today selected, from any level.
 - Typing in a grid cell or in the entry dialog changes no level: the digits land in the field.
 - The arrow keys are not claimed by the level control anywhere on the page.
 
@@ -718,7 +723,70 @@ Expected result:
   missed: the app's global CSS reduce-motion rule does not reach this animation library, so a
   failure here means the level transitions will fly for every user who has the setting on.
 - The screen reader announces the new level after each of `1`, `2` and `3` — the level's name, how
-  many days it covers, and the total for that span — in the language the page is in.
+  many days it covers, and the total for that span — in the language the page is in. After `4` it
+  names the month instead of a number of days.
+
+### Month Level And The Month It Shows
+
+Use a week that spans two months for this one — the month is taken from the selected day, not from
+the week, and a week inside a single month cannot tell the two apart.
+
+1. Open `https://{DOMAIN_NAME}/time?week={TIME_TRACKING_MONTH_SPANNING_WEEK_START}&zoom=month`.
+2. Read the period row above the day strip, and the band below it.
+3. On the day strip, select a day on the **earlier** month's side of the week, then a day on the
+   **later** month's side. Watch the period row, the total and the band each time.
+4. Confirm nothing spins, blanks out or reloads while you do — the address bar gains `day=` but the
+   page stays put.
+5. Press `[` and then `]`, then use the visible previous/next buttons beside the month name.
+6. Press `t`.
+7. Click a project row.
+8. Press `4` again, then `2`, and watch the day strip and the total across both changes.
+9. Repeat with a project you logged nothing against this month, and with a phone-width viewport.
+10. Repeat the whole scenario in Hungarian and in both light and dark themes.
+
+Expected result:
+
+- The period row names the month, steps by month, and its total reads `Month total`. It is the same
+  row that reads `Aug 31 - Sep 6, 2026` and `Week total` at the other three levels — one row, one
+  total, changing only its label and its number.
+- The month named is the month the **selected day** falls in. Moving the day strip across the month
+  boundary changes the month, its total and its rows, with no page load and no spinner.
+- The band lists one row per project with the hours tracked against it in that month. A project you
+  logged nothing against this month is still listed, at `0 h`, and reads quieter than the others.
+- The month total counts every hour the month holds, so the rows add up to it.
+- `[` and `]` and the visible previous/next buttons do exactly the same thing: one month back or
+  forward, landing on the 1st of that month with the week that contains it loaded. This is a real
+  page load, unlike moving within the visible week.
+- The `This month` pill appears only when the month shown is the current one; otherwise it is a
+  button that returns to today, and `t` does the same.
+- Clicking a project row returns to the `Grid` level on the week the day strip was already pointing
+  at — the whole week, not a view filtered to that project.
+- The day strip stays on screen at the month level, visibly quieter than at the other levels, and
+  stays clickable. The day total beside it stays in place and keeps reading the selected day.
+- Every label reads correctly in Hungarian and English, and the month name is in the page's own
+  language — `2026. szeptember`, not `September 2026`, in Hungarian.
+
+### A Declared-Only Member Sees Only The Month
+
+Set up: as an administrator, set every one of a member's project assignments to declared hours (or
+set the member default to declared and leave every assignment inheriting it).
+
+1. Sign in as that member and open `https://{DOMAIN_NAME}/time`.
+2. Then open `https://{DOMAIN_NAME}/time?zoom=week` and `?zoom=grid` directly.
+3. Press `1`, `2`, `3`, `-` and `+`.
+4. Press `[`, `]` and `t`.
+5. Confirm with a hybrid member — some assignments tracked, some declared — that nothing changed
+   for them.
+
+Expected result:
+
+- There is **no** detail-level control at all: one stop is not a choice.
+- The page opens on the month, and a `zoom=` in the address naming any other level still opens on
+  the month.
+- No digit or step key reaches another level.
+- `[`, `]` and `t` still work, and the hint beside where the control would be lists only those.
+- A hybrid member keeps all four stops, opens on the week as before, and sees their tracked
+  projects in the month band.
 
 ## Contractor Timesheets
 
@@ -3293,8 +3361,14 @@ Expected result:
 - Admin list filters read as a single toolbar row with removable chips for whatever is applied.
 - A running timer sits in the app header on every signed-in page and at every width, and can be
   stopped from there; starting one happens in an overlay opened from the time-tracking toolbar.
-- `/time` has one detail-level control with three stops, the level and the selected day live in the
+- `/time` has one detail-level control with four stops, the level and the selected day live in the
   address bar, and the selected day survives every level change in both directions.
+- At the month level the period row above the day strip names the month, steps by month and reads
+  `Month total`, and the visible previous/next buttons and `[` / `]` never disagree about whether a
+  period is a week or a month.
+- The month shown follows the selected day rather than the week, so moving the day strip across a
+  month boundary changes the month with no page load.
+- A member whose every assignment is declared monthly gets the month and no level control at all.
 - A `/time` level change animates as one surface moving, nothing animates on first paint, no figure
   ever tweens, and with the operating system's reduce-motion setting on nothing moves at all.
 - Each assignment in a project's drawer shows its hours-tracking mode beside its rate source, and
