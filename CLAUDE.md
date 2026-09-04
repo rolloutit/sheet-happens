@@ -103,6 +103,17 @@ unique accessible name, a change can be read back as text instead of eyeballed.
   region per weekday, entry controls addressable within their day. Copy that shape.
 - Aria baselines live in `e2e/__aria__/`. Date-derived values are matched with regexes, not
   literals — never "fix" a failing baseline by regenerating it without reading the diff first.
+- Two signed-in roles, each with its own `storageState` minted by `e2e/auth.setup.ts`: `admin`
+  (`admin@example.com`) and `member` (`contractor@example.com`). Specs in `e2e/authenticated/` run
+  under **both**; `authenticated/admin/` and `authenticated/member/` are the role-bound exceptions,
+  and `playwright.config.ts` says why a spec belongs in one.
+- Both roles have to be **onboarded**, not just logged in: the seed leaves every member row INVITED
+  and unlinked, so a magic-link session alone gets bounced to `/account-status`. The setup accepts
+  an invitation first — the admin from the seeded token, the member from a real admin-driven resend
+  — and that is the only reason a fresh database can run the suite at all.
+- `/sign-in/magic-link` allows **5 requests per 15 minutes per IP** and the whole suite shares one
+  localhost budget. That is why the member session is reused while it still works. A 429 in the
+  setup means the suite has been run too often, not that something broke.
 
 ## Testing conventions
 
