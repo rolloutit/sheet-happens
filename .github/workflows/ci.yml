@@ -1,0 +1,112 @@
+name: CI
+
+on:
+  push:
+    branches: [develop, main]
+  pull_request:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  # The static, unit and Storybook jobs never open a connection — Prisma only dials on the first
+  # query — but the client is constructed at import time, so it needs a syntactically valid URL.
+  # The e2e job overrides this with its service database.
+  DATABASE_URL: postgresql://sheet_happens:sheet_happens@localhost:5432/sheet_happens
+
+jobs:
+  # Cheapest gates first: a formatting slip should not wait for a browser to boot.
+  static:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/setup@v2
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm typecheck
+      - run: pnpm lint
+      - run: pnpm format
+
+  unit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/setup@v2
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm test
+
+  storybook:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/setup@v2
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm exec playwright install --with-deps chromium
+      - run: pnpm build-storybook
+      - run: pnpm test-storybook
+      # `pnpm test:visual` is deliberately absent: the checked-in baselines are platform-suffixed
+      # `-darwin`, so they can only be compared on a developer's macOS machine.
+
+  e2e:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: sheet_happens
+          POSTGRES_PASSWORD: sheet_happens
+          POSTGRES_DB: sheet_happens
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      # Ephemeral, throwaway values for a database that is destroyed with the runner. Not secrets.
+      BETTER_AUTH_SECRET: ci-only-auth-secret-not-used-anywhere-else
+      AUTH_LOGIN_ATTEMPT_SECRET: ci-only-login-attempt-secret-value
+      # The app's own URLs come from playwright.config.ts's webServer.env, which knows the port.
+      # No object storage in CI; nothing these specs touch reads from it.
+      OBJECT_STORAGE_PROVIDER: s3
+      S3_ENDPOINT: http://localhost:9000
+      S3_REGION: us-east-1
+      S3_BUCKET: sheet-happens
+      S3_ACCESS_KEY_ID: ci-access-key
+      S3_SECRET_ACCESS_KEY: ci-secret-key
+      S3_FORCE_PATH_STYLE: "true"
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/setup@v2
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm exec playwright install --with-deps chromium
+      # The init migration creates the citext and pgcrypto extensions the seed relies on.
+      - run: pnpm db:migrate:deploy
+      # `db:dev:seed` skips Docker entirely and seeds whatever DATABASE_URL points at.
+      - run: pnpm db:dev:seed
+      - run: pnpm e2e
+      - if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: playwright-report
+          path: |
+            playwright-report/
+            test-results/
+          retention-days: 7
