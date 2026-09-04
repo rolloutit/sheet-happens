@@ -1105,8 +1105,8 @@
       "navigation": "Taglista oldalak",
       "previous": "Előző",
       "next": "Következő",
-      "previousPage": "Ugrás a(z) {page}. oldalra",
-      "nextPage": "Ugrás a(z) {page}. oldalra",
+      "previousPage": "Előző oldal",
+      "nextPage": "Következő oldal",
       "page": "Ugrás a(z) {page}. oldalra",
       "currentPage": "Aktuális oldal: {page}. oldal",
       "summary": "{page}. oldal / {totalPages}, összesen {totalItems} tag"
@@ -1352,8 +1352,8 @@
       "navigation": "Projektlista oldalak",
       "previous": "Előző",
       "next": "Következő",
-      "previousPage": "Ugrás a(z) {page}. oldalra",
-      "nextPage": "Ugrás a(z) {page}. oldalra",
+      "previousPage": "Előző oldal",
+      "nextPage": "Következő oldal",
       "page": "Ugrás a(z) {page}. oldalra",
       "currentPage": "Aktuális oldal: {page}. oldal",
       "summary": "{page}. oldal / {totalPages}, összesen {totalItems} projekt"
