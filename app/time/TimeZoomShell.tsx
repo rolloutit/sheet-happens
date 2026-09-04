@@ -31,6 +31,17 @@ type TimeZoomShellProps = {
   month: { label: string; totalMinutes: number };
   /** The member's own stop list (`resolveZoomStops`), which bounds the digits and the steps. */
   stops: readonly ZoomLevel[];
+  /**
+   * §8's hybrid handoff line — _"Nimbus is declared monthly — see Month"_ — rendered under the day
+   * strip at L1-L3 and dropped at L4.
+   *
+   * A shell prop rather than something each level renders, for two reasons. It has to sit under the
+   * strip, and the strip is here; and written into all three `renderLevel` branches it would be
+   * three copies of one sentence, which is three places to forget it. It arrives as an already-built
+   * node, so the shell still knows nothing about projects — only where the line goes and at which
+   * levels it belongs.
+   */
+  handoff?: ReactNode;
   formatMinutes: (minutes: number) => string;
   onPreviousPeriod: () => void;
   onNextPeriod: () => void;
@@ -72,6 +83,7 @@ export function TimeZoomShell({
   dayTotalMinutes,
   month,
   stops,
+  handoff,
   formatMinutes,
   onPreviousPeriod,
   onNextPeriod,
@@ -232,6 +244,11 @@ export function TimeZoomShell({
               </span>
             </div>
           </div>
+
+          {/* Information, not a warning, so it reads as a line under the strip rather than as a
+              banner (§8). Absent at L4, where the declared projects are on screen and there is
+              nothing left to explain. */}
+          {handoff && !atMonth ? handoff : null}
 
           {renderLevel(level)}
 

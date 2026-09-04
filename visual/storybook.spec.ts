@@ -240,6 +240,46 @@ const storyCases: StoryVisualCase[] = [
     locale: "en",
     projects: ["mobile"],
   },
+  /**
+   * The three L4 member shapes, which is what §16 asks the baselines to cover. Hybrid is both
+   * bands with their headings; declared-only is the one case that drops both headings and the
+   * tracked band entirely; locked is the read-only form a submitted month leaves behind.
+   */
+  {
+    id: "sheet-monthoverview--hybrid-month",
+    slug: "month-overview-hybrid-dark",
+    theme: "dark",
+    locale: "en",
+    projects: ["desktop"],
+  },
+  {
+    id: "sheet-monthoverview--hybrid-month-light",
+    slug: "month-overview-hybrid-light",
+    theme: "light",
+    locale: "hu",
+    projects: ["desktop"],
+  },
+  {
+    id: "sheet-monthoverview--declared-only",
+    slug: "month-overview-declared-only-dark",
+    theme: "dark",
+    locale: "en",
+    projects: ["desktop"],
+  },
+  {
+    id: "sheet-monthoverview--declared-locked",
+    slug: "month-overview-declared-locked-dark",
+    theme: "dark",
+    locale: "en",
+    projects: ["desktop"],
+  },
+  {
+    id: "sheet-monthoverview--hybrid-month-mobile",
+    slug: "month-overview-hybrid-mobile-dark",
+    theme: "dark",
+    locale: "en",
+    projects: ["mobile"],
+  },
   {
     id: "sheet-timerstartdialog--open",
     slug: "timer-start-dialog-dark",

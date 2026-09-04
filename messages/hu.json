@@ -1750,6 +1750,11 @@
     },
     "events": {
       "actions": {
+        "hours_declaration__created": "Bevallva",
+        "hours_declaration__deleted": "Bevallás visszavonva",
+        "hours_declaration__proof_replaced": "Igazolás cserélve",
+        "hours_declaration__proof_uploaded": "Igazolás feltöltve",
+        "hours_declaration__updated": "Bevallás javítva",
         "inactive_project_week__marked": "Inaktívnak jelölve",
         "inactive_project_week__unmarked": "Inaktív jelölés törölve",
         "info_pages__publish": "Közzétéve",
@@ -1759,10 +1764,10 @@
         "member__activated": "Aktiválva",
         "member__avatar_deleted": "Profilkép törölve",
         "member__avatar_updated": "Profilkép frissítve",
-        "member__duration_display_format_updated": "Időtartam-megjelenítés frissítve",
         "member__bootstrap_invited": "Kezdeti admin meghívva",
         "member__deactivated": "Deaktiválva",
         "member__deleted": "Archiválva",
+        "member__duration_display_format_updated": "Időtartam-megjelenítés frissítve",
         "member__invitation_resent": "Meghívó újraküldve",
         "member__invitation_revoked": "Meghívó visszavonva",
         "member__invited": "Meghívva",
@@ -1820,10 +1825,10 @@
         "security__totp_reset": "2FA visszaállítva",
         "time_entries__copy_previous_day": "Előző nap másolva",
         "time_entries__duplicate_previous_week": "Előző hét másolva",
+        "time_entry__admin_updated": "Admin által javítva",
         "time_entry__created": "Létrehozva",
         "time_entry__deleted": "Törölve",
         "time_entry__updated": "Módosítva",
-        "time_entry__admin_updated": "Admin által javítva",
         "timesheet__approved": "Jóváhagyva",
         "timesheet__paid": "Kifizetettnek jelölve",
         "timesheet__rejected": "Elutasítva",
@@ -1833,6 +1838,7 @@
       "targets": {
         "assignment_rate_period": "Projektóradíj",
         "contractor_invoice": "Számla",
+        "hours_declaration": "Bevallott órák",
         "inactive_project_week": "Inaktív hét",
         "info_page": "Információs oldal",
         "member": "Munkatárs",
@@ -2079,7 +2085,10 @@
     "month": {
       "trackedHeading": "Sheet Happensben rögzítve",
       "emptyTitle": "Ebben a hónapban nincs mit zárni",
-      "emptyDescription": "Ebben a hónapban nem rögzítettél időt, és nincs benne nyitott projekt, amelyre rögzíthetnél."
+      "emptyDescription": "Ebben a hónapban nem rögzítettél időt, és nincs benne nyitott projekt, amelyre rögzíthetnél.",
+      "declaredHeading": "Havonta bevallott",
+      "declaredElsewhere": "A(z) {project} órái havonta kerülnek bevallásra — <link>nézd meg a Hónap nézetben</link>",
+      "declaredElsewhereMany": "{count, plural, other {# projekt}} órái havonta kerülnek bevallásra — <link>nézd meg a Hónap nézetben</link>"
     },
     "timer": {
       "trackedWithTimer": "Időmérővel rögzítve",
@@ -2157,6 +2166,28 @@
     },
     "errors": {
       "invalidDurationFormat": "Adj meg időt például így: 3.5, 3:30, 3h 20m vagy 200m."
+    },
+    "declared": {
+      "hoursLabel": "{project}, bevallott órák",
+      "hoursPlaceholder": "52",
+      "hoursHint": "A teljes hónap órái — 52, 52h vagy 52:30.",
+      "noteLabel": "{project}, mit fedeznek az órák",
+      "notePlaceholder": "Platformmigráció támogatása",
+      "noteRequired": "Írd le, mit fedeznek a bevallott órák.",
+      "proofLabel": "Óraigazolás PDF",
+      "proofUpload": "Igazolás feltöltése",
+      "proofReplace": "Csere",
+      "proofView": "Megnyitás",
+      "proofMissing": "Még nincs feltöltött igazolás",
+      "proofNeedsHours": "Előbb valld be az órákat, utána csatold az igazolást.",
+      "proofUploading": "Feltöltés",
+      "save": "Mentés",
+      "saving": "Mentés",
+      "saved": "Mentve",
+      "locked": "Beküldött időelszámolás zárolja ezt a hónapot, ezért az órák csak olvashatók.",
+      "nothingDeclared": "Nincs bevallva",
+      "externalSystem": "külső rendszer",
+      "sanityWarning": "Ez több mint {hours}, ennyi óra van az egész hónapban. Mentettük — ellenőrizd a számot."
     }
   },
   "TimeTrackingActions": {
@@ -2169,7 +2200,10 @@
       "draftSaved": "Piszkozat mentve.",
       "draftDiscarded": "Piszkozat eldobva.",
       "inactiveWeekSaved": "A projekt erre a hétre inaktívként jelölve.",
-      "inactiveWeekRemoved": "Inaktív hét eltávolítva."
+      "inactiveWeekRemoved": "Inaktív hét eltávolítva.",
+      "declarationSaved": "Bevallott órák mentve.",
+      "declarationWithdrawn": "Bevallott órák visszavonva.",
+      "proofUploaded": "Óraigazolás feltöltve."
     },
     "errors": {
       "generic": "Valami hiba történt.",
@@ -2195,7 +2229,15 @@
       "noTimerRunning": "Nincs futó időmérő.",
       "projectNotActiveForDate": "Ez a projekt nem aktív a kiválasztott dátumon.",
       "projectNotAssignedForWeek": "Ez a projekt nincs hozzárendelve a kiválasztott héten.",
-      "dateTimezoneFormatFailed": "A dátumot nem sikerült formázni az időzónában."
+      "dateTimezoneFormatFailed": "A dátumot nem sikerült formázni az időzónában.",
+      "declarationSaveFailed": "A bevallott órákat nem sikerült menteni.",
+      "declarationWithdrawFailed": "A bevallott órákat nem sikerült visszavonni.",
+      "proofUploadFailed": "Az óraigazolást nem sikerült feltölteni.",
+      "proofRequired": "Válassz ki egy PDF-et a feltöltéshez.",
+      "proofTooLarge": "Az óraigazolás PDF nagyobb mint 10 MB.",
+      "storageMissing": "A dokumentumtár nincs beállítva.",
+      "projectDeclaresMonthly": "Ez a projekt havonta vallja be az óráit.",
+      "declaredCorrectedAtMonth": "A bevallott órákat a Hónap nézetben lehet javítani."
     },
     "fields": {
       "chooseProject": "Válassz projektet.",
@@ -2231,6 +2273,20 @@
         "copied": "{created} bejegyzés másolva az előző hétről.",
         "copiedWithSkipped": "{created} bejegyzés másolva az előző hétről; {skipped} kihagyva."
       }
+    },
+    "declarationErrors": {
+      "INVALID_PERIOD": "Válassz érvényes hónapot.",
+      "INVALID_MINUTES": "A bevallott óraszámnak nullánál nagyobbnak kell lennie.",
+      "NOTE_REQUIRED": "Írd le, mit fedeznek a bevallott órák.",
+      "PERIOD_LOCKED": "Beküldött időelszámolás zárolja ezt a hónapot.",
+      "ASSIGNMENT_NOT_FOUND": "Ez a projekt nincs hozzád rendelve a kiválasztott hónapban.",
+      "NOT_DECLARED": "Ez a projekt a Sheet Happensben rögzíti az óráit, ezért nem vallhatók be.",
+      "TRACKED_ENTRIES_EXIST": "Ebben a hónapban már vannak rögzített időbejegyzések ehhez a projekthez. Töröld őket a bevallás előtt.",
+      "DECLARATION_NOT_FOUND": "Ebben a hónapban még nincs bevallott óraszám.",
+      "REASON_REQUIRED": "Az adminisztrátori javításhoz indoklás szükséges.",
+      "PROOF_REQUIRED": "Válassz ki egy PDF-et a feltöltéshez.",
+      "PROOF_TOO_LARGE": "Az óraigazolás PDF nagyobb mint 10 MB.",
+      "PROOF_NOT_PDF": "Az óraigazolásnak PDF-nek kell lennie."
     }
   },
   "MyRates": {

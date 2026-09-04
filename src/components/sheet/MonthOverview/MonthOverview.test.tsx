@@ -11,11 +11,35 @@ const projects: MonthOverviewProject[] = [
   { projectId: "orion", name: "Orion Rollout", color: "#f2b8ff", minutes: 0 },
 ];
 
+const declaredLabels = {
+  hoursLabel: (project: { name: string }) => `${project.name}, declared hours`,
+  hoursPlaceholder: "52",
+  hoursHint: "Hours for the whole month.",
+  noteLabel: (project: { name: string }) => `${project.name}, what the hours cover`,
+  notePlaceholder: "Platform migration support",
+  noteRequired: "Describe what the declared hours cover.",
+  proofLabel: "Hours proof PDF",
+  proofUpload: "Upload proof",
+  proofReplace: "Replace",
+  proofView: "View",
+  proofMissing: "No proof uploaded yet",
+  proofNeedsHours: "Declare the hours first, then attach the proof.",
+  proofUploading: "Uploading",
+  save: "Save",
+  saving: "Saving",
+  saved: "Saved",
+  locked: "A submitted timesheet locks this month.",
+  nothingDeclared: "Nothing declared",
+  externalSystem: "external system",
+};
+
 const labels = {
   trackedHeading: "Tracked in Sheet Happens",
+  declaredHeading: "Declared monthly",
   zoomToProject: (project: MonthOverviewProject) => `${project.name} · zoom in`,
   emptyTitle: "Nothing to close in this month",
   emptyDescription: "No hours were logged in this month.",
+  declared: declaredLabels,
 };
 
 function renderOverview(overrides: Partial<Parameters<typeof MonthOverview>[0]> = {}) {

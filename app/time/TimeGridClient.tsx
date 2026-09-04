@@ -39,7 +39,11 @@ import {
 import { useLocale, useTranslations } from "next-intl";
 
 import { DayAgenda, type DayAgendaEntry } from "@/src/components/sheet/DayAgenda";
-import { MonthOverview, type MonthOverviewProject } from "@/src/components/sheet/MonthOverview";
+import {
+  MonthOverview,
+  type MonthOverviewDeclaredProject,
+  type MonthOverviewProject,
+} from "@/src/components/sheet/MonthOverview";
 import {
   WeekAgenda,
   type WeekAgendaDay,
@@ -61,6 +65,7 @@ import {
 } from "@/src/components/ui/Dialog";
 import { formatDurationForInput, parseDurationToMinutes } from "@/src/lib/duration";
 import {
+  formatDateTime,
   formatHours as formatDurationHours,
   formatHoursWithUnit as formatDurationHoursWithUnit,
   formatMonthLabel,
@@ -88,10 +93,12 @@ import {
   deleteTimeEntryAction,
   duplicatePreviousWeekAction,
   markInactiveProjectWeekAction,
+  saveMonthlyHourDeclarationAction,
   saveTimeEntryDraftAction,
   stopRunningTimerAction,
   unmarkInactiveProjectWeekAction,
   updateTimeEntryAction,
+  uploadDeclarationProofAction,
 } from "./actions";
 import {
   TIME_ENTRY_FORM_DRAFT_KEY,
@@ -140,6 +147,16 @@ type EntryModalState =
       entry: TimeGridEntry;
     }
   | null;
+
+/** Which declared row is mid-write, and how the last write went. See `declarationState`. */
+type DeclarationRowState = {
+  projectId: string | null;
+  saving: boolean;
+  uploading: boolean;
+  /** Set on a successful save so the row can confirm it until the fields change again. */
+  savedAt: number | null;
+  error: string | null;
+};
 
 type BreakdownState = {
   projectId: string;
@@ -212,6 +229,20 @@ function TimeGridContent({ week, months }: { week: TimeGridWeek; months: MemberM
   const [entryModal, setEntryModal] = useState<EntryModalState>(null);
   const [breakdown, setBreakdown] = useState<BreakdownState>(null);
   const [pendingQuickAction, setPendingQuickAction] = useState<PendingQuickAction | null>(null);
+  /**
+   * Which declared row is mid-write, and how it went.
+   *
+   * One slot rather than a map: only one row can be saving or uploading at a time, because both
+   * affordances are disabled while a transition is pending. Keyed by project id so the spinner and
+   * the error land on the row that asked for them and not on the band.
+   */
+  const [declarationState, setDeclarationState] = useState<DeclarationRowState>({
+    projectId: null,
+    saving: false,
+    uploading: false,
+    savedAt: null,
+    error: null,
+  });
   const [, setTimerOpen] = useOverlayParam(TIME_OVERLAY_PARAM, TIMER_OVERLAY_VALUE);
 
   const inactiveProjectIds = useMemo(
@@ -223,7 +254,31 @@ function TimeGridContent({ week, months }: { week: TimeGridWeek; months: MemberM
   const weekHasLockedPeriod = week.lockedMonthStarts.length > 0;
   const adminModifiedEntryCount = week.entries.filter((entry) => entry.adminModification).length;
 
-  const projectRows = week.projects;
+  /**
+   * The projects L1-L3 are allowed to offer, and the ones they explain instead.
+   *
+   * **`week.projects` stays the complete assignment list**, and that is load-bearing rather than
+   * incidental: `resolveZoomStops` reads it to decide a declared-only member gets the month alone,
+   * and the axis is rendered at all only when it is non-empty. Filtering the payload would give
+   * such a member the "no assignments" empty state instead of their monthly form, and would collapse
+   * their stop list back to four because `resolveZoomStops([])` deliberately returns everything.
+   *
+   * So the split happens here, once. Every consumer that could offer a project to write against —
+   * the add-entry default, the L3 grid rows, the entry modal's picker, the "Assigned" chips, the
+   * recent chips, the timer dialog — reads `projectRows`, which is the tracked list. One `useMemo`
+   * beside the stop list cannot be forgotten the way six call sites can, and the declared half is
+   * needed anyway, for the handoff line and for the month's own band.
+   */
+  const projectRows = useMemo(
+    () => week.projects.filter((project) => project.trackingMode === "TRACKED"),
+    [week.projects],
+  );
+  const declaredProjects = useMemo(
+    () => week.projects.filter((project) => project.trackingMode === "DECLARED"),
+    [week.projects],
+  );
+  /** Whether the member has any assignment at all, which is what decides the axis renders. */
+  const hasAssignments = week.projects.length > 0;
   const projectsById = useMemo(
     () => new Map(projectRows.map((project) => [project.projectId, project])),
     [projectRows],
@@ -268,6 +323,43 @@ function TimeGridContent({ week, months }: { week: TimeGridWeek; months: MemberM
     color: project.color,
     minutes: project.minutes,
   }));
+
+  /**
+   * Locking is a member-and-month fact the page already holds: `week.lockedMonthStarts` names the
+   * months the visible week touches, which are exactly the months `months` was loaded for. Reading
+   * it here rather than asking `getMemberMonthOverview` for it keeps that function at three queries
+   * and keeps one answer to "is this month locked?" on the page.
+   */
+  const monthLocked = week.lockedMonthStarts.includes(selectedMonthStart);
+  const declaredRows: MonthOverviewDeclaredProject[] = (monthOverview?.declared ?? []).map(
+    (project) => ({
+      projectId: project.projectId,
+      name: project.name,
+      color: project.color,
+      minutes: project.minutes,
+      note: project.note,
+      proof: project.proof
+        ? {
+            filename: project.proof.filename,
+            href: `/time/hours-proof/${project.proof.declarationId}`,
+            sizeLabel: formatBytesLabel(project.proof.byteSize, locale),
+            uploadedAtLabel: formatDateTime(project.proof.uploadedAt, locale),
+          }
+        : null,
+      // A figure above 24h x days in the month is implausible, not impossible (§4). The sentence is
+      // built here because the row takes already-worded text and does no locale work of its own.
+      warning:
+        project.minutes !== null && project.minutes > declarationSanityLimitMinutes
+          ? t("declared.sanityWarning", {
+              hours: formatMinutesWithUnit(declarationSanityLimitMinutes),
+            })
+          : null,
+      error: declarationState.projectId === project.projectId ? declarationState.error : null,
+      saving: declarationState.projectId === project.projectId && declarationState.saving,
+      uploading: declarationState.projectId === project.projectId && declarationState.uploading,
+      savedAt: declarationState.projectId === project.projectId ? declarationState.savedAt : null,
+    }),
+  );
 
   /** What a period is at this level, for the keyboard hint and the "this period" affordance. */
   const periodNoun = atMonth ? t("zoom.periodMonth") : t("zoom.periodWeek");
@@ -369,6 +461,74 @@ function TimeGridContent({ week, months }: { week: TimeGridWeek; months: MemberM
       projectId: project.projectId,
       localDate,
       durationMinutes: 60,
+    });
+  }
+
+  /** 24 h x days in the selected month — the bound §4 makes a warning rather than a block. */
+  const declarationSanityLimitMinutes = countDaysInMonth(selectedMonthStart) * 24 * 60;
+
+  function saveDeclaration(input: { projectId: string; minutes: number; note: string }) {
+    setDeclarationState({
+      projectId: input.projectId,
+      saving: true,
+      uploading: false,
+      savedAt: null,
+      error: null,
+    });
+
+    startTransition(async () => {
+      const result = await saveMonthlyHourDeclarationAction({
+        projectId: input.projectId,
+        periodStart: selectedMonthStart,
+        minutes: input.minutes,
+        note: input.note,
+      });
+
+      setDeclarationState({
+        projectId: input.projectId,
+        saving: false,
+        uploading: false,
+        savedAt: result.status === "success" ? Date.now() : null,
+        error: result.status === "success" ? null : result.message,
+      });
+
+      /* The row already says what happened, so a success does not also raise the page-level
+         notice — two reports of one save read as two saves. A failure still does, because the
+         message can be about the month rather than about the row. */
+      if (result.status === "success") router.refresh();
+      else setNotice({ tone: "error", message: result.message });
+    });
+  }
+
+  function uploadDeclarationProof(input: { projectId: string; file: File }) {
+    setDeclarationState({
+      projectId: input.projectId,
+      saving: false,
+      uploading: true,
+      savedAt: null,
+      error: null,
+    });
+
+    startTransition(async () => {
+      const formData = new FormData();
+      formData.set("projectId", input.projectId);
+      formData.set("periodStart", selectedMonthStart);
+      formData.set("proofFile", input.file);
+
+      const result = await uploadDeclarationProofAction({ status: "idle", message: "" }, formData);
+
+      setDeclarationState({
+        projectId: input.projectId,
+        saving: false,
+        uploading: false,
+        savedAt: null,
+        error: result.status === "success" ? null : result.message,
+      });
+
+      if (result.status === "success") {
+        setNotice({ tone: "success", message: result.message });
+        router.refresh();
+      }
     });
   }
 
@@ -844,13 +1004,47 @@ function TimeGridContent({ week, months }: { week: TimeGridWeek; months: MemberM
         />
       ) : null}
 
-      {projectRows.length ? (
+      {/* The whole axis, not just the tracked levels: a declared-only member has no tracked
+          projects and still needs L4, which is their entire screen. The empty state below is for a
+          member with no assignments of either kind. */}
+      {hasAssignments ? (
         <TimeZoomShell
           days={zoomDays}
           todayIso={week.todayIso}
           dayTotalMinutes={selectedDayTotalMinutes}
           month={{ label: monthLabel, totalMinutes: monthTotalMinutes }}
           stops={stops}
+          handoff={
+            declaredProjects.length && projectRows.length ? (
+              <p className="text-sm text-muted-foreground">
+                {declaredProjects.length === 1
+                  ? t.rich("month.declaredElsewhere", {
+                      project: declaredProjects[0]?.name ?? "",
+                      link: (chunks) => (
+                        <button
+                          type="button"
+                          className="font-medium text-accent underline underline-offset-2"
+                          onClick={() => setLevel("month")}
+                        >
+                          {chunks}
+                        </button>
+                      ),
+                    })
+                  : t.rich("month.declaredElsewhereMany", {
+                      count: declaredProjects.length,
+                      link: (chunks) => (
+                        <button
+                          type="button"
+                          className="font-medium text-accent underline underline-offset-2"
+                          onClick={() => setLevel("month")}
+                        >
+                          {chunks}
+                        </button>
+                      ),
+                    })}
+              </p>
+            ) : null
+          }
           formatMinutes={formatMinutesWithUnit}
           onPreviousPeriod={goToPreviousPeriod}
           onNextPeriod={goToNextPeriod}
@@ -907,16 +1101,42 @@ function TimeGridContent({ week, months }: { week: TimeGridWeek; months: MemberM
             ) : activeLevel === "month" ? (
               <MonthOverview
                 projects={monthProjects}
+                declared={declaredRows}
+                monthLocked={monthLocked}
                 locale={locale}
                 durationDisplayFormat={durationDisplayFormat}
                 disabled={isPending}
                 animateRows={animateEntries}
                 labels={{
                   trackedHeading: t("month.trackedHeading"),
+                  declaredHeading: t("month.declaredHeading"),
                   zoomToProject: (project) => t("zoom.zoomToProject", { project: project.name }),
                   emptyTitle: t("month.emptyTitle"),
                   emptyDescription: t("month.emptyDescription"),
+                  declared: {
+                    hoursLabel: (project) => t("declared.hoursLabel", { project: project.name }),
+                    hoursPlaceholder: t("declared.hoursPlaceholder"),
+                    hoursHint: t("declared.hoursHint"),
+                    noteLabel: (project) => t("declared.noteLabel", { project: project.name }),
+                    notePlaceholder: t("declared.notePlaceholder"),
+                    noteRequired: t("declared.noteRequired"),
+                    proofLabel: t("declared.proofLabel"),
+                    proofUpload: t("declared.proofUpload"),
+                    proofReplace: t("declared.proofReplace"),
+                    proofView: t("declared.proofView"),
+                    proofMissing: t("declared.proofMissing"),
+                    proofNeedsHours: t("declared.proofNeedsHours"),
+                    proofUploading: t("declared.proofUploading"),
+                    save: t("declared.save"),
+                    saving: t("declared.saving"),
+                    saved: t("declared.saved"),
+                    locked: t("declared.locked"),
+                    nothingDeclared: t("declared.nothingDeclared"),
+                    externalSystem: t("declared.externalSystem"),
+                  },
                 }}
+                onSaveDeclaration={saveDeclaration}
+                onUploadProof={uploadDeclarationProof}
                 /* §6: a pure level change, not a filter. You land on the grid for the week the day
                    strip is already pointing at, which is why the row pressed does not matter to
                    where you go — only to which figure you were reading when you decided to. */
@@ -2452,6 +2672,29 @@ function isProjectAssignableOnDate(project: TimeGridAssignedProject, localDate: 
   if (project.projectStartsOn && localDate < project.projectStartsOn) return false;
   if (project.projectEndsOn && localDate > project.projectEndsOn) return false;
   return true;
+}
+
+/**
+ * Days in the month a `YYYY-MM-01` names, from day 0 of the month after it.
+ *
+ * The client's half of `getMonthEnd`, over an ISO string. February, leap years and December all
+ * fall out of the same arithmetic, and the server keeps its own copy because the warning shown here
+ * and the bound recorded there must agree.
+ */
+function countDaysInMonth(monthStartIso: string) {
+  const year = Number.parseInt(monthStartIso.slice(0, 4), 10);
+  const month = Number.parseInt(monthStartIso.slice(5, 7), 10);
+
+  return new Date(Date.UTC(year, month, 0)).getUTCDate();
+}
+
+/** A file size for the proof slot. Bytes are not a locale concept; the number is. */
+function formatBytesLabel(byteSize: number, locale: string) {
+  const kilobytes = byteSize / 1024;
+
+  return kilobytes >= 1024
+    ? `${new Intl.NumberFormat(locale, { maximumFractionDigits: 1 }).format(kilobytes / 1024)} MB`
+    : `${new Intl.NumberFormat(locale, { maximumFractionDigits: 0 }).format(kilobytes)} kB`;
 }
 
 function shiftIsoDate(isoDate: string, days: number) {

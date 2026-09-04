@@ -38,6 +38,17 @@ export type {
   DayAgendaLabels,
   DayAgendaProps,
 } from "./DayAgenda";
+export {
+  DeclaredHoursRow,
+  declaredHoursRowVariants,
+  declaredProofSlotVariants,
+} from "./DeclaredHoursRow";
+export type {
+  DeclaredHoursProject,
+  DeclaredHoursProof,
+  DeclaredHoursRowLabels,
+  DeclaredHoursRowProps,
+} from "./DeclaredHoursRow";
 export { EmptyState, emptyStateVariants } from "./EmptyState";
 export type { EmptyStateProps } from "./EmptyState";
 export { FilterChips } from "./FilterChips";
@@ -71,6 +82,7 @@ export { MarkdownArticle } from "./MarkdownArticle";
 export type { MarkdownArticleProps } from "./MarkdownArticle";
 export { MonthOverview, monthOverviewRowVariants } from "./MonthOverview";
 export type {
+  MonthOverviewDeclaredProject,
   MonthOverviewLabels,
   MonthOverviewProject,
   MonthOverviewProps,
