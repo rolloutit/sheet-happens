@@ -6,7 +6,7 @@ import { afterAll, beforeEach, describe, expect, it, vi } from "vitest";
 import messages from "@/messages/en.json";
 
 import { TimeZoomShell, type TimeZoomDay } from "./TimeZoomShell";
-import { zoomStorageKey, type ZoomLevel } from "./zoom";
+import { declaredOnlyZoomStops, zoomLevels, zoomStorageKey, type ZoomLevel } from "./zoom";
 
 /**
  * The axis keeps its state in the URL and writes it with `replaceState`, so the test needs both
@@ -80,13 +80,18 @@ const onPreviousPeriod = vi.fn();
 const onNextPeriod = vi.fn();
 const onToday = vi.fn();
 
-function renderShell(renderLevel: (level: ZoomLevel) => React.ReactNode = showLevel) {
+function renderShell(
+  renderLevel: (level: ZoomLevel) => React.ReactNode = showLevel,
+  stops: readonly ZoomLevel[] = zoomLevels,
+) {
   return render(
     <NextIntlClientProvider locale="en" timeZone="UTC" messages={messages}>
       <TimeZoomShell
         days={days}
         todayIso="2026-09-02"
         dayTotalMinutes={480}
+        month={{ label: "September 2026", totalMinutes: 10_080 }}
+        stops={stops}
         formatMinutes={(minutes) => `${minutes / 60} h`}
         onPreviousPeriod={onPreviousPeriod}
         onNextPeriod={onNextPeriod}
@@ -246,6 +251,10 @@ describe("TimeZoomShell", () => {
 
       await user.keyboard("3");
       expect(live).toHaveTextContent("Grid · 7 days · 22 h");
+
+      // L4 covers thirty days, not seven, so it names the month instead of counting days.
+      await user.keyboard("4");
+      expect(live).toHaveTextContent("Month · September 2026 · 168 h");
     });
 
     it("keeps the live region out of the accessible name of the day strip", () => {
@@ -285,6 +294,38 @@ describe("TimeZoomShell", () => {
     });
   });
 
+  describe("the month level", () => {
+    it("keeps the day strip mounted and operable, de-emphasised", async () => {
+      const user = userEvent.setup();
+      renderShell();
+
+      const wednesday = screen.getByRole("button", { name: "Select Wednesday" });
+      await user.keyboard("4");
+
+      expect(currentLevel()).toBe("month");
+      // Continuity item 2: the same element, not a re-render of an equivalent one.
+      expect(screen.getByRole("button", { name: "Select Wednesday" })).toBe(wednesday);
+      expect(
+        screen.getByRole("group", { name: "Days of the week you return to" }),
+      ).toContainElement(wednesday);
+
+      // Picking the day is how the month is picked (§11), so the chips still have to work.
+      await user.click(screen.getByRole("button", { name: "Select Monday" }));
+      expect(new URLSearchParams(window.location.search).get("day")).toBe("2026-08-31");
+      expect(currentLevel()).toBe("month");
+    });
+
+    it("keeps the persistent day total on screen", async () => {
+      const user = userEvent.setup();
+      renderShell();
+
+      const total = screen.getByText("8 h");
+      await user.keyboard("4");
+
+      expect(screen.getByText("8 h")).toBe(total);
+    });
+  });
+
   describe("keyboard", () => {
     it("jumps and steps between levels", async () => {
       const user = userEvent.setup();
@@ -301,6 +342,12 @@ describe("TimeZoomShell", () => {
 
       await user.keyboard("+");
       expect(currentLevel()).toBe("week");
+
+      await user.keyboard("4");
+      expect(currentLevel()).toBe("month");
+
+      await user.keyboard("+");
+      expect(currentLevel()).toBe("grid");
     });
 
     it("moves the period and goes to today", async () => {
@@ -315,6 +362,21 @@ describe("TimeZoomShell", () => {
       expect(onPreviousPeriod).toHaveBeenCalledTimes(1);
       expect(onNextPeriod).toHaveBeenCalledTimes(1);
       expect(onToday).toHaveBeenCalledTimes(1);
+    });
+
+    it("cannot reach a level the member does not have", async () => {
+      const user = userEvent.setup();
+      nativeReplaceState(null, "", "/time?zoom=week");
+      renderShell(showLevel, declaredOnlyZoomStops);
+
+      // Forced onto the month by the clamp, and no digit or step can leave it.
+      expect(currentLevel()).toBe("month");
+
+      await user.keyboard("2");
+      expect(currentLevel()).toBe("month");
+
+      await user.keyboard("+");
+      expect(currentLevel()).toBe("month");
     });
 
     it("stays out of the way while a field has the keystroke", async () => {

@@ -94,10 +94,11 @@ export function entryEnterTransition(index: number) {
  * - {@link entryLayoutId} belongs to an entry seen at one level at a time — the L1 row, the L2
  *   card. Only the selected day's entries carry it, because only they exist at both levels; a card
  *   in Thursday's column has nothing at L1 to morph into and would just cost a measure pass.
- *
- * `project-<id>` from the same list is deliberately absent: a project appears on many cards at L1
- * and L2, so it cannot be a `layoutId` there, and the one place it appears exactly once per level
- * — the L4 bands — does not exist until the month level lands.
+ * - {@link projectLayoutId} belongs to a project row at L4, and **only** there. A project appears
+ *   on many cards at L1 and L2, so it cannot name one element at those levels; the L4 bands are the
+ *   one place it appears exactly once, because a project is in either the tracked band or the
+ *   declared band and never both. That is what lets a row keep its identity as the month changes
+ *   under it, and what the declared band will morph against when it lands.
  */
 export function dayLayoutId(isoDate: string): string {
   return `day-${isoDate}`;
@@ -106,6 +107,11 @@ export function dayLayoutId(isoDate: string): string {
 /** See {@link dayLayoutId} for where this may and may not be used. */
 export function entryLayoutId(entryId: string): string {
   return `entry-${entryId}`;
+}
+
+/** See {@link dayLayoutId} for where this may and may not be used — L4 rows only. */
+export function projectLayoutId(projectId: string): string {
+  return `project-${projectId}`;
 }
 
 /**

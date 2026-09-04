@@ -19,6 +19,7 @@ import {
   parseDateOnly,
 } from "./dates";
 import type { TimeGridDay } from "./dates";
+import { resolveTrackingMode, type TrackingMode, type TrackingModeMember } from "./tracking-mode";
 
 /**
  * Mirrors the `EntrySource` enum, `DECLARED` included: a declared month is materialized as a
@@ -44,6 +45,15 @@ export type TimeGridAssignedProject = {
   validTo: string | null;
   projectStartsOn: string | null;
   projectEndsOn: string | null;
+  /**
+   * Already resolved through `resolveTrackingMode` — the member default with this assignment's
+   * override applied — so no consumer has to re-derive it and none can get the precedence wrong.
+   *
+   * The client needs it to derive its zoom stop list: a member with no tracked assignment gets the
+   * month stop alone (§5). Nothing about what L1-L3 render depends on it yet; excluding declared
+   * projects from the week is a separate change.
+   */
+  trackingMode: TrackingMode;
 };
 
 export type TimeGridEntry = {
@@ -227,6 +237,7 @@ type AssignmentForTimeGrid = {
   id: string;
   validFrom: Date;
   validTo: Date | null;
+  trackingMode: TrackingMode | null;
   project: {
     id: string;
     name: string;
@@ -345,6 +356,7 @@ export async function getMemberWeeklyTimeGrid(input: {
       id: true,
       timezone: true,
       deletedAt: true,
+      defaultTrackingMode: true,
     },
   });
 
@@ -394,6 +406,7 @@ export async function getMemberWeeklyTimeGrid(input: {
           id: true,
           validFrom: true,
           validTo: true,
+          trackingMode: true,
           project: {
             select: {
               id: true,
@@ -481,7 +494,7 @@ export async function getMemberWeeklyTimeGrid(input: {
     ]);
 
   const lockedMonthStarts = new Set(periodLocks.map((lock) => formatDateOnly(lock.periodStart)));
-  const projectRows = projects.map(mapAssignmentToProjectRow);
+  const projectRows = projects.map((project) => mapAssignmentToProjectRow(project, member));
   const projectsById = new Map(projectRows.map((project) => [project.projectId, project]));
   const recentProjects = unique(recentEntries.map((entry) => entry.projectId))
     .map((projectId) => projectsById.get(projectId))
@@ -1712,7 +1725,10 @@ async function getMemberTimezone(tx: TimeTrackingTransaction, memberId: string) 
   return member?.timezone ?? "Europe/Budapest";
 }
 
-function mapAssignmentToProjectRow(assignment: AssignmentForTimeGrid): TimeGridAssignedProject {
+function mapAssignmentToProjectRow(
+  assignment: AssignmentForTimeGrid,
+  member: TrackingModeMember,
+): TimeGridAssignedProject {
   const colorToken = isProjectColorToken(assignment.project.colorToken)
     ? assignment.project.colorToken
     : "teal";
@@ -1729,6 +1745,7 @@ function mapAssignmentToProjectRow(assignment: AssignmentForTimeGrid): TimeGridA
       ? formatDateOnly(assignment.project.startsOn)
       : null,
     projectEndsOn: assignment.project.endsOn ? formatDateOnly(assignment.project.endsOn) : null,
+    trackingMode: resolveTrackingMode(member, assignment).mode,
   };
 }
 

@@ -5,10 +5,12 @@ import { useCallback, useSyncExternalStore } from "react";
 import { replaceSearchParams, useHistoryParam } from "@/src/lib/use-history-param";
 
 import {
+  clampZoomLevel,
   DAY_PARAM,
   defaultZoomLevel,
   isZoomLevel,
   resolveSelectedDayIso,
+  zoomLevels,
   ZOOM_PARAM,
   zoomStorageKey,
   type ZoomLevel,
@@ -29,16 +31,27 @@ export type TimeZoom = {
  * That is what makes a level survive a reload and a link carry one. Any component under `/time`
  * can call this: both readings resolve from the same `useSearchParams`, so there is no second
  * source of truth to keep in step.
+ *
+ * `stops` is the member's own stop list (`resolveZoomStops`), and the level is clamped to it on
+ * every read. A declared-only member therefore lands on the month even when the URL or the
+ * remembered preference names a level they do not have — and because the clamp is on the read, the
+ * level that was forced on them is never written back as a preference.
  */
-export function useTimeZoom(week: {
-  days: readonly { isoDate: string }[];
-  todayIso: string;
-}): TimeZoom {
+export function useTimeZoom(
+  week: {
+    days: readonly { isoDate: string }[];
+    todayIso: string;
+  },
+  stops: readonly ZoomLevel[] = zoomLevels,
+): TimeZoom {
   const [zoomParam, setZoomParam] = useHistoryParam(ZOOM_PARAM);
   const [dayParam, setDayParam] = useHistoryParam(DAY_PARAM);
   const rememberedLevel = useRememberedLevel();
 
-  const level = isZoomLevel(zoomParam) ? zoomParam : (rememberedLevel ?? defaultZoomLevel);
+  const level = clampZoomLevel(
+    isZoomLevel(zoomParam) ? zoomParam : (rememberedLevel ?? defaultZoomLevel),
+    stops,
+  );
   const selectedDayIso = resolveSelectedDayIso(dayParam, week.days, week.todayIso);
 
   const setLevel = useCallback(

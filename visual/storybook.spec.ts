@@ -207,6 +207,39 @@ const storyCases: StoryVisualCase[] = [
     locale: "en",
     projects: ["desktop"],
   },
+  /**
+   * The month level. `ForgottenProject` rather than `TrackedBand` because it carries both row
+   * states — a project with hours and a live one with none — and because `TrackedBand` has a `play`
+   * function that Storybook runs on load, which would leave a focus ring inside the baseline.
+   */
+  {
+    id: "sheet-monthoverview--forgotten-project",
+    slug: "month-overview-dark",
+    theme: "dark",
+    locale: "en",
+    projects: ["desktop"],
+  },
+  {
+    id: "sheet-monthoverview--forgotten-project",
+    slug: "month-overview-light",
+    theme: "light",
+    locale: "hu",
+    projects: ["desktop"],
+  },
+  {
+    id: "sheet-monthoverview--empty-month",
+    slug: "month-overview-empty-dark",
+    theme: "dark",
+    locale: "en",
+    projects: ["desktop"],
+  },
+  {
+    id: "sheet-monthoverview--mobile-rows",
+    slug: "month-overview-mobile-dark",
+    theme: "dark",
+    locale: "en",
+    projects: ["mobile"],
+  },
   {
     id: "sheet-timerstartdialog--open",
     slug: "timer-start-dialog-dark",

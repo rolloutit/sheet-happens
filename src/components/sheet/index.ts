@@ -69,6 +69,12 @@ export { ManagementViews } from "./ManagementViews";
 export type { ManagementView, ManagementViewsProps } from "./ManagementViews";
 export { MarkdownArticle } from "./MarkdownArticle";
 export type { MarkdownArticleProps } from "./MarkdownArticle";
+export { MonthOverview, monthOverviewRowVariants } from "./MonthOverview";
+export type {
+  MonthOverviewLabels,
+  MonthOverviewProject,
+  MonthOverviewProps,
+} from "./MonthOverview";
 export { MonthRow } from "./MonthRow";
 export type { MonthRowProps } from "./MonthRow";
 export { NotificationPreferences } from "./NotificationPreferences";

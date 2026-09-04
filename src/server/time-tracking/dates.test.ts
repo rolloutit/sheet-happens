@@ -4,6 +4,7 @@ import {
   buildWeekDays,
   formatDateOnly,
   getMonday,
+  getMonthEnd,
   getMonthStart,
   getMonthStartsInRange,
   getTodayIsoInTimezone,
@@ -25,6 +26,15 @@ describe("time tracking date helpers", () => {
     const months = getMonthStartsInRange(parseDateOnly("2026-07-27"), parseDateOnly("2026-08-02"));
 
     expect(months.map(formatDateOnly)).toEqual(["2026-07-01", "2026-08-01"]);
+  });
+
+  it("closes a month on its own last day, whatever length it is", () => {
+    const monthEnds = ["2026-09-04", "2026-02-14", "2024-02-14", "2026-12-31"].map((isoDate) =>
+      formatDateOnly(getMonthEnd(parseDateOnly(isoDate))),
+    );
+
+    // The month-scoped query bound: 30-day, 28-day, leap February, and December's year edge.
+    expect(monthEnds).toEqual(["2026-09-30", "2026-02-28", "2024-02-29", "2026-12-31"]);
   });
 
   it("marks today, future days, and locked months for grid days", () => {

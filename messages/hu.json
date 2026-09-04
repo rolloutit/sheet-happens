@@ -1970,13 +1970,20 @@
       "day": "Nap",
       "week": "Hét",
       "grid": "Rács",
+      "month": "Hónap",
       "controlLabel": "Részletességi szint",
-      "keyboardHint": "1-3 szint · − + lépés · [ ] hét · t ma",
+      "keyboardHint": "1-{levels} szint · − + lépés · [ ] {period} · t ma",
+      "keyboardHintPeriod": "[ ] {period} · t ma",
+      "periodWeek": "hét",
+      "periodMonth": "hónap",
       "dayStrip": "A hét napjai",
+      "dayStripAtMonth": "Annak a hétnek a napjai, ahová visszatérsz",
       "selectDay": "{day} kiválasztása",
       "zoomToDay": "{day} megnyitása",
       "zoomOut": "Vissza a heti nézetre",
-      "announce": "{level} · {days} nap · {total}"
+      "announce": "{level} · {days} nap · {total}",
+      "zoomToProject": "{project} · nagyítás",
+      "announceMonth": "{level} · {month} · {total}"
     },
     "week": {
       "columnEmpty": "Nincs rögzítve",
@@ -1989,7 +1996,9 @@
     },
     "labels": {
       "thisWeek": "Ez a hét",
+      "thisMonth": "Ez a hónap",
       "weekTotal": "Heti összesen",
+      "monthTotal": "Havi összesen",
       "dayTotal": "Napi összesen",
       "assigned": "Hozzárendelve",
       "recent": "Legutóbbi",
@@ -2000,6 +2009,8 @@
       "newEntry": "Új bejegyzés",
       "previousWeek": "Előző hét",
       "nextWeek": "Következő hét",
+      "previousMonth": "Előző hónap",
+      "nextMonth": "Következő hónap",
       "sameAsYesterday": "Ugyanaz, mint tegnap",
       "duplicateLastWeek": "Előző hét másolása",
       "undo": "Visszavonás",
@@ -2064,6 +2075,11 @@
     "day": {
       "emptyTitle": "Nincs bejegyzés ezen a napon",
       "emptyDescription": "Indíts időmérőt vagy adj hozzá bejegyzést a kiválasztott projekthez és naphoz."
+    },
+    "month": {
+      "trackedHeading": "Sheet Happensben rögzítve",
+      "emptyTitle": "Ebben a hónapban nincs mit zárni",
+      "emptyDescription": "Ebben a hónapban nem rögzítettél időt, és nincs benne nyitott projekt, amelyre rögzíthetnél."
     },
     "timer": {
       "trackedWithTimer": "Időmérővel rögzítve",

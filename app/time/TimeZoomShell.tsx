@@ -5,7 +5,7 @@ import { LazyMotion, MotionConfig } from "motion/react";
 import * as m from "motion/react-m";
 import { useTranslations } from "next-intl";
 
-import { barTransition } from "@/src/lib/motion";
+import { barTransition, levelTransition } from "@/src/lib/motion";
 import { DAILY_SOFT_WARNING_MINUTES } from "@/src/lib/time-entry-limits";
 import { cn } from "@/src/lib/utils";
 import type { TimeGridDay } from "@/src/server/time-tracking";
@@ -21,6 +21,16 @@ type TimeZoomShellProps = {
   todayIso: string;
   /** The selected day's logged minutes, which the persistent total reads. */
   dayTotalMinutes: number;
+  /**
+   * The month the selected day falls in, already named in the member's locale.
+   *
+   * Only the announcement uses it: at L4 "7 days" is not what changed, the month is. The month
+   * label and total are *rendered* by the period row above this shell, which owns them at every
+   * level — see `MonthOverview` for why they are not part of the level itself.
+   */
+  month: { label: string; totalMinutes: number };
+  /** The member's own stop list (`resolveZoomStops`), which bounds the digits and the steps. */
+  stops: readonly ZoomLevel[];
   formatMinutes: (minutes: number) => string;
   onPreviousPeriod: () => void;
   onNextPeriod: () => void;
@@ -60,6 +70,8 @@ export function TimeZoomShell({
   days,
   todayIso,
   dayTotalMinutes,
+  month,
+  stops,
   formatMinutes,
   onPreviousPeriod,
   onNextPeriod,
@@ -67,20 +79,23 @@ export function TimeZoomShell({
   renderLevel,
 }: TimeZoomShellProps) {
   const t = useTranslations("TimeTracking");
-  const { level, selectedDayIso, setLevel, setSelectedDayIso } = useTimeZoom({ days, todayIso });
+  const { level, selectedDayIso, setLevel, setSelectedDayIso } = useTimeZoom(
+    { days, todayIso },
+    stops,
+  );
   const dayChipRefs = useRef(new Map<string, HTMLButtonElement>());
   const previousLevel = useRef(level);
 
   useEffect(() => {
     function handleKeyDown(event: KeyboardEvent) {
-      const shortcut = resolveZoomShortcut(event);
+      const shortcut = resolveZoomShortcut(event, stops);
 
       if (!shortcut) return;
 
       event.preventDefault();
 
       if (shortcut.type === "level") setLevel(shortcut.level);
-      if (shortcut.type === "step") setLevel(stepZoomLevel(level, shortcut.direction));
+      if (shortcut.type === "step") setLevel(stepZoomLevel(level, shortcut.direction, stops));
       if (shortcut.type === "period") {
         if (shortcut.direction === "previous") onPreviousPeriod();
         else onNextPeriod();
@@ -90,7 +105,7 @@ export function TimeZoomShell({
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [level, onNextPeriod, onPreviousPeriod, onToday, setLevel]);
+  }, [level, onNextPeriod, onPreviousPeriod, onToday, setLevel, stops]);
 
   /**
    * Continuity items 4 and 5, which only a level change can break.
@@ -112,28 +127,47 @@ export function TimeZoomShell({
     if (typeof chip?.scrollIntoView === "function") chip.scrollIntoView({ block: "nearest" });
   }, [level, selectedDayIso]);
 
+  /** L4 keeps the week on screen, quieter, as the week returning from the month lands on. */
+  const atMonth = level === "month";
+
   /**
    * §15: a sighted user sees the transition, so a screen reader user has to be told about it.
    *
    * One day at L1, the whole week at L2 and L3, and the total that goes with whichever it is — the
-   * same two facts the eye takes from the layout.
+   * same two facts the eye takes from the layout. L4 needs its own sentence rather than a fourth
+   * value in the same one: what changed is the month, and "7 days" would be a plain lie about a
+   * level that covers thirty of them.
    */
-  const announcement = t("zoom.announce", {
-    level: t(`zoom.${level}`),
-    days: level === "day" ? 1 : days.length,
-    total: formatMinutes(
-      level === "day" ? dayTotalMinutes : days.reduce((sum, day) => sum + day.totalMinutes, 0),
-    ),
-  });
+  const announcement = atMonth
+    ? t("zoom.announceMonth", {
+        level: t("zoom.month"),
+        month: month.label,
+        total: formatMinutes(month.totalMinutes),
+      })
+    : t("zoom.announce", {
+        level: t(`zoom.${level}`),
+        days: level === "day" ? 1 : days.length,
+        total: formatMinutes(
+          level === "day" ? dayTotalMinutes : days.reduce((sum, day) => sum + day.totalMinutes, 0),
+        ),
+      });
 
   return (
     <MotionConfig reducedMotion="user">
       <LazyMotion strict features={loadMotionFeatures}>
         <div className="grid gap-4">
           <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
-            <div
+            {/* Mounted at every level, including L4 — continuity item 2, and the reason zooming
+                back in from the month is deterministic rather than a jump to today. At L4 it is
+                de-emphasised rather than hidden, and by opacity rather than by movement: the chips
+                stay operable there (picking the day is how the month is chosen at all, §11), so
+                the treatment has to leave them both legible and clickable. */}
+            <m.div
               role="group"
-              aria-label={t("zoom.dayStrip")}
+              aria-label={atMonth ? t("zoom.dayStripAtMonth") : t("zoom.dayStrip")}
+              initial={false}
+              animate={{ opacity: atMonth ? 0.7 : 1 }}
+              transition={levelTransition}
               className="grid grid-cols-7 gap-1.5 sm:w-auto"
             >
               {days.map((day) => {
@@ -168,7 +202,7 @@ export function TimeZoomShell({
                     )}
                     onClick={() =>
                       zoomsOut
-                        ? setLevel(stepZoomLevel(level, "out"))
+                        ? setLevel(stepZoomLevel(level, "out", stops))
                         : setSelectedDayIso(day.isoDate)
                     }
                   >
@@ -180,7 +214,7 @@ export function TimeZoomShell({
                   </button>
                 );
               })}
-            </div>
+            </m.div>
 
             <div className="flex items-center gap-3 sm:justify-end">
               <span className="font-ui text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">

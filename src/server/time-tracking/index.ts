@@ -34,6 +34,15 @@ export type {
   TimeGridWeek,
   TimeTrackingRequestMetadata,
 } from "./time-entries";
+export { buildMonthOverview, getMemberMonthOverview } from "./month-overview";
+export type {
+  BuildMonthOverviewInput,
+  MemberMonthOverview,
+  MonthOverviewAssignment,
+  MonthOverviewDeclaration,
+  MonthOverviewDeclarationRow,
+  MonthOverviewProject,
+} from "./month-overview";
 export { getShellRunningTimer } from "./shell-timer";
 export {
   assertTrackingModeSwitchAllowed,
@@ -61,6 +70,7 @@ export {
   formatDateOnly,
   formatWeekRange,
   getMonday,
+  getMonthEnd,
   getMonthStart,
   getMonthStartsInRange,
   getTodayIsoInTimezone,

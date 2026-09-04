@@ -39,6 +39,7 @@ import {
 import { useLocale, useTranslations } from "next-intl";
 
 import { DayAgenda, type DayAgendaEntry } from "@/src/components/sheet/DayAgenda";
+import { MonthOverview, type MonthOverviewProject } from "@/src/components/sheet/MonthOverview";
 import {
   WeekAgenda,
   type WeekAgendaDay,
@@ -62,6 +63,7 @@ import { formatDurationForInput, parseDurationToMinutes } from "@/src/lib/durati
 import {
   formatHours as formatDurationHours,
   formatHoursWithUnit as formatDurationHoursWithUnit,
+  formatMonthLabel,
   type DurationDisplayFormat,
 } from "@/src/lib/formatting";
 import { dayLayoutId, levelTransition, useAfterFirstPaint } from "@/src/lib/motion";
@@ -72,6 +74,7 @@ import { useElapsedLabel } from "@/src/lib/use-elapsed-label";
 import { useOverlayParam } from "@/src/lib/use-overlay-param";
 import { cn } from "@/src/lib/utils";
 import type {
+  MemberMonthOverview,
   TimeGridAssignedProject,
   TimeGridDay,
   TimeGridEntry,
@@ -99,7 +102,16 @@ import { TimerCreateDialog } from "./TimerCreateDialog";
 import { TIME_OVERLAY_PARAM, TIMER_OVERLAY_VALUE } from "./time-overlays";
 import { TimeZoomShell, type TimeZoomDay } from "./TimeZoomShell";
 import { useTimeZoom } from "./use-time-zoom";
-import { DAY_PARAM, ZOOM_PARAM, zoomLevels, type ZoomLevel } from "./zoom";
+import {
+  DAY_PARAM,
+  resolveMonthStartIso,
+  resolveSelectedMonthStartIso,
+  resolveWeekStartIso,
+  resolveZoomStops,
+  shiftMonthStartIso,
+  ZOOM_PARAM,
+  type ZoomLevel,
+} from "./zoom";
 
 const GRID_ENTRY_IDLE_OPEN_DELAY_MS = 900;
 
@@ -150,6 +162,17 @@ type PendingQuickAction =
 
 type TimeGridClientProps = {
   week: TimeGridWeek;
+  /**
+   * Every month the visible week touches — one, or two when the week spans a month boundary (§11).
+   *
+   * A second payload beside `week` rather than a field inside it. `TimeGridWeek` means "the visible
+   * week", every field on it is week-scoped, and `getMemberMonthOverview` is its own domain
+   * function with its own queries — folding one into the other would make the week function
+   * responsible for fetching a month and make the type's name a lie. Shipping it with the page is
+   * what makes L4 reachable with no round-trip, which is what lets the level change stay a pure
+   * layout animation.
+   */
+  months: MemberMonthOverview[];
   durationDisplayFormat: DurationDisplayFormat;
 };
 
@@ -157,22 +180,34 @@ type TimeTrackingTranslator = ReturnType<typeof useTranslations>;
 
 const DurationDisplayContext = createContext<DurationDisplayFormat>("DECIMAL_HOURS");
 
-export function TimeGridClient({ week, durationDisplayFormat }: TimeGridClientProps) {
+export function TimeGridClient({ week, months, durationDisplayFormat }: TimeGridClientProps) {
   return (
     <DurationDisplayContext.Provider value={durationDisplayFormat}>
-      <TimeGridContent week={week} />
+      <TimeGridContent week={week} months={months} />
     </DurationDisplayContext.Provider>
   );
 }
 
-function TimeGridContent({ week }: { week: TimeGridWeek }) {
+function TimeGridContent({ week, months }: { week: TimeGridWeek; months: MemberMonthOverview[] }) {
   const router = useRouter();
   const t = useTranslations("TimeTracking");
   const locale = useLocale();
   const durationDisplayFormat = useContext(DurationDisplayContext);
   const { formatMinutesAsHours, formatMinutesWithUnit } = useDurationFormatting();
   const [isPending, startTransition] = useTransition();
-  const { level, selectedDayIso, setLevel, setSelectedDayIso, zoomToDay } = useTimeZoom(week);
+  /**
+   * The member's own stop list (§5), derived from the resolved tracking mode on each assignment.
+   *
+   * This is the `.map` over the raw stop list that used to feed the control. A declared-only member
+   * gets the month alone, and no control at all — the collapse ships with the derivation rather
+   * than after it, because after Step 3 an admin can already create such a member and a four-stop
+   * control over three empty levels is worse than no control.
+   */
+  const stops = useMemo(() => resolveZoomStops(week.projects), [week.projects]);
+  const { level, selectedDayIso, setLevel, setSelectedDayIso, zoomToDay } = useTimeZoom(
+    week,
+    stops,
+  );
   const [notice, setNotice] = useState<Notice>(null);
   const [entryModal, setEntryModal] = useState<EntryModalState>(null);
   const [breakdown, setBreakdown] = useState<BreakdownState>(null);
@@ -210,6 +245,36 @@ function TimeGridContent({ week }: { week: TimeGridWeek }) {
   const selectedDayTotalMinutes = selectedDay
     ? (dailyTotals[week.days.indexOf(selectedDay)] ?? 0)
     : 0;
+
+  /**
+   * The month L4 shows, derived from the **selected day** and never from the week (§11).
+   *
+   * The design doc's own example week, Aug 31 - Sep 6 2026, is why: taking it from `week.weekStart`
+   * would call the whole of that week August, including the six days of it that are September.
+   * Moving the day strip across the boundary therefore changes the month with no round-trip,
+   * because the page shipped both months.
+   */
+  const atMonth = level === "month";
+  const selectedMonthStart = resolveSelectedMonthStartIso(
+    selectedDayIso,
+    months.map((month) => month.monthStart),
+  );
+  const monthOverview = months.find((month) => month.monthStart === selectedMonthStart);
+  const monthLabel = formatMonthLabel(selectedMonthStart, locale);
+  const monthTotalMinutes = monthOverview?.totalMinutes ?? 0;
+  const monthProjects: MonthOverviewProject[] = (monthOverview?.tracked ?? []).map((project) => ({
+    projectId: project.projectId,
+    name: project.name,
+    color: project.color,
+    minutes: project.minutes,
+  }));
+
+  /** What a period is at this level, for the keyboard hint and the "this period" affordance. */
+  const periodNoun = atMonth ? t("zoom.periodMonth") : t("zoom.periodWeek");
+  const atCurrentPeriod = atMonth
+    ? selectedMonthStart === resolveMonthStartIso(week.todayIso)
+    : week.weekStart === week.thisWeek;
+  const currentPeriodLabel = atMonth ? t("labels.thisMonth") : t("labels.thisWeek");
 
   /**
    * The day strip's own view of the week: the same `TimeGridDay`s the shell already renders, each
@@ -334,6 +399,34 @@ function TimeGridContent({ week }: { week: TimeGridWeek }) {
     });
 
     router.push(`/time?${params.toString()}` as Route);
+  }
+
+  /**
+   * §11 exactly: at L4 a period step sets `day` to the 1st of the adjacent month and `week` to the
+   * week containing it. Moving to a different month is a real navigation and a real fetch, the same
+   * as changing weeks — the round-trip the month payload avoids is the one *within* the visible
+   * week, not this one.
+   */
+  function navigateToMonth(direction: -1 | 1) {
+    const targetMonthStart = shiftMonthStartIso(selectedMonthStart, direction);
+
+    navigateToWeek(resolveWeekStartIso(targetMonthStart), targetMonthStart);
+  }
+
+  /**
+   * One definition of "the previous period", read by both the toolbar buttons and `[` / `]`.
+   *
+   * They cannot disagree because there is nothing for them to disagree about: weeks at L1-L3,
+   * months at L4, decided once. The label beside the buttons follows the same `atMonth` flag.
+   */
+  function goToPreviousPeriod() {
+    if (atMonth) navigateToMonth(-1);
+    else navigateToWeek(week.previousWeek);
+  }
+
+  function goToNextPeriod() {
+    if (atMonth) navigateToMonth(1);
+    else navigateToWeek(week.nextWeek);
   }
 
   function goToToday() {
@@ -490,18 +583,28 @@ function TimeGridContent({ week }: { week: TimeGridWeek }) {
     <div className="grid gap-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex min-w-0 flex-wrap items-center gap-3">
-          <SegmentedControl
-            label={t("zoom.controlLabel")}
-            value={level}
-            onValueChange={(value) => setLevel(value as ZoomLevel)}
-            items={zoomLevels.map((zoomLevel) => ({
-              value: zoomLevel,
-              label: t(`zoom.${zoomLevel}`),
-            }))}
-          />
-          <span className="hidden text-xs text-muted-foreground lg:inline">
-            {t("zoom.keyboardHint")}
-          </span>
+          {/* One stop is not a choice, so a declared-only member gets no control — and no hint
+              about level shortcuts they do not have, only the period and today keys they do. */}
+          {stops.length > 1 ? (
+            <>
+              <SegmentedControl
+                label={t("zoom.controlLabel")}
+                value={level}
+                onValueChange={(value) => setLevel(value as ZoomLevel)}
+                items={stops.map((zoomLevel) => ({
+                  value: zoomLevel,
+                  label: t(`zoom.${zoomLevel}`),
+                }))}
+              />
+              <span className="hidden text-xs text-muted-foreground lg:inline">
+                {t("zoom.keyboardHint", { levels: stops.length, period: periodNoun })}
+              </span>
+            </>
+          ) : (
+            <span className="hidden text-xs text-muted-foreground lg:inline">
+              {t("zoom.keyboardHintPeriod", { period: periodNoun })}
+            </span>
+          )}
         </div>
 
         <div className="flex items-center gap-2">
@@ -554,31 +657,38 @@ function TimeGridContent({ week }: { week: TimeGridWeek }) {
         />
       ) : null}
 
+      {/* The period row, and §8's month header — the same row at two resolutions.
+          It names the period, steps it, and carries its total, at every level: weeks at L1-L3 and
+          the month at L4. One row rather than two is what keeps the visible arrows saying what
+          `[` / `]` do, and what lets continuity item 3 hold for the total in its strongest form —
+          the element never moves and never fades, only its label and its number swap. */}
       <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
         <div className="flex flex-wrap items-center gap-3">
           <div className="inline-flex items-center gap-1 rounded-[var(--radius-pill)] border border-border bg-card p-1">
             <button
               type="button"
               className="grid size-8 place-items-center rounded-full text-muted-foreground transition hover:bg-secondary hover:text-foreground"
-              aria-label={t("actions.previousWeek")}
-              onClick={() => navigateToWeek(week.previousWeek)}
+              aria-label={atMonth ? t("actions.previousMonth") : t("actions.previousWeek")}
+              onClick={goToPreviousPeriod}
             >
               <ChevronLeft className="size-4" aria-hidden="true" />
             </button>
-            <span className="px-3 text-sm font-medium text-foreground">{week.weekLabel}</span>
+            <span className="px-3 text-sm font-medium text-foreground">
+              {atMonth ? monthLabel : week.weekLabel}
+            </span>
             <button
               type="button"
               className="grid size-8 place-items-center rounded-full text-muted-foreground transition hover:bg-secondary hover:text-foreground"
-              aria-label={t("actions.nextWeek")}
-              onClick={() => navigateToWeek(week.nextWeek)}
+              aria-label={atMonth ? t("actions.nextMonth") : t("actions.nextWeek")}
+              onClick={goToNextPeriod}
             >
               <ChevronRight className="size-4" aria-hidden="true" />
             </button>
           </div>
 
-          {week.weekStart === week.thisWeek ? (
+          {atCurrentPeriod ? (
             <span className="rounded-[var(--radius-pill)] bg-accent-soft px-3 py-1.5 font-ui text-[11px] font-semibold uppercase tracking-[0.08em] text-accent">
-              {t("labels.thisWeek")}
+              {currentPeriodLabel}
             </span>
           ) : (
             <button
@@ -587,17 +697,17 @@ function TimeGridContent({ week }: { week: TimeGridWeek }) {
               onClick={goToToday}
             >
               <RotateCcw className="size-4" aria-hidden="true" />
-              {t("labels.thisWeek")}
+              {currentPeriodLabel}
             </button>
           )}
         </div>
 
         <div className="flex items-center gap-3 lg:justify-end">
           <span className="font-ui text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
-            {t("labels.weekTotal")}
+            {atMonth ? t("labels.monthTotal") : t("labels.weekTotal")}
           </span>
           <span className="text-[26px] font-semibold text-foreground">
-            {formatMinutesWithUnit(weekTotal)}
+            {formatMinutesWithUnit(atMonth ? monthTotalMinutes : weekTotal)}
           </span>
         </div>
       </div>
@@ -739,9 +849,11 @@ function TimeGridContent({ week }: { week: TimeGridWeek }) {
           days={zoomDays}
           todayIso={week.todayIso}
           dayTotalMinutes={selectedDayTotalMinutes}
+          month={{ label: monthLabel, totalMinutes: monthTotalMinutes }}
+          stops={stops}
           formatMinutes={formatMinutesWithUnit}
-          onPreviousPeriod={() => navigateToWeek(week.previousWeek)}
-          onNextPeriod={() => navigateToWeek(week.nextWeek)}
+          onPreviousPeriod={goToPreviousPeriod}
+          onNextPeriod={goToNextPeriod}
           onToday={goToToday}
           renderLevel={(activeLevel) =>
             activeLevel === "day" ? (
@@ -791,6 +903,24 @@ function TimeGridContent({ week }: { week: TimeGridWeek }) {
                 onAddEntry={addEntryOnDay}
                 onEditEntry={(entry) => editEntryById(entry.id)}
                 onDeleteEntry={(entry) => deleteEntryById(entry.id)}
+              />
+            ) : activeLevel === "month" ? (
+              <MonthOverview
+                projects={monthProjects}
+                locale={locale}
+                durationDisplayFormat={durationDisplayFormat}
+                disabled={isPending}
+                animateRows={animateEntries}
+                labels={{
+                  trackedHeading: t("month.trackedHeading"),
+                  zoomToProject: (project) => t("zoom.zoomToProject", { project: project.name }),
+                  emptyTitle: t("month.emptyTitle"),
+                  emptyDescription: t("month.emptyDescription"),
+                }}
+                /* §6: a pure level change, not a filter. You land on the grid for the week the day
+                   strip is already pointing at, which is why the row pressed does not matter to
+                   where you go — only to which figure you were reading when you decided to. */
+                onZoomToProject={() => setLevel("grid")}
               />
             ) : (
               <>
