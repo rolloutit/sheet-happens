@@ -982,6 +982,53 @@ Expected result:
 - A hybrid member keeps all four stops, opens on the week as before, sees **both** bands with their
   headings, and sees their tracked projects in the tracked band.
 
+### An Administrator Corrects A Declared Figure On A Member's Behalf
+
+Run this as `{ADMIN_EMAIL}`. Set up: one member with a declared assignment who has declared
+`{DECLARED_HOURS}` hours for the current month with `{HOURS_PROOF_PDF_FILE}` attached, one declared
+assignment that nobody has declared against yet, and — for step 8 — one contractor whose month is
+held by a submitted timesheet.
+
+1. Open `https://{DOMAIN_NAME}/admin/declared-hours` and read the three counters beside the month.
+2. Step to the previous month and back with the arrows, then use "This month". Watch the address bar,
+   and then press the browser's Back button twice.
+3. Open `https://{DOMAIN_NAME}/admin/declared-hours?month=1999-13-99` and then `?month=` with nothing
+   after it.
+4. Find the row that has nothing declared, and the one with a figure but no proof.
+5. On the row with a proof, open the proof from the table, then press Correct and open it again from
+   inside the drawer.
+6. In the drawer, clear the note and try to save. Put the note back, clear the reason and try again.
+7. Type `{DECLARED_HOURS}:30` into the hours field, give a reason, and save.
+8. Look at the locked contractor's row, at your own row if you have a declared assignment, and at a
+   row whose assignment has been ended so it no longer covers the month.
+9. Sign in as the corrected member: open their notifications, then `/time` at the month level.
+10. Sign in as a non-admin and open `https://{DOMAIN_NAME}/admin/declared-hours` directly.
+11. Repeat in Hungarian, in both light and dark themes, and at phone width.
+
+Expected result:
+
+- The page lists one row per member and declared project for the month — including rows with
+  **nothing declared yet**, which is the main thing it exists to make visible. The counters read
+  declared total, how many figures are missing, and how many figures have no proof.
+- The month lives in the address as `?month=YYYY-MM-01`, so a month is linkable and the browser's
+  Back button means "the previous month I was looking at". A nonsense or empty `month=` falls back to
+  the current month rather than erroring.
+- The proof opens as a PDF from both the table and the drawer. An admin can **open** a proof but
+  never upload or replace one — that stays with the member, and the note under the table says so.
+- Save is unavailable until the hours, the note **and** the reason all have a value. The reason is
+  mandatory: it is what the member reads in their notification.
+- Hours accept `52`, `52:30` and `52h`, the same grammar the member's own row takes. A figure above
+  24 h × the days in that month warns and still saves.
+- Three rows offer no correction, each saying **why** rather than showing a dead button: a locked
+  month, your own declaration (correct it on your own `/time`, so the reason is not lost), and an
+  assignment that no longer covers the month.
+- The corrected member gets a time-entry admin-modification notification carrying the reason, and
+  their own month level shows the new figure. The audit log has the correction with before/after
+  values.
+- A non-admin cannot reach the page at all.
+- Reports still exclude the corrected hours, and the contractor's timesheet still includes them —
+  a correction changes the figure, never which chain it belongs to.
+
 ## Contractor Timesheets
 
 Run these tests as `{CONTRACTOR_EMAIL}` unless the scenario says otherwise.
