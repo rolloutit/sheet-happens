@@ -8,7 +8,7 @@
     "pnpm": ">=11.5.0"
   },
   "scripts": {
-    "dev:e2e": "AUTH_EMAIL_DELIVERY_MODE=file AUTH_EMAIL_FILE=.mail/e2e-outbox.jsonl AUTH_SECURITY_SETUP_MODE=optional pnpm dev",
+    "dev:e2e": "AUTH_EMAIL_DELIVERY_MODE=file AUTH_EMAIL_FILE=.mail/e2e-outbox.jsonl AUTH_SECURITY_SETUP_MODE=optional DATABASE_URL=\"$(node scripts/dev-db.mjs test-url)\" pnpm dev",
     "dev": "next dev --turbopack",
     "build": "next build && node scripts/copy-standalone-assets.mjs",
     "start": "node .next/standalone/server.js",
@@ -20,6 +20,8 @@
     "db:dev:reset": "node scripts/dev-db.mjs reset",
     "db:dev:seed": "node scripts/dev-db.mjs seed",
     "db:dev:stop": "node scripts/dev-db.mjs stop",
+    "db:test": "node scripts/dev-db.mjs test",
+    "db:test:reset": "node scripts/dev-db.mjs test-reset",
     "db:generate": "prisma generate",
     "db:migrate:deploy": "prisma migrate deploy",
     "db:validate": "prisma validate",

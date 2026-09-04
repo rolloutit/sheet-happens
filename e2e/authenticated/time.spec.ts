@@ -10,10 +10,11 @@
  *  - opening a day is visible in the accessibility tree, not only on screen.
  *
  * Everything here holds for any signed-in member, so every role project runs it. The one part of
- * `/time` that cannot — the committed aria snapshot of a populated week, which is the admin's own
- * seeded data — lives in admin/time-week.spec.ts.
+ * `/time` that cannot — the committed aria snapshot, which describes one role's frozen week —
+ * lives in admin/time-week.spec.ts.
  */
 import { expect, test, visit } from "../fixtures";
+import { FROZEN_WEEK_PATH } from "../seed";
 
 const WEEKDAYS = [
   "Monday",
@@ -44,19 +45,24 @@ test("exposes the week as landmarks, one h1 and a region per weekday", async ({ 
 });
 
 test("scopes entry controls to their day", async ({ page }) => {
-  // Which weekdays hold entries is fixture data, not structure: the dev seed skips days per member
-  // and builds them relative to its own run date, so the contractor's Monday is routinely empty
-  // where the admin's is not. The contract is that a day's entries are addressable *through its
-  // region* — the same description legitimately repeats on other days — so this asserts it on
-  // whichever days the fixture populated rather than naming one.
-  const populated: string[] = [];
+  // The frozen week rather than today's, because this is the one test here that needs entries to
+  // exist. The seed fills days only up to the day it runs, so on a Monday the current week can
+  // legitimately hold nothing at all. Both roles get their own frozen week, so the contract is
+  // asserted against each role's own data.
+  await visit(page, FROZEN_WEEK_PATH);
+
+  // Which weekdays hold entries differs per role, so the assertion follows the data rather than
+  // naming a day. What it pins is the contract: a day's entries are addressable *through its
+  // region*, because the same description legitimately repeats on other days.
+  const counts: number[] = [];
 
   for (const day of WEEKDAYS) {
     const entries = page.getByRole("region", { name: day }).getByRole("listitem");
+    const count = await entries.count();
 
-    if ((await entries.count()) === 0) continue;
+    if (count === 0) continue;
 
-    populated.push(day);
+    counts.push(count);
 
     for (const entry of await entries.all()) {
       await expect(entry.getByRole("button", { name: /^Edit / })).toHaveCount(1);
@@ -64,10 +70,29 @@ test("scopes entry controls to their day", async ({ page }) => {
     }
   }
 
-  expect(populated, "no day of the visible week holds a time entry").not.toEqual([]);
+  expect(
+    counts,
+    `${FROZEN_WEEK_PATH} holds no entries at all — is the e2e database seeded? \`pnpm db:test\``,
+  ).not.toEqual([]);
+
+  // Scoping to a day only means something when a day holds more than one entry, and both frozen
+  // weeks are built with such a day.
+  expect(
+    Math.max(...counts),
+    "no day of the frozen week holds more than one entry",
+  ).toBeGreaterThan(1);
 });
 
 test("puts the selected day in the accessibility tree, not just the styling", async ({ page }) => {
+  /**
+   * Generous, because two slow things stack here. The selected day lives in the URL
+   * (`app/time/use-time-zoom.ts`), so this asserts a navigation, and `/time` is `force-dynamic` —
+   * on a dev server whose caches are still cold, with five workers compiling at once, the first
+   * render of a new `?day=` can take well over the 15s this used to allow. Measured warm it is
+   * under a second; the failure mode was purely the cold first pass, which is every CI run.
+   */
+  test.setTimeout(90_000);
+
   const dayPicker = page.getByRole("group", { name: "Days of this week" });
   const wednesday = dayPicker.getByRole("button", { name: "Select Wednesday" });
 
@@ -79,7 +104,7 @@ test("puts the selected day in the accessibility tree, not just the styling", as
   await expect(async () => {
     await wednesday.click();
     await expect(wednesday).toHaveAttribute("aria-pressed", "true");
-  }).toPass({ timeout: 15_000 });
+  }).toPass({ timeout: 60_000 });
 });
 
 test("marks exactly one day as selected", async ({ page }) => {

@@ -97,10 +97,11 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pnpm exec playwright install --with-deps chromium
-      # The init migration creates the citext and pgcrypto extensions the seed relies on.
-      - run: pnpm db:migrate:deploy
-      # `db:dev:seed` skips Docker entirely and seeds whatever DATABASE_URL points at.
-      - run: pnpm db:dev:seed
+      # Creates, migrates and seeds the suite's own database — `sheet_happens_e2e`, derived from
+      # DATABASE_URL above — on the service container. It touches Docker not at all, so this is the
+      # same code path a developer runs locally, and `migrate deploy` keeps the release path
+      # exercised here: its init migration is what creates the citext and pgcrypto extensions.
+      - run: pnpm db:test:reset
       - run: pnpm e2e
       - if: failure()
         uses: actions/upload-artifact@v7

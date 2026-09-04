@@ -1,5 +1,6 @@
 import { defineConfig, devices } from "@playwright/test";
 
+import { e2eDatabaseUrl } from "./e2e/database";
 import { E2E_OUTBOX_PATH } from "./e2e/outbox";
 
 // Must be `localhost`, not `127.0.0.1`: the Better Auth client always posts to the origin baked
@@ -17,10 +18,10 @@ const baseURL = `http://localhost:${port}`;
  * reasons that happens are worth keeping apart:
  *
  *  - `authenticated/admin/` — the surface is admin-only, or the assertion is against the admin's
- *    own fixture data. The committed aria snapshot of a populated `/time` week is the latter: the
- *    dev seed gives each member a different set of entries, so the snapshot can only ever match
- *    one role, while the structural assertions around it (landmarks, one `h1`, a region per
- *    weekday, controls addressed within their day, `aria-pressed`) hold for both.
+ *    own fixture data. The committed aria snapshot of a populated `/time` week is the latter: it
+ *    describes the frozen week `scripts/dev-seed.mjs` plants for the admin, which is one role's
+ *    data by construction. The structural assertions around it (landmarks, one `h1`, a region per
+ *    weekday, controls addressed within their day, `aria-pressed`) hold for both roles.
  *  - `authenticated/member/` — what a non-admin must *not* be able to see or reach, which only
  *    means anything when asserted as a non-admin.
  */
@@ -67,6 +68,10 @@ export default defineConfig({
       // Local .env.local sets this; CI has no such file and would otherwise bounce every
       // authenticated request to the security-setup screen.
       AUTH_SECURITY_SETUP_MODE: "optional",
+      // The suite's own database, never the one a developer browses — see e2e/database.ts. This
+      // only reaches a server Playwright starts itself; a reused `pnpm dev:e2e` sets it from
+      // `node scripts/dev-db.mjs test-url` instead.
+      DATABASE_URL: e2eDatabaseUrl(),
       BETTER_AUTH_URL: baseURL,
       NEXT_PUBLIC_APP_URL: baseURL,
       NEXT_PUBLIC_BETTER_AUTH_URL: baseURL,
