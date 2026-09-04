@@ -39,6 +39,10 @@ Replace placeholder values before sharing a concrete test run:
   months, formatted as `YYYY-MM-DD` — for example `2026-08-31`, the week Aug 31 - Sep 6.
 - `{TIME_TRACKING_PROJECT_A}`: active project assigned to the time-tracking test user.
 - `{TIME_TRACKING_PROJECT_B}`: second active project assigned to the time-tracking test user.
+- `{DECLARED_HOURS}`: monthly hour figure used for declared-hours testing, for example `52`.
+- `{DECLARED_NOTE}`: note text describing what the declared hours cover.
+- `{HOURS_PROOF_PDF_FILE}`: local PDF file used as the declared-hours proof document.
+- `{HOURS_PROOF_REPLACEMENT_PDF_FILE}`: second local PDF file, for replacing a proof.
 - `{TIME_ENTRY_DESCRIPTION}`: description text used for test time entries.
 - `{TIME_ENTRY_UPDATED_DESCRIPTION}`: edited description text used for test time entries.
 - `{TIMESHEET_MONTH}`: contractor timesheet month formatted as `YYYY-MM`.
@@ -751,9 +755,13 @@ Expected result:
   total, changing only its label and its number.
 - The month named is the month the **selected day** falls in. Moving the day strip across the month
   boundary changes the month, its total and its rows, with no page load and no spinner.
-- The band lists one row per project with the hours tracked against it in that month. A project you
-  logged nothing against this month is still listed, at `0 h`, and reads quieter than the others.
-- The month total counts every hour the month holds, so the rows add up to it.
+- The tracked band lists one row per project with the hours tracked against it in that month. A
+  project you logged nothing against this month is still listed, at `0 h`, and reads quieter than
+  the others.
+- If the member has any declared assignment, a second band follows it. A declared project with
+  nothing declared yet still gets a row, because that row is the form the figure is typed into.
+- The month total counts every hour the month holds, tracked **and** declared, so the rows across
+  both bands add up to it.
 - `[` and `]` and the visible previous/next buttons do exactly the same thing: one month back or
   forward, landing on the 1st of that month with the week that contains it loaded. This is a real
   page load, unlike moving within the visible week.
@@ -766,6 +774,185 @@ Expected result:
 - Every label reads correctly in Hungarian and English, and the month name is in the page's own
   language — `2026. szeptember`, not `September 2026`, in Hungarian.
 
+### Declare A Month's Hours On A Hybrid Project
+
+Set up: as an administrator, set **one** of a member's project assignments to declared hours and
+leave the rest tracked. Use `{TIME_TRACKING_PROJECT_B}` as the declared one. The month must hold no
+tracked time entries for that project — the write refuses one that does, which is the double-count
+guard and is checked separately below.
+
+Run this as the member.
+
+1. Open `https://{DOMAIN_NAME}/time` and read the line under the day strip.
+2. Follow the link in that line.
+3. Read the two bands and their headings.
+4. In the declared row, press Save without typing anything, then type `{DECLARED_HOURS}` into the
+   hours field and press Save again.
+5. Type `{DECLARED_NOTE}` into the note field and press Save.
+6. Read the month total in the period row, and add up the two bands yourself.
+7. Type `{DECLARED_HOURS}:30` into the hours field, then `{DECLARED_HOURS}h`, saving each time.
+8. Attach `{HOURS_PROOF_PDF_FILE}` in the proof slot, then open it with the view link.
+9. Replace it with `{HOURS_PROOF_REPLACEMENT_PDF_FILE}` and open it again.
+10. Press `1`, `2` and `3`, and look for the declared project in each level.
+11. Reload the page and confirm the figure, the note and the proof are still there.
+12. Repeat the whole scenario in Hungarian and in both light and dark themes, and at phone width.
+
+Expected result:
+
+- At Day, Week and Grid the declared project is **absent** from everything — the grid rows, the
+  "Assigned" chips, the recent chips, the entry form's project picker and the timer dialog — and one
+  line under the day strip explains why, naming the project and linking to the month. The line is
+  information, not a banner, and it disappears at the month level where the project is on screen.
+- The month has two bands: the tracked one first with a row per project, then the declared one.
+- Save is unavailable until **both** the hours and the note have a value. A figure with no note
+  cannot be saved at all, which is deliberate — the note becomes the entry's description, and a
+  timesheet cannot be submitted without one.
+- `52`, `52:30` and `52h` are all accepted and mean what they say, the same as everywhere else in
+  the app. What is stored is minutes; what is shown is your own duration format.
+- **The month total equals the tracked hours plus the declared hours**, and the rows add up to it.
+  Check this arithmetic explicitly — it is the number a month is closed against.
+- The proof shows its filename, size and upload time, opens as a PDF in a new tab, and can be
+  replaced while the month is unlocked. Replacing it leaves exactly one proof, not two.
+- Everything survives a reload, and every label reads correctly in both languages.
+
+### Declared Hours Refuse The Ways They Could Double-Count
+
+Run these as the member, on the declared project from the previous scenario.
+
+1. At the Grid level, try to type hours into a cell for the declared project.
+2. Press "New entry" and open the project picker.
+3. Press "New timer" and open its project picker.
+4. Press "Duplicate last week" in a week containing the 1st of a month that has a declared figure.
+5. As an administrator, try to switch the assignment back to tracked hours while the declaration
+   exists.
+6. As an administrator, set a **second** project to declared for a month that already holds ordinary
+   time entries for it, then have the member try to declare hours on it.
+
+Expected result:
+
+- The declared project is not offered anywhere at Day, Week or Grid, so steps 1-3 have nothing to
+  select. There is no cell to type into and no entry to create.
+- "Duplicate last week" copies the tracked entries and **not** the declared figure. The following
+  month does not gain a 52-hour entry.
+- The mode switch is refused with a message naming the month and what has to be removed first.
+- Declaring hours on a month that already holds tracked entries for that project is refused, with a
+  message saying to remove them first. This is the guard that keeps a month from counting the same
+  hours twice; it is the single most important refusal in this feature.
+
+### A Contractor Cannot Submit Declared Hours Without Their Proof
+
+Run this as `{CONTRACTOR_EMAIL}`, with one declared assignment in `{TIMESHEET_MONTH}`.
+
+1. Declare `{DECLARED_HOURS}` hours with a note, and do **not** attach a proof.
+2. Open `https://{DOMAIN_NAME}/timesheets?month={TIMESHEET_MONTH}` and submit the month.
+3. Attach `{HOURS_PROOF_PDF_FILE}` and submit again.
+4. Return to `https://{DOMAIN_NAME}/time` at the month level.
+5. Repeat with a declared assignment that has **no** hours declared against it at all.
+6. Repeat step 1 and 2 as an employee rather than a contractor.
+
+Expected result:
+
+- Submission is refused while a declared figure has no proof, and the message **names the projects**
+  whose proof is missing rather than saying only that something is wrong.
+- With the proof attached the month submits normally, and the declared figure is one line on the
+  timesheet with the right hours and the right amount.
+- After submission the declared row is read-only: the figure, the note and the proof are still
+  legible and the proof still opens, but nothing can be edited or replaced. That is the same
+  `PeriodLock` that freezes ordinary entries — no new mechanism.
+- A declared assignment with **no** hours does not block submission. That is a quiet month, not a
+  missing document.
+- An employee has no submission gate at all, so a missing proof stays a warning on their month and
+  never blocks anything. That asymmetry is deliberate.
+
+### An Administrator Reviews Declared Hours Against The Invoice
+
+Run this as `{ADMIN_EMAIL}`, on the submitted month from the previous scenario.
+
+1. Open `https://{DOMAIN_NAME}/admin/timesheets` and open that contractor's `{TIMESHEET_MONTH}`.
+2. Read the submitted snapshot, project by project.
+3. Read the date on the declared project's line.
+4. Open the proof from the review page.
+5. Compare the snapshot total with the uploaded invoice amount.
+
+Expected result:
+
+- The declared project is marked as declared monthly, so a reviewer is not left inferring it from
+  an entry count of one.
+- Its caption reads as hours declared for the month rather than as a count of entries.
+- **The line's date reads as the month and the word "declared", not `Sep 1`.** A reviewer must not
+  be able to take it for work done on the first of the month.
+- The proof opens as a PDF in a new tab from the review page, the same way the invoice does, and
+  the filename, size and upload time are shown beside it.
+- The declared hours are counted into the project total, the snapshot total and the figure the
+  invoice is checked against — exactly like tracked hours, because they are the same kind of record.
+
+### Reports Exclude Declared Hours And Say So
+
+Run this as `{ADMIN_EMAIL}`, with the hybrid project from the first scenario.
+
+1. Open `https://{DOMAIN_NAME}/admin/reports` for the month that holds the declared figure.
+2. Read the total hours and the line above the table.
+3. Filter to the declared project only.
+4. Filter to a member whose assignments are **all** declared.
+5. Export the report as a PDF, in both languages, and read the footnotes.
+6. Open the report row editor for a **tracked** entry dated the 1st of that month, change its
+   duration, and save.
+
+Expected result:
+
+- The report totals **only** the tracked hours. The declared figure is absent from the totals, the
+  charts, the table and the export.
+- A line above the report states that declared hours were excluded and how many members and
+  projects that covers. It gives **counts and never amounts**, and is worded so it can be read
+  outside the company.
+- A member with only declared assignments stays selectable in the filters, and the empty result says
+  _why_ it is empty rather than showing a blank table.
+- The exported PDF carries the same disclosure as a footnote, in the language the export was made
+  in.
+- **The tracked entry dated the 1st saves normally.** This is the one to watch: the declared figure
+  sits on that same date, and if it were counted into the day's total the edit would fail with a
+  24-hour message about hours nothing on the screen shows.
+
+### Declared Assignments Are Flagged Monthly, Not Weekly
+
+Run this as `{ADMIN_EMAIL}`.
+
+1. Open `https://{DOMAIN_NAME}/dashboard` mid-month, with a declared assignment that has nothing
+   declared for the **current** month but does for the previous one.
+2. Then remove the previous month's declaration and reload.
+3. Mark that project inactive for the current week, if the option is offered, and reload.
+4. Compare against a tracked assignment with nothing logged this week.
+
+Expected result:
+
+- A declared assignment with the **last ended month** declared is not flagged, whatever the current
+  week looks like. It must not nag for three weeks out of four while a member waits for month end.
+- A declared assignment with nothing declared for the last ended month **is** flagged.
+- An inactive-week marker is not offered for a declared assignment and does not excuse a missing
+  declaration if one exists — "nothing happened this week" says nothing about a monthly figure.
+- A tracked assignment keeps the weekly rhythm it has always had.
+
+### The Proof Upload Rejects What It Should
+
+Run this as the member with a declared assignment and hours already declared.
+
+1. Try to attach the proof **before** declaring any hours.
+2. Attach a PNG or a Word file.
+3. Rename a non-PDF file to end in `.pdf` and attach it.
+4. Attach a PDF larger than 10 MB.
+5. Attach a valid PDF and then open the proof link while signed in as a **different** member.
+
+Expected result:
+
+- The proof slot is not offered before hours are declared, and says so rather than being silently
+  absent.
+- A non-PDF is rejected by type, and a renamed non-PDF is rejected too — the check reads the file's
+  own bytes, not its name.
+- An oversized file gives a real message naming the size limit. It must not fail silently or with a
+  generic error, which is what would happen if it reached the 12 MB server-action limit instead.
+- Every rejection is reported on the row that asked for it, not on the whole month.
+- Another member's proof link is a 404, not a document.
+
 ### A Declared-Only Member Sees Only The Month
 
 Set up: as an administrator, set every one of a member's project assignments to declared hours (or
@@ -775,7 +962,9 @@ set the member default to declared and leave every assignment inheriting it).
 2. Then open `https://{DOMAIN_NAME}/time?zoom=week` and `?zoom=grid` directly.
 3. Press `1`, `2`, `3`, `-` and `+`.
 4. Press `[`, `]` and `t`.
-5. Confirm with a hybrid member — some assignments tracked, some declared — that nothing changed
+5. Read the bands and their headings.
+6. Declare `{DECLARED_HOURS}` hours with `{DECLARED_NOTE}` and attach `{HOURS_PROOF_PDF_FILE}`.
+7. Confirm with a hybrid member — some assignments tracked, some declared — that nothing changed
    for them.
 
 Expected result:
@@ -785,8 +974,13 @@ Expected result:
   the month.
 - No digit or step key reaches another level.
 - `[`, `]` and `t` still work, and the hint beside where the control would be lists only those.
-- A hybrid member keeps all four stops, opens on the week as before, and sees their tracked
-  projects in the month band.
+- **Both band headings are gone**, and so is the tracked band: with one kind of hours there is
+  nothing to distinguish, so this member sees one form and no labels above it. There is also no
+  handoff line, because there is nothing to hand off to.
+- The month total is the declared figure, and declaring, noting and proving work exactly as they do
+  for a hybrid member.
+- A hybrid member keeps all four stops, opens on the week as before, sees **both** bands with their
+  headings, and sees their tracked projects in the tracked band.
 
 ## Contractor Timesheets
 
@@ -3382,3 +3576,17 @@ Expected result:
   message names the months - for the member default, the projects too - that have to be cleared
   first. A month already locked by a submitted timesheet revision does not block the switch.
 - Every one of those labels, hints and refusal messages reads correctly in Hungarian and English.
+- A declared project is absent from Day, Week and Grid entirely, and one line under the day strip
+  names it and links to the month rather than leaving the absence unexplained.
+- A month's declared figure needs both a number and a note before it can be saved, and the month
+  total equals the tracked hours plus the declared ones.
+- Declaring hours is refused for a month that already holds tracked entries for that project, and
+  ordinary time entry is refused for a declared project — the double count is blocked from both
+  sides.
+- A contractor cannot submit a month while a declared figure has no proof, and the refusal names
+  the projects. An employee is never blocked, only warned.
+- The admin review marks a declared project as declared, dates its line as the month rather than the
+  1st, and opens its proof beside the invoice.
+- Reports and exports total only the tracked hours, and state how many members and projects of
+  declared hours they left out — counts, never amounts.
+- Editing a tracked report line dated the 1st of a month that holds a declared figure still saves.
