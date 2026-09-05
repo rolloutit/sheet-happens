@@ -191,6 +191,12 @@ export type BuildReportPdfPayloadInput = {
   title: string;
   snapshot: ReportSnapshot;
   locale: string;
+  /**
+   * The zone `generatedAt` is rendered in — the admin's own, and already what `reportExport`
+   * records for the export. Required rather than optional: without it the stamp silently followed
+   * the server's zone, which in production is UTC and on a developer's machine is not.
+   */
+  timezone: string;
   generatedAt: Date;
   durationDisplayFormat: DurationDisplayFormat;
   t: ReportPdfTranslator;
@@ -227,7 +233,13 @@ export function buildReportPdfPayload(input: BuildReportPdfPayloadInput): Report
     title,
     labels,
     header: {
-      generatedAt: formatDateTime(input.generatedAt, locale),
+      // The only instant in the whole document — every other date it prints is a calendar date
+      // that was already decided in the member's own zone. It carries its zone so a reader cannot
+      // take it for their own clock.
+      generatedAt: formatDateTime(input.generatedAt, locale, {
+        timeZone: input.timezone,
+        timeZoneName: "shortOffset",
+      }),
       facets: buildHeaderFacets(snapshot, periodLabel, locale, t),
     },
     summary: buildSummary(snapshot, locale, formatHours, scope, t),

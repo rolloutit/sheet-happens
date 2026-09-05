@@ -71,6 +71,7 @@ export async function generateReportPdfExport(
     title,
     snapshot: input.snapshot,
     locale: input.locale,
+    timezone: input.timezone,
     generatedAt: now,
     durationDisplayFormat: input.durationDisplayFormat,
     t: input.t,

@@ -14,6 +14,15 @@ import {
 } from "./report-snapshot.fixture";
 
 const generatedAt = new Date("2026-07-31T12:00:00.000Z");
+/**
+ * The zone the payload renders `generatedAt` in.
+ *
+ * Pinned rather than left to the host, which is what this file used to do: the stamp followed
+ * whichever zone the machine ran in, so the expectation below described a laptop in Budapest and
+ * failed on any runner in UTC. A payload that states its own zone is what makes a fixed
+ * expectation honest rather than lucky.
+ */
+const timezone = "Europe/Budapest";
 
 function translator(locale: "en" | "hu"): ReportPdfTranslator {
   return createTranslator({
@@ -33,6 +42,7 @@ function buildPayload(
     title,
     snapshot,
     locale,
+    timezone,
     generatedAt,
     durationDisplayFormat,
     t: translator(locale),
@@ -140,7 +150,31 @@ describe("report PDF payload", () => {
       { label: "Project", value: "All projects", color: null },
       { label: "Member", value: "All members", color: null },
     ]);
-    expect(payload.header.generatedAt).toBe("Jul 31, 2026, 02:00 PM");
+    expect(payload.header.generatedAt).toBe("Jul 31, 2026, 02:00 PM GMT+2");
+  });
+
+  it("stamps the report with the zone it was generated in, in both catalogues", () => {
+    const snapshot = createCostFreeReportSnapshot();
+    const stampIn = (zone: string, locale: "en" | "hu" = "en") =>
+      buildReportPdfPayload({
+        title: "Client July report",
+        snapshot,
+        locale,
+        timezone: zone,
+        generatedAt,
+        durationDisplayFormat: "DECIMAL_HOURS",
+        t: translator(locale),
+      }).header.generatedAt;
+
+    // One instant, two zones: the number moves, and the marker says why. Without the marker these
+    // two are indistinguishable to a reader, which is how a UTC production deploy printed a
+    // Hungarian admin's report two hours off with nothing to reveal it.
+    expect(stampIn("Europe/Budapest")).toBe("Jul 31, 2026, 02:00 PM GMT+2");
+    expect(stampIn("UTC")).toBe("Jul 31, 2026, 12:00 PM GMT+0");
+
+    // The same marker in both languages. `timeZoneName: "short"` would say CEST here and GMT+2 in
+    // English for the one zone, making two renderings of one document look like two documents.
+    expect(stampIn("Europe/Budapest", "hu")).toBe("2026. júl. 31. 14:00 GMT+2");
   });
 
   it("names the applied filters and adds the group facet only when one is set", () => {

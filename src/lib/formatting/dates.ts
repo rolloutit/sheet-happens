@@ -34,6 +34,14 @@ export type FormatMonthNameOptions = {
 export type FormatTimeOptions = {
   /** Pin the rendering zone. Omit to use the host zone. */
   timeZone?: string;
+  /**
+   * Name the zone the value was rendered in, so the reader cannot mistake it for their own clock.
+   *
+   * `shortOffset` — `GMT+2` — is the form Intl renders identically in both catalogues. `short`
+   * says `CEST` in Hungarian and `GMT+2` in English for the very same zone, which makes the two
+   * language versions of one document look like two different documents.
+   */
+  timeZoneName?: Intl.DateTimeFormatOptions["timeZoneName"];
 };
 
 function dateOnlyToInstant(isoDate: string) {
@@ -108,7 +116,14 @@ export function formatMonthLabel(isoDate: string, locale: string) {
   }).format(dateOnlyToInstant(isoDate));
 }
 
-/** `Jul 31, 2026, 02:00 PM` — an instant with an explicit, zero-padded time. */
+/**
+ * `Jul 31, 2026, 02:00 PM` — an instant with an explicit, zero-padded time.
+ *
+ * Unlike the date-only helpers above, an instant has no single right zone to pin, so this renders
+ * in the host's unless `timeZone` says otherwise. That is correct in a Client Component, where the
+ * host is the reader's own browser, and wrong on the server, where it is whatever the deployment
+ * happens to run in — pass `timeZone` there, and `timeZoneName` so the output says which.
+ */
 export function formatDateTime(
   value: Date | string,
   locale: string,
@@ -121,6 +136,7 @@ export function formatDateTime(
     hour: "2-digit",
     minute: "2-digit",
     ...(options.timeZone ? { timeZone: options.timeZone } : {}),
+    ...(options.timeZoneName ? { timeZoneName: options.timeZoneName } : {}),
   }).format(typeof value === "string" ? new Date(value) : value);
 }
 
@@ -136,5 +152,6 @@ export function formatTimestamp(
     dateStyle: "medium",
     timeStyle: "short",
     ...(options.timeZone ? { timeZone: options.timeZone } : {}),
+    ...(options.timeZoneName ? { timeZoneName: options.timeZoneName } : {}),
   }).format(new Date(value));
 }

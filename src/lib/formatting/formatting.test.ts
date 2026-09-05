@@ -211,6 +211,16 @@ describe("instants", () => {
     ).toBe("Jul 31, 2026, 02:00 PM");
   });
 
+  it("names the zone it rendered in when asked, identically in both catalogues", () => {
+    const instant = new Date("2026-07-31T12:00:00.000Z");
+    const options = { timeZone: "Europe/Budapest", timeZoneName: "shortOffset" } as const;
+
+    // `shortOffset` rather than `short`, which says CEST in Hungarian and GMT+2 in English for
+    // this one zone — two renderings of a single document should not carry different markers.
+    expect(formatDateTime(instant, "en", options)).toBe("Jul 31, 2026, 02:00 PM GMT+2");
+    expect(formatDateTime(instant, "hu", options)).toBe("2026. júl. 31. 14:00 GMT+2");
+  });
+
   it("renders a styled timestamp and a placeholder when absent", () => {
     expect(formatTimestamp("2026-07-31T12:00:00.000Z", "en", { timeZone: "UTC" })).toBe(
       "Jul 31, 2026, 12:00 PM",
