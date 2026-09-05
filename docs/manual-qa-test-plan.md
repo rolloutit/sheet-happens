@@ -3612,6 +3612,20 @@ Expected result:
 - Keyboard tabbing through the pager reaches Prev, every numbered button, then Next, and the
   current page button is the one marked as current.
 
+## Report Export Timestamp And Its Zone
+
+- The "Generated" line of an exported report PDF names the zone it is written in, as in
+  `Jul 31, 2026, 02:00 PM GMT+2`, so the time reads correctly without knowing where the server runs.
+- That zone is the exporting admin's own, the one set on their profile, not the server's. Change the
+  profile timezone, export again, and the stamp moves with it.
+- The preview in the export dialog carries the same stamp as the downloaded file. The two cannot
+  disagree: both take the zone from the same admin.
+- The Hungarian and English renderings of one export carry the same marker - `GMT+2` in both - so
+  the two language versions do not read as two different documents.
+- Only the stamp is affected. Every date in the table is a member-local calendar date and does not
+  move with the exporting admin's zone, and the footnote still names the member time zones the day
+  boundaries came from.
+
 ## Regression Checklist For Every Release
 
 - Invitation activation works for a new invited user.
