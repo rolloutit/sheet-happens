@@ -7,3 +7,10 @@ pnpm-lock.yaml
 src/server/db/generated
 storybook-static
 test-results
+# Vendored by `playwright init-skills` — reformatting them only churns on the next re-run.
+.claude/skills/playwright-cli
+.claude/skills/playwright-component-testing
+.claude/skills/playwright-trace
+
+# Playwright writes these and matches against them byte for byte — the layout is the contract.
+e2e/__aria__

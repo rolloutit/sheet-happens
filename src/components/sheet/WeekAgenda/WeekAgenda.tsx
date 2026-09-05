@@ -129,6 +129,13 @@ export function WeekAgenda({
                         animate={entryCardMotion.animate}
                         exit={{ ...entryCardMotion.exit, transition: exitTransition }}
                         transition={{ ...entryEnterTransition(index), layout: levelTransition }}
+                        /* `min-w-0`, or a column is as wide as its widest card wants to be. A grid
+                           item's automatic minimum is its min-content width, so the list's single
+                           `auto` track grows past the column instead of clamping to it — and since
+                           the columns are `minmax(0, 1fr)` tracks that cannot grow, the cards
+                           simply hang out over the next day. Seven columns of that is the level
+                           looking like it has come apart. */
+                        className="min-w-0"
                       >
                         <EntryCard
                           entry={entry}
@@ -217,20 +224,33 @@ function EntryCard({
         ) : null}
       </div>
 
-      <p className="line-clamp-2 text-xs leading-snug text-foreground" title={entry.description}>
+      {/* `min-w-0 break-words`: a single long token in a description is a min-content width the
+          card would otherwise have to honour, and a column has none to spare. */}
+      <p
+        className="line-clamp-2 min-w-0 break-words text-xs leading-snug text-foreground"
+        title={entry.description}
+      >
         {entry.description}
       </p>
 
-      <div className="flex items-center justify-between gap-1">
-        <span className="min-w-0 truncate text-xs font-semibold text-foreground">
-          {formatHoursWithUnit(entry.durationMinutes, locale, durationDisplayFormat)}
+      {/* The figure, the times and the two 28px actions do not share one line in a column this
+          narrow — seven of them across a laptop leaves ~120px here — so the time range is the part
+          that gives way and wraps under the duration. It is the only one of the three that can:
+          the figure is what the level is read for, and the actions are click targets whose position
+          must not depend on how wide the week happens to be. Wide columns still fit all three on
+          one line, which is why this is a wrap and not a second row. */}
+      <div className="flex min-w-0 items-center gap-1">
+        <span className="flex min-w-0 flex-wrap items-baseline gap-x-1 text-xs font-semibold text-foreground">
+          <span className="shrink-0">
+            {formatHoursWithUnit(entry.durationMinutes, locale, durationDisplayFormat)}
+          </span>
           {entry.startTime && entry.endTime ? (
-            <span className="ml-1 font-normal text-muted-foreground">
+            <span className="min-w-0 truncate font-normal text-muted-foreground">
               {entry.startTime}–{entry.endTime}
             </span>
           ) : null}
         </span>
-        <span className="flex shrink-0 items-center">
+        <span className="ml-auto flex shrink-0 items-center">
           <button
             type="button"
             disabled={entry.locked || disabled}

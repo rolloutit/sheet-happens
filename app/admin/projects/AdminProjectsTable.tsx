@@ -470,8 +470,8 @@ export function AdminProjectsTable({
           navigation: t("pager.navigation"),
           previous: t("pager.previous"),
           next: t("pager.next"),
-          previousPage: (page) => t("pager.previousPage", { page }),
-          nextPage: (page) => t("pager.nextPage", { page }),
+          previousPage: t("pager.previousPage"),
+          nextPage: t("pager.nextPage"),
           page: (page) => t("pager.page", { page }),
           currentPage: (page) => t("pager.currentPage", { page }),
           summary: (page, totalPages, totalItems) =>

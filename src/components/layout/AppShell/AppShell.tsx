@@ -439,9 +439,13 @@ export function AppShell({
                 >
                   {pageScope(current, role, t)}
                 </p>
-                <p className="truncate text-lg font-semibold leading-tight">
+                {/* The shell owns the page's only `h1`: every route renders through here, so a
+                    heading in the page body would either duplicate it or skip a level. Tailwind's
+                    preflight strips heading margins and font sizing, so this is a semantic change
+                    with no visual one. */}
+                <h1 className="truncate text-lg font-semibold leading-tight">
                   {pageTitle(current, t)}
-                </p>
+                </h1>
               </div>
             </div>
             <div className="flex items-center gap-3">

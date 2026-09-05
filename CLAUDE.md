@@ -8,6 +8,11 @@ Prisma/Postgres, Better Auth, Tailwind v4, next-intl (HU/EN), Storybook.
 
 pnpm only — `packageManager: pnpm@11.5.3`, Node `24.14.0` (`.nvmrc`). Never npm or yarn.
 
+Dependency specifiers are caret ranges on the major in use (`^4.5.4`), never `latest`: `pnpm
+install` and `pnpm update` move minors and patches, a major only ever moves on a deliberate
+`pnpm update --latest <pkg>` with the lockfile diff read. `latest` also resolved twice per install
+and left two copies of react, zod and chromatic in the lockfile; the ranges dedupe the tree.
+
 - `pnpm setup:git` — run once per clone: installs the pre-push guard and the push defaults that
   keep a feature branch off `develop`. Local git config only, never global.
 - `pnpm dev` — Next dev server (Turbopack) on `:3000`
@@ -21,9 +26,24 @@ pnpm only — `packageManager: pnpm@11.5.3`, Node `24.14.0` (`.nvmrc`). Never np
 - `pnpm test:browser` — Vitest browser mode, `src/**/*.browser.{test,spec}.{ts,tsx}`
 - `pnpm storybook` · `pnpm test-storybook`
 - `pnpm test:visual` — rebuilds Storybook, compares checked-in screenshots
-- `pnpm e2e` — Playwright; boots `pnpm dev` itself, no separate server needed
-- `pnpm verify` — the full gate chain. Run it before calling a feature done. (Not `pnpm ci`: pnpm
-  has a built-in `ci` that shadows package scripts and silently runs a clean install instead.)
+- `pnpm dev:e2e` — the dev server the e2e suite needs: same as `pnpm dev` but with auth emails
+  written to `.mail/e2e-outbox.jsonl` instead of the console. Use it instead of `pnpm dev` when you
+  intend to run e2e; Next refuses a second dev server for the same directory, so the suite cannot
+  start its own alongside a plain `pnpm dev`.
+- `pnpm db:test` — create/migrate/seed `sheet_happens_e2e`, the suite's own database, on the same
+  Postgres as the dev one. Idempotent; `db:test:reset` drops and rebuilds it. Run once per clone
+  before the first `pnpm e2e`. No Docker involved, so CI runs the same command. It needs object
+  storage as well as Postgres and creates the bucket itself: the seed uploads a contractor invoice
+  PDF per invoiced month, so without a reachable `S3_ENDPOINT` the whole seed rolls back.
+- `pnpm e2e` — Playwright. Starts the server itself if nothing is on `:3000`, otherwise reuses what
+  is there. The `setup` project requests a magic link over HTTP and reads it back out of the outbox
+  — that is how authenticated specs get a session, and why the outbox matters. Also `e2e:a11y`
+  (axe only), `e2e:failed` (re-run failures), `e2e:update` (refresh aria snapshots)
+- `pnpm verify` — the full gate chain and the definition of done. Run it before calling a feature
+  done. (Not `pnpm ci`: pnpm has a built-in `ci` that shadows package scripts and silently runs a
+  clean install instead.) `pnpm verify:fast` (typecheck + lint + unit) is the mid-task loop.
+- CI (`.github/workflows/ci.yml`) runs the same gates except `test:visual` — those baselines are
+  `-darwin`-suffixed and can only be compared on macOS.
 
 ## Environment
 
@@ -77,6 +97,43 @@ Follow `src/components/README.md`. In short:
 - Theme is a light/dark/**system** preference (next-themes, `system` by default). `:root` is the
   dark palette, `.light` overrides it — check both.
 
+## Browser verification
+
+The accessibility tree is the machine-readable surface of this app: if every control has a stable,
+unique accessible name, a change can be read back as text instead of eyeballed.
+
+- `pnpm exec playwright cli` (ships with playwright-core, no install) drives a persistent headless
+  session: `open <url>` → `find "text"` → `click e61`. Snapshots go to `.playwright-cli/*.yml`
+  rather than into the transcript. The `/playwright-cli` skill has the full command set.
+- Browse on `http://localhost`, never `127.0.0.1`: the Better Auth client posts to the origin in
+  `authOrigin`, so the other host fails every auth call on a CORS preflight.
+- A fresh browser has no locale cookie and renders **EN**, not the HU default. Committed aria
+  snapshots pin `sheet-happens-locale` in `e2e/fixtures.ts` for exactly this reason.
+- `/time` is the exemplar route (`e2e/authenticated/time.spec.ts`): landmarks, one `h1`, a named
+  region per weekday, entry controls addressable within their day. Copy that shape.
+- Aria baselines live in `e2e/__aria__/`. Date-derived values are matched with regexes, not
+  literals — never "fix" a failing baseline by regenerating it without reading the diff first.
+- The suite runs against **its own database** (`sheet_happens_e2e`, see `e2e/database.ts`), never
+  the one you browse. It writes — onboarding flips member rows — and its aria fixture must not be
+  editable by hand. `playwright.config.ts` pins `DATABASE_URL` for a server it starts; `pnpm dev:e2e`
+  pins the same one for a server you start. So `pnpm db:dev:reset` is now safe to run freely.
+- Two signed-in roles, each with its own `storageState` minted by `e2e/auth.setup.ts`: `admin`
+  (`admin@example.com`) and `member` (`contractor@example.com`). Specs in `e2e/authenticated/` run
+  under **both**; `authenticated/admin/` and `authenticated/member/` are the role-bound exceptions,
+  and `playwright.config.ts` says why a spec belongs in one.
+- Both roles have to be **onboarded**, not just logged in: the seed leaves every member row INVITED
+  and unlinked, so a magic-link session alone gets bounced to `/account-status`. The setup accepts
+  an invitation first — the admin from the seeded token, the member from a real admin-driven resend
+  — and that is the only reason a fresh database can run the suite at all.
+- Anything asserted **literally** must come from the **frozen week** (`e2e/seed.ts`,
+  `FROZEN_WEEKS` in `scripts/dev-seed.mjs`), not from the generated data. The generator fills days
+  only up to the day it runs — the current week holds one day of data on a Monday and five on a
+  Friday — and its PRNG re-aligns when its twelve-month window slides, so nothing it produces can be
+  pinned. The frozen week is fixed dates, durations and descriptions outside that window.
+- `/sign-in/magic-link` allows **5 requests per 15 minutes per IP** and the whole suite shares one
+  localhost budget. That is why the member session is reused while it still works. A 429 in the
+  setup means the suite has been run too often, not that something broke.
+
 ## Testing conventions
 
 - Unit and domain tests colocate as `*.test.ts` beside the source under `src/`. Route handler
@@ -85,6 +142,13 @@ Follow `src/components/README.md`. In short:
 - Visual baselines in `visual/storybook.spec.ts-snapshots/` are checked in and platform-suffixed
   (`-darwin`). Refresh with `pnpm test:visual:update` **only** for an intentional visual change, and
   say so in the commit.
+- `vitest` and `@vitest/browser-playwright` are **pinned exactly to 4.1.11**, tighter than the
+  caret range everything else gets. Not a compatibility problem in our code — the whole chain is green on 5.0.0 once
+  `vitest.storybook.config.ts` declares a viewport, which it now does. The blocker is
+  `@storybook/addon-vitest`: every published version, up to `11.0.0-alpha.0`, declares
+  `vitest: ^3 || ^4` and `@vitest/browser-playwright: ^4`, so vitest 5 leaves a second
+  `@vitest/browser@4` in the tree and the story runner peer-mismatched. Lift the pins when that
+  addon ships a release accepting vitest 5, and check `pnpm peers check` before believing it.
 - User-visible changes get a matching scenario appended to `docs/manual-qa-test-plan.md`, committed
   separately as `docs(qa): ...` (established repo convention).
 

@@ -668,6 +668,35 @@ Expected result:
   with the day and its total. Tapping a collapsed day opens it; tapping the open one zooms in.
 - Every label is translated in both languages, and the level is legible in both themes.
 
+### Week Columns Contain Their Cards, And Use A Wide Display
+
+1. Open `https://{DOMAIN_NAME}/time?week={TIME_TRACKING_WEEK_START}&zoom=week` on the widest
+   display available, and log entries so that at least one day holds an entry with a start and end
+   time (`09:00`–`18:00`, not a duration-only entry) and one holds an entry with a long
+   single-word description.
+2. Look along the seven columns at the right-hand edge of each one.
+3. Measure how much empty page there is left and right of the content, and compare it with
+   `https://{DOMAIN_NAME}/admin/projects` at the same window size.
+4. Narrow the browser window down through roughly 1500px, 1300px and 1100px, watching the entry
+   cards each time.
+5. Widen it back out, then repeat at a phone-width viewport.
+6. Repeat in Hungarian and in both light and dark themes.
+
+Expected result:
+
+- No entry card is wider than the column it sits in. Nothing hangs over the day to its right, and
+  no card is clipped by the next column — at any window width, and with any description.
+- A card's edit and delete buttons stay at the card's right edge at every width. They never sit
+  outside the card and never drift as the window changes.
+- On a wide display the page uses the same width as the admin screens rather than a narrower
+  reading column, so the seven day columns are visibly wider than they were.
+- Where a column is too narrow for the duration and the time range on one line, the time range
+  moves under the duration. The duration itself is never shortened or ellipsised, and the card
+  grows by one text line at most.
+- A long single-word description wraps or is clipped to two lines inside the card; it never widens
+  the card or the column.
+- The phone accordion is unchanged: one open day, the rest collapsed to a summary row.
+
 ### Detail Level Focus And Scroll Continuity
 
 1. Open `https://{DOMAIN_NAME}/time?week={TIME_TRACKING_WEEK_START}&zoom=week`.
@@ -3516,6 +3545,86 @@ Expected result:
   colour for a status as the table pill does, in **both** themes — the dashboard used to carry its
   own hardcoded dark-theme colours.
 - Every colour is accompanied by its status name; nothing requires colour alone to be identified.
+
+## Page Heading Semantics And The Automated Accessibility Gate
+
+- Every page rendered through the app shell exposes its title as the page's only level-1 heading.
+  A screen reader announces it on arrival, and the title still looks exactly as before - same size,
+  weight and spacing - on desktop and mobile, in light and dark, in both locales.
+- No page has two level-1 headings, and no page body introduces a heading that skips a level below
+  the shell's.
+- The week view on Time tracking reads as a structure without looking at it: one level-1 heading,
+  the primary navigation, and one named region per weekday. Each entry inside a day offers an edit
+  and a delete control whose names carry the entry description, so two identical descriptions on
+  different days stay distinguishable by their day.
+- Selecting a different day in the week strip changes that button's pressed state, not only its
+  colour, and exactly one day is ever pressed.
+- Auth emails with `AUTH_EMAIL_DELIVERY_MODE=file`: the magic link, invitation and password-reset
+  messages land as one JSON line each in the outbox file and are not printed to the console. With
+  the variable unset they print to the console as before. A production build refuses file delivery
+  and falls back to the console, so plaintext links cannot be written to disk on a deploy.
+- `pnpm e2e` with nothing running on port 3000 starts its own server and finishes green. With
+  `pnpm dev:e2e` already running it reuses that one. With a plain `pnpm dev` running it fails on the
+  first authenticated spec and the message names the fix rather than timing out.
+
+## Role Boundaries Seen From A Non-Admin Member
+
+- Signed in as `{CONTRACTOR_EMAIL}`, the sidebar has no Admin group at all. Approvals, Reports,
+  Projects, People, Rates, Declared hours, Audit log, System and Information page are absent from
+  the navigation rather than shown disabled, and a screen reader walking the primary navigation
+  never announces them.
+- Opening an admin URL directly as that member - `/admin/people`, `/admin/timesheets`,
+  `/admin/system` - lands on the account status screen titled "Admin access required", never on the
+  admin page and never on a blank or error page.
+- That refusal keeps the route it refused in the address bar, so the screen states what was asked
+  for rather than silently dropping it.
+- The refusal reads correctly in Hungarian and English, and the same member can still reach their
+  own pages - Dashboard, Time tracking, Timesheets - immediately afterwards.
+- An admin opening the same URLs sees the admin page, so the refusal is about the role and not about
+  the route being broken.
+- Invitation resend from the People row menu: the action reports "Invitation resent to {email}" and
+  a fresh invitation email arrives. The link in the _previous_ email no longer activates the
+  account, because a resend replaces the stored token.
+- Resend is offered only for a member whose state is `invited`. For an active, inactive or archived
+  member the menu does not offer it.
+- Accepting an invitation while signed in with a different email leaves the activate button
+  disabled and says which address the invitation belongs to.
+- Re-opening an already accepted invitation link says the invitation has already been used instead
+  of activating anything a second time.
+- After activation the member's People row reads `active` and the member can sign in with a plain
+  magic link from then on.
+- A magic link is delivered to any active member, but redeeming one for a member who has never
+  accepted an invitation does not produce a working session - it ends on the account status screen.
+  Delivery is not proof of access.
+
+## Pagination Control Names
+
+- On People and Projects, walking the pager with a screen reader announces four distinct things:
+  "Previous page", "Next page", "Go to page N" for each numbered button, and "Current page, page N"
+  for the one you are on. No two controls in the pager announce the same name.
+- The visible labels are unchanged - the step buttons still read "Prev" and "Next" (HU: "Előző",
+  "Következő") - and the announced name contains that visible text, so voice control still works by
+  saying what is written on the button.
+- The step buttons no longer claim a page number. Previously both announced "Go to page N" for
+  their destination, which is what the numbered buttons are called, so the same name pointed at two
+  different controls.
+- Both names read correctly in Hungarian and English.
+- Keyboard tabbing through the pager reaches Prev, every numbered button, then Next, and the
+  current page button is the one marked as current.
+
+## Report Export Timestamp And Its Zone
+
+- The "Generated" line of an exported report PDF names the zone it is written in, as in
+  `Jul 31, 2026, 02:00 PM GMT+2`, so the time reads correctly without knowing where the server runs.
+- That zone is the exporting admin's own, the one set on their profile, not the server's. Change the
+  profile timezone, export again, and the stamp moves with it.
+- The preview in the export dialog carries the same stamp as the downloaded file. The two cannot
+  disagree: both take the zone from the same admin.
+- The Hungarian and English renderings of one export carry the same marker - `GMT+2` in both - so
+  the two language versions do not read as two different documents.
+- Only the stamp is affected. Every date in the table is a member-local calendar date and does not
+  move with the exporting admin's zone, and the footnote still names the member time zones the day
+  boundaries came from.
 
 ## Regression Checklist For Every Release
 

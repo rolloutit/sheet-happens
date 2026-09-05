@@ -7,10 +7,10 @@ projects, environments, domains or the deployed databases.
 
 Since 2026-08-04 each stage is its own Railway project, in the `Rollout IT Workspace`:
 
-| Project              | Environment   | Branch    | Services                                                  | URL                                |
-| -------------------- | ------------- | --------- | --------------------------------------------------------- | ---------------------------------- |
-| `sheet-happens-prod` | `production`  | `main`    | `sheet-happens-next`, `Postgres`                          | `sheet.example.com`               |
-| `sheet-happens-dev`  | `development` | `develop` | `sheet-happens-next`, `Postgres`, bucket `object-storage` | `<service>-<environment>.up.railway.app` |
+| Project              | Environment   | Branch    | Services                                                       | URL                                |
+| -------------------- | ------------- | --------- | -------------------------------------------------------------- | ---------------------------------- |
+| `sheet-happens-prod` | `production`  | `main`    | `sheet-happens-next`, `Postgres`, bucket `object-storage-prod` | `sheet.example.com`               |
+| `sheet-happens-dev`  | `development` | `develop` | `sheet-happens-next`, `Postgres`, bucket `object-storage`      | `<service>-<environment>.up.railway.app` |
 
 `sheet-happens-prod` was the original shared project (named `SheetHappens` until 2026-08-04), so it
 still contains a leftover `development` environment. That environment is **dormant**: its deploy
