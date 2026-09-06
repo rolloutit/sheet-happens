@@ -400,7 +400,7 @@ describe("report PDF payload", () => {
     const payload = buildPayload(createInternalReportSnapshot());
 
     expect(payload.labels).toEqual({
-      brand: "Sheet Happens",
+      brand: "Sheet Happens - Rollout IT",
       confidential: "Confidential",
       page: "Page",
       generatedAt: "Generated",

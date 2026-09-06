@@ -940,6 +940,7 @@ function BulkAssignmentDialog({
   const [validFrom, setValidFrom] = useState(todayDate);
   const [validTo, setValidTo] = useState("");
   const [active, setActive] = useState(true);
+  const [trackingMode, setTrackingMode] = useState<TrackingModeOverrideValue>("");
   const [notes, setNotes] = useState("");
 
   const activeProjects = projects.filter((project) => project.status !== "ARCHIVED");
@@ -968,6 +969,7 @@ function BulkAssignmentDialog({
     setValidFrom(todayDate);
     setValidTo("");
     setActive(true);
+    setTrackingMode("");
     setNotes("");
   }
 
@@ -1157,6 +1159,28 @@ function BulkAssignmentDialog({
             </label>
             <div className="md:col-span-3">
               <Field
+                label={t("trackingMode.overrideLabel")}
+                reserveMessageSpace
+                hint={t("trackingMode.bulkHint")}
+                error={actionState?.fieldErrors?.trackingMode}
+              >
+                {({ id, describedBy, invalid }) => (
+                  <Select
+                    id={id}
+                    label={t("trackingMode.overrideLabel")}
+                    value={trackingMode}
+                    onValueChange={(value) => setTrackingMode(value as TrackingModeOverrideValue)}
+                    aria-describedby={describedBy}
+                    invalid={invalid}
+                    searchable={false}
+                    // Several members, several defaults: the inherit option cannot name one.
+                    options={getTrackingModeOverrideOptions(null, t)}
+                  />
+                )}
+              </Field>
+            </div>
+            <div className="md:col-span-3">
+              <Field
                 label={t("form.notes")}
                 reserveMessageSpace
                 error={actionState?.fieldErrors?.notes}
@@ -1208,6 +1232,7 @@ function BulkAssignmentDialog({
                 validFrom,
                 validTo,
                 active,
+                trackingMode,
                 notes,
               })
             }
@@ -1358,11 +1383,24 @@ function ProjectDetailDrawer({
   const locale = useLocale();
   const pickerLabels = usePickerLabels();
   const [editingAssignmentId, setEditingAssignmentId] = useState<string | null>(null);
+  // The member picker stays uncontrolled inside the form; this mirror exists only so the hours
+  // tracking option can name the default the chosen member would inherit.
+  const [assignMemberId, setAssignMemberId] = useState("");
   const assignPending = project ? pendingKey === `${project.id}:assign` : false;
   const nextActive = project?.status !== "ACTIVE";
+  const assignMemberDefaultTrackingMode =
+    assignableMembers.find((member) => member.id === assignMemberId)?.defaultTrackingMode ?? null;
 
   return (
-    <Drawer open={Boolean(project)} onOpenChange={onOpenChange}>
+    <Drawer
+      open={Boolean(project)}
+      onOpenChange={(open) => {
+        // The drawer body unmounts on close, so the form resets itself; the mirror has to follow
+        // or the next project opens naming the previous member's default.
+        if (!open) setAssignMemberId("");
+        onOpenChange(open);
+      }}
+    >
       {project ? (
         <DrawerContent className="w-[min(44rem,100vw)] gap-0 overflow-hidden p-0">
           <div className="border-b border-border px-5 py-5">
@@ -1466,6 +1504,7 @@ function ProjectDetailDrawer({
                   validFrom: getAssignmentFormString(formData, "validFrom"),
                   validTo: getAssignmentFormString(formData, "validTo"),
                   active: formData.get("active") === "true",
+                  trackingMode: getTrackingModeFormValue(formData),
                   notes: getAssignmentFormString(formData, "notes"),
                 });
               }}
@@ -1495,6 +1534,7 @@ function ProjectDetailDrawer({
                       invalid={invalid}
                       required={required}
                       labels={pickerLabels.combobox}
+                      onValueChange={setAssignMemberId}
                       options={assignableMembers.map((member) => ({
                         value: member.id,
                         label: member.name,
@@ -1543,6 +1583,26 @@ function ProjectDetailDrawer({
                   )}
                 </Field>
               </div>
+
+              <Field
+                label={t("trackingMode.overrideLabel")}
+                reserveMessageSpace
+                hint={t("trackingMode.overrideHint")}
+                error={actionState?.fieldErrors?.trackingMode}
+              >
+                {({ id, describedBy, invalid }) => (
+                  <Select
+                    id={id}
+                    name="trackingMode"
+                    label={t("trackingMode.overrideLabel")}
+                    defaultValue=""
+                    aria-describedby={describedBy}
+                    invalid={invalid}
+                    searchable={false}
+                    options={getTrackingModeOverrideOptions(assignMemberDefaultTrackingMode, t)}
+                  />
+                )}
+              </Field>
 
               <div className="grid gap-4 lg:grid-cols-[1fr_auto] lg:items-end">
                 <Field
@@ -2266,13 +2326,21 @@ function getTrackingModeLabel(mode: TrackingMode, t: AdminProjectsTranslator) {
 
 /**
  * `""` is the inherit state, kept as an explicit option rather than an empty placeholder so an
- * admin can see which assignments are deliberately different from the member default.
+ * admin can see which assignments are deliberately different from the member default. The option
+ * names that default whenever exactly one member is in scope; `null` covers the two cases where
+ * none is — the assign form before a member is chosen, and the bulk dialog, where several members
+ * may inherit different modes.
  */
-function getTrackingModeOverrideOptions(memberDefault: TrackingMode, t: AdminProjectsTranslator) {
+function getTrackingModeOverrideOptions(
+  memberDefault: TrackingMode | null,
+  t: AdminProjectsTranslator,
+) {
   return [
     {
       value: "",
-      label: t("trackingMode.inherit", { mode: getTrackingModeLabel(memberDefault, t) }),
+      label: memberDefault
+        ? t("trackingMode.inherit", { mode: getTrackingModeLabel(memberDefault, t) })
+        : t("trackingMode.inheritDefault"),
     },
     { value: "TRACKED", label: t("trackingMode.trackedOption") },
     { value: "DECLARED", label: t("trackingMode.declaredOption") },

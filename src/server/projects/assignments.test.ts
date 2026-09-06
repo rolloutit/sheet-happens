@@ -151,6 +151,7 @@ describe("project assignment services", () => {
           displayName: "Employee Example",
           status: "ACTIVE",
           currentProfile: "EMPLOYEE",
+          defaultTrackingMode: "DECLARED",
         },
       ],
     });
@@ -162,6 +163,7 @@ describe("project assignment services", () => {
         email: "contractor@example.com",
         status: "INVITED",
         profile: "CONTRACTOR",
+        defaultTrackingMode: "TRACKED",
       },
       {
         id: "member-2",
@@ -169,6 +171,7 @@ describe("project assignment services", () => {
         email: "employee@example.com",
         status: "ACTIVE",
         profile: "EMPLOYEE",
+        defaultTrackingMode: "DECLARED",
       },
     ]);
   });
@@ -235,6 +238,7 @@ describe("project assignment services", () => {
           active: true,
           validFrom: new Date("2026-08-10T00:00:00.000Z"),
           validTo: null,
+          trackingMode: null,
           notes: "Initial onboarding",
           createdByMemberId: "admin-1",
           updatedByMemberId: "admin-1",
@@ -255,6 +259,41 @@ describe("project assignment services", () => {
           }),
           ipAddress: "127.0.0.1",
           userAgent: "vitest",
+        }),
+      }),
+    );
+  });
+
+  it("stores an hours tracking override chosen while the assignment is created", async () => {
+    const { db, tx } = createAssignmentDb();
+
+    await assignMemberToProject(
+      {
+        projectId: "project-1",
+        memberId: "member-1",
+        validFrom: new Date("2026-08-10T15:45:00.000Z"),
+        validTo: null,
+        active: true,
+        trackingMode: "DECLARED",
+        notes: null,
+        actorMemberId: "admin-1",
+      },
+      { db },
+    );
+
+    expect(tx.projectAssignment.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          trackingMode: "DECLARED",
+        }),
+      }),
+    );
+    expect(tx.auditLog.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          after: expect.objectContaining({
+            trackingMode: "DECLARED",
+          }),
         }),
       }),
     );

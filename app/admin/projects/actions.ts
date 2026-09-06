@@ -87,6 +87,12 @@ function createProjectFormSchema(t: AdminProjectsActionsTranslator) {
     });
 }
 
+function createTrackingModeOverrideSchema(t: AdminProjectsActionsTranslator) {
+  // `""` is the inherit state, not a missing value: every assignment form states the override
+  // explicitly so creating one and editing it later go through the same three choices.
+  return z.enum(["", "TRACKED", "DECLARED"], t("validation.trackingModeInvalid"));
+}
+
 function createAssignmentBaseSchema(t: AdminProjectsActionsTranslator) {
   return z.object({
     memberId: z.string().trim().min(1, t("validation.chooseMember")),
@@ -97,6 +103,7 @@ function createAssignmentBaseSchema(t: AdminProjectsActionsTranslator) {
       .refine(isDateInputValue, t("validation.validStartDate")),
     validTo: createProjectDateSchema(t),
     active: z.boolean(),
+    trackingMode: createTrackingModeOverrideSchema(t),
     notes: z.string().trim().max(1000, t("validation.notesMax")),
   });
 }
@@ -109,11 +116,6 @@ function createUpdateAssignmentFormSchema(t: AdminProjectsActionsTranslator) {
   return createAssignmentBaseSchema(t)
     .omit({
       memberId: true,
-    })
-    .extend({
-      // Only the edit form carries the override: a new assignment inherits the member default,
-      // and the admin overrides it from the same drawer straight afterwards.
-      trackingMode: z.enum(["", "TRACKED", "DECLARED"], t("validation.trackingModeInvalid")),
     })
     .superRefine(validateAssignmentDateRange(t));
 }
@@ -155,6 +157,7 @@ function createBulkAssignmentFormSchema(t: AdminProjectsActionsTranslator) {
         .refine(isDateInputValue, t("validation.validStartDate")),
       validTo: createProjectDateSchema(t),
       active: z.boolean(),
+      trackingMode: createTrackingModeOverrideSchema(t),
       notes: z.string().trim().max(1000, t("validation.notesMax")),
     })
     .superRefine((value, context) => {
@@ -339,6 +342,7 @@ export async function assignProjectMemberAction(
       projectId: input.projectId,
       validFrom: parseRequiredDate(parsed.data.validFrom),
       validTo: parseOptionalDate(parsed.data.validTo),
+      trackingMode: parseTrackingModeOverride(parsed.data.trackingMode),
       actorMemberId: admin.id,
       requestMetadata: await getProjectRequestMetadata(),
     });
@@ -374,6 +378,7 @@ export async function bulkAssignProjectMembersAction(
       ...parsed.data,
       validFrom: parseRequiredDate(parsed.data.validFrom),
       validTo: parseOptionalDate(parsed.data.validTo),
+      trackingMode: parseTrackingModeOverride(parsed.data.trackingMode),
       actorMemberId: admin.id,
       requestMetadata: await getProjectRequestMetadata(),
     });
@@ -777,6 +782,7 @@ function isProjectBulkAssignmentFormField(field: unknown): field is ProjectBulkA
     field === "validFrom" ||
     field === "validTo" ||
     field === "active" ||
+    field === "trackingMode" ||
     field === "notes"
   );
 }

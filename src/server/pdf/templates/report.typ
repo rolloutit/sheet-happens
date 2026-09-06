@@ -12,7 +12,15 @@
 // rate and amount columns it carries, and the payload for a cost-free export does not contain
 // those fields at all.
 
-#import "lib/theme.typ": accent, micro-label, muted, radius-lg, report-theme, rule-color
+#import "lib/theme.typ": (
+  accent,
+  brand-mark,
+  micro-label,
+  muted,
+  radius-lg,
+  report-theme,
+  rule-color,
+)
 #import "lib/components.typ": (
   cell,
   data-table,
@@ -34,9 +42,13 @@
 
 // ─── Document header ────────────────────────────────────────────────────────────────────────
 #panel-box(radius: radius-lg, inset: 11pt)[
+  // Letterhead: the pictogram left of the wordmark, the same composition as the app's sidebar
+  // header. Sized to the pill opposite it, so the mark reads as branding rather than as a graphic.
   #grid(
-    columns: (1fr, auto),
-    align: (horizon + left, horizon + right),
+    columns: (auto, 1fr, auto),
+    column-gutter: (5.5pt, 0pt),
+    align: (horizon, horizon + left, horizon + right),
+    brand-mark(),
     micro-label(labels.brand, fill: accent),
     pill(labels.confidential),
   )

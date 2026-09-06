@@ -1530,10 +1530,12 @@
       "trackedOption": "Itt rögzített",
       "declaredOption": "Havi bevallás",
       "inherit": "Tag alapértelmezése ({mode})",
+      "inheritDefault": "Tag alapértelmezése",
       "inheritedDetail": "Az órák módja a tag alapértelmezése szerint: {mode}.",
       "overriddenDetail": "Az órák módja csak ennél a hozzárendelésnél: {mode}.",
       "overrideLabel": "Óranyilvántartás",
-      "overrideHint": "Csak erre a hozzárendelésre érvényes. A tag alapértelmezését a Tagok oldalon lehet beállítani."
+      "overrideHint": "Csak erre a hozzárendelésre érvényes. A tag alapértelmezését a Tagok oldalon lehet beállítani.",
+      "bulkHint": "Az itt létrehozott összes hozzárendelésre érvényes. A tag alapértelmezését a Tagok oldalon lehet beállítani."
     },
     "discardDialog": {
       "title": "Elveted ezt a projektet?",
@@ -2859,7 +2861,7 @@
       "declaredOnly": "Ebben a szűrésben minden órát havonta vallottak be egy másik cég rendszerében, ezért a riport nem tartalmazza. A bevallott órák az időelszámolásnál nézhetők át, nem itt."
     },
     "pdf": {
-      "brand": "Sheet Happens",
+      "brand": "Sheet Happens - Rollout IT",
       "confidential": "Bizalmas",
       "page": "Oldal",
       "generatedAt": "Generálva",

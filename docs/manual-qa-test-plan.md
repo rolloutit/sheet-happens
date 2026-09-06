@@ -3725,6 +3725,15 @@ Expected result:
   says whether the mode is inherited from the member default or set for that assignment only.
 - The per-assignment mode control offers an explicit inherit option that names the member default,
   so an admin can tell a deliberate override from an inherited setting.
+- The same three choices are on the form that creates an assignment, so an admin sets the mode while
+  assigning the member rather than saving and then editing the assignment straight afterwards.
+- That control names the chosen member's default in its inherit option and follows the member picker
+  when the choice changes; before any member is picked it reads as the plain inherit option.
+- The bulk assign dialog carries the control too. Its inherit option names no mode - several members
+  may inherit different ones - and its hint says the choice applies to every assignment created
+  there.
+- An assignment created on inherit shows as inherited in the list afterwards, and one created on an
+  explicit mode shows as set for that assignment only.
 - The member-level default is set on the People page, not from inside one project, and both controls
   state their scope: the member default applies to every project, the override to one assignment.
 - Changing the member default leaves any assignment carrying its own override exactly as it was.

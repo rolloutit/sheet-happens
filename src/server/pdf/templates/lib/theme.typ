@@ -42,6 +42,12 @@
   fill: fill,
 )[#upper(label)]
 
+/// Rollout IT pictogram — the same file the app header renders through `BrandMark`, copied from
+/// `public/brand/rolloutit-mark-blue.png`. That is the tone the app picks on a light surface, and a
+/// page is always light. It lives under `templates/assets` because Typst can only read inside
+/// `--root`, and the renderer copies the whole templates folder into the compile root.
+#let brand-mark(height: 12pt) = image("/assets/rolloutit-mark.png", height: height)
+
 /// Wraps a whole document: page geometry, footer and text defaults.
 /// Apply with `#show: report-theme.with(brand: "…", page-label: "…")`.
 #let report-theme(brand: "Sheet Happens", page-label: "Page", body) = {

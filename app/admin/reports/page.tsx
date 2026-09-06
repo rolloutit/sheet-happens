@@ -60,7 +60,18 @@ export default async function AdminReportsPage({ searchParams }: AdminReportsPag
         timezone={admin.timezone}
         durationDisplayFormat={admin.durationDisplayFormat}
         filters={
+          /*
+            Keyed even though it is a fixed slot rather than a list item. `snapshot` pushes this
+            page's Flight row past React's 3200-byte MAX_ROW_SIZE, so the serializer defers the
+            next element it meets — this one — into a row of its own. The client then receives it
+            as a lazy chunk that only initializes while ReportWorkspace is already rendering, which
+            is too late for the key validation `jsx()` does at element-creation time: the flag is
+            written on the lazy wrapper and lost when the wrapper resolves. Reconciliation sees an
+            unkeyed element in `<section>`'s children array and warns. An explicit key is what that
+            check looks for, and it costs nothing here.
+          */
           <ReportFiltersBar
+            key="report-filters"
             period={filters.period}
             view={snapshot.view}
             anchor={filters.anchor}

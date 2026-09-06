@@ -1530,10 +1530,12 @@
       "trackedOption": "Tracked here",
       "declaredOption": "Declared monthly",
       "inherit": "Inherit member default ({mode})",
+      "inheritDefault": "Inherit member default",
       "inheritedDetail": "Hours are {mode} by the member default.",
       "overriddenDetail": "Hours are {mode} for this assignment only.",
       "overrideLabel": "Hours tracking",
-      "overrideHint": "Applies to this assignment only. The member default is set on the People page."
+      "overrideHint": "Applies to this assignment only. The member default is set on the People page.",
+      "bulkHint": "Applies to every assignment created here. The member default is set on the People page."
     },
     "discardDialog": {
       "title": "Discard this project?",
@@ -2859,7 +2861,7 @@
       "declaredOnly": "Every hour in this scope was declared monthly for another company's system, so the report excludes it. Declared hours are reviewed with the timesheet, not here."
     },
     "pdf": {
-      "brand": "Sheet Happens",
+      "brand": "Sheet Happens - Rollout IT",
       "confidential": "Confidential",
       "page": "Page",
       "generatedAt": "Generated",

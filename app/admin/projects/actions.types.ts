@@ -11,7 +11,7 @@ export type ProjectAssignmentFormField =
   "memberId" | "validFrom" | "validTo" | "active" | "trackingMode" | "notes";
 
 export type ProjectBulkAssignmentFormField =
-  "memberIds" | "projectIds" | "validFrom" | "validTo" | "active" | "notes";
+  "memberIds" | "projectIds" | "validFrom" | "validTo" | "active" | "trackingMode" | "notes";
 
 export type ProjectGroupFormField = "name" | "slug" | "description" | "active";
 
@@ -66,6 +66,7 @@ export type AssignProjectMemberActionInput = {
   validFrom: string;
   validTo: string;
   active: boolean;
+  trackingMode: TrackingModeOverrideValue;
   notes: string;
 };
 
@@ -75,6 +76,7 @@ export type BulkAssignProjectMembersActionInput = {
   validFrom: string;
   validTo: string;
   active: boolean;
+  trackingMode: TrackingModeOverrideValue;
   notes: string;
 };
 

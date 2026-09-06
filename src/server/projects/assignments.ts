@@ -75,6 +75,8 @@ export type ProjectAssignableMemberRow = {
   email: string;
   status: Extract<ProjectAssignmentMemberStatus, "INVITED" | "ACTIVE">;
   profile: ProjectAssignmentMemberProfile;
+  /** Lets the assign form name the mode its inherit option would actually resolve to. */
+  defaultTrackingMode: TrackingMode;
 };
 
 export type BulkAssignMembersToProjectsResult = {
@@ -835,6 +837,7 @@ function mapMemberToAssignableRow(member: MemberRecord): ProjectAssignableMember
     email: member.email,
     status: member.status as ProjectAssignableMemberRow["status"],
     profile: member.currentProfile,
+    defaultTrackingMode: member.defaultTrackingMode,
   };
 }
 
