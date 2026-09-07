@@ -15,7 +15,19 @@ import { useCallback, useSyncExternalStore } from "react";
  * hydration rather than as a mismatch inside it. Nothing may depend on this being right during the
  * first paint.
  */
-export function useMediaQuery(query: string): boolean {
+export type UseMediaQueryOptions = {
+  /**
+   * What the server render and the hydrating render assume, before the real answer arrives on the
+   * render right after hydration. Defaults to `false`. `/time` passes `true` for its desktop query
+   * so the server sends the desktop chrome — the primary form factor, and the one whose markup an
+   * e2e assertion may read before hydration has finished — and a phone corrects itself before its
+   * first paint through `useSyncExternalStore`'s synchronous re-render.
+   */
+  serverSnapshot?: boolean;
+};
+
+export function useMediaQuery(query: string, options: UseMediaQueryOptions = {}): boolean {
+  const { serverSnapshot = false } = options;
   const subscribe = useCallback(
     (onStoreChange: () => void) => {
       const list = window.matchMedia(query);
@@ -29,6 +41,6 @@ export function useMediaQuery(query: string): boolean {
   return useSyncExternalStore(
     subscribe,
     () => window.matchMedia(query).matches,
-    () => false,
+    () => serverSnapshot,
   );
 }

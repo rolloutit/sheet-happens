@@ -127,3 +127,23 @@ export function clampDateValue(value: string, min?: string, max?: string) {
   if (max && compareDateValues(value, max) > 0) return max;
   return value;
 }
+
+/**
+ * The ISO 8601 week number of a `YYYY-MM-DD` date — weeks start on Monday, week 1 holds the year's
+ * first Thursday, and the last days of December can belong to week 1 of the next year.
+ *
+ * Hungarian working culture counts weeks constantly ("36. hét"), which is why the `/time` period
+ * header carries the number beside the range. Pure UTC arithmetic so no host timezone can move a
+ * date across a week boundary.
+ */
+export function isoWeekNumber(date: string) {
+  const instant = new Date(`${date}T00:00:00.000Z`);
+  // Shift to the Thursday of the same ISO week; its year is the ISO year.
+  const weekday = (instant.getUTCDay() + 6) % 7;
+  instant.setUTCDate(instant.getUTCDate() - weekday + 3);
+  const isoYearStart = new Date(Date.UTC(instant.getUTCFullYear(), 0, 4));
+  const yearStartWeekday = (isoYearStart.getUTCDay() + 6) % 7;
+  isoYearStart.setUTCDate(isoYearStart.getUTCDate() - yearStartWeekday);
+
+  return 1 + Math.round((instant.getTime() - isoYearStart.getTime()) / (7 * 24 * 60 * 60 * 1000));
+}

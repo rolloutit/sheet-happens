@@ -268,19 +268,34 @@ The trade-off is that such an entry is **not** emitted as a custom property. Two
     chassis. In light this shadow does more work than in dark, because elevation there cannot be a
     lightness step.
 - **Layout:** `--sidebar-w` 256px, `--sidebar-w-collapsed` 76px, `--header-h` 64px.
-- **Motion:** six tokens, and `app/globals.css` is the source of truth for all of them.
+- **Motion:** thirteen tokens, and `app/globals.css` is the source of truth for all of them.
   `--ease-standard` `cubic-bezier(0.2, 0.7, 0.2, 1)` is the default for everything; `--ease-exit`
   `cubic-bezier(0.4, 0, 1, 1)` is for elements leaving, which should be quick and unremarkable.
-  Three durations — `--duration-level` 260ms for a `/time` zoom-level transition, `--duration-micro`
-  140ms for hover, chip state and badge crossfades, `--duration-bar` 300ms for a capacity bar
-  changing width — and `--stagger-entry` 18ms, the step between entry cards arriving.
-  - **These six are mirrored as TypeScript literals in `app/time/motion.ts`.** Motion (the library)
-    animates via JS outside CSS transitions and cannot interpolate a `var()`, so the `/time` zoom
-    axis reads the numbers rather than the tokens. The table here is the source of truth; the module
-    says so in a comment. Change one and change the other.
+  Nothing eases in and nothing runs longer than 300ms.
+  - Durations: `--duration-level` 260ms for a `/time` zoom (scope) transition, `--duration-micro`
+    140ms for hover, chip state, badge crossfades and every exit, `--duration-bar` 300ms for a
+    capacity bar changing width, `--duration-step` 200ms for a date step (the shared-axis slide),
+    `--duration-settle` 180ms for a figure changing (the one-step settle — figures never roll).
+  - Distances and scales: `--distance-step` 24px is how far the content slides on a date step (the
+    period label slides a third of it); `--scale-zoom-in` 0.96 and `--scale-zoom-out` 1.04 are the
+    incoming view's starting scale when zooming in and out. Scale direction is what tells the eye
+    "closer" versus "farther"; the shared `layoutId`s tell it "the same thing".
+  - Springs, recorded as `stiffness damping mass` triples: `--spring-thumb` `520 42 0.8` for the
+    scope, lens and ribbon thumbs (settles in ≈ 220ms with no visible bounce), `--spring-ring`
+    `180 26 1` for the target ring and the capacity bars filling.
+  - `--stagger-entry` 24ms, the step between entry cards arriving, capped at eight cards so a dense
+    column cannot drizzle. Heat-navigator rows and grid rows stagger at 12ms.
+  - **All of these are mirrored as TypeScript literals in `src/lib/motion.ts`.** Motion (the library)
+    animates via JS outside CSS transitions and cannot interpolate a `var()`, so `/time` reads the
+    numbers rather than the tokens. The table here is the source of truth; the module says so in a
+    comment. Change one and change the other.
   - The `prefers-reduced-motion` block at the end of `app/globals.css` collapses CSS durations and
     **does nothing to Motion**. Anything animated with Motion needs
     `<MotionConfig reducedMotion="user">` above it, which is why `/time` has one at its client root.
+    Two things are switched off outright under reduced motion rather than shortened: the running
+    timer's pulse and the heat navigator's row stagger.
+  - `sheet-saved-pulse` is the one CSS keyframe on the surface: a card that was just saved runs
+    `box-shadow: none → --elevation-glow → none` once over 600ms.
 
 ## Focus
 

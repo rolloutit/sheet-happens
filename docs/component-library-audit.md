@@ -138,59 +138,68 @@ Recommendation: do not implement all immediately. Add them only when real screen
 
 ## Product Component Inventory
 
-| Component               | Status | Notes                                                                                                                                           |
-| ----------------------- | ------ | ----------------------------------------------------------------------------------------------------------------------------------------------- |
-| AuthScreens             | Ready  | Full auth-mode story coverage, typed form/callback contracts, and reusable PasswordInput, StrengthMeter, and CodeInput wiring.                  |
-| ChartPrimitives         | Ready  | ChartFrame, TrendChart, and DistributionBarList provide reusable report/chart building blocks beyond the bar chart card.                        |
-| DashboardCards          | Ready  | Composes data-driven stats, checklist, flagged-user, hero action, and status APIs; covered by Storybook and the app audit route.                |
-| DayAgenda               | Ready  | L1 of the `/time` zoom axis: one day's entries with source, warnings, admin corrections, and edit/delete/add callbacks.                         |
-| WeekAgenda              | Ready  | L2 of the `/time` zoom axis: seven day columns on desktop, an accordion on mobile, with per-day totals, add, edit, delete, and zoom callbacks.  |
-| StatCard                | Ready  | Dashboard KPI primitive with typed tone, trend, loading, and sparkline props.                                                                   |
-| FlaggedUserList         | Ready  | Controlled flagged-user panel with selection, reminder callback, sent/empty states, and Storybook interaction coverage.                         |
-| StatusOverview          | Ready  | Data-driven distribution/legend primitive with empty state, formatter hook, and action slot.                                                    |
-| WeeklyTimeGrid          | Ready  | Typed day/cell/timer APIs, editable cells, arrow-key movement, callbacks, totals, locked/warning/future states, mobile cards, and route proof.  |
-| TimeGridTimer           | Ready  | Timer control split from weekly grid with project combobox, description input, elapsed badge, and start/stop/reset callbacks.                   |
-| TimesheetComponents     | Ready  | Composes typed summary, stepper, invoice upload, and breakdown data; rejection banner can still be extracted when review flows mature.          |
-| TimesheetSummaryCard    | Ready  | Current-month summary card with status, meta, and typed action API.                                                                             |
-| MonthRow                | Ready  | Data-driven month row built on `ListRow`, with status and optional row action semantics.                                                        |
-| TimesheetStepper        | Ready  | Data-driven workflow stepper with status-derived or custom step states.                                                                         |
-| InvoiceUploadPanel      | Ready  | Invoice upload panel with enabled/locked states and Dropzone-backed file props.                                                                 |
-| TimeEntryForm           | Ready  | Typed single-entry form with project/date/hours/note/billable fields, draft state, submit/cancel/change callbacks, and Storybook coverage.      |
-| SubmitTimesheetDialog   | Ready  | Radix dialog wrapper for submit confirmation with trigger, details, and confirm callback.                                                       |
-| TimeBreakdownDialog     | Ready  | Timesheet breakdown modal with row totals, amount display, export callback, and dialog interaction coverage.                                    |
-| AdminReview             | Ready  | Composes queue table, diff list, review action bar, and reject dialog APIs; route proof pairs it with `PdfViewer` for document preview.         |
-| ReviewQueueTable        | Ready  | Data-driven admin queue table with selection, sorting, row-open callback, loading, and empty states.                                            |
-| ReviewDiffList          | Ready  | Data-driven invoice/timesheet diff list with match/mismatch badges, totals, status, and footer slot.                                            |
-| ReviewActionBar         | Ready  | Bulk review action bar built on `BulkBar`, with approve, clear, reject action, and label hooks.                                                 |
-| RejectDialog            | Ready  | Radix dialog wrapper with reason textarea, disabled confirm until reason exists, and reject callback.                                           |
-| ManagementViews         | Ready  | Composes typed people table, project drawer, and rate drawer APIs. Group manager remains future app-specific work.                              |
-| PeopleTable             | Ready  | Data-driven people table with sortable columns and edit/delete callbacks.                                                                       |
-| ProjectDrawer           | Ready  | Project settings drawer with active switch, members, tags, date range, notes, rate source, and save callback.                                   |
-| RateDrawer              | Ready  | Rate editor drawer with amount, currency, unit, effective date, status badge, and save callback.                                                |
-| Reports                 | Ready  | Composes typed filter, stat, chart, export dialog, document preview, and table row APIs; real query/export contracts remain app work.           |
-| ReportFilterBar         | Ready  | Data-driven period/project filters, view segmented control, export callback, and Storybook interaction coverage.                                |
-| ReportStatTile          | Ready  | KPI tile with typed tone and Lucide icon API.                                                                                                   |
-| ReportChartCard         | Ready  | Recharts-backed bar chart card with data, distribution, value label, and empty-state props.                                                     |
-| ReportExportDialog      | Ready  | Export dialog with configurable formats, document preview, controlled open props, and export callback.                                          |
-| DocumentPreview         | Ready  | Cost-free/internal document preview that filters internal rows by mode.                                                                         |
-| InfoPageEditor          | Ready  | Markdown-backed info-page editor with edit/preview tabs, title/slug/body fields, save/publish callbacks, and Storybook coverage.                |
-| SettingsPanels          | Ready  | Composes typed profile, security method, TOTP setup, preference, notification, and tweak-control APIs; real account contracts remain app work.  |
-| ProfileSettingsPanel    | Ready  | Profile form section with avatar, read-only fields, and optional action callback.                                                               |
-| SecurityMethodList      | Ready  | Data-driven sign-in method cards with typed states, badges, icons, and action callback.                                                         |
-| TotpSetupDialog         | Ready  | Radix dialog for authenticator setup with QR placeholder, secret, code input, and verify callback.                                              |
-| PreferenceControls      | Ready  | Avatar action, timezone combobox, and language segmented control with callbacks.                                                                |
-| NotificationPreferences | Ready  | Data-driven notification toggles, reset action, cadence segmented control, and callback coverage.                                               |
-| Payslips                | Ready  | Composes typed summary, month list, upload panel, admin table, and viewer APIs; real payroll query/upload contracts remain app work.            |
-| PayslipSummaryCard      | Ready  | Latest payslip card with typed status and action APIs.                                                                                          |
-| PayslipMonthList        | Ready  | Data-driven employee month list with preview/download callbacks, selected state, empty state, and status badges.                                |
-| PayslipUploadPanel      | Ready  | Admin upload panel with selected employee/month context, Dropzone wiring, disabled state, and upload callback.                                  |
-| PayslipAdminTable       | Ready  | Data-driven admin table with status badges, sort, preview/download/upload row actions, loading, empty, and responsive card mode.                |
-| PayslipViewer           | Ready  | Document preview shell with loading skeleton, ready actions, error state, and empty state.                                                      |
-| PdfViewer               | Ready  | Generic PDF viewer shell with loading/ready/error/empty states, page controls, zoom, download/open hooks, and Storybook coverage.               |
-| TweaksPanel             | Ready  | Typed draft value, accent/radius/density/font/width controls, reset/apply/change callbacks, closed trigger, and Storybook interaction coverage. |
-| Toast                   | Ready  | Sonner wrapper supports standard action/cancel options, action callback assertions, and auto-dismiss lifecycle coverage.                        |
-| StatusPill              | Ready  | Best product primitive so far: status union, variant mapping, stories, unit test.                                                               |
-| EmptyState              | Ready  | Good reusable product feedback component.                                                                                                       |
+| Component               | Status | Notes                                                                                                                                                   |
+| ----------------------- | ------ | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| AuthScreens             | Ready  | Full auth-mode story coverage, typed form/callback contracts, and reusable PasswordInput, StrengthMeter, and CodeInput wiring.                          |
+| ChartPrimitives         | Ready  | ChartFrame, TrendChart, and DistributionBarList provide reusable report/chart building blocks beyond the bar chart card.                                |
+| DashboardCards          | Ready  | Composes data-driven stats, checklist, flagged-user, hero action, and status APIs; covered by Storybook and the app audit route.                        |
+| DayAgenda               | Ready  | The `/time` Day scope: one day's cards, a rail with the target ring, the per-project split and the quick composer slot; edit/delete/continue callbacks. |
+| DayColumnHeader         | Ready  | One day's header at three densities (Week column, ribbon chip, accordion row) sharing one `layoutId`; capacity bar, over-target and locked states.      |
+| DayRibbon               | Ready  | The week as seven chips with a travelling thumb; the Day scope's navigator and the phone's day picker.                                                  |
+| EntryCard               | Ready  | One time entry at two densities: project rail, hover-revealed edit/continue/delete, timer glyph, locked and admin-modified states, saved pulse.         |
+| MonthHeatNavigator      | Ready  | A month of days by intensity, `grid` semantics with arrow-key movement; cells open a day, row headers a week.                                           |
+| PeriodNavigator         | Ready  | `‹ label › Today` with unit-bound names, a direction-aware label slide, and a month grid under the label.                                               |
+| PeriodTotal             | Ready  | One figure, one unit, one caption; settles in the direction of change and never rolls; status as icon + words.                                          |
+| QuickEntryComposer      | Ready  | Project chips, a duration and a description; validated on submit, Enter adds, More options hands off to the full dialog.                                |
+| ShortcutSheet           | Ready  | Every `/time` shortcut as tables grouped View · Move · Add · Timer, in a dialog on `?`.                                                                 |
+| TimeScopeBar            | Ready  | The scope control with `⊖ ⊕` caps and `kbd` chips, the week-only lens toggle, and the two global actions.                                               |
+| WeekAgenda              | Ready  | The `/time` Week scope's Agenda lens: seven columns headed by `DayColumnHeader`, an accordion on mobile, contextual empty states, composer slot.        |
+| StatCard                | Ready  | Dashboard KPI primitive with typed tone, trend, loading, and sparkline props.                                                                           |
+| FlaggedUserList         | Ready  | Controlled flagged-user panel with selection, reminder callback, sent/empty states, and Storybook interaction coverage.                                 |
+| StatusOverview          | Ready  | Data-driven distribution/legend primitive with empty state, formatter hook, and action slot.                                                            |
+| WeeklyTimeGrid          | Ready  | Typed day/cell/timer APIs, editable cells, arrow-key movement, callbacks, totals, locked/warning/future states, mobile cards, and route proof.          |
+| TimeGridTimer           | Ready  | Timer control split from weekly grid with project combobox, description input, elapsed badge, and start/stop/reset callbacks.                           |
+| TimesheetComponents     | Ready  | Composes typed summary, stepper, invoice upload, and breakdown data; rejection banner can still be extracted when review flows mature.                  |
+| TimesheetSummaryCard    | Ready  | Current-month summary card with status, meta, and typed action API.                                                                                     |
+| MonthRow                | Ready  | Data-driven month row built on `ListRow`, with status and optional row action semantics.                                                                |
+| TimesheetStepper        | Ready  | Data-driven workflow stepper with status-derived or custom step states.                                                                                 |
+| InvoiceUploadPanel      | Ready  | Invoice upload panel with enabled/locked states and Dropzone-backed file props.                                                                         |
+| TimeEntryForm           | Ready  | Typed single-entry form with project/date/hours/note/billable fields, draft state, submit/cancel/change callbacks, and Storybook coverage.              |
+| SubmitTimesheetDialog   | Ready  | Radix dialog wrapper for submit confirmation with trigger, details, and confirm callback.                                                               |
+| TimeBreakdownDialog     | Ready  | Timesheet breakdown modal with row totals, amount display, export callback, and dialog interaction coverage.                                            |
+| AdminReview             | Ready  | Composes queue table, diff list, review action bar, and reject dialog APIs; route proof pairs it with `PdfViewer` for document preview.                 |
+| ReviewQueueTable        | Ready  | Data-driven admin queue table with selection, sorting, row-open callback, loading, and empty states.                                                    |
+| ReviewDiffList          | Ready  | Data-driven invoice/timesheet diff list with match/mismatch badges, totals, status, and footer slot.                                                    |
+| ReviewActionBar         | Ready  | Bulk review action bar built on `BulkBar`, with approve, clear, reject action, and label hooks.                                                         |
+| RejectDialog            | Ready  | Radix dialog wrapper with reason textarea, disabled confirm until reason exists, and reject callback.                                                   |
+| ManagementViews         | Ready  | Composes typed people table, project drawer, and rate drawer APIs. Group manager remains future app-specific work.                                      |
+| PeopleTable             | Ready  | Data-driven people table with sortable columns and edit/delete callbacks.                                                                               |
+| ProjectDrawer           | Ready  | Project settings drawer with active switch, members, tags, date range, notes, rate source, and save callback.                                           |
+| RateDrawer              | Ready  | Rate editor drawer with amount, currency, unit, effective date, status badge, and save callback.                                                        |
+| Reports                 | Ready  | Composes typed filter, stat, chart, export dialog, document preview, and table row APIs; real query/export contracts remain app work.                   |
+| ReportFilterBar         | Ready  | Data-driven period/project filters, view segmented control, export callback, and Storybook interaction coverage.                                        |
+| ReportStatTile          | Ready  | KPI tile with typed tone and Lucide icon API.                                                                                                           |
+| ReportChartCard         | Ready  | Recharts-backed bar chart card with data, distribution, value label, and empty-state props.                                                             |
+| ReportExportDialog      | Ready  | Export dialog with configurable formats, document preview, controlled open props, and export callback.                                                  |
+| DocumentPreview         | Ready  | Cost-free/internal document preview that filters internal rows by mode.                                                                                 |
+| InfoPageEditor          | Ready  | Markdown-backed info-page editor with edit/preview tabs, title/slug/body fields, save/publish callbacks, and Storybook coverage.                        |
+| SettingsPanels          | Ready  | Composes typed profile, security method, TOTP setup, preference, notification, and tweak-control APIs; real account contracts remain app work.          |
+| ProfileSettingsPanel    | Ready  | Profile form section with avatar, read-only fields, and optional action callback.                                                                       |
+| SecurityMethodList      | Ready  | Data-driven sign-in method cards with typed states, badges, icons, and action callback.                                                                 |
+| TotpSetupDialog         | Ready  | Radix dialog for authenticator setup with QR placeholder, secret, code input, and verify callback.                                                      |
+| PreferenceControls      | Ready  | Avatar action, timezone combobox, and language segmented control with callbacks.                                                                        |
+| NotificationPreferences | Ready  | Data-driven notification toggles, reset action, cadence segmented control, and callback coverage.                                                       |
+| Payslips                | Ready  | Composes typed summary, month list, upload panel, admin table, and viewer APIs; real payroll query/upload contracts remain app work.                    |
+| PayslipSummaryCard      | Ready  | Latest payslip card with typed status and action APIs.                                                                                                  |
+| PayslipMonthList        | Ready  | Data-driven employee month list with preview/download callbacks, selected state, empty state, and status badges.                                        |
+| PayslipUploadPanel      | Ready  | Admin upload panel with selected employee/month context, Dropzone wiring, disabled state, and upload callback.                                          |
+| PayslipAdminTable       | Ready  | Data-driven admin table with status badges, sort, preview/download/upload row actions, loading, empty, and responsive card mode.                        |
+| PayslipViewer           | Ready  | Document preview shell with loading skeleton, ready actions, error state, and empty state.                                                              |
+| PdfViewer               | Ready  | Generic PDF viewer shell with loading/ready/error/empty states, page controls, zoom, download/open hooks, and Storybook coverage.                       |
+| TweaksPanel             | Ready  | Typed draft value, accent/radius/density/font/width controls, reset/apply/change callbacks, closed trigger, and Storybook interaction coverage.         |
+| Toast                   | Ready  | Sonner wrapper supports standard action/cancel options, action callback assertions, and auto-dismiss lifecycle coverage.                                |
+| StatusPill              | Ready  | Best product primitive so far: status union, variant mapping, stories, unit test.                                                                       |
+| EmptyState              | Ready  | Good reusable product feedback component.                                                                                                               |
 
 ## Storybook Coverage Audit
 

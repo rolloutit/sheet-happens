@@ -107,6 +107,43 @@ export function formatPeriodRange(
   return `${formatDateLabel(start, locale, options)} - ${formatDateLabel(end, locale, options)}`;
 }
 
+/**
+ * `Aug 31 – Sep 6, 2026` (EN) or `2026. aug. 31. – szept. 6.` (HU) from two `YYYY-MM-DD` strings.
+ *
+ * `formatRange` rather than two `formatDateLabel`s joined by a dash: a range formatter drops the
+ * parts the two ends share, which is what makes the week header read as one period rather than two
+ * dates, and it puts the year where the locale puts it.
+ */
+export function formatDateRangeLabel(start: string, end: string, locale: string) {
+  return (
+    new Intl.DateTimeFormat(locale, {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+      timeZone: "UTC",
+    })
+      .formatRange(dateOnlyToInstant(start), dateOnlyToInstant(end))
+      /* Node's ICU sets the dash in U+2009 THIN SPACE, Chrome's in a plain space. The label is
+         rendered on the server and hydrated in the browser, so the two have to agree byte for byte
+         or every week that crosses a month reports a hydration mismatch. */
+      .replace(/[\u2009\u202f]/g, " ")
+  );
+}
+
+/**
+ * `Monday, Aug 31, 2026` (EN) or `2026. aug. 31., hétfő` (HU) — a day as the period header names
+ * it: weekday first in English, last in Hungarian, the locale deciding.
+ */
+export function formatDayHeading(isoDate: string, locale: string) {
+  return new Intl.DateTimeFormat(locale, {
+    weekday: "long",
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+    timeZone: "UTC",
+  }).format(dateOnlyToInstant(isoDate));
+}
+
 /** `July 2026` from a `YYYY-MM-DD` string. */
 export function formatMonthLabel(isoDate: string, locale: string) {
   return new Intl.DateTimeFormat(locale, {

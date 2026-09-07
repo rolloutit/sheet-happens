@@ -22,6 +22,7 @@ import {
   HOURS_PROOF_MAX_BYTES,
   markInactiveProjectWeek,
   parseDateOnly,
+  restoreTimeEntry,
   saveMonthlyHourDeclaration,
   saveTimeEntryDraft,
   startRunningTimer,
@@ -43,6 +44,7 @@ import type {
   DeleteTimeEntryActionInput,
   DuplicatePreviousWeekActionInput,
   InactiveProjectWeekActionInput,
+  RestoreTimeEntryActionInput,
   SaveMonthlyHourDeclarationActionInput,
   SaveTimeEntryDraftActionInput,
   StartRunningTimerActionInput,
@@ -282,6 +284,39 @@ export async function deleteTimeEntryAction(
     };
   } catch (error) {
     return mapTimeTrackingActionError(error, t("errors.timeEntryDeleteFailed"), t);
+  }
+}
+
+export async function restoreTimeEntryAction(
+  input: RestoreTimeEntryActionInput,
+): Promise<TimeTrackingActionState> {
+  const t = await getTranslations("TimeTrackingActions");
+  const parsed = deleteTimeEntrySchema.safeParse(input);
+
+  if (!parsed.success) {
+    return {
+      status: "error",
+      message: t("errors.timeEntryRestoreFailed"),
+    };
+  }
+
+  try {
+    const { member } = await requireActiveAppMemberForAction();
+    await restoreTimeEntry({
+      timeEntryId: parsed.data.timeEntryId,
+      memberId: member.id,
+      actorMemberId: member.id,
+      requestMetadata: await getTimeTrackingRequestMetadata(),
+    });
+
+    revalidatePath("/time");
+
+    return {
+      status: "success",
+      message: t("success.timeEntryRestored"),
+    };
+  } catch (error) {
+    return mapTimeTrackingActionError(error, t("errors.timeEntryRestoreFailed"), t);
   }
 }
 

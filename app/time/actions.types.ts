@@ -39,6 +39,8 @@ export type DeleteTimeEntryActionInput = {
   timeEntryId: string;
 };
 
+export type RestoreTimeEntryActionInput = DeleteTimeEntryActionInput;
+
 export type InactiveProjectWeekActionInput = {
   projectId: string;
   weekStartDate: string;

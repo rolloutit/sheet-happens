@@ -1,3 +1,5 @@
+import type { ReactNode } from "react";
+
 import type { DurationDisplayFormat } from "@/src/lib/formatting";
 import type { DeclaredHoursProof, DeclaredHoursRowLabels } from "../DeclaredHoursRow";
 
@@ -66,6 +68,12 @@ export type MonthOverviewProps = {
    * settled state rather than a frame of a transition.
    */
   animateRows?: boolean;
+  /**
+   * The heat navigator, rendered above the bands (§4.4 of `docs/time-view-redesign.md`). A slot
+   * rather than a dependency: the navigator needs the per-day totals and the selected week, which
+   * the screen owns, and the bands know nothing about days.
+   */
+  navigator?: ReactNode;
   className?: string;
   onZoomToProject: (project: MonthOverviewProject) => void;
   onSaveDeclaration?: (input: { projectId: string; minutes: number; note: string }) => void;

@@ -2,6 +2,7 @@ import type { Meta, StoryObj } from "@storybook/nextjs-vite";
 import { expect, fn } from "storybook/test";
 
 import { MonthOverview } from ".";
+import { buildHeatWeeks, MonthHeatNavigator } from "../MonthHeatNavigator";
 import type { MonthOverviewDeclaredProject, MonthOverviewProject } from "./MonthOverview.types";
 
 /**
@@ -283,5 +284,50 @@ export const HybridMonthMobile: Story = {
     viewport: {
       defaultViewport: "mobile1",
     },
+  },
+};
+
+/** The redesign's Month scope: the heat navigator above the bands (§4.4). */
+export const WithNavigator: Story = {
+  args: {
+    projects,
+    navigator: (
+      <MonthHeatNavigator
+        weeks={buildHeatWeeks({
+          monthStart: "2026-09-01",
+          todayIso: "2026-09-16",
+          totals: [
+            { isoDate: "2026-09-01", minutes: 390, entryCount: 2 },
+            { isoDate: "2026-09-02", minutes: 480, entryCount: 1 },
+            { isoDate: "2026-09-03", minutes: 480, entryCount: 3 },
+            { isoDate: "2026-09-07", minutes: 510, entryCount: 2 },
+            { isoDate: "2026-09-10", minutes: 480, entryCount: 2 },
+            { isoDate: "2026-09-14", minutes: 480, entryCount: 2 },
+            { isoDate: "2026-09-15", minutes: 420, entryCount: 2 },
+          ],
+        })}
+        weekdayLabels={["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]}
+        selectedWeekStart="2026-09-14"
+        selectedDayIso="2026-09-16"
+        capacityMinutes={480}
+        formatMinutes={(minutes) => `${minutes / 60} h`}
+        labels={{
+          grid: "Days of September 2026",
+          openWeek: (week) => `Open week ${week.weekNumber}`,
+          weekRow: (week) => `W${week.weekNumber}`,
+          cell: (day) => `${day.isoDate}, ${day.minutes / 60} hours`,
+          empty: (day) => `${day.isoDate}, nothing logged`,
+          future: (day) => `${day.isoDate}, in the future`,
+          outside: (day) => `${day.isoDate}, outside this month`,
+          detail: (day) => `${day.minutes / 60} h · ${day.entryCount} entries`,
+          locked: "This month is locked",
+          legendLogged: "Logged",
+          legendEmpty: "Nothing logged",
+          legendFuture: "Future",
+        }}
+        onSelectDay={fn()}
+        onSelectWeek={fn()}
+      />
+    ),
   },
 };

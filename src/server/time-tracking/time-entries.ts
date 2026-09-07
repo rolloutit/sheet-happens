@@ -173,6 +173,8 @@ export type TimeEntryDeleteInput = {
   requestMetadata?: TimeTrackingRequestMetadata;
 };
 
+export type TimeEntryRestoreInput = TimeEntryDeleteInput;
+
 export type RunningTimerStartInput = {
   memberId: string;
   actorMemberId: string;
@@ -811,6 +813,92 @@ export async function deleteTimeEntry(input: TimeEntryDeleteInput) {
         after: {
           deletedAt: "now",
         },
+        ...input.requestMetadata,
+      },
+    });
+
+    return {
+      id: current.id,
+    };
+  });
+}
+
+/**
+ * The undo of {@link deleteTimeEntry}, for the six seconds the toast offers it (§5.8 of
+ * `docs/time-view-redesign.md`).
+ *
+ * A real restore rather than a deferred delete: the delete has already happened and been audited,
+ * so undoing it is a second, audited write that clears `deletedAt` — nothing is held back on the
+ * client waiting for a timer, and closing the tab mid-toast leaves the database honest either way.
+ *
+ * Re-validated as if the entry were being created now, because the world may have moved in the
+ * meantime: the month may have been submitted, the assignment may have switched to declared hours,
+ * and the day may have filled up past the hard limit with another entry. Each of those refuses the
+ * restore with the same message the create would have given.
+ */
+export async function restoreTimeEntry(input: TimeEntryRestoreInput) {
+  return prisma.$transaction(async (tx) => {
+    const current = await tx.timeEntry.findUnique({
+      where: {
+        id: input.timeEntryId,
+      },
+      select: {
+        id: true,
+        memberId: true,
+        projectId: true,
+        projectAssignmentId: true,
+        localDate: true,
+        durationMinutes: true,
+        description: true,
+        source: true,
+        startedAt: true,
+        endedAt: true,
+        lockedByTimesheetRevisionId: true,
+        deletedAt: true,
+      },
+    });
+
+    if (!current || current.memberId !== input.memberId || !current.deletedAt) {
+      throw new TimeTrackingError("Time entry not found.");
+    }
+
+    assertEntryIsNotDeclared(current.source);
+
+    if (current.lockedByTimesheetRevisionId) {
+      throw new TimeTrackingError("This entry is locked by a submitted timesheet.");
+    }
+
+    await assertDateOpen(tx, input.memberId, current.localDate);
+    await assertAssignmentStillTracked(tx, current.projectAssignmentId);
+    await assertDailyTotalWithinHardLimit(tx, {
+      memberId: input.memberId,
+      localDate: current.localDate,
+      addedMinutes: current.durationMinutes,
+    });
+
+    await tx.timeEntry.update({
+      where: {
+        id: current.id,
+      },
+      data: {
+        deletedAt: null,
+        updatedByMemberId: input.actorMemberId,
+      },
+      select: {
+        id: true,
+      },
+    });
+
+    await tx.auditLog.create({
+      data: {
+        actorMemberId: input.actorMemberId,
+        action: "time_entry.restored",
+        targetType: "time_entry",
+        targetId: current.id,
+        before: {
+          deletedAt: current.deletedAt.toISOString(),
+        },
+        after: serializeTimeEntryForAudit(current),
         ...input.requestMetadata,
       },
     });

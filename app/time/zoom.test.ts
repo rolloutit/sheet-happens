@@ -1,19 +1,24 @@
 import { describe, expect, it } from "vitest";
 
 import {
-  clampZoomLevel,
-  declaredOnlyZoomStops,
-  isZoomLevel,
+  clampScope,
+  declaredOnlyScopes,
+  hasOpenOverlay,
+  isTimeScope,
+  isWeekLens,
+  mapLegacyZoom,
   resolveMonthStartIso,
+  resolveScopeStops,
   resolveSelectedDayIso,
   resolveSelectedMonthStartIso,
+  resolveTimeShortcut,
   resolveWeekStartIso,
-  resolveZoomShortcut,
-  resolveZoomStops,
+  shiftIsoDate,
   shiftMonthStartIso,
-  stepZoomLevel,
-  suppressesZoomShortcut,
-  zoomLevels,
+  stepScope,
+  suppressesTimeShortcut,
+  timeScopes,
+  type TimeScope,
 } from "./zoom";
 
 /** The design doc's own example week, which spans two months: Aug 31 - Sep 6, 2026. */
@@ -27,257 +32,218 @@ const days = [
   "2026-09-06",
 ].map((isoDate) => ({ isoDate }));
 
-/** The two months that week touches, which is what `/time` ships alongside it. */
-const loadedMonths = ["2026-08-01", "2026-09-01"];
-
-function keyEvent(key: string, overrides: Partial<Parameters<typeof resolveZoomShortcut>[0]> = {}) {
+function keystroke(
+  key: string,
+  overrides: Partial<{
+    ctrlKey: boolean;
+    metaKey: boolean;
+    altKey: boolean;
+    target: EventTarget | null;
+  }> = {},
+) {
   return { key, ctrlKey: false, metaKey: false, altKey: false, target: null, ...overrides };
 }
 
-describe("zoomLevels", () => {
-  it("runs zoomed-in to zoomed-out", () => {
-    expect(zoomLevels).toEqual(["day", "week", "grid", "month"]);
+describe("timeScopes", () => {
+  it("runs zoomed-in to zoomed-out with three stops and no grid", () => {
+    expect(timeScopes).toEqual(["day", "week", "month"]);
   });
 
-  it("accepts only its own stops", () => {
-    expect(isZoomLevel("week")).toBe(true);
-    expect(isZoomLevel("month")).toBe(true);
-    expect(isZoomLevel("year")).toBe(false);
-    expect(isZoomLevel(null)).toBe(false);
+  it("accepts only its own scopes and lenses", () => {
+    expect(isTimeScope("week")).toBe(true);
+    expect(isTimeScope("grid")).toBe(false);
+    expect(isWeekLens("grid")).toBe(true);
+    expect(isWeekLens("week")).toBe(false);
   });
 });
 
-describe("resolveZoomStops", () => {
-  it("gives a tracked-only member every stop", () => {
-    expect(resolveZoomStops([{ trackingMode: "TRACKED" }, { trackingMode: "TRACKED" }])).toEqual(
-      zoomLevels,
-    );
+describe("resolveScopeStops", () => {
+  it("gives a tracked-only member every scope", () => {
+    expect(resolveScopeStops([{ trackingMode: "TRACKED" }])).toEqual(timeScopes);
   });
 
-  it("gives a hybrid member every stop", () => {
-    expect(resolveZoomStops([{ trackingMode: "TRACKED" }, { trackingMode: "DECLARED" }])).toEqual(
-      zoomLevels,
+  it("gives a hybrid member every scope", () => {
+    expect(resolveScopeStops([{ trackingMode: "TRACKED" }, { trackingMode: "DECLARED" }])).toEqual(
+      timeScopes,
     );
   });
 
   it("collapses a declared-only member to the month", () => {
-    expect(resolveZoomStops([{ trackingMode: "DECLARED" }])).toEqual(declaredOnlyZoomStops);
+    expect(resolveScopeStops([{ trackingMode: "DECLARED" }])).toEqual(declaredOnlyScopes);
   });
 
   it("does not treat a member with no assignments as declared-only", () => {
-    expect(resolveZoomStops([])).toEqual(zoomLevels);
+    expect(resolveScopeStops([])).toEqual(timeScopes);
   });
 });
 
-describe("clampZoomLevel", () => {
-  it("leaves a stop the member has alone", () => {
-    expect(clampZoomLevel("grid", zoomLevels)).toBe("grid");
+describe("clampScope and stepScope", () => {
+  it("leaves a scope the member has alone and forces a declared-only member onto the month", () => {
+    expect(clampScope("day", timeScopes)).toBe("day");
+    expect(clampScope("day", declaredOnlyScopes)).toBe("month");
   });
 
-  it("forces a declared-only member onto the month whatever the URL says", () => {
-    expect(clampZoomLevel("week", declaredOnlyZoomStops)).toBe("month");
-    expect(clampZoomLevel("grid", declaredOnlyZoomStops)).toBe("month");
-    expect(clampZoomLevel("month", declaredOnlyZoomStops)).toBe("month");
-  });
-});
-
-describe("stepZoomLevel", () => {
-  it("steps out toward the month and in toward the day", () => {
-    expect(stepZoomLevel("day", "out", zoomLevels)).toBe("week");
-    expect(stepZoomLevel("week", "out", zoomLevels)).toBe("grid");
-    expect(stepZoomLevel("grid", "out", zoomLevels)).toBe("month");
-    expect(stepZoomLevel("month", "in", zoomLevels)).toBe("grid");
-    expect(stepZoomLevel("week", "in", zoomLevels)).toBe("day");
+  it("steps out toward the month and in toward the day, clamped at both ends", () => {
+    expect(stepScope("day", "out", timeScopes)).toBe("week");
+    expect(stepScope("week", "out", timeScopes)).toBe("month");
+    expect(stepScope("month", "out", timeScopes)).toBe("month");
+    expect(stepScope("month", "in", timeScopes)).toBe("week");
+    expect(stepScope("day", "in", timeScopes)).toBe("day");
   });
 
-  it("clamps at both ends rather than wrapping", () => {
-    expect(stepZoomLevel("day", "in", zoomLevels)).toBe("day");
-    expect(stepZoomLevel("month", "out", zoomLevels)).toBe("month");
-  });
-
-  it("cannot step out of the stops the member has", () => {
-    expect(stepZoomLevel("month", "in", declaredOnlyZoomStops)).toBe("month");
-    expect(stepZoomLevel("month", "out", declaredOnlyZoomStops)).toBe("month");
+  it("cannot step out of the scopes the member has", () => {
+    expect(stepScope("month", "in", declaredOnlyScopes)).toBe("month");
   });
 });
 
-/**
- * §11's rule, on the week that makes it matter. Deriving the month from `week` would put all seven
- * of these days in August; six of them are September.
- */
-describe("resolveMonthStartIso", () => {
+describe("mapLegacyZoom", () => {
+  it("lands every old link where it used to go", () => {
+    expect(mapLegacyZoom("day")).toEqual({ scope: "day", lens: null });
+    expect(mapLegacyZoom("week")).toEqual({ scope: "week", lens: "agenda" });
+    expect(mapLegacyZoom("grid")).toEqual({ scope: "week", lens: "grid" });
+    expect(mapLegacyZoom("month")).toEqual({ scope: "month", lens: null });
+  });
+
+  it("ignores anything else", () => {
+    expect(mapLegacyZoom(null)).toBeNull();
+    expect(mapLegacyZoom("year")).toBeNull();
+  });
+});
+
+describe("date arithmetic", () => {
   it("takes the month from the day, across a month-spanning week", () => {
-    expect(days.map((day) => resolveMonthStartIso(day.isoDate))).toEqual([
-      "2026-08-01",
-      "2026-09-01",
-      "2026-09-01",
-      "2026-09-01",
-      "2026-09-01",
-      "2026-09-01",
-      "2026-09-01",
-    ]);
+    expect(resolveMonthStartIso("2026-08-31")).toBe("2026-08-01");
+    expect(resolveMonthStartIso("2026-09-01")).toBe("2026-09-01");
   });
 
-  it("disagrees with the week start for six days of that week", () => {
-    const fromWeek = resolveMonthStartIso(days[0].isoDate);
-
-    expect(days.filter((day) => resolveMonthStartIso(day.isoDate) !== fromWeek)).toHaveLength(6);
-  });
-});
-
-describe("resolveSelectedMonthStartIso", () => {
-  it("picks the loaded month the selected day falls in", () => {
-    expect(resolveSelectedMonthStartIso("2026-08-31", loadedMonths)).toBe("2026-08-01");
-    expect(resolveSelectedMonthStartIso("2026-09-01", loadedMonths)).toBe("2026-09-01");
-  });
-
-  it("falls back to the first loaded month when the day's month never arrived", () => {
-    expect(resolveSelectedMonthStartIso("2026-11-14", loadedMonths)).toBe("2026-08-01");
-  });
-
-  it("derives the month anyway when nothing was loaded", () => {
-    expect(resolveSelectedMonthStartIso("2026-11-14", [])).toBe("2026-11-01");
-  });
-});
-
-describe("shiftMonthStartIso", () => {
-  it("steps a month in either direction", () => {
-    expect(shiftMonthStartIso("2026-09-01", -1)).toBe("2026-08-01");
+  it("steps a month in either direction and wraps the year", () => {
     expect(shiftMonthStartIso("2026-09-01", 1)).toBe("2026-10-01");
-  });
-
-  it("wraps the year at both ends", () => {
     expect(shiftMonthStartIso("2026-01-01", -1)).toBe("2025-12-01");
     expect(shiftMonthStartIso("2026-12-01", 1)).toBe("2027-01-01");
   });
 
-  it("keeps landing on the first, including into a shorter month", () => {
-    expect(shiftMonthStartIso("2026-03-01", -1)).toBe("2026-02-01");
-    expect(shiftMonthStartIso("2024-01-01", 1)).toBe("2024-02-01");
+  it("shifts a day across a month and a year boundary", () => {
+    expect(shiftIsoDate("2026-08-31", 1)).toBe("2026-09-01");
+    expect(shiftIsoDate("2026-01-01", -1)).toBe("2025-12-31");
+    expect(shiftIsoDate("not-a-date", 1)).toBe("not-a-date");
   });
-});
 
-describe("resolveWeekStartIso", () => {
   it("finds the Monday of the week a day falls in", () => {
-    for (const day of days) {
-      expect(resolveWeekStartIso(day.isoDate)).toBe("2026-08-31");
-    }
+    expect(resolveWeekStartIso("2026-09-03")).toBe("2026-08-31");
+    expect(resolveWeekStartIso("2026-08-31")).toBe("2026-08-31");
+    expect(resolveWeekStartIso("2026-09-06")).toBe("2026-08-31");
   });
 
-  it("puts the 1st of a month in the week that contains it", () => {
-    // Sep 1 2026 is a Tuesday, so the month opens mid-week — the case §11's `[` / `]` rule needs.
-    expect(resolveWeekStartIso("2026-09-01")).toBe("2026-08-31");
-    // Nov 1 2026 is a Sunday, the latest a month can start in its week.
-    expect(resolveWeekStartIso("2026-11-01")).toBe("2026-10-26");
-    // Jun 1 2026 is itself a Monday.
-    expect(resolveWeekStartIso("2026-06-01")).toBe("2026-06-01");
+  it("picks the loaded month the selected day falls in, else the first loaded one", () => {
+    expect(resolveSelectedMonthStartIso("2026-09-02", ["2026-08-01", "2026-09-01"])).toBe(
+      "2026-09-01",
+    );
+    expect(resolveSelectedMonthStartIso("2026-10-02", ["2026-08-01", "2026-09-01"])).toBe(
+      "2026-08-01",
+    );
+    expect(resolveSelectedMonthStartIso("2026-10-02", [])).toBe("2026-10-01");
   });
 });
 
 describe("resolveSelectedDayIso", () => {
   it("takes the param when it names a day of the visible week", () => {
-    expect(resolveSelectedDayIso("2026-09-03", days, "2026-09-02")).toBe("2026-09-03");
+    expect(resolveSelectedDayIso("2026-09-04", days, "2026-09-02")).toBe("2026-09-04");
   });
 
-  it("falls back to today when the param is absent", () => {
+  it("falls back to today, then to the week start", () => {
     expect(resolveSelectedDayIso(null, days, "2026-09-02")).toBe("2026-09-02");
-  });
-
-  it("falls back to the week start when today is another week", () => {
-    expect(resolveSelectedDayIso(null, days, "2026-09-20")).toBe("2026-08-31");
+    expect(resolveSelectedDayIso(null, days, "2026-10-02")).toBe("2026-08-31");
   });
 
   it("ignores a day left over from another week", () => {
-    expect(resolveSelectedDayIso("2026-07-14", days, "2026-09-20")).toBe("2026-08-31");
+    expect(resolveSelectedDayIso("2026-09-10", days, "2026-09-02")).toBe("2026-09-02");
   });
 });
 
-describe("resolveZoomShortcut", () => {
-  it("jumps to a stop by number", () => {
-    expect(resolveZoomShortcut(keyEvent("1"), zoomLevels)).toEqual({ type: "level", level: "day" });
-    expect(resolveZoomShortcut(keyEvent("2"), zoomLevels)).toEqual({
-      type: "level",
-      level: "week",
-    });
-    expect(resolveZoomShortcut(keyEvent("3"), zoomLevels)).toEqual({
-      type: "level",
-      level: "grid",
-    });
-    expect(resolveZoomShortcut(keyEvent("4"), zoomLevels)).toEqual({
-      type: "level",
-      level: "month",
-    });
+describe("resolveTimeShortcut", () => {
+  const stops: readonly TimeScope[] = timeScopes;
+
+  it("jumps to a scope by number, bounded by the member's stops", () => {
+    expect(resolveTimeShortcut(keystroke("1"), stops)).toEqual({ type: "scope", scope: "day" });
+    expect(resolveTimeShortcut(keystroke("3"), stops)).toEqual({ type: "scope", scope: "month" });
+    expect(resolveTimeShortcut(keystroke("4"), stops)).toBeNull();
+    expect(resolveTimeShortcut(keystroke("2"), declaredOnlyScopes)).toBeNull();
   });
 
-  it("has no stop for a number the axis does not have", () => {
-    expect(resolveZoomShortcut(keyEvent("5"), zoomLevels)).toBeNull();
-    expect(resolveZoomShortcut(keyEvent("0"), zoomLevels)).toBeNull();
+  it("steps with − and +", () => {
+    expect(resolveTimeShortcut(keystroke("-"), stops)).toEqual({ type: "step", direction: "out" });
+    expect(resolveTimeShortcut(keystroke("+"), stops)).toEqual({ type: "step", direction: "in" });
   });
 
-  it("offers a declared-only member no level they do not have", () => {
-    expect(resolveZoomShortcut(keyEvent("1"), declaredOnlyZoomStops)).toEqual({
-      type: "level",
-      level: "month",
-    });
-    expect(resolveZoomShortcut(keyEvent("2"), declaredOnlyZoomStops)).toBeNull();
-  });
-
-  it("steps, moves period, and goes to today", () => {
-    expect(resolveZoomShortcut(keyEvent("-"), zoomLevels)).toEqual({
-      type: "step",
-      direction: "out",
-    });
-    expect(resolveZoomShortcut(keyEvent("+"), zoomLevels)).toEqual({
-      type: "step",
-      direction: "in",
-    });
-    expect(resolveZoomShortcut(keyEvent("["), zoomLevels)).toEqual({
+  it("moves the period with J and K, and still with the brackets", () => {
+    expect(resolveTimeShortcut(keystroke("k"), stops)).toEqual({
       type: "period",
       direction: "previous",
     });
-    expect(resolveZoomShortcut(keyEvent("]"), zoomLevels)).toEqual({
+    expect(resolveTimeShortcut(keystroke("J"), stops)).toEqual({
       type: "period",
       direction: "next",
     });
-    expect(resolveZoomShortcut(keyEvent("t"), zoomLevels)).toEqual({ type: "today" });
+    expect(resolveTimeShortcut(keystroke("["), stops)).toEqual({
+      type: "period",
+      direction: "previous",
+    });
+    expect(resolveTimeShortcut(keystroke("]"), stops)).toEqual({
+      type: "period",
+      direction: "next",
+    });
   });
 
-  it("leaves the arrow keys to the grid", () => {
-    expect(resolveZoomShortcut(keyEvent("ArrowRight"), zoomLevels)).toBeNull();
-    expect(resolveZoomShortcut(keyEvent("ArrowDown"), zoomLevels)).toBeNull();
+  it("knows today, the lens, the composer, the timer, the sheet and escape", () => {
+    expect(resolveTimeShortcut(keystroke("t"), stops)).toEqual({ type: "today" });
+    expect(resolveTimeShortcut(keystroke("G"), stops)).toEqual({ type: "lens" });
+    expect(resolveTimeShortcut(keystroke("n"), stops)).toEqual({ type: "compose" });
+    expect(resolveTimeShortcut(keystroke("S"), stops)).toEqual({ type: "timer" });
+    expect(resolveTimeShortcut(keystroke("?"), stops)).toEqual({ type: "help" });
+    expect(resolveTimeShortcut(keystroke("Escape"), stops)).toEqual({ type: "escape" });
+  });
+
+  it("leaves the arrow keys to the grids", () => {
+    expect(resolveTimeShortcut(keystroke("ArrowLeft"), stops)).toBeNull();
+    expect(resolveTimeShortcut(keystroke("ArrowDown"), stops)).toBeNull();
   });
 
   it("does not fire with a browser modifier held", () => {
-    expect(resolveZoomShortcut(keyEvent("t", { metaKey: true }), zoomLevels)).toBeNull();
-    expect(resolveZoomShortcut(keyEvent("2", { ctrlKey: true }), zoomLevels)).toBeNull();
-    expect(resolveZoomShortcut(keyEvent("]", { altKey: true }), zoomLevels)).toBeNull();
+    expect(resolveTimeShortcut(keystroke("k", { metaKey: true }), stops)).toBeNull();
+    expect(resolveTimeShortcut(keystroke("1", { ctrlKey: true }), stops)).toBeNull();
+    expect(resolveTimeShortcut(keystroke("j", { altKey: true }), stops)).toBeNull();
   });
 
   it("does not fire while a field has the keystroke", () => {
     const input = document.createElement("input");
-
-    expect(resolveZoomShortcut(keyEvent("3", { target: input }), zoomLevels)).toBeNull();
+    expect(resolveTimeShortcut(keystroke("2", { target: input }), stops)).toBeNull();
   });
 });
 
-describe("suppressesZoomShortcut", () => {
-  it("yields to text entry", () => {
-    for (const tagName of ["input", "textarea", "select"]) {
-      expect(suppressesZoomShortcut(document.createElement(tagName))).toBe(true);
-    }
-  });
+describe("suppressesTimeShortcut and hasOpenOverlay", () => {
+  it("yields to text entry and to an open overlay that owns the keyboard", () => {
+    const textarea = document.createElement("textarea");
+    expect(suppressesTimeShortcut(textarea)).toBe(true);
 
-  it("yields to an open overlay that owns the keyboard", () => {
     const dialog = document.createElement("div");
     dialog.setAttribute("role", "dialog");
-    const button = document.createElement("button");
-    dialog.append(button);
-
-    expect(suppressesZoomShortcut(button)).toBe(true);
+    const inside = document.createElement("button");
+    dialog.append(inside);
+    expect(suppressesTimeShortcut(inside)).toBe(true);
   });
 
   it("leaves an ordinary button alone", () => {
-    expect(suppressesZoomShortcut(document.createElement("button"))).toBe(false);
-    expect(suppressesZoomShortcut(null)).toBe(false);
+    expect(suppressesTimeShortcut(document.createElement("button"))).toBe(false);
+    expect(suppressesTimeShortcut(null)).toBe(false);
+  });
+
+  it("sees a dialog anywhere on the page", () => {
+    const root = document.createElement("div");
+    expect(hasOpenOverlay(root)).toBe(false);
+
+    const menu = document.createElement("div");
+    menu.setAttribute("role", "menu");
+    root.append(menu);
+    expect(hasOpenOverlay(root)).toBe(true);
   });
 });

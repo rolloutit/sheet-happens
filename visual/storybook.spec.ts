@@ -200,6 +200,66 @@ const storyCases: StoryVisualCase[] = [
     locale: "en",
     projects: ["mobile"],
   },
+  /**
+   * The redesign's chrome and its new blocks (docs/time-view-redesign.md). The scope bar and the
+   * navigator are the two rows above every `/time` view, the heat navigator is the Month scope's
+   * new top half, and the composer is the popover the column `+` opens.
+   */
+  {
+    id: "sheet-timescopebar--week-scope",
+    slug: "time-scope-bar-dark",
+    theme: "dark",
+    locale: "en",
+    projects: ["desktop"],
+  },
+  {
+    id: "sheet-timescopebar--week-scope-light",
+    slug: "time-scope-bar-light",
+    theme: "light",
+    locale: "en",
+    projects: ["desktop"],
+  },
+  {
+    id: "sheet-periodnavigator--week",
+    slug: "period-navigator-dark",
+    theme: "dark",
+    locale: "en",
+    projects: ["desktop"],
+  },
+  {
+    id: "sheet-monthheatnavigator--september",
+    slug: "month-heat-navigator-dark",
+    theme: "dark",
+    locale: "en",
+    projects: ["desktop"],
+  },
+  {
+    id: "sheet-monthheatnavigator--september-light",
+    slug: "month-heat-navigator-light",
+    theme: "light",
+    locale: "en",
+    projects: ["desktop"],
+  },
+  {
+    id: "sheet-quickentrycomposer--default",
+    slug: "quick-entry-composer-dark",
+    theme: "dark",
+    locale: "en",
+    projects: ["desktop"],
+  },
+  {
+    id: "sheet-entrycard--compact",
+    slug: "entry-card-dark",
+    theme: "dark",
+    locale: "en",
+    projects: ["desktop"],
+  },
+  {
+    id: "sheet-dayribbon--week",
+    slug: "day-ribbon-dark",
+    theme: "dark",
+    locale: "en",
+  },
   {
     id: "sheet-dayagenda--default",
     slug: "day-agenda-dark",

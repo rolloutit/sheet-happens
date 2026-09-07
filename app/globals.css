@@ -431,16 +431,25 @@
   --header-h: 64px;
 
   /* Motion. `--ease-standard` is the default for everything; the rest exist because the `/time`
-     zoom axis needs a named vocabulary rather than a scatter of magic numbers
-     (`docs/time-view-zoom-axis.md` §9). These six are the source of truth: `app/time/motion.ts`
-     mirrors them as TypeScript literals because Motion animates outside CSS and cannot interpolate
-     a `var()`. Changing a value here means changing it there. */
+     view needs a named vocabulary rather than a scatter of magic numbers
+     (`docs/time-view-zoom-axis.md` §9, `docs/time-view-redesign.md` §7.1). These are the source of
+     truth: `src/lib/motion.ts` mirrors them as TypeScript literals because Motion animates outside
+     CSS and cannot interpolate a `var()`. Changing a value here means changing it there.
+     Everything stays under 300ms and eases out; nothing eases in. The two springs are recorded as
+     `stiffness damping mass` triples so the numbers live beside the durations they pace. */
   --ease-standard: cubic-bezier(0.2, 0.7, 0.2, 1);
   --ease-exit: cubic-bezier(0.4, 0, 1, 1);
   --duration-level: 260ms;
   --duration-micro: 140ms;
   --duration-bar: 300ms;
-  --stagger-entry: 18ms;
+  --duration-step: 200ms;
+  --duration-settle: 180ms;
+  --distance-step: 24px;
+  --scale-zoom-in: 0.96;
+  --scale-zoom-out: 1.04;
+  --spring-thumb: 520 42 0.8;
+  --spring-ring: 180 26 1;
+  --stagger-entry: 24ms;
 }
 
 .dark {
@@ -899,23 +908,30 @@ body,
   }
 }
 
-button,
-input,
-select,
-textarea {
-  font: inherit;
+/* Layered for the same reason the focus rule below is, and it is the same bug: unlayered, this
+   outranks every `text-*` in Tailwind's `@layer utilities`, so `font: inherit` won the font-size
+   on every `<button>` in the app and each one rendered at the inherited 16px no matter what size
+   it asked for. Preflight already normalises controls this way from `@layer base`; keeping our
+   copy in the same layer leaves the normalisation and lets a utility override it. */
+@layer base {
+  button,
+  input,
+  select,
+  textarea {
+    font: inherit;
+  }
 }
 
 ::selection {
   background: rgb(41 198 198 / 0.32);
 }
 
-/* The only layered rules in this file, and they have to be. A control that wants a different focus
-   treatment cancels this one with `focus-visible:outline-none`, and that utility compiles into
-   Tailwind's `@layer utilities` — unlayered, the rule below would outrank it (the mechanism the
-   `.auth-gyro-layer` note relies on), which is how every such call site ended up compositing a
-   second ring on top of this outline instead of replacing it. Layered, `base` loses to `utilities`
-   and the cancel works.
+/* Layered, and they have to be — the same reason as the control reset above. A control that wants
+   a different focus treatment cancels this one with `focus-visible:outline-none`, and that utility
+   compiles into Tailwind's `@layer utilities` — unlayered, the rule below would outrank it (the
+   mechanism the `.auth-gyro-layer` note relies on), which is how every such call site ended up
+   compositing a second ring on top of this outline instead of replacing it. Layered, `base` loses
+   to `utilities` and the cancel works.
 
    Two treatments live on top of this: controls with their own visible border brighten that border
    instead (`focusChromeClassName`), and borderless controls declare nothing and take the outline
@@ -1382,6 +1398,28 @@ textarea {
   50% {
     transform: scale(1.03);
   }
+}
+
+/* §7.7 of docs/time-view-redesign.md: a card that was just saved runs its rail and border through
+   the accent glow once — `none → --elevation-glow → none` over 600ms, no repeat. A class rather than
+   a Motion animation so the card itself stays a plain element; the reduced-motion block below
+   collapses it to a single frame, which is the right degradation for a pulse that carries no
+   information the card's presence does not. */
+@keyframes sheet-saved-pulse {
+  0% {
+    box-shadow: none;
+  }
+  45% {
+    box-shadow: var(--elevation-glow);
+    border-color: var(--accent-line);
+  }
+  100% {
+    box-shadow: none;
+  }
+}
+
+.sheet-saved-pulse {
+  animation: sheet-saved-pulse 600ms var(--ease-standard) 1;
 }
 
 @media (prefers-reduced-motion: reduce) {

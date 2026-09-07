@@ -163,8 +163,8 @@ export { ListRow } from "./ListRow";
 export type { ListRowProps } from "./ListRow";
 export { LockedState } from "./LockedState";
 export type { LockedStateProps } from "./LockedState";
-export { MonthPicker } from "./MonthPicker";
-export type { MonthPickerLabels, MonthPickerProps } from "./MonthPicker";
+export { MonthPicker, MonthPickerPanel } from "./MonthPicker";
+export type { MonthPickerLabels, MonthPickerPanelProps, MonthPickerProps } from "./MonthPicker";
 export { Pager } from "./Pager";
 export type { PagerLabels, PagerProps } from "./Pager";
 export { PasswordInput } from "./PasswordInput";
@@ -178,7 +178,11 @@ export type { ResultBannerProps, ResultBannerTone } from "./ResultBanner";
 export { SectionHead } from "./SectionHead";
 export type { SectionHeadProps } from "./SectionHead";
 export { SegmentedControl } from "./SegmentedControl";
-export type { SegmentItem, SegmentedControlProps } from "./SegmentedControl";
+export type {
+  SegmentItem,
+  SegmentedControlIndicator,
+  SegmentedControlProps,
+} from "./SegmentedControl";
 export { defaultSearchThreshold, Select, SelectMenu } from "./Select";
 export type {
   SelectMenuProps,

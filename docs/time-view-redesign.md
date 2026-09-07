@@ -1,6 +1,6 @@
 # Time View Redesign — Scope, Lens and Motion
 
-**Status:** proposal · design only, no code touched
+**Status:** implemented (R0–R4) on the `/time` route · this document is the design record; §15 lists the decisions as taken
 **Surface:** `/time` (`app/time/TimeZoomShell.tsx`, `app/time/TimeGridClient.tsx`, `WeekAgenda`,
 `DayAgenda`, `MonthOverview`, `SegmentedControl`)
 **Relationship to other docs:** this revises the _presentation_ half of `docs/time-view-zoom-axis.md`

@@ -5,4 +5,6 @@ export type {
   DayAgendaEntry,
   DayAgendaLabels,
   DayAgendaProps,
+  DayAgendaRunningTimer,
+  DayAgendaSplit,
 } from "./DayAgenda.types";

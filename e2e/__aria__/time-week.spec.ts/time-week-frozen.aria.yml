@@ -1,107 +1,101 @@
 - main:
-  - radiogroup "Detail level":
+  - button "Zoom out to Month"
+  - radiogroup "View":
     - radio "Day"
     - radio "Week" [checked]
-    - radio "Grid"
     - radio "Month"
-  - text: 1-4 level · − + step · [ ] week · t today
-  - button "New timer"
+  - button "Zoom in to Day"
+  - radiogroup "Week layout":
+    - radio "Agenda" [checked]
+    - radio "Grid"
+  - button "Start timer"
   - button "New entry"
   - button "Previous week"
-  - text: Mar 3 - Mar 9, 2025
+  - button /Week \d+ · Mar 3 – 9, \d+/
   - button "Next week"
-  - button "This week"
-  - text: Week total 23.5 h
-  - button "Same as yesterday"
-  - button "Duplicate last week"
-  - text: Assigned Atlas Platform Internal Ops & Tooling Recent
-  - button "Internal Ops & Tooling"
-  - button "Atlas Platform"
-  - group "Days of this week":
-    - button "Select Monday" [pressed]: Mon 3
-    - button "Select Tuesday": Tue 4
-    - button "Select Wednesday": Wed 5
-    - button "Select Thursday": Thu 6
-    - button "Select Friday": Fri 7
-    - button "Select Saturday": Sat 8
-    - button "Select Sunday": Sun 9
-  - text: Day total 4 h
+  - button "Today"
+  - button "More actions"
+  - text: /\d+\.\d+ h this week/
   - region "Monday":
-    - heading "Open Monday" [level=2]:
-      - button "Open Monday": Mon 3 4 h
+    - heading "Open Monday, 3" [level=2]:
+      - button "Open Monday, 3": Mon 3 4 h
     - list:
       - listitem:
-        - text: Atlas Platform
         - paragraph: Sprint planning
-        - text: 1.5 h
+        - text: 1.5 h Atlas Platform
         - button "Edit Sprint planning"
+        - button "Continue Sprint planning"
         - button "Delete Sprint planning"
       - listitem:
-        - text: Internal Ops & Tooling
         - paragraph: CI pipeline maintenance
-        - text: 2.5 h
+        - text: 2.5 h Internal Ops & Tooling
         - button "Edit CI pipeline maintenance"
+        - button "Continue CI pipeline maintenance"
         - button "Delete CI pipeline maintenance"
     - button "Add entry on Monday"
   - region "Tuesday":
-    - heading "Open Tuesday" [level=2]:
-      - button "Open Tuesday": Tue 4 8 h
+    - heading "Open Tuesday, 4" [level=2]:
+      - button "Open Tuesday, 4": Tue 4 8 h
     - list:
       - listitem:
-        - text: Atlas Platform
-        - img "Long continuous session"
         - paragraph: API endpoint implementation
-        - text: 8 h 09:00–17:00
+        - img "Tracked with a timer"
+        - text: /8 h Atlas Platform \d+:\d+ – \d+:\d+/
+        - img "Long continuous session"
         - button "Edit API endpoint implementation"
+        - button "Continue API endpoint implementation"
         - button "Delete API endpoint implementation"
     - button "Add entry on Tuesday"
   - region "Wednesday":
-    - heading "Open Wednesday" [level=2]:
-      - button "Open Wednesday": Wed 5 5.5 h
+    - heading "Open Wednesday, 5" [level=2]:
+      - button "Open Wednesday, 5": Wed 5 5.5 h
     - list:
       - listitem:
-        - text: Internal Ops & Tooling
         - paragraph: Dev tooling improvements
-        - text: 3.5 h
+        - text: 3.5 h Internal Ops & Tooling
         - button "Edit Dev tooling improvements"
+        - button "Continue Dev tooling improvements"
         - button "Delete Dev tooling improvements"
       - listitem:
-        - text: Atlas Platform
         - paragraph: Code review
-        - text: 2 h
+        - text: 2 h Atlas Platform
         - button "Edit Code review"
+        - button "Continue Code review"
         - button "Delete Code review"
     - button "Add entry on Wednesday"
   - region "Thursday":
-    - heading "Open Thursday" [level=2]:
-      - button "Open Thursday": Thu 6 5 h
+    - heading "Open Thursday, 6" [level=2]:
+      - button "Open Thursday, 6": Thu 6 5 h
     - list:
       - listitem:
-        - text: Atlas Platform
         - paragraph: Database migration work
-        - text: 5 h 09:00–14:00
+        - img "Tracked with a timer"
+        - text: /5 h Atlas Platform \d+:\d+ – \d+:\d+/
         - button "Edit Database migration work"
+        - button "Continue Database migration work"
         - button "Delete Database migration work"
     - button "Add entry on Thursday"
   - region "Friday":
-    - heading "Open Friday" [level=2]:
-      - button "Open Friday": Fri 7 1 h
+    - heading "Open Friday, 7" [level=2]:
+      - button "Open Friday, 7": Fri 7 1 h
     - list:
       - listitem:
-        - text: Internal Ops & Tooling
         - paragraph: Documentation
-        - text: 1 h
+        - text: 1 h Internal Ops & Tooling
         - button "Edit Documentation"
+        - button "Continue Documentation"
         - button "Delete Documentation"
     - button "Add entry on Friday"
   - region "Saturday":
-    - heading "Open Saturday" [level=2]:
-      - button "Open Saturday": Sat 8 0 h
+    - heading "Open Saturday, 8" [level=2]:
+      - button "Open Saturday, 8": Sat 8 0 h
     - paragraph: Nothing logged
+    - button "Copy yesterday"
     - button "Add entry on Saturday"
   - region "Sunday":
-    - heading "Open Sunday" [level=2]:
-      - button "Open Sunday": Sun 9 0 h
+    - heading "Open Sunday, 9" [level=2]:
+      - button "Open Sunday, 9": Sun 9 0 h
     - paragraph: Nothing logged
     - button "Add entry on Sunday"
-  - paragraph: Week · 7 days · 23.5 h
+  - paragraph: /Week · Agenda · Week \d+ · Mar 3 – 9, \d+ · \d+\.\d+ h/
+  - button "Open the command palette⌘K"

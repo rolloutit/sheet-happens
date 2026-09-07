@@ -1,296 +1,288 @@
 "use client";
 
-import { useEffect, useRef, type ReactNode } from "react";
-import { LazyMotion, MotionConfig } from "motion/react";
+import { AnimatePresence, LayoutGroup, LazyMotion, MotionConfig } from "motion/react";
 import * as m from "motion/react-m";
-import { useTranslations } from "next-intl";
+import { useEffect, useRef, type ReactNode, type RefObject, type TouchEvent } from "react";
 
-import { barTransition, levelTransition } from "@/src/lib/motion";
+import { DayRibbon, type DayRibbonLabels } from "@/src/components/sheet/DayRibbon";
+import type { DayColumnHeaderDay } from "@/src/components/sheet/DayColumnHeader";
+import { TIME_LAYOUT_GROUP_ID, viewVariants, type TimeMove } from "@/src/lib/motion";
 import { DAILY_SOFT_WARNING_MINUTES } from "@/src/lib/time-entry-limits";
-import { cn } from "@/src/lib/utils";
-import type { TimeGridDay } from "@/src/server/time-tracking";
 
-import { useTimeZoom } from "./use-time-zoom";
-import { resolveZoomShortcut, stepZoomLevel, type ZoomLevel } from "./zoom";
+import {
+  ESCAPE_ZOOM_GRACE_MS,
+  hasOpenOverlay,
+  resolveTimeShortcut,
+  stepScope,
+  type TimeScope,
+  type WeekLens,
+} from "./zoom";
 
-/** A day of the visible week, plus the total the capacity bar under its chip measures. */
-export type TimeZoomDay = TimeGridDay & { totalMinutes: number };
+/** A day of the visible week, plus the total its capacity bar measures. */
+export type TimeZoomDay = DayColumnHeaderDay;
+
+const SWIPE_MIN_DISTANCE = 60;
+const SWIPE_MAX_DRIFT = 40;
 
 type TimeZoomShellProps = {
+  scope: TimeScope;
+  lens: WeekLens;
+  /** The member's own scope list (`resolveScopeStops`), which bounds the digits and the steps. */
+  stops: readonly TimeScope[];
   days: TimeZoomDay[];
-  todayIso: string;
-  /** The selected day's logged minutes, which the persistent total reads. */
-  dayTotalMinutes: number;
+  selectedDayIso: string;
+  /** Keys the ribbon's slide across a week boundary. */
+  weekStart: string;
   /**
-   * The month the selected day falls in, already named in the member's locale.
-   *
-   * Only the announcement uses it: at L4 "7 days" is not what changed, the month is. The month
-   * label and total are *rendered* by the period row above this shell, which owns them at every
-   * level — see `MonthOverview` for why they are not part of the level itself.
+   * Keys the content: `${scope}:${lens}:${periodStart}`. A change of key is a move, and `move`
+   * says which kind, so the presence can slide, scale or crossfade accordingly.
    */
-  month: { label: string; totalMinutes: number };
-  /** The member's own stop list (`resolveZoomStops`), which bounds the digits and the steps. */
-  stops: readonly ZoomLevel[];
-  /**
-   * §8's hybrid handoff line — _"Nimbus is declared monthly — see Month"_ — rendered under the day
-   * strip at L1-L3 and dropped at L4.
-   *
-   * A shell prop rather than something each level renders, for two reasons. It has to sit under the
-   * strip, and the strip is here; and written into all three `renderLevel` branches it would be
-   * three copies of one sentence, which is three places to forget it. It arrives as an already-built
-   * node, so the shell still knows nothing about projects — only where the line goes and at which
-   * levels it belongs.
-   */
-  handoff?: ReactNode;
+  viewKey: string;
+  move: TimeMove | null;
+  /** What a screen reader hears on every scope, lens or period change. */
+  announcement: string;
+  /** Rows 1 and 2 — the scope bar and the period navigator, composed by the screen. */
+  toolbar: ReactNode;
+  /** Whether a horizontal swipe on the content steps the period. Off on the Grid lens. */
+  swipeEnabled: boolean;
+  /** Where focus lands when a scope change took the focused element with it. */
+  focusFallback: RefObject<HTMLElement | null>;
   formatMinutes: (minutes: number) => string;
-  onPreviousPeriod: () => void;
-  onNextPeriod: () => void;
+  ribbonLabels: DayRibbonLabels;
+  disabled?: boolean;
+  onScopeChange: (scope: TimeScope) => void;
+  onSelectDay: (isoDate: string) => void;
+  onPeriod: (direction: "previous" | "next") => void;
   onToday: () => void;
-  renderLevel: (level: ZoomLevel) => ReactNode;
+  onToggleLens: () => void;
+  onCompose: () => void;
+  onTimer: () => void;
+  onHelp: () => void;
+  children: ReactNode;
 };
 
-/**
- * `domMax`, loaded after first paint. See `motion-features.ts` for why it is not `domAnimation`.
- */
+/** `domMax`, loaded after first paint. See `motion-features.ts` for why it is not `domAnimation`. */
 const loadMotionFeatures = () => import("./motion-features").then((module) => module.default);
 
 /**
- * The chrome that stays put while the resolution changes underneath it.
+ * The chrome that stays put while the view changes underneath it, and the choreography of the
+ * change (§6, §7 of `docs/time-view-redesign.md`).
  *
- * The continuity contract in §7 of `docs/time-view-zoom-axis.md` is not about animation — it is
- * about what survives a level change, and all of it is structural. The day strip is rendered here,
- * above the level, precisely so that it never unmounts: the selected day, the day total and the
- * focus ring on a day chip all outlive a transition because the elements holding them are never
- * torn down. The motion added on top makes that survival legible; nothing here depends on it.
+ * Three jobs:
  *
- * The level content comes in through `renderLevel` rather than as three nodes, so the grid's ~70
- * cells are only built when the grid is the level being shown.
+ * - **Keyboard.** One listener resolves every shortcut through `resolveTimeShortcut` and hands the
+ *   meaning back to the screen. `Esc` zooms out one step, but only when no overlay is open and not
+ *   within {@link ESCAPE_ZOOM_GRACE_MS} of an `Esc` an overlay swallowed — so closing a dialog
+ *   and pressing `Esc` again reflexively does not also change the view.
+ * - **Motion.** One `AnimatePresence` around the content, keyed by the view and told which kind of
+ *   move happened. A step slides along the time axis; a zoom scales in the direction of travel
+ *   while the day headers, ribbon chips and heat cells that share a `layoutId` morph between their
+ *   stations; a re-lens crossfades under headers that do not move. `LayoutGroup id="time"`
+ *   namespaces every id on the surface.
+ * - **Continuity.** The selected day survives every move because it lives in the URL. Focus
+ *   survives: if the element that had it left with the old view, it lands on the period label,
+ *   never on `body`. The ribbon renders here, in the Day scope only, as the week context for one
+ *   day and the navigator between days.
  *
  * This is also the `/time` client root, so it is where the two Motion providers live:
- *
- * - `MotionConfig reducedMotion="user"` is **required, not belt-and-braces**. The global
- *   `prefers-reduced-motion` block in `app/globals.css` zeroes CSS durations and does nothing at
- *   all to Motion, which animates via JS outside CSS transitions. Without this, `/time` would be
- *   the one screen in the app that ignores the OS setting. `"user"` keeps opacity and drops
- *   transform and layout, which is the right degradation: the level still crossfades, nothing
- *   flies.
- * - `LazyMotion strict` keeps the feature bundle off every other route and makes a stray full
- *   `motion.*` import fail loudly instead of silently re-inflating it.
+ * `MotionConfig reducedMotion="user"` is **required, not belt-and-braces** — the global
+ * `prefers-reduced-motion` block in `app/globals.css` does nothing to Motion — and `LazyMotion
+ * strict` keeps the feature bundle off every other route.
  */
 export function TimeZoomShell({
-  days,
-  todayIso,
-  dayTotalMinutes,
-  month,
+  scope,
+  lens,
   stops,
-  handoff,
+  days,
+  selectedDayIso,
+  weekStart,
+  viewKey,
+  move,
+  announcement,
+  toolbar,
+  swipeEnabled,
+  focusFallback,
   formatMinutes,
-  onPreviousPeriod,
-  onNextPeriod,
+  ribbonLabels,
+  disabled = false,
+  onScopeChange,
+  onSelectDay,
+  onPeriod,
   onToday,
-  renderLevel,
+  onToggleLens,
+  onCompose,
+  onTimer,
+  onHelp,
+  children,
 }: TimeZoomShellProps) {
-  const t = useTranslations("TimeTracking");
-  const { level, selectedDayIso, setLevel, setSelectedDayIso } = useTimeZoom(
-    { days, todayIso },
-    stops,
-  );
-  const dayChipRefs = useRef(new Map<string, HTMLButtonElement>());
-  const previousLevel = useRef(level);
+  const previousScope = useRef(scope);
+  const overlayEscapeAt = useRef(0);
+  const touchStart = useRef<{ x: number; y: number } | null>(null);
 
   useEffect(() => {
     function handleKeyDown(event: KeyboardEvent) {
-      const shortcut = resolveZoomShortcut(event, stops);
+      const shortcut = resolveTimeShortcut(event, stops);
 
       if (!shortcut) return;
 
+      if (shortcut.type === "escape") {
+        if (hasOpenOverlay()) {
+          overlayEscapeAt.current = Date.now();
+          return;
+        }
+        if (Date.now() - overlayEscapeAt.current < ESCAPE_ZOOM_GRACE_MS) return;
+
+        const outer = stepScope(scope, "out", stops);
+        if (outer !== scope) {
+          event.preventDefault();
+          onScopeChange(outer);
+        }
+        return;
+      }
+
       event.preventDefault();
 
-      if (shortcut.type === "level") setLevel(shortcut.level);
-      if (shortcut.type === "step") setLevel(stepZoomLevel(level, shortcut.direction, stops));
-      if (shortcut.type === "period") {
-        if (shortcut.direction === "previous") onPreviousPeriod();
-        else onNextPeriod();
+      switch (shortcut.type) {
+        case "scope":
+          onScopeChange(shortcut.scope);
+          break;
+        case "step": {
+          const next = stepScope(scope, shortcut.direction, stops);
+          if (next !== scope) onScopeChange(next);
+          break;
+        }
+        case "period":
+          onPeriod(shortcut.direction);
+          break;
+        case "today":
+          onToday();
+          break;
+        case "lens":
+          onToggleLens();
+          break;
+        case "compose":
+          onCompose();
+          break;
+        case "timer":
+          onTimer();
+          break;
+        case "help":
+          onHelp();
+          break;
       }
-      if (shortcut.type === "today") onToday();
     }
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [level, onNextPeriod, onPreviousPeriod, onToday, setLevel, stops]);
+  }, [onCompose, onHelp, onPeriod, onScopeChange, onTimer, onToday, onToggleLens, scope, stops]);
 
   /**
-   * Continuity items 4 and 5, which only a level change can break.
+   * Focus survives a scope change, or lands somewhere sensible.
    *
-   * Focus is left exactly where it is whenever it survived — the point is not to move focus, it is
-   * that a level change must never dump it on `<body>`. It lands there when the element that was
-   * focused belonged to the level that just went away, which is what clicking a day column header
-   * at L2 does; the day chip is where that focus belongs, because it is the same day.
+   * Left exactly where it is whenever it survived — the point is not to move focus, it is that a
+   * scope change must never dump it on `<body>`. It lands there when the element that was focused
+   * belonged to the view that just went away, which is what pressing a day header does; the period
+   * label is where that focus belongs, because it names the same day.
    */
   useEffect(() => {
-    if (previousLevel.current === level) return;
+    if (previousScope.current === scope) return;
 
-    previousLevel.current = level;
+    previousScope.current = scope;
 
-    const chip = dayChipRefs.current.get(selectedDayIso);
     const active = document.activeElement;
+    /* The old view is still in the DOM while it animates out, so "the focused element left with
+       the view" has to be read off which view it sits in, not off `body`. */
+    const leftWithOldView =
+      active instanceof HTMLElement &&
+      active.closest("[data-view-key]")?.getAttribute("data-view-key") !== viewKey &&
+      active.closest("[data-view-key]") !== null;
 
-    if (!active || active === document.body) chip?.focus();
-    if (typeof chip?.scrollIntoView === "function") chip.scrollIntoView({ block: "nearest" });
-  }, [level, selectedDayIso]);
+    if (!active || active === document.body || leftWithOldView) focusFallback.current?.focus();
+  }, [focusFallback, scope, viewKey]);
 
-  /** L4 keeps the week on screen, quieter, as the week returning from the month lands on. */
-  const atMonth = level === "month";
+  function handleTouchStart(event: TouchEvent<HTMLDivElement>) {
+    const touch = event.touches[0];
+    touchStart.current = touch ? { x: touch.clientX, y: touch.clientY } : null;
+  }
 
-  /**
-   * §15: a sighted user sees the transition, so a screen reader user has to be told about it.
-   *
-   * One day at L1, the whole week at L2 and L3, and the total that goes with whichever it is — the
-   * same two facts the eye takes from the layout. L4 needs its own sentence rather than a fourth
-   * value in the same one: what changed is the month, and "7 days" would be a plain lie about a
-   * level that covers thirty of them.
-   */
-  const announcement = atMonth
-    ? t("zoom.announceMonth", {
-        level: t("zoom.month"),
-        month: month.label,
-        total: formatMinutes(month.totalMinutes),
-      })
-    : t("zoom.announce", {
-        level: t(`zoom.${level}`),
-        days: level === "day" ? 1 : days.length,
-        total: formatMinutes(
-          level === "day" ? dayTotalMinutes : days.reduce((sum, day) => sum + day.totalMinutes, 0),
-        ),
-      });
+  function handleTouchEnd(event: TouchEvent<HTMLDivElement>) {
+    const start = touchStart.current;
+    const touch = event.changedTouches[0];
+    touchStart.current = null;
+
+    if (!swipeEnabled || !start || !touch) return;
+
+    const deltaX = touch.clientX - start.x;
+    const deltaY = touch.clientY - start.y;
+
+    if (Math.abs(deltaX) < SWIPE_MIN_DISTANCE || Math.abs(deltaY) > SWIPE_MAX_DRIFT) return;
+
+    onPeriod(deltaX < 0 ? "next" : "previous");
+  }
 
   return (
     <MotionConfig reducedMotion="user">
       <LazyMotion strict features={loadMotionFeatures}>
-        <div className="grid gap-4">
-          <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
-            {/* Mounted at every level, including L4 — continuity item 2, and the reason zooming
-                back in from the month is deterministic rather than a jump to today. At L4 it is
-                de-emphasised rather than hidden, and by opacity rather than by movement: the chips
-                stay operable there (picking the day is how the month is chosen at all, §11), so
-                the treatment has to leave them both legible and clickable. */}
-            <m.div
-              role="group"
-              aria-label={atMonth ? t("zoom.dayStripAtMonth") : t("zoom.dayStrip")}
-              initial={false}
-              animate={{ opacity: atMonth ? 0.7 : 1 }}
-              transition={levelTransition}
-              className="grid grid-cols-7 gap-1.5 sm:w-auto"
+        <LayoutGroup id={TIME_LAYOUT_GROUP_ID}>
+          <div className="grid gap-4">
+            {toolbar}
+
+            {/* The ribbon lives here, and only in the Day scope on a desktop (§4.3). It mounts as
+                the Week headers unmount, which is what lets both carry `day-<iso>`. Crossing a week
+                boundary slides the whole ribbon as one block; inside the week only the thumb moves. */}
+            <AnimatePresence mode="popLayout" initial={false} custom={move}>
+              {scope === "day" ? (
+                <m.div
+                  key={`ribbon:${weekStart}`}
+                  custom={move}
+                  variants={viewVariants}
+                  initial="enter"
+                  animate="center"
+                  exit="exit"
+                  className="relative min-w-0"
+                >
+                  <DayRibbon
+                    days={days}
+                    selectedDayIso={selectedDayIso}
+                    capacityMinutes={DAILY_SOFT_WARNING_MINUTES}
+                    formatMinutes={formatMinutes}
+                    labels={ribbonLabels}
+                    disabled={disabled}
+                    onSelectDay={onSelectDay}
+                  />
+                </m.div>
+              ) : null}
+            </AnimatePresence>
+
+            <div
+              className="relative min-w-0"
+              onTouchStart={handleTouchStart}
+              onTouchEnd={handleTouchEnd}
             >
-              {days.map((day) => {
-                const selected = day.isoDate === selectedDayIso;
-                // Clicking the day you are already on is the one gesture that has nowhere finer to
-                // go, so at L1 it means the opposite: step back out to the week.
-                const zoomsOut = selected && level === "day";
-
-                return (
-                  <button
-                    key={day.isoDate}
-                    ref={(node) => {
-                      if (node) dayChipRefs.current.set(day.isoDate, node);
-                      else dayChipRefs.current.delete(day.isoDate);
-                    }}
-                    type="button"
-                    aria-pressed={selected}
-                    aria-label={
-                      zoomsOut ? t("zoom.zoomOut") : t("zoom.selectDay", { day: day.label })
-                    }
-                    /* The bar itself is decoration, so the figures it stands for reach a pointer
-                       user as a tooltip and assistive technology as the button's description —
-                       neither of which disturbs the accessible name the day strip is navigated by. */
-                    title={t("week.capacity", {
-                      logged: formatMinutes(day.totalMinutes),
-                      target: formatMinutes(DAILY_SOFT_WARNING_MINUTES),
-                    })}
-                    className={cn(
-                      "rounded-[var(--radius-md)] border border-border bg-card px-3 py-2 text-center transition hover:border-accent/45 hover:bg-accent-soft",
-                      selected && "border-accent bg-accent-soft text-accent",
-                      day.state === "future" && "opacity-65",
-                    )}
-                    onClick={() =>
-                      zoomsOut
-                        ? setLevel(stepZoomLevel(level, "out", stops))
-                        : setSelectedDayIso(day.isoDate)
-                    }
-                  >
-                    <span className="block font-ui text-[10px] font-semibold uppercase tracking-[0.06em] text-muted-foreground">
-                      {day.shortLabel}
-                    </span>
-                    <span className="block text-base font-semibold">{day.dayNumber}</span>
-                    <CapacityBar minutes={day.totalMinutes} />
-                  </button>
-                );
-              })}
-            </m.div>
-
-            <div className="flex items-center gap-3 sm:justify-end">
-              <span className="font-ui text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
-                {t("labels.dayTotal")}
-              </span>
-              {/* No layout animation and no tween. §9: a rolling odometer on a figure that feeds a
-                  timesheet revision reads as imprecise, so the number simply swaps. */}
-              <span
-                className={cn(
-                  "text-[26px] font-semibold",
-                  dayTotalMinutes > DAILY_SOFT_WARNING_MINUTES ? "text-warning" : "text-foreground",
-                )}
-              >
-                {formatMinutes(dayTotalMinutes)}
-              </span>
+              <AnimatePresence mode="popLayout" initial={false} custom={move}>
+                <m.div
+                  key={viewKey}
+                  custom={move}
+                  variants={viewVariants}
+                  initial="enter"
+                  animate="center"
+                  exit="exit"
+                  className="min-w-0"
+                  data-view-key={viewKey}
+                  data-scope={scope}
+                  data-lens={scope === "week" ? lens : undefined}
+                >
+                  {children}
+                </m.div>
+              </AnimatePresence>
             </div>
+
+            <p aria-live="polite" className="sr-only">
+              {announcement}
+            </p>
           </div>
-
-          {/* Information, not a warning, so it reads as a line under the strip rather than as a
-              banner (§8). Absent at L4, where the declared projects are on screen and there is
-              nothing left to explain. */}
-          {handoff && !atMonth ? handoff : null}
-
-          {renderLevel(level)}
-
-          <p aria-live="polite" className="sr-only">
-            {announcement}
-          </p>
-        </div>
+        </LayoutGroup>
       </LazyMotion>
     </MotionConfig>
-  );
-}
-
-/**
- * How full a day is against the 8h soft target, drawn under its chip.
- *
- * `DAILY_SOFT_WARNING_MINUTES` is the implicit daily capacity (§17 decision 4) — the same number
- * the day view already warns against, so the bar and the warning can never disagree. Past the
- * target the bar fills and turns, rather than overflowing its track: the fact worth reading at a
- * glance is "over", not "over by how much".
- *
- * `scaleX`, not `width`, because §9's performance rule is transform and opacity only — a width
- * tween is a layout pass per frame, seven times over. `initial={false}` so the bars do not grow
- * from nothing when the page opens; they animate when a day's total actually changes.
- */
-function CapacityBar({ minutes }: { minutes: number }) {
-  const ratio = Math.min(1, Math.max(0, minutes / DAILY_SOFT_WARNING_MINUTES));
-  const over = minutes > DAILY_SOFT_WARNING_MINUTES;
-
-  return (
-    <span
-      aria-hidden="true"
-      className="mt-1.5 block h-1 overflow-hidden rounded-[var(--radius-pill)] bg-secondary"
-    >
-      <m.span
-        initial={false}
-        animate={{ scaleX: ratio }}
-        transition={barTransition}
-        className={cn(
-          "block h-full origin-left rounded-[var(--radius-pill)]",
-          over ? "bg-warning" : "bg-accent",
-        )}
-      />
-    </span>
   );
 }

@@ -8,6 +8,7 @@ import {
   dateValueToMonthValue,
   isDateValue,
   isMonthValue,
+  isoWeekNumber,
   monthValueToDateValue,
   parseDateValue,
   startOfUtcDay,
@@ -177,5 +178,24 @@ describe("clampDateValue", () => {
     expect(clampDateValue("2026-06-01", undefined, "2026-06-20")).toBe("2026-06-01");
     expect(clampDateValue("2026-06-30", "2026-06-10", undefined)).toBe("2026-06-30");
     expect(clampDateValue("2026-06-30")).toBe("2026-06-30");
+  });
+});
+
+describe("isoWeekNumber", () => {
+  it("counts the design doc's example week as ISO week 36", () => {
+    expect(isoWeekNumber("2026-08-31")).toBe(36);
+    expect(isoWeekNumber("2026-09-06")).toBe(36);
+  });
+
+  it("puts the first days of a year in the previous year's last week when ISO says so", () => {
+    // 2027-01-01 is a Friday: it belongs to week 53 of 2026.
+    expect(isoWeekNumber("2027-01-01")).toBe(53);
+    expect(isoWeekNumber("2027-01-04")).toBe(1);
+  });
+
+  it("starts week 1 on the Monday of the week holding January 4th", () => {
+    expect(isoWeekNumber("2025-12-29")).toBe(1);
+    expect(isoWeekNumber("2026-01-04")).toBe(1);
+    expect(isoWeekNumber("2026-01-05")).toBe(2);
   });
 });

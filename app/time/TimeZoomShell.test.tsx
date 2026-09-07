@@ -1,58 +1,10 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { NextIntlClientProvider } from "next-intl";
-import { afterAll, beforeEach, describe, expect, it, vi } from "vitest";
-
-import messages from "@/messages/en.json";
+import { createRef } from "react";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { TimeZoomShell, type TimeZoomDay } from "./TimeZoomShell";
-import { declaredOnlyZoomStops, zoomLevels, zoomStorageKey, type ZoomLevel } from "./zoom";
-
-/**
- * The axis keeps its state in the URL and writes it with `replaceState`, so the test needs both
- * halves of what Next provides: `useSearchParams` reading `window.location`, and a re-render when
- * a History write changes it. Faking only the read would make every assertion below pass against a
- * component that never updates.
- */
-const historyStore = vi.hoisted(() => {
-  const listeners = new Set<() => void>();
-
-  return {
-    subscribe(listener: () => void) {
-      listeners.add(listener);
-      return () => listeners.delete(listener);
-    },
-    notify() {
-      for (const listener of listeners) listener();
-    },
-  };
-});
-
-vi.mock("next/navigation", async () => {
-  const { useSyncExternalStore } = await import("react");
-
-  return {
-    useSearchParams: () =>
-      new URLSearchParams(
-        useSyncExternalStore(
-          historyStore.subscribe,
-          () => window.location.search,
-          () => "",
-        ),
-      ),
-  };
-});
-
-const nativeReplaceState = window.history.replaceState.bind(window.history);
-
-window.history.replaceState = (...args: Parameters<History["replaceState"]>) => {
-  nativeReplaceState(...args);
-  historyStore.notify();
-};
-
-afterAll(() => {
-  window.history.replaceState = nativeReplaceState;
-});
+import { ESCAPE_ZOOM_GRACE_MS, timeScopes, type TimeScope, type WeekLens } from "./zoom";
 
 const dayNames = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
 
@@ -76,323 +28,340 @@ const days: TimeZoomDay[] = [
   totalMinutes: [240, 480, 600, 0, 0, 0, 0][index],
 }));
 
-const onPreviousPeriod = vi.fn();
-const onNextPeriod = vi.fn();
-const onToday = vi.fn();
+const handlers = {
+  onScopeChange: vi.fn(),
+  onSelectDay: vi.fn(),
+  onPeriod: vi.fn(),
+  onToday: vi.fn(),
+  onToggleLens: vi.fn(),
+  onCompose: vi.fn(),
+  onTimer: vi.fn(),
+  onHelp: vi.fn(),
+};
 
 function renderShell(
-  renderLevel: (level: ZoomLevel) => React.ReactNode = showLevel,
-  stops: readonly ZoomLevel[] = zoomLevels,
+  overrides: Partial<{
+    scope: TimeScope;
+    lens: WeekLens;
+    stops: readonly TimeScope[];
+    toolbar: React.ReactNode;
+    children: React.ReactNode;
+    focusFallback: React.RefObject<HTMLElement | null>;
+  }> = {},
 ) {
+  const focusFallback = overrides.focusFallback ?? createRef<HTMLElement>();
+
   return render(
-    <NextIntlClientProvider locale="en" timeZone="UTC" messages={messages}>
-      <TimeZoomShell
-        days={days}
-        todayIso="2026-09-02"
-        dayTotalMinutes={480}
-        month={{ label: "September 2026", totalMinutes: 10_080 }}
-        stops={stops}
-        formatMinutes={(minutes) => `${minutes / 60} h`}
-        onPreviousPeriod={onPreviousPeriod}
-        onNextPeriod={onNextPeriod}
-        onToday={onToday}
-        renderLevel={renderLevel}
-      />
-    </NextIntlClientProvider>,
+    <TimeZoomShell
+      scope={overrides.scope ?? "week"}
+      lens={overrides.lens ?? "agenda"}
+      stops={overrides.stops ?? timeScopes}
+      days={days}
+      selectedDayIso="2026-09-02"
+      weekStart="2026-08-31"
+      viewKey={`${overrides.scope ?? "week"}:agenda:2026-08-31`}
+      move={null}
+      announcement="Week · Week 36 · 22 h"
+      toolbar={overrides.toolbar ?? <div data-testid="toolbar" />}
+      swipeEnabled
+      focusFallback={focusFallback}
+      formatMinutes={(minutes) => `${minutes / 60} h`}
+      ribbonLabels={{
+        group: "Days of this week",
+        selectDay: (day) => `Select ${day.label}`,
+        capacity: (day) => `${day.totalMinutes / 60} h of 8 h`,
+        over: "over 8 h",
+        locked: "Locked",
+        today: "Today",
+      }}
+      {...handlers}
+    >
+      {overrides.children ?? <div data-testid="content" />}
+    </TimeZoomShell>,
   );
 }
 
-function showLevel(level: ZoomLevel) {
-  return <span data-testid="level">{level}</span>;
-}
-
-function currentLevel() {
-  return screen.getByTestId("level").textContent;
-}
-
 beforeEach(() => {
-  nativeReplaceState(null, "", "/time");
-  window.localStorage.clear();
   vi.clearAllMocks();
 });
 
 describe("TimeZoomShell", () => {
-  it("opens on the week and marks today", () => {
-    renderShell();
+  it("renders the ribbon in the Day scope only, with one chip pressed", () => {
+    const { rerender, unmount } = renderShell({ scope: "week" });
 
-    expect(currentLevel()).toBe("week");
+    expect(screen.queryByRole("group", { name: "Days of this week" })).not.toBeInTheDocument();
+    unmount();
+    void rerender;
+
+    renderShell({ scope: "day" });
+
+    const ribbon = screen.getByRole("group", { name: "Days of this week" });
+    expect(ribbon).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Select Wednesday" })).toHaveAttribute(
       "aria-pressed",
       "true",
     );
+    expect(screen.getAllByRole("button", { pressed: true })).toHaveLength(1);
   });
 
-  it("opens on the level and day named by the URL", () => {
-    nativeReplaceState(null, "", "/time?zoom=grid&day=2026-09-04");
-    renderShell();
-
-    expect(currentLevel()).toBe("grid");
-    expect(screen.getByRole("button", { name: "Select Friday" })).toHaveAttribute(
-      "aria-pressed",
-      "true",
-    );
-  });
-
-  it("opens on the remembered level when the URL names none", async () => {
-    window.localStorage.setItem(zoomStorageKey, "day");
-    renderShell();
-
-    await waitFor(() => expect(currentLevel()).toBe("day"));
-  });
-
-  it("lets an explicit level in the URL outrank the remembered one", () => {
-    window.localStorage.setItem(zoomStorageKey, "day");
-    nativeReplaceState(null, "", "/time?zoom=grid");
-    renderShell();
-
-    expect(currentLevel()).toBe("grid");
-  });
-
-  it("writes the level to the URL and remembers it", async () => {
+  it("reports a chip press as a day selection", async () => {
     const user = userEvent.setup();
-    renderShell();
-
-    await user.keyboard("3");
-
-    expect(currentLevel()).toBe("grid");
-    expect(new URLSearchParams(window.location.search).get("zoom")).toBe("grid");
-    expect(window.localStorage.getItem(zoomStorageKey)).toBe("grid");
-  });
-
-  it("keeps the selected day across a level change, in both directions", async () => {
-    const user = userEvent.setup();
-    renderShell();
+    renderShell({ scope: "day" });
 
     await user.click(screen.getByRole("button", { name: "Select Friday" }));
-    await user.keyboard("1");
-    expect(currentLevel()).toBe("day");
 
-    await user.keyboard("3");
-    expect(currentLevel()).toBe("grid");
-    expect(screen.getByRole("button", { name: "Select Friday" })).toHaveAttribute(
-      "aria-pressed",
-      "true",
+    expect(handlers.onSelectDay).toHaveBeenCalledWith("2026-09-04");
+  });
+
+  it("measures each chip against the 8h soft target and marks the day over it", () => {
+    renderShell({ scope: "day" });
+
+    // The bar is decoration; the figures reach the user through the chip's own description.
+    expect(screen.getByRole("button", { name: "Select Monday" })).toHaveAttribute(
+      "title",
+      "4 h of 8 h",
     );
-  });
-
-  it("keeps the day strip mounted across a level change", async () => {
-    const user = userEvent.setup();
-    renderShell();
-
-    const wednesday = screen.getByRole("button", { name: "Select Wednesday" });
-    await user.keyboard("3");
-
-    expect(currentLevel()).toBe("grid");
-    expect(screen.getByRole("button", { name: "Select Wednesday" })).toBe(wednesday);
-  });
-
-  it("zooms out when the day you are already on is pressed at the day level", async () => {
-    const user = userEvent.setup();
-    nativeReplaceState(null, "", "/time?zoom=day");
-    renderShell();
-
-    await user.click(screen.getByRole("button", { name: "Back out to the week" }));
-
-    expect(currentLevel()).toBe("week");
-  });
-
-  it("moves focus to the day chip when the level change takes the focused element with it", async () => {
-    const user = userEvent.setup();
-    renderShell((level) => (
-      <div>
-        <span data-testid="level">{level}</span>
-        {level === "week" ? <button type="button">Wednesday column</button> : null}
-      </div>
-    ));
-
-    screen.getByRole("button", { name: "Wednesday column" }).focus();
-    await user.keyboard("1");
-
-    expect(currentLevel()).toBe("day");
-    expect(document.activeElement).toBe(
-      screen.getByRole("button", { name: "Back out to the week" }),
-    );
-  });
-
-  it("leaves focus alone when it survived the level change", async () => {
-    const user = userEvent.setup();
-    renderShell((level) => (
-      <div>
-        <span data-testid="level">{level}</span>
-        <button type="button">Add entry</button>
-      </div>
-    ));
-
-    const addEntry = screen.getByRole("button", { name: "Add entry" });
-    addEntry.focus();
-    await user.keyboard("3");
-
-    expect(currentLevel()).toBe("grid");
-    expect(document.activeElement).toBe(addEntry);
-  });
-
-  describe("motion and capacity", () => {
-    it("announces the level, its span and its total on a level change", async () => {
-      const user = userEvent.setup();
-      const { container } = renderShell();
-
-      const live = container.querySelector('[aria-live="polite"]');
-
-      // 240 + 480 + 600 across the week; the selected day is Wednesday's 600.
-      expect(live).toHaveTextContent("Week · 7 days · 22 h");
-
-      await user.keyboard("1");
-      expect(live).toHaveTextContent("Day · 1 day · 8 h");
-
-      await user.keyboard("3");
-      expect(live).toHaveTextContent("Grid · 7 days · 22 h");
-
-      // L4 covers thirty days, not seven, so it names the month instead of counting days.
-      await user.keyboard("4");
-      expect(live).toHaveTextContent("Month · September 2026 · 168 h");
-    });
-
-    it("keeps the live region out of the accessible name of the day strip", () => {
-      const { container } = renderShell();
-
-      expect(container.querySelector('[aria-live="polite"]')).toHaveClass("sr-only");
-      expect(screen.getByRole("button", { name: "Select Wednesday" })).toBeInTheDocument();
-    });
-
-    it("measures each day chip against the 8h soft target", () => {
-      renderShell();
-
-      // The bar is decoration; the figures reach the user through the chip's own description.
-      expect(screen.getByRole("button", { name: "Select Monday" })).toHaveAttribute(
-        "title",
-        "4 h of 8 h",
-      );
-      expect(screen.getByRole("button", { name: "Select Thursday" })).toHaveAttribute(
-        "title",
-        "0 h of 8 h",
-      );
-    });
-
-    it("caps a bar at the target rather than overflowing its track", () => {
-      renderShell();
-
-      const overTarget = screen
-        .getByRole("button", { name: "Select Wednesday" })
-        .querySelector("span > span");
-      const underTarget = screen
-        .getByRole("button", { name: "Select Monday" })
-        .querySelector("span > span");
-
-      // Wednesday logs 10h against an 8h target: full, and turned, but not 125% wide.
-      expect(overTarget).toHaveClass("bg-warning");
-      expect(underTarget).toHaveClass("bg-accent");
-    });
-  });
-
-  describe("the month level", () => {
-    it("keeps the day strip mounted and operable, de-emphasised", async () => {
-      const user = userEvent.setup();
-      renderShell();
-
-      const wednesday = screen.getByRole("button", { name: "Select Wednesday" });
-      await user.keyboard("4");
-
-      expect(currentLevel()).toBe("month");
-      // Continuity item 2: the same element, not a re-render of an equivalent one.
-      expect(screen.getByRole("button", { name: "Select Wednesday" })).toBe(wednesday);
-      expect(
-        screen.getByRole("group", { name: "Days of the week you return to" }),
-      ).toContainElement(wednesday);
-
-      // Picking the day is how the month is picked (§11), so the chips still have to work.
-      await user.click(screen.getByRole("button", { name: "Select Monday" }));
-      expect(new URLSearchParams(window.location.search).get("day")).toBe("2026-08-31");
-      expect(currentLevel()).toBe("month");
-    });
-
-    it("keeps the persistent day total on screen", async () => {
-      const user = userEvent.setup();
-      renderShell();
-
-      const total = screen.getByText("8 h");
-      await user.keyboard("4");
-
-      expect(screen.getByText("8 h")).toBe(total);
-    });
+    expect(
+      screen.getByRole("button", { name: "Select Wednesday" }).querySelector('[role="img"]'),
+    ).toHaveAttribute("aria-label", "over 8 h");
   });
 
   describe("keyboard", () => {
-    it("jumps and steps between levels", async () => {
+    it("jumps and steps between scopes", async () => {
       const user = userEvent.setup();
-      renderShell();
+      renderShell({ scope: "week" });
 
       await user.keyboard("1");
-      expect(currentLevel()).toBe("day");
-
-      await user.keyboard("-");
-      expect(currentLevel()).toBe("week");
+      expect(handlers.onScopeChange).toHaveBeenLastCalledWith("day");
 
       await user.keyboard("3");
-      expect(currentLevel()).toBe("grid");
+      expect(handlers.onScopeChange).toHaveBeenLastCalledWith("month");
+
+      await user.keyboard("-");
+      expect(handlers.onScopeChange).toHaveBeenLastCalledWith("month");
 
       await user.keyboard("+");
-      expect(currentLevel()).toBe("week");
-
-      await user.keyboard("4");
-      expect(currentLevel()).toBe("month");
-
-      await user.keyboard("+");
-      expect(currentLevel()).toBe("grid");
+      expect(handlers.onScopeChange).toHaveBeenLastCalledWith("day");
     });
 
-    it("moves the period and goes to today", async () => {
+    it("moves the period with J and K and the brackets, and jumps to today", async () => {
       const user = userEvent.setup();
       renderShell();
 
+      await user.keyboard("k");
+      await user.keyboard("j");
       // `[` opens a key-code descriptor in userEvent's keyboard syntax; doubling escapes it.
       await user.keyboard("[[");
       await user.keyboard("]");
       await user.keyboard("t");
 
-      expect(onPreviousPeriod).toHaveBeenCalledTimes(1);
-      expect(onNextPeriod).toHaveBeenCalledTimes(1);
-      expect(onToday).toHaveBeenCalledTimes(1);
+      expect(handlers.onPeriod.mock.calls).toEqual([
+        ["previous"],
+        ["next"],
+        ["previous"],
+        ["next"],
+      ]);
+      expect(handlers.onToday).toHaveBeenCalledTimes(1);
     });
 
-    it("cannot reach a level the member does not have", async () => {
+    it("hands the lens, the composer, the timer and the sheet to the screen", async () => {
       const user = userEvent.setup();
-      nativeReplaceState(null, "", "/time?zoom=week");
-      renderShell(showLevel, declaredOnlyZoomStops);
+      renderShell();
 
-      // Forced onto the month by the clamp, and no digit or step can leave it.
-      expect(currentLevel()).toBe("month");
+      await user.keyboard("g");
+      await user.keyboard("n");
+      await user.keyboard("s");
+      await user.keyboard("?");
+
+      expect(handlers.onToggleLens).toHaveBeenCalledTimes(1);
+      expect(handlers.onCompose).toHaveBeenCalledTimes(1);
+      expect(handlers.onTimer).toHaveBeenCalledTimes(1);
+      expect(handlers.onHelp).toHaveBeenCalledTimes(1);
+    });
+
+    it("zooms out one step on Escape when nothing is open, and not at the widest scope", async () => {
+      const user = userEvent.setup();
+      const first = renderShell({ scope: "day" });
+
+      await user.keyboard("{Escape}");
+      expect(handlers.onScopeChange).toHaveBeenLastCalledWith("week");
+      first.unmount();
+
+      vi.clearAllMocks();
+      renderShell({ scope: "month" });
+      await user.keyboard("{Escape}");
+      expect(handlers.onScopeChange).not.toHaveBeenCalled();
+    });
+
+    it("leaves Escape to an open overlay, and ignores the reflex press right after it closes", async () => {
+      let now = 1_000_000;
+      const clock = vi.spyOn(Date, "now").mockImplementation(() => now);
+      const user = userEvent.setup();
+
+      // The page's dialogs portal to `body`, beside the shell rather than inside its animated view.
+      function Page({ dialogOpen }: { dialogOpen: boolean }) {
+        return (
+          <div>
+            {dialogOpen ? <div role="dialog">open</div> : null}
+            <TimeZoomShell
+              scope="day"
+              lens="agenda"
+              stops={timeScopes}
+              days={days}
+              selectedDayIso="2026-09-02"
+              weekStart="2026-08-31"
+              viewKey="day:-:2026-09-02"
+              move={null}
+              announcement=""
+              toolbar={null}
+              swipeEnabled
+              focusFallback={createRef<HTMLElement>()}
+              formatMinutes={(minutes) => `${minutes / 60} h`}
+              ribbonLabels={{
+                group: "Days of this week",
+                selectDay: (day) => `Select ${day.label}`,
+                capacity: () => "",
+                over: "over 8 h",
+                locked: "Locked",
+                today: "Today",
+              }}
+              {...handlers}
+            >
+              <div>content</div>
+            </TimeZoomShell>
+          </div>
+        );
+      }
+
+      const { rerender } = render(<Page dialogOpen />);
+
+      await user.keyboard("{Escape}");
+      expect(handlers.onScopeChange).not.toHaveBeenCalled();
+
+      // The overlay closes; a second Escape inside the grace window is still swallowed.
+      rerender(<Page dialogOpen={false} />);
+      await user.keyboard("{Escape}");
+      expect(handlers.onScopeChange).not.toHaveBeenCalled();
+
+      now += ESCAPE_ZOOM_GRACE_MS + 1;
+      await user.keyboard("{Escape}");
+      expect(handlers.onScopeChange).toHaveBeenLastCalledWith("week");
+      clock.mockRestore();
+    });
+
+    it("cannot reach a scope the member does not have", async () => {
+      const user = userEvent.setup();
+      renderShell({ scope: "month", stops: ["month"] });
 
       await user.keyboard("2");
-      expect(currentLevel()).toBe("month");
-
       await user.keyboard("+");
-      expect(currentLevel()).toBe("month");
+      expect(handlers.onScopeChange).not.toHaveBeenCalled();
     });
 
     it("stays out of the way while a field has the keystroke", async () => {
       const user = userEvent.setup();
-      renderShell((level) => (
-        <div>
-          <span data-testid="level">{level}</span>
-          <input aria-label="Hours" />
-        </div>
-      ));
+      renderShell({ children: <input aria-label="Hours" /> });
 
       await user.click(screen.getByRole("textbox", { name: "Hours" }));
       await user.keyboard("3");
 
-      expect(currentLevel()).toBe("week");
+      expect(handlers.onScopeChange).not.toHaveBeenCalled();
       expect(screen.getByRole("textbox", { name: "Hours" })).toHaveValue("3");
+    });
+  });
+
+  describe("continuity", () => {
+    it("moves focus to the fallback when the scope change took the focused element with it", () => {
+      const focusFallback = createRef<HTMLElement>();
+      const { rerender } = render(
+        <div>
+          <button
+            ref={(node) => {
+              focusFallback.current = node;
+            }}
+            type="button"
+          >
+            Period
+          </button>
+          <TimeZoomShell
+            scope="week"
+            lens="agenda"
+            stops={timeScopes}
+            days={days}
+            selectedDayIso="2026-09-02"
+            weekStart="2026-08-31"
+            viewKey="week:agenda:2026-08-31"
+            move={null}
+            announcement=""
+            toolbar={null}
+            swipeEnabled
+            focusFallback={focusFallback}
+            formatMinutes={() => ""}
+            ribbonLabels={{
+              group: "Days of this week",
+              selectDay: (day) => `Select ${day.label}`,
+              capacity: () => "",
+              over: "",
+              locked: "",
+              today: "",
+            }}
+            {...handlers}
+          >
+            <button type="button">Wednesday column</button>
+          </TimeZoomShell>
+        </div>,
+      );
+
+      screen.getByRole("button", { name: "Wednesday column" }).focus();
+
+      rerender(
+        <div>
+          <button
+            ref={(node) => {
+              focusFallback.current = node;
+            }}
+            type="button"
+          >
+            Period
+          </button>
+          <TimeZoomShell
+            scope="day"
+            lens="agenda"
+            stops={timeScopes}
+            days={days}
+            selectedDayIso="2026-09-02"
+            weekStart="2026-08-31"
+            viewKey="day:-:2026-09-02"
+            move={null}
+            announcement=""
+            toolbar={null}
+            swipeEnabled
+            focusFallback={focusFallback}
+            formatMinutes={() => ""}
+            ribbonLabels={{
+              group: "Days of this week",
+              selectDay: (day) => `Select ${day.label}`,
+              capacity: () => "",
+              over: "",
+              locked: "",
+              today: "",
+            }}
+            {...handlers}
+          >
+            <div>day</div>
+          </TimeZoomShell>
+        </div>,
+      );
+
+      expect(document.activeElement).toBe(screen.getByRole("button", { name: "Period" }));
+    });
+
+    it("announces the view politely, outside any accessible name", () => {
+      const { container } = renderShell();
+
+      const live = container.querySelector('[aria-live="polite"]');
+      expect(live).toHaveTextContent("Week · Week 36 · 22 h");
+      expect(live).toHaveClass("sr-only");
     });
   });
 });

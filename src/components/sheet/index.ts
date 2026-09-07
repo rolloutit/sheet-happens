@@ -37,7 +37,30 @@ export type {
   DayAgendaEntry,
   DayAgendaLabels,
   DayAgendaProps,
+  DayAgendaRunningTimer,
+  DayAgendaSplit,
 } from "./DayAgenda";
+export { CapacityBar, DayColumnHeader, dayColumnHeaderVariants } from "./DayColumnHeader";
+export type {
+  CapacityBarProps,
+  DayColumnHeaderDay,
+  DayColumnHeaderDayState,
+  DayColumnHeaderLabels,
+  DayColumnHeaderProps,
+  DayColumnHeaderVariant,
+} from "./DayColumnHeader";
+export { DayRibbon } from "./DayRibbon";
+export type { DayRibbonLabels, DayRibbonOrientation, DayRibbonProps } from "./DayRibbon";
+export { EntryCard, entryCardVariants, RunningEntryCard } from "./EntryCard";
+export type {
+  EntryCardDensity,
+  EntryCardEntry,
+  EntryCardLabels,
+  EntryCardProps,
+  EntryHighlight,
+  RunningEntryCardLabels,
+  RunningEntryCardProps,
+} from "./EntryCard";
 export {
   DeclaredHoursRow,
   declaredHoursRowVariants,
@@ -80,6 +103,21 @@ export { ManagementViews } from "./ManagementViews";
 export type { ManagementView, ManagementViewsProps } from "./ManagementViews";
 export { MarkdownArticle } from "./MarkdownArticle";
 export type { MarkdownArticleProps } from "./MarkdownArticle";
+export {
+  buildHeatWeeks,
+  countWorkdays,
+  heatCellVariants,
+  heatStep,
+  MonthHeatNavigator,
+} from "./MonthHeatNavigator";
+export type {
+  HeatDay,
+  HeatDayState,
+  HeatDayTotal,
+  HeatWeek,
+  MonthHeatNavigatorLabels,
+  MonthHeatNavigatorProps,
+} from "./MonthHeatNavigator";
 export { MonthOverview, monthOverviewRowVariants } from "./MonthOverview";
 export type {
   MonthOverviewDeclaredProject,
@@ -245,13 +283,44 @@ export { TotpSetupDialog } from "./TotpSetupDialog";
 export type { TotpSetupDialogProps } from "./TotpSetupDialog";
 export { TweaksPanel } from "./TweaksPanel";
 export type { TweaksPanelProps } from "./TweaksPanel";
-export { WeekAgenda, weekAgendaColumnVariants, weekAgendaHeaderVariants } from "./WeekAgenda";
+export { PeriodNavigator } from "./PeriodNavigator";
+export type {
+  PeriodNavigatorLabels,
+  PeriodNavigatorProps,
+  PeriodNavigatorShortcuts,
+} from "./PeriodNavigator";
+export { PeriodTotal } from "./PeriodTotal";
+export type { PeriodTotalProps, PeriodTotalStatus, PeriodTotalStatusTone } from "./PeriodTotal";
+export { QuickEntryComposer } from "./QuickEntryComposer";
+export type {
+  QuickEntryComposerLabels,
+  QuickEntryComposerProject,
+  QuickEntryComposerProps,
+  QuickEntryComposerValue,
+} from "./QuickEntryComposer";
+export { ShortcutSheet } from "./ShortcutSheet";
+export type {
+  ShortcutGroup,
+  ShortcutRow,
+  ShortcutSheetLabels,
+  ShortcutSheetProps,
+} from "./ShortcutSheet";
+export { ShortcutChip, TimeScopeBar } from "./TimeScopeBar";
+export type {
+  TimeScopeBarLabels,
+  TimeScopeBarOption,
+  TimeScopeBarProps,
+  TimeScopeBarShortcuts,
+} from "./TimeScopeBar";
+export { WeekAgenda, weekAgendaColumnVariants } from "./WeekAgenda";
 export type {
   WeekAgendaDay,
   WeekAgendaDayState,
   WeekAgendaEntry,
   WeekAgendaLabels,
+  WeekAgendaLayout,
   WeekAgendaProps,
+  WeekAgendaRunningTimer,
 } from "./WeekAgenda";
 export { WeeklyTimeGrid } from "./WeeklyTimeGrid";
 export type {

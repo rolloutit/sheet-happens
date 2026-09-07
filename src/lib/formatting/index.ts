@@ -1,6 +1,8 @@
 export {
   formatDateLabel,
+  formatDateRangeLabel,
   formatDateTime,
+  formatDayHeading,
   formatMonthLabel,
   formatMonthName,
   formatPeriodRange,

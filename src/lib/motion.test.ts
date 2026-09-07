@@ -1,14 +1,22 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  DISTANCE_STEP,
   DURATION_LEVEL,
+  DURATION_SETTLE,
+  DURATION_STEP,
   EASE_STANDARD,
+  SCALE_ZOOM_IN,
+  SCALE_ZOOM_OUT,
   STAGGER_CAP,
   STAGGER_ENTRY,
   dayLayoutId,
   entryEnterTransition,
   entryLayoutId,
   entryStaggerDelay,
+  settleVariants,
+  springThumb,
+  viewVariants,
 } from "./motion";
 
 describe("motion tokens", () => {
@@ -19,8 +27,62 @@ describe("motion tokens", () => {
    */
   it("mirrors the CSS token table in seconds", () => {
     expect(DURATION_LEVEL * 1000).toBe(260);
-    expect(STAGGER_ENTRY * 1000).toBe(18);
+    expect(DURATION_STEP * 1000).toBe(200);
+    expect(DURATION_SETTLE * 1000).toBe(180);
+    expect(DISTANCE_STEP).toBe(24);
+    expect(SCALE_ZOOM_IN).toBe(0.96);
+    expect(SCALE_ZOOM_OUT).toBe(1.04);
+    expect(STAGGER_ENTRY * 1000).toBe(24);
     expect(EASE_STANDARD).toEqual([0.2, 0.7, 0.2, 1]);
+    expect(springThumb).toEqual({ type: "spring", stiffness: 520, damping: 42, mass: 0.8 });
+  });
+
+  it("keeps every move under 300ms", () => {
+    for (const duration of [DURATION_LEVEL, DURATION_STEP, DURATION_SETTLE]) {
+      expect(duration).toBeLessThan(0.3);
+    }
+  });
+});
+
+describe("viewVariants", () => {
+  it("slides a step in from the side it came from and out the other way", () => {
+    expect(viewVariants.enter({ kind: "step", direction: 1 })).toEqual({
+      opacity: 0,
+      x: DISTANCE_STEP,
+    });
+    expect(viewVariants.exit({ kind: "step", direction: 1 })).toMatchObject({
+      opacity: 0,
+      x: -DISTANCE_STEP,
+    });
+    expect(viewVariants.enter({ kind: "jump", direction: -1 })).toEqual({
+      opacity: 0,
+      x: -DISTANCE_STEP,
+    });
+  });
+
+  it("scales a zoom in from smaller and a zoom out from larger", () => {
+    expect(viewVariants.enter({ kind: "zoom", direction: "in" })).toEqual({
+      opacity: 0,
+      scale: SCALE_ZOOM_IN,
+    });
+    expect(viewVariants.enter({ kind: "zoom", direction: "out" })).toEqual({
+      opacity: 0,
+      scale: SCALE_ZOOM_OUT,
+    });
+  });
+
+  it("crossfades a re-lens and anything it was not told about", () => {
+    expect(viewVariants.enter({ kind: "lens" })).toEqual({ opacity: 0, y: 4 });
+    expect(viewVariants.enter(undefined)).toEqual({ opacity: 0 });
+    expect(viewVariants.exit({ kind: "lens" })).toMatchObject({ opacity: 0 });
+  });
+});
+
+describe("settleVariants", () => {
+  it("enters from below when the figure went up and from above when it went down", () => {
+    expect(settleVariants.enter(1)).toEqual({ opacity: 0, y: 6 });
+    expect(settleVariants.enter(-1)).toEqual({ opacity: 0, y: -6 });
+    expect(settleVariants.enter(0)).toEqual({ opacity: 0, y: 0 });
   });
 });
 
@@ -31,7 +93,7 @@ describe("entryStaggerDelay", () => {
     expect(entryStaggerDelay(7)).toBeCloseTo(7 * STAGGER_ENTRY);
   });
 
-  /** §9's arithmetic: 40 cards at 18ms each would be 720ms of drizzle. */
+  /** The arithmetic: 40 cards at 24ms each would be 960ms of drizzle. */
   it("holds every card past the cap at the cap, so a dense column cannot drizzle", () => {
     const capped = entryStaggerDelay(STAGGER_CAP - 1);
 

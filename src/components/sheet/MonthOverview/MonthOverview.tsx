@@ -54,6 +54,7 @@ export function MonthOverview({
   labels,
   disabled = false,
   animateRows = false,
+  navigator,
   className,
   onZoomToProject,
   onSaveDeclaration,
@@ -67,6 +68,12 @@ export function MonthOverview({
 
   return (
     <div className={cn("grid gap-4", className)}>
+      {navigator ? (
+        <section className="rounded-[var(--radius-lg)] border border-border bg-card p-4">
+          {navigator}
+        </section>
+      ) : null}
+
       {declaredOnly ? null : (
         <section className="overflow-hidden rounded-[var(--radius-lg)] border border-border bg-card">
           <h2 className="border-b border-border bg-card/95 px-4 py-2.5 font-ui text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">

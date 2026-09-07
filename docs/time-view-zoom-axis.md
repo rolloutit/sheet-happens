@@ -368,6 +368,10 @@ transition**. The animation only makes the survival legible.
 2. **The day strip is persistent chrome.** It renders at all four levels and never unmounts. At L4 it
    is de-emphasised and reads as _"the week you will return to"_ — which is also what makes zooming
    back in from the month deterministic.
+   _Superseded by `docs/time-view-redesign.md` §5.4:_ the strip left the desktop Week scope, where
+   the seven column headers already say everything it said, and became the Day scope's ribbon.
+   What survives is stronger — the headers, chips and heat cells share one `layoutId`, so the day
+   visibly goes somewhere — and the week you return to is the heat navigator's tinted row.
 3. **Totals never remount.** Week total, day total and month total keep their DOM element across
    levels. The _number_ may change; the element does not move or fade.
 4. **Focus survives.** If focus is on Thursday's chip, a level change leaves it there. A level change

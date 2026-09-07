@@ -55,10 +55,26 @@ export type MonthOverviewDeclaration = {
   proof: MonthOverviewDeclarationProof | null;
 };
 
+/**
+ * One day's tracked total, for the heat navigator (§4.4 of `docs/time-view-redesign.md`). Only
+ * days with something logged appear; the client lays the month out and fills the gaps.
+ */
+export type MonthOverviewDayTotal = {
+  isoDate: string;
+  minutes: number;
+  entryCount: number;
+};
+
 export type MemberMonthOverview = {
   /** The first of the month, `YYYY-MM-DD`. The month is named on the client, in the user's locale. */
   monthStart: string;
   monthEnd: string;
+  /**
+   * Tracked minutes per day, for the days that have any. The one aggregate the redesign added to
+   * the month payload: a `groupBy` over the same rows as {@link trackedMinutes}, so a day's cell and
+   * the month total can never disagree about what was logged.
+   */
+  days: MonthOverviewDayTotal[];
   /** Hours tracked in Sheet Happens. Summed from the database, not from {@link tracked}. */
   trackedMinutes: number;
   /** Hours declared for another company's system. */
@@ -111,6 +127,8 @@ export type BuildMonthOverviewInput = {
   assignments: readonly MonthOverviewAssignment[];
   /** Tracked minutes per project id, already summed. Declared entries are excluded upstream. */
   trackedMinutesByProjectId: ReadonlyMap<string, number>;
+  /** Tracked minutes per day, already summed over the same rows. */
+  dayTotals?: readonly MonthOverviewDayTotal[];
   declarations: readonly MonthOverviewDeclarationRow[];
 };
 
@@ -195,6 +213,7 @@ export function buildMonthOverview(input: BuildMonthOverviewInput): MemberMonthO
   return {
     monthStart: input.monthStart,
     monthEnd: input.monthEnd,
+    days: [...(input.dayTotals ?? [])].sort((a, b) => a.isoDate.localeCompare(b.isoDate)),
     trackedMinutes,
     declaredMinutes,
     totalMinutes: trackedMinutes + declaredMinutes,
@@ -221,7 +240,7 @@ export async function getMemberMonthOverview(input: {
   const monthStart = getMonthStart(input.monthStart);
   const monthEnd = getMonthEnd(monthStart);
 
-  const [assignments, trackedSums, declarations] = await Promise.all([
+  const [assignments, trackedSums, daySums, declarations] = await Promise.all([
     /* No `active: true` and no project-status filter, unlike the week's assignment query. An
        assignment deactivated or a project archived after the fact leaves its entries behind, and
        those hours are still part of the month; whether it is *live* is decided in the pure core,
@@ -276,6 +295,28 @@ export async function getMemberMonthOverview(input: {
       },
       _sum: {
         durationMinutes: true,
+      },
+    }),
+    /* The same rows again, grouped by day rather than by project: the heat navigator's cells. One
+       extra indexed aggregate per month, and the only new query the redesign needed. */
+    prisma.timeEntry.groupBy({
+      by: ["localDate"],
+      where: {
+        memberId: input.memberId,
+        deletedAt: null,
+        source: {
+          not: "DECLARED",
+        },
+        localDate: {
+          gte: monthStart,
+          lte: monthEnd,
+        },
+      },
+      _sum: {
+        durationMinutes: true,
+      },
+      _count: {
+        _all: true,
       },
     }),
     prisma.monthlyHourDeclaration.findMany({
@@ -336,6 +377,11 @@ export async function getMemberMonthOverview(input: {
     trackedMinutesByProjectId: new Map(
       trackedSums.map((row) => [row.projectId, row._sum.durationMinutes ?? 0]),
     ),
+    dayTotals: daySums.map((row) => ({
+      isoDate: formatDateOnly(row.localDate),
+      minutes: row._sum.durationMinutes ?? 0,
+      entryCount: row._count._all,
+    })),
     declarations: declarations.map((declaration) => ({
       projectId: declaration.projectId,
       assignmentId: declaration.projectAssignmentId,

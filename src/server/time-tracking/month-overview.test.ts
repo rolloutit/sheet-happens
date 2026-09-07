@@ -50,6 +50,7 @@ function declaration(
 function build(input: {
   assignments?: MonthOverviewAssignment[];
   minutes?: Record<string, number>;
+  dayTotals?: { isoDate: string; minutes: number; entryCount: number }[];
   declarations?: MonthOverviewDeclarationRow[];
 }) {
   return buildMonthOverview({
@@ -57,6 +58,7 @@ function build(input: {
     monthEnd: MONTH_END,
     assignments: input.assignments ?? [],
     trackedMinutesByProjectId: new Map(Object.entries(input.minutes ?? {})),
+    dayTotals: input.dayTotals,
     declarations: input.declarations ?? [],
   });
 }
@@ -257,5 +259,23 @@ describe("buildMonthOverview", () => {
     const month = build({});
 
     expect(month).toMatchObject({ monthStart: MONTH_START, monthEnd: MONTH_END });
+  });
+
+  it("carries the per-day totals through in date order, for the heat navigator", () => {
+    const month = build({
+      dayTotals: [
+        { isoDate: "2026-09-03", minutes: 480, entryCount: 2 },
+        { isoDate: "2026-09-01", minutes: 120, entryCount: 1 },
+      ],
+    });
+
+    expect(month.days).toEqual([
+      { isoDate: "2026-09-01", minutes: 120, entryCount: 1 },
+      { isoDate: "2026-09-03", minutes: 480, entryCount: 2 },
+    ]);
+  });
+
+  it("has no days when nothing was logged", () => {
+    expect(build({}).days).toEqual([]);
   });
 });

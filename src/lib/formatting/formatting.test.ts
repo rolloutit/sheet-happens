@@ -3,7 +3,9 @@ import { describe, expect, it } from "vitest";
 import {
   formatCount,
   formatDateLabel,
+  formatDateRangeLabel,
   formatDateTime,
+  formatDayHeading,
   formatDecimalHours,
   formatHours,
   formatHoursWithUnit,
@@ -242,5 +244,22 @@ describe("formatList", () => {
 
   it("returns nothing for an empty list, so the caller can fall back", () => {
     expect(formatList([], "en")).toBe("");
+  });
+});
+
+describe("period headers", () => {
+  it("renders a week range as one period, the locale placing the year, in plain spaces", () => {
+    // Node's ICU would set the dash in thin spaces; the label normalises them so the server render
+    // and the browser's hydration agree.
+    expect(formatDateRangeLabel("2026-08-31", "2026-09-06", "en")).toBe("Aug 31 – Sep 6, 2026");
+    expect(formatDateRangeLabel("2026-08-31", "2026-09-06", "hu")).toBe(
+      "2026. aug. 31. – szept. 6.",
+    );
+    expect(formatDateRangeLabel("2026-08-31", "2026-09-06", "en")).not.toMatch(/[\u2009\u202f]/);
+  });
+
+  it("names a day the way the period header does", () => {
+    expect(formatDayHeading("2026-08-31", "en")).toBe("Monday, Aug 31, 2026");
+    expect(formatDayHeading("2026-08-31", "hu")).toBe("2026. aug. 31., hétfő");
   });
 });

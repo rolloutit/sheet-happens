@@ -7,13 +7,28 @@ import type { WeekAgendaDay, WeekAgendaEntry, WeekAgendaLabels } from "./WeekAge
 import { WeekAgenda } from ".";
 
 const labels: WeekAgendaLabels = {
-  openDay: (day) => `Open ${day.label}`,
+  openDay: (day) => `Open ${day.label}, ${day.dayNumber}`,
   expandDay: (day) => `Show ${day.label}`,
+  capacity: (day) => `${day.totalMinutes / 60} h of 8 h`,
+  over: "over 8 h",
+  locked: "Locked",
+  today: "Today",
   columnEmpty: "Nothing logged",
+  copyYesterday: "Copy yesterday",
   addEntry: (day) => `Add entry on ${day.label}`,
-  editEntry: (entry) => `Edit ${entry.description}`,
-  deleteEntry: (entry) => `Delete ${entry.description}`,
-  adminModified: "Changed by an administrator",
+  emptyWeekTitle: "Nothing logged this week",
+  emptyWeekDescription: "Add an entry, or bring last week over.",
+  addEntryPlain: "Add entry",
+  duplicateLastWeek: "Duplicate last week",
+  card: {
+    edit: (entry) => `Edit ${entry.description}`,
+    delete: (entry) => `Delete ${entry.description}`,
+    continue: (entry) => `Continue ${entry.description}`,
+    adminModified: "Changed by an administrator",
+    timed: "Tracked with a timer",
+    locked: "Locked by a submitted timesheet",
+  },
+  timer: { live: "Running now", stop: "Stop timer" },
 };
 
 function entry(overrides: Partial<WeekAgendaEntry> = {}): WeekAgendaEntry {
@@ -25,9 +40,10 @@ function entry(overrides: Partial<WeekAgendaEntry> = {}): WeekAgendaEntry {
     durationMinutes: 150,
     startTime: null,
     endTime: null,
+    timed: false,
     locked: false,
-    warnings: [],
     adminModified: false,
+    warnings: [],
     ...overrides,
   };
 }
@@ -45,7 +61,10 @@ const isoDates = [
   "2026-09-06",
 ];
 
-function buildDays(entriesByIndex: Record<number, WeekAgendaEntry[]> = {}): WeekAgendaDay[] {
+function buildDays(
+  entriesByIndex: Record<number, WeekAgendaEntry[]> = {},
+  overrides: Partial<WeekAgendaDay> = {},
+): WeekAgendaDay[] {
   return isoDates.map((isoDate, index) => {
     const entries = entriesByIndex[index] ?? [];
 
@@ -58,23 +77,32 @@ function buildDays(entriesByIndex: Record<number, WeekAgendaEntry[]> = {}): Week
       locked: false,
       totalMinutes: entries.reduce((sum, item) => sum + item.durationMinutes, 0),
       entries,
+      canCopyPreviousDay: index > 0 && (entriesByIndex[index - 1]?.length ?? 0) > 0,
+      ...overrides,
     };
   });
 }
 
-function renderWeek(props: Partial<React.ComponentProps<typeof WeekAgenda>> = {}) {
+type Props = React.ComponentProps<typeof WeekAgenda>;
+
+function renderWeek(props: Partial<Props> = {}) {
   const handlers = {
     onSelectDay: vi.fn(),
-    onZoomToDay: vi.fn(),
+    onOpenDay: vi.fn(),
     onAddEntry: vi.fn(),
     onEditEntry: vi.fn(),
     onDeleteEntry: vi.fn(),
+    onContinueEntry: vi.fn(),
+    onCopyPreviousDay: vi.fn(),
+    onDuplicatePreviousWeek: vi.fn(),
   };
 
   render(
     <WeekAgenda
       days={buildDays({ 2: [entry()] })}
       selectedDayIso="2026-09-02"
+      capacityMinutes={480}
+      layout="columns"
       locale="en"
       durationDisplayFormat="DECIMAL_HOURS"
       labels={labels}
@@ -86,118 +114,190 @@ function renderWeek(props: Partial<React.ComponentProps<typeof WeekAgenda>> = {}
   return handlers;
 }
 
-/**
- * jsdom loads no stylesheet, so the breakpoint that hides one of the two day headers is not in
- * play and both are in the document. That is what makes each shape separately testable here —
- * `[0]` is the columns header, `[1]` the accordion header.
- */
-function dayHeaders(day: string) {
-  return within(screen.getByRole("region", { name: day })).getAllByRole("button", {
-    name: new RegExp(`(Open|Show) ${day}`),
-  });
-}
-
 describe("WeekAgenda", () => {
-  it("gives every day a region and a heading", () => {
+  it("gives every day a region with one header that says the day, its number and its total", () => {
     renderWeek();
 
     for (const day of dayNames) {
       expect(screen.getByRole("region", { name: day })).toBeInTheDocument();
     }
 
-    expect(screen.getAllByRole("heading", { level: 2 })).toHaveLength(dayNames.length * 2);
+    const wednesday = within(screen.getByRole("region", { name: "Wednesday" }));
+    const header = wednesday.getByRole("button", { name: "Open Wednesday, 2" });
+
+    expect(header).toHaveTextContent("Wed");
+    expect(header).toHaveTextContent("2");
+    expect(header).toHaveTextContent("2.5 h");
+    expect(header).toHaveAttribute("aria-current", "date");
+    expect(wednesday.getAllByRole("heading", { level: 2 })).toHaveLength(1);
   });
 
-  it("zooms into the day when its column header is pressed", async () => {
+  it("opens the day when its column header is pressed", async () => {
     const user = userEvent.setup();
-    const { onZoomToDay, onSelectDay } = renderWeek();
+    const handlers = renderWeek();
 
-    await user.click(dayHeaders("Thursday")[0]);
+    await user.click(screen.getByRole("button", { name: "Open Thursday, 3" }));
 
-    expect(onZoomToDay).toHaveBeenCalledWith("2026-09-03");
-    expect(onSelectDay).not.toHaveBeenCalled();
+    expect(handlers.onOpenDay).toHaveBeenCalledWith("2026-09-03");
+    expect(handlers.onSelectDay).not.toHaveBeenCalled();
   });
 
-  it("opens a collapsed day rather than zooming, in the accordion", async () => {
-    const user = userEvent.setup();
-    const { onSelectDay, onZoomToDay } = renderWeek();
+  it("marks a day over its target in words as well as colour", () => {
+    renderWeek({ days: buildDays({ 1: [entry({ id: "long", durationMinutes: 600 })] }) });
 
-    const [, accordionHeader] = dayHeaders("Thursday");
-    expect(accordionHeader).toHaveAttribute("aria-expanded", "false");
-
-    await user.click(accordionHeader);
-
-    expect(onSelectDay).toHaveBeenCalledWith("2026-09-03");
-    expect(onZoomToDay).not.toHaveBeenCalled();
+    const tuesday = within(screen.getByRole("region", { name: "Tuesday" }));
+    expect(tuesday.getByRole("img", { name: "over 8 h" })).toBeInTheDocument();
+    expect(tuesday.getByRole("button", { name: "Open Tuesday, 1" })).toHaveTextContent("10 h");
   });
 
-  it("zooms in from the open accordion day", async () => {
-    const user = userEvent.setup();
-    const { onZoomToDay } = renderWeek();
+  describe("the accordion", () => {
+    it("opens a collapsed day rather than zooming, and zooms in from the open one", async () => {
+      const user = userEvent.setup();
+      const handlers = renderWeek({ layout: "accordion" });
 
-    const [, accordionHeader] = dayHeaders("Wednesday");
-    expect(accordionHeader).toHaveAttribute("aria-expanded", "true");
+      const thursday = screen.getByRole("button", { name: "Show Thursday" });
+      expect(thursday).toHaveAttribute("aria-expanded", "false");
+      await user.click(thursday);
+      expect(handlers.onSelectDay).toHaveBeenCalledWith("2026-09-03");
+      expect(handlers.onOpenDay).not.toHaveBeenCalled();
 
-    await user.click(accordionHeader);
+      const wednesday = screen.getByRole("button", { name: "Open Wednesday, 2" });
+      expect(wednesday).toHaveAttribute("aria-expanded", "true");
+      await user.click(wednesday);
+      expect(handlers.onOpenDay).toHaveBeenCalledWith("2026-09-02");
+    });
 
-    expect(onZoomToDay).toHaveBeenCalledWith("2026-09-02");
+    it("keeps only the selected day's panel in the document flow", () => {
+      renderWeek({ layout: "accordion" });
+
+      // jsdom loads no stylesheet, so the collapse is asserted by the class that carries it.
+      const panelOf = (day: string) =>
+        within(screen.getByRole("region", { name: day })).getByRole("button", {
+          name: `Add entry on ${day}`,
+        }).parentElement;
+
+      expect(panelOf("Wednesday")).not.toHaveClass("hidden");
+      expect(panelOf("Monday")).toHaveClass("hidden");
+    });
   });
 
   it("adds an entry to the column it was pressed in", async () => {
     const user = userEvent.setup();
-    const { onAddEntry } = renderWeek();
+    const handlers = renderWeek();
 
     await user.click(screen.getByRole("button", { name: "Add entry on Friday" }));
 
-    expect(onAddEntry).toHaveBeenCalledWith("2026-09-04");
+    expect(handlers.onAddEntry).toHaveBeenCalledWith("2026-09-04");
   });
 
-  it("lists entries per day and says so when a day has none", () => {
-    renderWeek();
+  it("lists entries per day and says so once when a day has none", () => {
+    renderWeek({ days: buildDays({ 1: [entry({ id: "a" }), entry({ id: "b" })] }) });
+
+    expect(
+      within(screen.getByRole("region", { name: "Tuesday" })).getAllByRole("listitem"),
+    ).toHaveLength(2);
+    expect(
+      within(screen.getByRole("region", { name: "Thursday" })).getByText("Nothing logged"),
+    ).toBeInTheDocument();
+    expect(screen.queryByText("Nothing logged this week")).not.toBeInTheDocument();
+  });
+
+  it("reports edit, delete and continue per entry, scoped to its day", async () => {
+    const user = userEvent.setup();
+    const handlers = renderWeek();
+    const wednesday = within(screen.getByRole("region", { name: "Wednesday" }));
+
+    await user.click(wednesday.getByRole("button", { name: "Edit Invoice reconciliation" }));
+    await user.click(wednesday.getByRole("button", { name: "Delete Invoice reconciliation" }));
+    await user.click(wednesday.getByRole("button", { name: "Continue Invoice reconciliation" }));
+
+    expect(handlers.onEditEntry).toHaveBeenCalledWith(expect.objectContaining({ id: "atlas-1" }));
+    expect(handlers.onDeleteEntry).toHaveBeenCalledWith(expect.objectContaining({ id: "atlas-1" }));
+    expect(handlers.onContinueEntry).toHaveBeenCalledWith(
+      expect.objectContaining({ id: "atlas-1" }),
+    );
+  });
+
+  it("withholds Continue while a timer is already running", () => {
+    renderWeek({ canContinue: false });
+
+    expect(
+      screen.queryByRole("button", { name: "Continue Invoice reconciliation" }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("offers Copy yesterday only on an empty day whose yesterday holds something", async () => {
+    const user = userEvent.setup();
+    const handlers = renderWeek({ days: buildDays({ 1: [entry()] }) });
 
     const wednesday = within(screen.getByRole("region", { name: "Wednesday" }));
-    expect(within(wednesday.getByRole("list")).getAllByRole("listitem")).toHaveLength(1);
+    await user.click(wednesday.getByRole("button", { name: "Copy yesterday" }));
+    expect(handlers.onCopyPreviousDay).toHaveBeenCalledWith("2026-09-02");
 
-    const monday = within(screen.getByRole("region", { name: "Monday" }));
-    expect(monday.getByText("Nothing logged")).toBeInTheDocument();
-    expect(monday.queryByRole("list")).not.toBeInTheDocument();
-  });
-
-  it("reports edit and delete per entry", async () => {
-    const user = userEvent.setup();
-    const item = entry();
-    const { onEditEntry, onDeleteEntry } = renderWeek({ days: buildDays({ 2: [item] }) });
-
-    await user.click(screen.getByRole("button", { name: "Edit Invoice reconciliation" }));
-    await user.click(screen.getByRole("button", { name: "Delete Invoice reconciliation" }));
-
-    expect(onEditEntry).toHaveBeenCalledWith(item);
-    expect(onDeleteEntry).toHaveBeenCalledWith(item);
+    const friday = within(screen.getByRole("region", { name: "Friday" }));
+    expect(friday.queryByRole("button", { name: "Copy yesterday" })).not.toBeInTheDocument();
   });
 
   it("offers no edit, delete or add on a locked day", () => {
     renderWeek({
-      days: buildDays({ 2: [entry({ locked: true })] }).map((day) => ({ ...day, locked: true })),
+      days: buildDays({ 2: [entry({ locked: true })] }, { locked: true }),
     });
 
-    expect(screen.getByRole("button", { name: "Edit Invoice reconciliation" })).toBeDisabled();
-    expect(screen.getByRole("button", { name: "Delete Invoice reconciliation" })).toBeDisabled();
-    expect(screen.getByRole("button", { name: "Add entry on Wednesday" })).toBeDisabled();
+    const wednesday = within(screen.getByRole("region", { name: "Wednesday" }));
+    expect(wednesday.getByRole("button", { name: "Edit Invoice reconciliation" })).toBeDisabled();
+    expect(wednesday.getByRole("button", { name: "Delete Invoice reconciliation" })).toBeDisabled();
+    expect(
+      wednesday.queryByRole("button", { name: "Add entry on Wednesday" }),
+    ).not.toBeInTheDocument();
   });
 
-  it("surfaces a warning and an admin correction on the card", () => {
+  it("surfaces a warning, a timer glyph and an admin correction on the card", () => {
     renderWeek({
       days: buildDays({
-        2: [entry({ warnings: ["Long continuous session"], adminModified: true })],
+        2: [entry({ warnings: ["Long continuous session"], adminModified: true, timed: true })],
       }),
     });
 
-    expect(screen.getByRole("img", { name: "Long continuous session" })).toBeInTheDocument();
-    expect(screen.getByRole("img", { name: "Changed by an administrator" })).toBeInTheDocument();
+    const wednesday = within(screen.getByRole("region", { name: "Wednesday" }));
+    expect(wednesday.getByRole("img", { name: "Long continuous session" })).toBeInTheDocument();
+    expect(wednesday.getByRole("img", { name: "Changed by an administrator" })).toBeInTheDocument();
+    expect(wednesday.getByRole("img", { name: "Tracked with a timer" })).toBeInTheDocument();
+  });
+
+  it("shows the empty week once, in the middle, with its two actions", async () => {
+    const user = userEvent.setup();
+    const handlers = renderWeek({ days: buildDays(), canDuplicatePreviousWeek: true });
+
+    expect(screen.getByText("Nothing logged this week")).toBeInTheDocument();
+    expect(screen.queryByText("Nothing logged")).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Duplicate last week" }));
+    expect(handlers.onDuplicatePreviousWeek).toHaveBeenCalledTimes(1);
+
+    await user.click(screen.getByRole("button", { name: "Add entry" }));
+    expect(handlers.onAddEntry).toHaveBeenCalledWith("2026-09-02");
+    // Every column still has its own `+`, so the structural contract holds on an empty week too.
+    expect(screen.getByRole("button", { name: "Add entry on Sunday" })).toBeInTheDocument();
+  });
+
+  it("puts the running timer at the top of today's column", () => {
+    renderWeek({
+      runningTimer: {
+        projectName: "Atlas Platform",
+        projectColor: "#37e3de",
+        description: "Sprint planning",
+        elapsedLabel: "0:42:13",
+      },
+      onStopTimer: vi.fn(),
+    });
+
+    const wednesday = within(screen.getByRole("region", { name: "Wednesday" }));
+    expect(wednesday.getByRole("status")).toHaveTextContent("0:42:13");
+    expect(wednesday.getByRole("button", { name: "Stop timer" })).toBeInTheDocument();
   });
 
   /**
-   * The level animates on `/time` and nowhere else, so the component has to be legible in both
+   * The scope animates on `/time` and nowhere else, so the component has to be legible in both
    * worlds: wrapped in the `LazyMotion` boundary that `TimeZoomShell` puts around it, and bare —
    * which is how Storybook, the visual baselines and every test above render it. `m` components
    * degrade to plain DOM with no feature bundle in scope, so the same tree comes out either way.
@@ -208,15 +308,17 @@ describe("WeekAgenda", () => {
       const props = {
         days,
         selectedDayIso: "2026-09-02",
+        capacityMinutes: 480,
+        layout: "columns",
         locale: "en",
         durationDisplayFormat: "DECIMAL_HOURS",
         labels,
         onSelectDay: vi.fn(),
-        onZoomToDay: vi.fn(),
+        onOpenDay: vi.fn(),
         onAddEntry: vi.fn(),
         onEditEntry: vi.fn(),
         onDeleteEntry: vi.fn(),
-      } satisfies React.ComponentProps<typeof WeekAgenda>;
+      } satisfies Props;
 
       const bare = render(<WeekAgenda {...props} />);
       const bareRegions = screen.getAllByRole("region").length;
@@ -231,7 +333,6 @@ describe("WeekAgenda", () => {
 
       expect(screen.getAllByRole("region")).toHaveLength(bareRegions);
       expect(screen.getAllByRole("listitem")).toHaveLength(bareItems);
-      expect(screen.getByRole("region", { name: "Wednesday" })).toBeInTheDocument();
     });
 
     it("still lists every entry when the cards animate in", () => {
@@ -240,12 +341,14 @@ describe("WeekAgenda", () => {
           <WeekAgenda
             days={buildDays({ 2: Array.from({ length: 12 }, (_, i) => entry({ id: `e${i}` })) })}
             selectedDayIso="2026-09-02"
+            capacityMinutes={480}
+            layout="columns"
             locale="en"
             durationDisplayFormat="DECIMAL_HOURS"
             labels={labels}
             animateEntries
             onSelectDay={vi.fn()}
-            onZoomToDay={vi.fn()}
+            onOpenDay={vi.fn()}
             onAddEntry={vi.fn()}
             onEditEntry={vi.fn()}
             onDeleteEntry={vi.fn()}

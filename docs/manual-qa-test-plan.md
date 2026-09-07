@@ -3626,6 +3626,127 @@ Expected result:
   move with the exporting admin's zone, and the footnote still names the member time zones the day
   boundaries came from.
 
+## Time View Scope And Lens Redesign
+
+The `/time` chrome is two rows: row 1 answers _how close_ (a View control with `⊖ ⊕` caps, the
+week-only Agenda ⇄ Grid layout toggle, and the Start timer / New entry actions), row 2 answers
+_when_ (`‹ label ›`, Today, the `⋯` menu, and one period total). Everything below is the design
+record in `docs/time-view-redesign.md`; regenerate `e2e/__aria__/time-week.spec.ts/` only after
+reading its diff.
+
+### Scope, lens and the period header
+
+1. Open `/time` on a desktop signed in as a member with tracked assignments. Confirm row 1 shows a
+   `View` control with **three** stops — Day, Week, Month — each with a small key chip (`1 2 3`)
+   that brightens when the control is hovered, and `⊖` / `⊕` caps at its ends. There is no Grid stop
+   and no inline keyboard legend.
+2. Confirm the Week layout toggle (Agenda / Grid) sits beside the View control **only** in Week
+   scope, fading in with a short slide, and that switching it leaves the seven day headers exactly
+   where they are while the bodies crossfade.
+3. Read row 2: `Week 36 · Aug 31 – Sep 6, 2026` (Hungarian: `36. hét · 2026. aug. 31. – szept. 6.`),
+   arrows named Previous week / Next week, a Today button, and one total reading `36 h this week`.
+   Switch to Day: the label becomes `Monday, Aug 31, 2026`, the arrows step a **day**, the total
+   reads `8.5 h today`. Switch to Month: `September 2026`, the arrows step a month, the total reads
+   `112 h this month` with `14 of 22 workdays` under it.
+4. Press the period label. A month grid opens; picking a month jumps there **without changing the
+   scope**. Confirm Today is dimmed with a mint dot while today is in view and clickable otherwise.
+5. Confirm the total never counts up: change a figure (add an entry) and watch it settle in one step
+   in the direction of change. Over 8 h in Day scope the total carries `⚠ over 8 h` in words; a bare
+   orange number appears nowhere.
+6. Open an old link `/time?zoom=grid`. It lands on Week + Grid and the address bar drops `zoom` on
+   the first change of view. Reload: the remembered scope and layout survive in `localStorage`
+   (`time-scope`, `time-lens`); an explicit `?scope=` in a shared link outranks them.
+
+### Zooming and motion
+
+7. In Week · Agenda, hover a day header: a `›` appears and the header lifts by a pixel. Click it: the
+   view zooms in — the seven headers shrink into the Day ribbon's seven chips, the other columns'
+   cards fade out, the day's cards grow into full rows, the page scales in from slightly smaller, and
+   the rail (target ring, per-project split, quick add) arrives last. Zoom out with `⊖`, `−` or `Esc`
+   and the ribbon grows back into the headers with the page scaling in from slightly larger.
+8. In Month, click a heat cell: it grows into the selected chip as the Day scope opens. Click a
+   week number (`W36 ›`): the week opens in Agenda.
+9. Step a period with `‹ ›` or `J` / `K`: the content and the label slide 24 px / 8 px in the
+   direction of travel — next from the right, previous from the left. Jumping backwards with the
+   month grid or Today slides backwards.
+10. Turn on the operating system's reduce-motion setting. Every transition becomes a crossfade,
+    nothing scales or slides, the timer's pulse is not rendered, and the heat navigator's rows do
+    not draw in one by one.
+
+### The Week and Day content
+
+11. In Week · Agenda confirm there is **no day strip** above the columns and that a day's total,
+    name and number appear once, in its header. Today's column has a 2 px mint top rule; when both
+    weekend days are empty they are narrower than the working days.
+12. Cards: a 3 px project-colour rail, the description as the primary line, `project · 09:00 – 13:15`
+    as the muted line, the duration right-aligned in tabular numerals. Edit / Continue / Delete
+    appear on hover and on keyboard focus and are always reachable by Tab. A timer-sourced entry has
+    a small `▷` before its duration; a locked entry a lock glyph and a muted rail; an admin-changed
+    entry the shield.
+13. Press Continue on a card: a timer starts with that project and description, the Start timer
+    button morphs into a live pill (`● 0:00:05 · Project ■`), and a live card with a mint rail sits
+    at the top of today's column and in Day scope. Stop it from the pill or the card. Confirm
+    Continue is withheld while a timer runs.
+14. Delete a card: it leaves through its exit transition and a toast offers **Undo** for six seconds.
+    Undo brings it back through the enter transition and the audit log shows a `Restored` event.
+    Let the toast expire on another delete and confirm the entry stays deleted.
+15. Empty states: an empty column reads `Nothing logged` with a `Copy yesterday` link when the day
+    before holds entries; an empty week shows one centred state with `Add entry` and `Duplicate last
+week`, while every column still has its `+`. A locked day shows no `+` at all. A future day's
+    header and cards sit at 70 % opacity with the `+` still enabled. In the narrowed weekend
+    columns, in Hungarian and in English, both lines stay inside their own column — the
+    `Copy yesterday` link wraps onto a second line rather than running across the neighbouring day
+    — and it reads smaller than the `Nothing logged` line above it, not larger.
+16. The hybrid handoff: for a member with a declared project, a footnote under the Week columns
+    links into Month, the Grid lens shows a ghost row `declared monthly · See Month`, and the Month
+    segment wears a 4 px dot while another scope is open.
+
+### Quick composer and quick actions
+
+17. Press a column's `+`: a popover opens anchored to it — the date, project chips (recent first),
+    a duration field and a description field. Type `2h30`, a description, Enter. The popover closes,
+    the card enters with the stagger and its rail pulses once. Try `lots` as a duration: the composer
+    refuses and explains; nothing is sent.
+18. In Day scope the composer is open in the rail; `N` focuses its duration field. `More options`
+    opens the full dialog with the project, date, duration text and description carried over;
+    `Interval instead` opens it in interval mode. A half-typed description is autosaved as a draft.
+19. The `⋯` menu at the end of row 2 holds `Duplicate last week`, `Copy yesterday into <day>` and
+    `Keyboard shortcuts`; the toolbar no longer lists Assigned or Recent chips.
+20. On the Grid lens, hover a cell: its row and column tint by one surface step. The seven headers
+    are buttons that open the day, with capacity bars.
+
+### Keyboard, palette and hint
+
+21. Press `?`: a dialog lists every shortcut in four tables (View · Move · Add · Timer). Confirm
+    `J`/`K` step, `[`/`]` still work, `G` toggles the layout in Week and jumps to Week + Grid from
+    Day or Month, `N` opens the composer, `S` starts (opens the timer dialog) or stops the timer,
+    `−`/`+` and `1 2 3` move the scope, `T` goes to today, and nothing fires while typing in a
+    field. On a Hungarian layout confirm `J`/`K` work unmodified.
+22. Press `Esc` with a dialog open: the dialog closes and the view does not change. Press `Esc`
+    again within 300 ms: nothing happens. After that, `Esc` zooms out one step; at Month it does
+    nothing.
+23. Press `⌘K`: a command palette lists Go to today, View: Day / Week / Month, Week layout: Agenda /
+    Grid, New entry, Start/Stop timer, Duplicate last week, Copy yesterday and Keyboard shortcuts,
+    searchable in both locales.
+24. In a fresh browser profile the first visit shows one toast: `Press ? for shortcuts, or click a
+day to open it`. Reload: it does not return.
+
+### Mobile
+
+25. At a phone width the default scope is Day: the ribbon scrolls horizontally with the selected
+    chip snapping to centre, the rail stacks under the list as an `At a glance` collapsible, and a
+    peach `+` FAB above the bottom bar opens the composer as a bottom sheet. Row 1 is the full-width
+    View control with no caps; Start timer and New entry are gone from it (the header pill and the
+    FAB cover them).
+26. Week · Agenda is an accordion whose rows are the same day headers; the expanded row's header
+    opens the day. Week · Grid keeps the stacked project cards and the layout toggle. Swipe left or
+    right on the Day or Agenda content to step the period; the Grid does not claim the swipe.
+
+### Declared-only member
+
+27. Signed in as a member whose every assignment is declared monthly: Month only, no View control,
+    no ribbon, no heat navigator, the declared form as before.
+
 ## Regression Checklist For Every Release
 
 - Invitation activation works for a new invited user.
@@ -3652,6 +3773,9 @@ Expected result:
   every screen readable in both themes.
 - Body copy renders in Lexend and `.font-ui` labels in Poppins, served from this origin with no
   request to Google, and Hungarian ő/ű match the typeface of the letters beside them.
+- Buttons honour their own type size rather than the size they inherit: a small label inside a
+  button reads smaller than the body text around it, and no button label is larger than the text it
+  sits beside.
 - No native `<select>` or date input remains on any screen; dropdowns above eight options offer
   search, and searching ignores accents.
 - The timesheet month filter submits `YYYY-MM` and actually narrows the list.
@@ -3711,16 +3835,20 @@ Expected result:
 - Admin list filters read as a single toolbar row with removable chips for whatever is applied.
 - A running timer sits in the app header on every signed-in page and at every width, and can be
   stopped from there; starting one happens in an overlay opened from the time-tracking toolbar.
-- `/time` has one detail-level control with four stops, the level and the selected day live in the
-  address bar, and the selected day survives every level change in both directions.
-- At the month level the period row above the day strip names the month, steps by month and reads
-  `Month total`, and the visible previous/next buttons and `[` / `]` never disagree about whether a
-  period is a week or a month.
-- The month shown follows the selected day rather than the week, so moving the day strip across a
-  month boundary changes the month with no page load.
-- A member whose every assignment is declared monthly gets the month and no level control at all.
-- A `/time` level change animates as one surface moving, nothing animates on first paint, no figure
-  ever tweens, and with the operating system's reduce-motion setting on nothing moves at all.
+- `/time` has one View control with three scopes (Day · Week · Month) and `⊖ ⊕` caps, a week-only
+  Agenda ⇄ Grid layout toggle, and the scope, layout and selected day live in the address bar; the
+  selected day survives every change of view in both directions and an old `?zoom=` link still lands.
+- The period label carries the unit — a day, `Week 36 · range`, or the month — and the arrows,
+  `J`/`K` and `[`/`]` step exactly that unit; Today is dimmed with a dot while today is in view.
+- The month shown follows the selected day rather than the week, so stepping a day across a month
+  boundary changes the month with no page load.
+- A member whose every assignment is declared monthly gets the month and no View control at all.
+- Zooming is spatial: a day header becomes its ribbon chip and a heat cell becomes the selected
+  chip; steps slide in the direction of travel; nothing animates on first paint; no figure ever
+  rolls; with the operating system's reduce-motion setting on everything crossfades and nothing moves.
+- The desktop Week shows no day strip, each day's total appears once, cards reveal Edit / Continue /
+  Delete on hover and focus, a delete can be undone for six seconds, and the `+` opens the quick
+  composer rather than the dialog.
 - Each assignment in a project's drawer shows its hours-tracking mode beside its rate source, and
   says whether the mode is inherited from the member default or set for that assignment only.
 - The per-assignment mode control offers an explicit inherit option that names the member default,

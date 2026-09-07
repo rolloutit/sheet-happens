@@ -1938,6 +1938,7 @@
         "time_entry__admin_updated": "Admin corrected",
         "time_entry__created": "Created",
         "time_entry__deleted": "Deleted",
+        "time_entry__restored": "Restored",
         "time_entry__updated": "Updated",
         "timesheet__approved": "Approved",
         "timesheet__paid": "Marked paid",
@@ -2083,23 +2084,9 @@
   },
   "TimeTracking": {
     "zoom": {
-      "day": "Day",
-      "week": "Week",
-      "grid": "Grid",
-      "month": "Month",
-      "controlLabel": "Detail level",
-      "keyboardHint": "1-{levels} level · − + step · [ ] {period} · t today",
-      "keyboardHintPeriod": "[ ] {period} · t today",
-      "periodWeek": "week",
-      "periodMonth": "month",
       "dayStrip": "Days of this week",
-      "dayStripAtMonth": "Days of the week you return to",
       "selectDay": "Select {day}",
-      "zoomToDay": "Open {day}",
-      "zoomOut": "Back out to the week",
-      "announce": "{level} · {days, plural, one {# day} other {# days}} · {total}",
-      "zoomToProject": "{project} · zoom in",
-      "announceMonth": "{level} · {month} · {total}"
+      "zoomToProject": "{project} · zoom in"
     },
     "week": {
       "columnEmpty": "Nothing logged",
@@ -2116,18 +2103,12 @@
       "weekTotal": "Week total",
       "monthTotal": "Month total",
       "dayTotal": "Day total",
-      "assigned": "Assigned",
       "recent": "Recent",
       "archivedProject": "Archived project",
       "noDescription": "No description"
     },
     "actions": {
       "newEntry": "New entry",
-      "previousWeek": "Previous week",
-      "nextWeek": "Next week",
-      "previousMonth": "Previous month",
-      "nextMonth": "Next month",
-      "sameAsYesterday": "Same as yesterday",
       "duplicateLastWeek": "Duplicate last week",
       "undo": "Undo",
       "discard": "Discard",
@@ -2139,7 +2120,8 @@
       "close": "Close",
       "cancel": "Cancel",
       "save": "Save",
-      "newTimer": "New timer"
+      "copyYesterdayInto": "Copy yesterday into {day}",
+      "more": "More actions"
     },
     "tooltips": {
       "copyPreviousDay": "Copy entries from the day before {date}.",
@@ -2165,7 +2147,9 @@
     "grid": {
       "projects": "Projects",
       "total": "Total",
-      "dailyTotal": "Daily total"
+      "dailyTotal": "Daily total",
+      "declaredMonthly": "Declared monthly",
+      "seeMonth": "See Month"
     },
     "inactive": {
       "title": "Inactive week",
@@ -2179,7 +2163,10 @@
     },
     "empty": {
       "title": "No active assigned projects",
-      "description": "Time can be logged after an admin assigns you to an active project for this week."
+      "description": "Time can be logged after an admin assigns you to an active project for this week.",
+      "copyYesterday": "Copy yesterday",
+      "weekTitle": "Nothing logged this week",
+      "weekDescription": "Add an entry, or bring last week's entries over."
     },
     "draft": {
       "title": "Unsaved time entry draft",
@@ -2190,7 +2177,12 @@
     },
     "day": {
       "emptyTitle": "No entries on this day",
-      "emptyDescription": "Start a timer or add an entry for the selected project and day."
+      "emptyDescription": "Start a timer or add an entry for the selected project and day.",
+      "target": "of {target} target",
+      "split": "By project",
+      "quickAdd": "Quick add",
+      "glance": "At a glance",
+      "noSplit": "Nothing logged yet"
     },
     "month": {
       "trackedHeading": "Tracked in Sheet Happens",
@@ -2205,7 +2197,11 @@
       "placeholder": "What are you working on?",
       "projectLabel": "Timer project",
       "start": "Start",
-      "stop": "Stop"
+      "stop": "Stop",
+      "startTimer": "Start timer",
+      "stopTimer": "Stop timer",
+      "running": "Timer running",
+      "elapsed": "{elapsed} elapsed"
     },
     "timerModal": {
       "title": "New timer",
@@ -2298,6 +2294,142 @@
       "nothingDeclared": "Nothing declared",
       "externalSystem": "external system",
       "sanityWarning": "That is more than {hours}, the hours in this whole month. Saved anyway — check the figure."
+    },
+    "view": {
+      "label": "View",
+      "day": "Day",
+      "week": "Week",
+      "month": "Month",
+      "zoomIn": "Zoom in to {scope}",
+      "zoomOut": "Zoom out to {scope}",
+      "zoomInMost": "Already at the closest view",
+      "zoomOutMost": "Already at the widest view",
+      "shortcut": "Shortcut {key}",
+      "monthBadge": "Declared hours live in Month",
+      "announce": "{scope} · {period} · {total}"
+    },
+    "lens": {
+      "label": "Week layout",
+      "agenda": "Agenda",
+      "grid": "Grid"
+    },
+    "period": {
+      "week": "Week {week} · {range}",
+      "today": "Today",
+      "previous": "Previous {unit}",
+      "next": "Next {unit}",
+      "unitDay": "day",
+      "unitWeek": "week",
+      "unitMonth": "month",
+      "pick": "Jump to a month",
+      "atToday": "You are on today"
+    },
+    "total": {
+      "today": "today",
+      "week": "this week",
+      "month": "this month",
+      "overTarget": "over {target}",
+      "onTarget": "on target"
+    },
+    "header": {
+      "open": "Open {date}",
+      "locked": "Locked by a submitted timesheet",
+      "today": "Today",
+      "over": "Over {target}"
+    },
+    "heat": {
+      "label": "Days of {month}",
+      "cell": "{date}, {hours}",
+      "cellDetail": "{hours} · {count, plural, one {# entry} other {# entries}}",
+      "empty": "{date}, nothing logged",
+      "future": "{date}, in the future",
+      "workdays": "{logged} of {workdays} workdays",
+      "weekRow": "Week {week}",
+      "openWeek": "Open week {week}",
+      "locked": "This month is locked by a submitted timesheet",
+      "legendLogged": "Logged",
+      "legendEmpty": "Nothing logged",
+      "legendFuture": "Future",
+      "outside": "{date}, outside this month"
+    },
+    "composer": {
+      "title": "Add to {date}",
+      "description": "What did you do?",
+      "duration": "Duration",
+      "durationPlaceholder": "2h30",
+      "project": "Project",
+      "more": "More options",
+      "interval": "Interval instead",
+      "add": "Add",
+      "submitHint": "Enter adds",
+      "descriptionRequired": "Describe what you did.",
+      "noProject": "Pick a project first.",
+      "close": "Close"
+    },
+    "card": {
+      "continue": "Continue {description}",
+      "more": "More actions for {description}",
+      "timer": "Tracked with a timer",
+      "locked": "Locked by a submitted timesheet",
+      "live": "Running now"
+    },
+    "undo": {
+      "deleted": "Entry deleted",
+      "action": "Undo",
+      "restored": "Entry restored"
+    },
+    "shortcuts": {
+      "title": "Keyboard shortcuts",
+      "description": "Every move on this page has a key. None of them fire while you type.",
+      "open": "Keyboard shortcuts",
+      "keyHeader": "Key",
+      "actionHeader": "Action",
+      "groupView": "View",
+      "groupMove": "Move",
+      "groupAdd": "Add",
+      "groupTimer": "Timer",
+      "day": "Day",
+      "week": "Week",
+      "month": "Month",
+      "zoomOut": "Zoom out",
+      "zoomIn": "Zoom in",
+      "grid": "Grid layout of the week",
+      "previous": "Previous {unit}",
+      "next": "Next {unit}",
+      "today": "Today",
+      "escape": "Zoom out one step",
+      "newEntry": "New entry on the selected day",
+      "timer": "Start or stop the timer",
+      "help": "This sheet",
+      "palette": "Command palette"
+    },
+    "hint": {
+      "firstVisit": "Press ? for shortcuts, or click a day to open it",
+      "dismiss": "Got it"
+    },
+    "commands": {
+      "group": "Time tracking",
+      "title": "Command palette",
+      "description": "Every action on this page, searchable by name.",
+      "search": "Search commands",
+      "empty": "No commands match",
+      "trigger": "Open the command palette",
+      "goToToday": "Go to today",
+      "viewDay": "View: Day",
+      "viewWeek": "View: Week",
+      "viewMonth": "View: Month",
+      "lensAgenda": "Week layout: Agenda",
+      "lensGrid": "Week layout: Grid",
+      "newEntry": "New entry",
+      "startTimer": "Start timer",
+      "stopTimer": "Stop timer",
+      "duplicateLastWeek": "Duplicate last week",
+      "copyYesterday": "Copy yesterday",
+      "shortcuts": "Keyboard shortcuts"
+    },
+    "mobile": {
+      "addEntry": "Add entry",
+      "swipeHint": "Swipe to change the period"
     }
   },
   "TimeTrackingActions": {
@@ -2313,7 +2445,8 @@
       "inactiveWeekRemoved": "Inactive week removed.",
       "declarationSaved": "Declared hours saved.",
       "declarationWithdrawn": "Declared hours withdrawn.",
-      "proofUploaded": "Hours proof uploaded."
+      "proofUploaded": "Hours proof uploaded.",
+      "timeEntryRestored": "Time entry restored."
     },
     "errors": {
       "generic": "Something went wrong.",
@@ -2347,7 +2480,8 @@
       "proofTooLarge": "The hours proof PDF is larger than 10 MB.",
       "storageMissing": "Document storage is not configured.",
       "projectDeclaresMonthly": "This project declares its hours monthly.",
-      "declaredCorrectedAtMonth": "Declared hours are corrected on the month level."
+      "declaredCorrectedAtMonth": "Declared hours are corrected on the month level.",
+      "timeEntryRestoreFailed": "The time entry could not be restored."
     },
     "fields": {
       "chooseProject": "Choose a project.",
