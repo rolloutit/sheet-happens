@@ -3694,7 +3694,11 @@ reading its diff.
 15. Empty states: an empty column reads `Nothing logged` with a `Copy yesterday` link when the day
     before holds entries; an empty week shows one centred state with `Add entry` and `Duplicate last
 week`, while every column still has its `+`. A locked day shows no `+` at all. A future day's
-    header and cards sit at 70 % opacity with the `+` still enabled. In the narrowed weekend
+    header and cards sit on the recessed `--muted` surface, not at reduced opacity, with the `+`
+    still enabled — its label, its `0 h` total and its `Nothing logged` line stay at full ink and
+    must remain as readable as a past day's. (Ancestor opacity is what put ~640 colour-contrast
+    failures into the `@a11y` run; check this on a weekday early enough in the week that the row
+    still has future days, because the automated gate cannot see them on a Sunday.) In the narrowed weekend
     columns, in Hungarian and in English, both lines stay inside their own column — the
     `Copy yesterday` link wraps onto a second line rather than running across the neighbouring day
     — and it reads smaller than the `Nothing logged` line above it, not larger.

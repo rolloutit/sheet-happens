@@ -130,7 +130,9 @@ export function WeekAgenda({
                 className={cn(
                   "flex flex-1 flex-col gap-2 p-2",
                   !expanded && "hidden",
-                  day.state === "future" && "opacity-70",
+                  /* Recessed, never faded: ancestor opacity would composite these cards'
+                     text below 4.5:1. See `DayColumnHeader.variants.ts`. */
+                  day.state === "future" && "bg-muted/45",
                 )}
               >
                 {showTimer && runningTimer ? (

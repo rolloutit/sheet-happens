@@ -298,6 +298,23 @@ export const auth = betterAuth({
   ],
 });
 
+/**
+ * `betterAuth()` builds its context eagerly at module load and stores it as a bare promise, so
+ * every plugin `init` runs the moment this file is imported. Since `mcp()` was added that init
+ * touches the database — `@better-auth/oauth-provider` seeds the `oauthResource` row for
+ * `authUrls.mcpResource` — and with no database reachable the promise rejects with nobody
+ * awaiting it yet. Node reports that as an unhandled rejection, which is enough to fail a whole
+ * `vitest run` (the unit job has no Postgres, and any test that transitively imports
+ * `auth/session` imports this file).
+ *
+ * Attaching a handler only stops the *unhandled* report: `handler` and `api` still await
+ * `$context` on every request, so a genuinely broken boot surfaces there as it always did. This
+ * mirrors what better-auth already does with its own schema check.
+ */
+void auth.$context.catch((error: unknown) => {
+  console.error("[auth] Failed to initialise the Better Auth context.", error);
+});
+
 export type Auth = typeof auth;
 
 function getAuthSecret() {

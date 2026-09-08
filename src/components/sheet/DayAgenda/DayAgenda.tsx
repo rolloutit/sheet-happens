@@ -135,7 +135,8 @@ export function DayAgenda({
         <div
           className={cn(
             "grid gap-2 rounded-[var(--radius-lg)] border border-border bg-card p-2",
-            dayState === "future" && "opacity-70",
+            /* Recessed, never faded — see `DayColumnHeader.variants.ts`. */
+            dayState === "future" && "bg-muted/45",
           )}
         >
           {showTimer && runningTimer ? (

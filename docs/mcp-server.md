@@ -1157,6 +1157,18 @@ that makes the whole flow work, and it is worth stating because both halves matt
   (the resource seed) at module load — and an unhandled rejection in every test that mocks Prisma
   partially. `getShellRunningTimer` is imported from `@/src/server/time-tracking/shell-timer`
   directly now; `app/layout.tsx` is its only caller.
+- **Pruning that one import chain was not enough, because the seed is unconditional.**
+  `betterAuth()` resolves its context eagerly — `createBetterAuth` calls `init(options).then(...)`
+  at module load and keeps a bare promise — so every plugin `init` runs on import, and
+  `oauth-provider`'s does `oauthResource.findFirst`. With no database reachable that promise
+  rejects with nothing awaiting it yet, which Node reports as an unhandled rejection and Vitest
+  turns into a failed run: the CI `unit` job has no Postgres, so six test files that merely reach
+  `auth/session` transitively took the whole suite down while all 939 tests passed. Chasing the
+  chains is whack-a-mole; `auth.ts` now attaches a handler to `auth.$context` instead. It only
+  suppresses the _unhandled_ report — `handler` and `api` still await the same promise per request
+  — and mirrors what better-auth already does with its own `checkSchema`. Note the promise is
+  built once, so a database outage at boot poisons it for the process's lifetime; that is upstream
+  behaviour, not something the handler introduces.
 
 ### 18.11 Verified end to end
 
