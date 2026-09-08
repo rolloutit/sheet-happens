@@ -56,4 +56,10 @@ export type { ThemeProviderProps, UseThemeResult } from "./ThemeProvider";
 export { ThemeToggle } from "./ThemeToggle";
 export type { ThemeToggleProps } from "./ThemeToggle";
 export { UserMenu } from "./UserMenu";
-export type { UserMenuAction, UserMenuActionTone, UserMenuProps, UserMenuUser } from "./UserMenu";
+export type {
+  UserMenuAction,
+  UserMenuActionConfirm,
+  UserMenuActionTone,
+  UserMenuProps,
+  UserMenuUser,
+} from "./UserMenu";

@@ -85,7 +85,14 @@
       "label": "User menu",
       "myRates": "My rates",
       "profileAndSettings": "Profile and settings",
-      "signOut": "Sign out"
+      "signOut": "Sign out",
+      "signOutConfirm": {
+        "title": "Sign out?",
+        "description": "You will be signed out on this device and sent back to the login screen. Any time you have already saved stays exactly where it is.",
+        "confirm": "Sign out",
+        "cancel": "Stay signed in",
+        "close": "Close"
+      }
     },
     "timer": {
       "stop": "Stop timer",
@@ -315,6 +322,45 @@
       "signOut": "Sign out"
     }
   },
+  "Consent": {
+    "eyebrow": "Connect an app",
+    "title": "{client} wants to access your Sheet Happens account",
+    "description": "You are signed in as {name}. An app you allow acts as you, with exactly your own rights — it can never see or change anyone else's hours.",
+    "scopes": {
+      "timeRead": {
+        "title": "Read your time",
+        "description": "See your own time entries, your projects, your running timer and your day, week and month totals."
+      },
+      "timeWrite": {
+        "title": "Log and correct your time",
+        "description": "Add, change and delete your own time entries, and start or stop your timer. Deleted entries can be restored. Months with a submitted timesheet stay locked."
+      },
+      "identity": {
+        "title": "Know who you are and stay connected",
+        "description": "Read your name and email address, and keep the connection working without asking you to sign in again."
+      }
+    },
+    "unknownScopes": "This app is also asking for something Sheet Happens does not recognise: {scopes}. Deny unless you know why.",
+    "actions": {
+      "allow": "Allow",
+      "deny": "Deny"
+    },
+    "expired": {
+      "title": "This request has expired",
+      "message": "Connection requests are only valid for a few minutes. Start the connection again from the app you were using."
+    },
+    "invalid": {
+      "title": "Nothing to approve",
+      "message": "This page is part of connecting an app to Sheet Happens. Open it from the app you want to connect rather than directly."
+    }
+  },
+  "ConsentActions": {
+    "errors": {
+      "expired": "This request is no longer valid. Start the connection again from the app you were using.",
+      "notAllowed": "Your Sheet Happens account cannot connect apps right now.",
+      "generic": "The connection could not be completed."
+    }
+  },
   "Help": {
     "eyebrow": "Help",
     "title": "Help and manual",
@@ -322,7 +368,8 @@
     "tabs": {
       "label": "Help content",
       "welcome": "Welcome",
-      "manual": "Manual"
+      "manual": "Manual",
+      "connector": "Claude connector"
     },
     "actions": {
       "editWelcome": "Edit welcome content"
@@ -344,6 +391,37 @@
       "all": "Everyone",
       "contractor": "Contractors",
       "admin": "Admins"
+    },
+    "mcp": {
+      "badge": "Claude connector",
+      "title": "Let Claude work with your own hours",
+      "description": "The Sheet Happens connector lets Claude read your tracked time and log it for you — on the web, in the desktop app, in Cowork, on mobile, or in Claude Code. Every member connects it for themselves, and a connection only ever sees that member's own hours.",
+      "urlLabel": "Connector URL",
+      "urlHint": "Paste this address wherever Claude asks for a custom connector URL. Signing in uses your normal Sheet Happens login, and a consent page then lists exactly what the agent may do before anything is granted.",
+      "copyUrl": "Copy URL",
+      "urlCopied": "Connector URL copied to the clipboard.",
+      "copyFailed": "Copying failed — select the address above and copy it by hand.",
+      "app": {
+        "title": "Claude.ai, Claude Desktop, Cowork and mobile",
+        "description": "One setup covers all four surfaces.",
+        "teamTitle": "Team or Enterprise workspace",
+        "teamOwner": "An owner adds the connector once: Organization settings → Connectors → Add → Custom, name it “Sheet Happens”, paste the URL above, set authentication to “Always required” and keep Anthropic's hosted OAuth client metadata.",
+        "teamMember": "Everyone else then opens Customize → Connectors and clicks Connect.",
+        "personalTitle": "Pro, Max or Free account",
+        "personalStep": "Open Customize → Connectors → Add custom connector and paste the URL above. Claude reads the authentication settings from Sheet Happens itself and fills them in.",
+        "tools": "Tools are switched on per conversation from the “+” menu, and any single tool can be set to Blocked under the connector."
+      },
+      "code": {
+        "title": "Claude Code",
+        "description": "Add the connector once, then sign in — from the terminal, or with /mcp inside a session.",
+        "loginHint": "Add --no-browser when you are working over SSH. Tool permissions use names like mcp__sheet-happens__time_get_context."
+      },
+      "ownership": {
+        "title": "What the connector can reach",
+        "body": "An agent using your connection reaches exactly what you reach in Sheet Happens: your own time entries, your own projects and your own totals. It can never see or change anyone else's hours, and a month with a submitted timesheet stays locked for an agent too.",
+        "disconnect": "You decide how long it lasts. Until you disconnect it in Settings, the app can keep acting as you — including while you are not using it.",
+        "openConnectedApps": "Open connected apps"
+      }
     }
   },
   "AdminInfo": {
@@ -546,6 +624,7 @@
         "lastWeek": "Last week",
         "twoWeeksAgo": "2 weeks ago",
         "viewDrilldown": "View details",
+        "viewAll": "View all {count} flagged users",
         "remind": "Send reminder",
         "reminderSent": "Reminder sent",
         "reminderErrors": {
@@ -1888,6 +1967,7 @@
         "member__restored": "Restored",
         "member__role_changed": "Role changed",
         "member__session_revoked": "Session revoked",
+        "member__mcp_access_revoked": "Connected apps revoked",
         "member__timezone_updated": "Time zone updated",
         "member__updated": "Updated",
         "notification__settings_updated": "Settings updated",
@@ -2259,7 +2339,8 @@
       "timer": "Timer",
       "timed": "Timed",
       "hours": "Hours",
-      "declared": "Declared"
+      "declared": "Declared",
+      "mcp": "MCP"
     },
     "fieldErrors": {
       "durationPositive": "Duration must be greater than zero.",
@@ -2468,6 +2549,7 @@
       "entryLocked": "This entry is locked by a submitted timesheet.",
       "periodLocked": "This period is locked by a submitted timesheet.",
       "weekTouchesLockedPeriod": "This week touches a locked period.",
+      "inactiveWeekHasEntries": "Remove this week's entries before marking the project inactive.",
       "stopTimerFirst": "Stop the running timer before starting another one.",
       "noTimerRunning": "No timer is running.",
       "projectNotActiveForDate": "This project is not active for the selected date.",
@@ -2486,6 +2568,7 @@
     "fields": {
       "chooseProject": "Choose a project.",
       "validDate": "Choose a valid date.",
+      "validTime": "Choose a valid time.",
       "validTargetDate": "Choose a valid target date.",
       "validWeek": "Choose a valid week.",
       "validStartTime": "Choose a valid start time.",
@@ -2589,6 +2672,7 @@
       "label": "Profile settings sections",
       "profile": "Profile",
       "security": "Security and sign-in",
+      "connectedApps": "Connected apps",
       "preferences": "Preferences",
       "notifications": "Notifications"
     },
@@ -2608,6 +2692,26 @@
     "securitySection": {
       "title": "Security and sign-in",
       "description": "Manage sign-in methods, passkeys, and authenticator-app verification."
+    },
+    "connectedApps": {
+      "title": "Connected apps",
+      "description": "Apps you allowed to act as you in Sheet Happens, and what each of them may do.",
+      "connectedOn": "Connected {date}",
+      "scopesLabel": "Allowed",
+      "disconnect": "Disconnect",
+      "disconnectApp": "Disconnect {app}",
+      "keepsActingNote": "An allowed app keeps acting as you — with your rights, and only on your own hours — until you disconnect it here.",
+      "empty": {
+        "title": "No connected apps",
+        "body": "Connecting lets Claude read and log your own hours for you. It starts in Claude, not here: add the Sheet Happens connector there and approve the access it asks for. The Help page has the exact steps.",
+        "openHelp": "See the exact steps"
+      },
+      "dialog": {
+        "title": "Disconnect this app?",
+        "body": "{app} loses access immediately, including any conversation that is already open. Your time entries stay exactly as they are, and you can connect the app again whenever you want.",
+        "confirm": "Disconnect",
+        "cancel": "Cancel"
+      }
     },
     "preferences": {
       "title": "Preferences",
@@ -3032,6 +3136,7 @@
       "passkeyRemoved": "Passkey removed.",
       "totpDisabledAudited": "Authenticator app disablement audited.",
       "backupCodesRegeneratedAudited": "Backup-code regeneration audited.",
+      "connectedAppDisconnected": "App disconnected.",
       "notificationSettingsUpdated": "Notification settings updated."
     },
     "errors": {
@@ -3052,6 +3157,9 @@
       "passkeyRemoveFailed": "Could not remove the passkey.",
       "totpDisableAuditFailed": "Authenticator app was disabled, but the audit event could not be recorded.",
       "backupCodesAuditFailed": "Backup codes were regenerated, but the audit event could not be recorded.",
+      "connectedAppIdMissing": "The app to disconnect is missing.",
+      "connectedAppAlreadyDisconnected": "That app is already disconnected.",
+      "connectedAppDisconnectFailed": "The app could not be disconnected.",
       "noAuthAccount": "No auth account is linked to this member.",
       "notificationSettingsUpdateFailed": "Notification settings could not be updated.",
       "notificationSettingsInvalid": "Check the notification schedule and delivery settings."

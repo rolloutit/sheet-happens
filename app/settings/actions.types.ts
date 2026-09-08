@@ -23,3 +23,8 @@ export type RenamePasskeyActionInput = {
 export type DeletePasskeyActionInput = {
   passkeyId: string;
 };
+
+export type DisconnectConnectedAppActionInput = {
+  /** The OAuth `client_id` of the connected app: a CIMD URL, or an opaque registered id. */
+  clientId: string;
+};

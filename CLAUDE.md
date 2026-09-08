@@ -64,6 +64,13 @@ and left two copies of react, zod and chromatic in the lockfile; the ranges dedu
 - **Server Actions stay thin**: authenticate → authorize → validate with Zod → call
   `src/server/<domain>` → return a typed result. Domain and DB logic lives in `src/server/*`,
   never in components or route files.
+- **The MCP server is a registry of toolsets** (`src/server/mcp`, endpoint `app/api/mcp/route.ts`).
+  The route authenticates and authorizes, the toolsets validate arguments with Zod and adapt shapes,
+  and every business rule stays in `src/server/time-tracking` — which is what makes period locks,
+  the 24-hour cap, tracking modes and audit logging apply to an agent automatically. No tool talks to
+  Prisma. Adding a toolset is a folder under `toolsets/`, a scope, and one line in `registry.ts`.
+  Read `docs/mcp-server.md` — especially §18, which records where the installed packages differ from
+  their own documentation — before changing anything here.
 - **PDF documents are Typst templates, never generated markup.** Layout lives in
   `src/server/pdf/templates/*.typ` (`lib/theme.typ` for tokens, `lib/components.typ` for blocks);
   TypeScript only builds a display-ready JSON payload (`report-pdf-payload.ts`) that the template
@@ -82,6 +89,12 @@ and left two copies of react, zod and chromatic in the lockfile; the ranges dedu
 Every user-facing string must exist in **both** `messages/hu.json` and `messages/en.json` — labels,
 validation messages, empty/error states, toasts, dialogs, and auth emails. Server code localizes via
 `getTranslations`. A feature is not done until both locales are complete.
+
+**One exception, and only one:** the MCP layer's _model-facing_ text — tool names, tool and argument
+descriptions, and the `McpErrorCode` messages in `src/server/mcp` — is English only. Those strings
+are read by the model, which then answers the user in the user's own language; translating them
+would fork the wire contract per locale for no reader. Every _human_-facing MCP surface (`/consent`,
+the Connected apps section of `/settings`, the Help recipe) is fully HU/EN like everything else.
 
 ## Components
 
@@ -169,6 +182,9 @@ Detailed workflow lives in the `/git-workflow` skill (`.claude/skills/git-workfl
 
 - `docs/domain-model.md` — entities, state machines, invariants, authorization boundaries. Read
   before changing timesheet, rate, or invoice logic.
+- `docs/mcp-server.md` — the MCP/OAuth layer: scopes, the consent and login hand-off, the toolset
+  registry, and §18's record of every place the installed Better Auth / MCP SDK behaviour differs
+  from its docs. Read before touching `src/server/mcp`, `app/consent` or the auth plugin list.
 - `docs/database-schema.md` · `docs/auth-user-management.md` · `docs/frontend-stack.md`
 - `docs/tokens.md` — design tokens · `docs/component-library-audit.md` — component inventory
 - `docs/local-dev-db.md` · `docs/manual-qa-test-plan.md`

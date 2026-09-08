@@ -15,6 +15,7 @@ Replace placeholder values before sharing a concrete test run:
 - `{SYSTEM_CHECK_VIEW}`: admin system-check path, default `https://{DOMAIN_NAME}/admin/system`.
 - `{AUDIT_LOG_VIEW}`: audit-log viewer path, default `https://{DOMAIN_NAME}/admin/audit`.
 - `{HELP_VIEW}`: Help page path, default `https://{DOMAIN_NAME}/help`.
+- `{MCP_URL}`: MCP connector URL, default `https://{DOMAIN_NAME}/api/mcp`.
 - `{ADMIN_INFO_VIEW}`: admin information-page editor path, default `https://{DOMAIN_NAME}/admin/info`.
 - `{INVITED_EMAIL}`: email address that owns the tested invitation.
 - `{INVITED_FIRST_NAME}`: first name used when creating a new invited member.
@@ -3747,6 +3748,166 @@ day to open it`. Reload: it does not return.
 27. Signed in as a member whose every assignment is declared monthly: Month only, no View control,
     no ribbon, no heat navigator, the declared form as before.
 
+## MCP Server And Connected Apps
+
+An AI agent connects to Sheet Happens over MCP and then acts **as one member, with exactly that
+member's rights**. Everything below is the design record in `docs/mcp-server.md`. The whole point of
+this section is that an agent can never do something the member could not do in the browser, so
+every refusal below matters as much as every success.
+
+### Finding The Connector In The App
+
+1. Sign in as `{CONTRACTOR_EMAIL}` and open `{HELP_VIEW}`, then the `Claude connector` tab.
+2. Confirm the Connector URL on the page is `{MCP_URL}` for the environment you are actually on —
+   the development deployment has to print its own host, not the production one.
+3. Click `Copy URL`, then paste into any text field. Confirm the clipboard holds that URL with no
+   trailing slash, that a confirmation line appears beside the button, and that the line clears
+   itself a few seconds later without the page jumping.
+4. Switch to Hungarian and repeat. Confirm the button, the confirmation line and the whole recipe
+   are translated.
+5. Open `https://{DOMAIN_NAME}/settings` → Connected apps as a member who has connected nothing,
+   and click the link in the empty state.
+
+Expected result:
+
+- The Claude Code command block quotes the same URL as the Connector URL field above it.
+- The empty state's link opens the Help page **on the connector tab**, not on Welcome.
+- Every member sees the connector tab, not only admins.
+
+### Connecting
+
+1. Sign in to Claude as a person who is **not** signed in to Sheet Happens in that browser. Add a
+   custom connector with the URL `{MCP_URL}` exactly, no trailing slash. Claude should detect the
+   authentication settings by itself from the refusal — you should not have to paste a client id or
+   secret anywhere.
+2. Click Connect. Confirm you land on the Sheet Happens login page and that the address bar still
+   carries the pending request (a long query string), not a bare `/login`.
+3. Sign in with a **magic link**. Confirm that after clicking the link you are taken to the consent
+   screen, not to the dashboard. Repeat with a **passkey** and with **password + TOTP**: all three
+   must arrive at consent, and the TOTP hop must not lose the request either.
+4. Confirm the consent screen names the app as `claude.ai` — the host that vouches for it — rather
+   than a name the app chose for itself.
+5. Confirm it lists, in plain language, that the app may read your time, log and correct your time,
+   and know who you are and stay connected. Confirm it says the app acts as you and can never see
+   anyone else's hours.
+6. Read the whole screen in Hungarian and in English. Both must be complete: no English sentence on
+   the Hungarian page.
+7. Click Deny. Confirm you are returned to Claude and it reports the connection was refused, and
+   that `{MCP_URL}` still refuses to answer afterwards.
+8. Connect again and click Allow. Confirm Claude reports the connector is connected and lists the
+   Sheet Happens tools.
+
+### Consent edge cases
+
+- Start a connection, leave the consent screen open for more than ten minutes, then click Allow.
+  Confirm the screen or the result says the request has expired and tells you to start again from
+  Claude — never a silent failure and never a stuck spinner.
+- Open `{MCP_URL}`'s consent path directly in the browser with no query (just `/consent`). Confirm
+  it explains that this page is part of connecting an app and does not offer an Allow button.
+- Connect a second time after already having connected once. Confirm you are **not** asked to
+  consent again: the grant is remembered, and a reconnect or a token refresh must not re-prompt.
+- Sign in as an **invited** member who has not accepted yet, or as a **deactivated** member, and try
+  to reach the consent screen. Confirm you are bounced exactly as you would be from `/time` — to the
+  account-status page — so connecting an app is not a way around the account gate.
+- Sign in as a member who has neither a passkey nor TOTP set up, and try to connect. Confirm you are
+  sent to finish security setup first.
+
+### What the agent can do
+
+Ask Claude to do each of these and confirm the result in the Sheet Happens UI afterwards.
+
+- "What am I tracking today?" — confirm it reports your timezone's today, your projects, and no
+  timer if none is running. Confirm the date it uses is **your** today, not the server's: test from a
+  profile timezone far from the server's, near midnight.
+- "Log two hours on {a tracked project} today, working on X." Confirm the entry appears on `/time`
+  on the right day, with the right project and description, and that its source reads **MCP** rather
+  than Grid or Form.
+- Confirm the figure Claude quotes back matches the format on your profile: a member on decimal
+  hours must hear "2" or "2.5", a member on hours and minutes must hear "2:30".
+- "Change that to two and a half hours" — confirm the entry updates and the day total moves with it.
+- "How much did I work this week, by project?" — confirm the totals match the `/time` week total
+  exactly, and that a declared-hours project is reported separately rather than mixed in.
+- "Delete that entry." Confirm Claude asks you to approve the action before it happens, every time,
+  even if you have allowed the other tools to run unattended.
+- After the delete, confirm `/time` no longer shows the entry, then ask Claude to put it back and
+  confirm it reappears unchanged.
+- "Start a timer on {a tracked project}." Confirm the header timer pill appears in the browser.
+  Ask "what am I tracking?" and confirm the elapsed figure is plausible. Then "stop the timer" and
+  confirm an entry is saved for the day the timer **started**.
+- Ask Claude to start a second timer while one is running. Confirm it is refused and that Claude can
+  tell you what is currently running, so it can offer to stop it.
+
+### What the agent must be refused
+
+- Ask Claude to log time in a month whose timesheet is already submitted. Confirm it is refused and
+  that Claude explains the month is locked rather than reporting success.
+- Ask it to log time against a project that declares its hours monthly. Confirm it is refused and
+  that Claude explains that project is declared on the month level.
+- Ask it to log 30 hours on one day. Confirm it is refused for exceeding 24 hours, and that the
+  day's existing entries are untouched.
+- Ask it about, or to change, **another member's** hours by name. Confirm it cannot: there is no tool
+  that takes another member, and it should say so rather than reporting someone else's figures.
+- Ask it to submit a timesheet, approve one, or change a rate. Confirm no such tool exists.
+- Have an admin deactivate the member while Claude is connected, then ask Claude to log time.
+  Confirm it fails and that reconnecting fails at login too.
+
+### Connected apps in settings
+
+- Open `/settings` as the connected member. Confirm a Connected apps section lists the app by the
+  host that vouches for it, the date it was connected, and what it was allowed to do — in the same
+  wording the consent screen used, not a second set of sentences.
+- Confirm the section reads correctly in Hungarian and English, including the empty state for a
+  member who has connected nothing.
+- Click Disconnect. Confirm a confirmation step names the app, and that cancelling changes nothing.
+- Confirm the app then disappears from the list, and that Claude can no longer read or write your
+  hours — not even for the hour an access token would otherwise still have been valid.
+- Reconnect from Claude and confirm you are asked to consent again, because the grant was removed.
+
+### Audit trail
+
+- Open `{AUDIT_LOG_VIEW}` as an admin. Confirm an entry the agent created is audited under the same
+  action name as a browser-created one, and that the row records it arrived over MCP and which app
+  it came from.
+- Confirm no audit row contains a token, an argument dump, or the text of a time entry's
+  description.
+
+## Dashboard Width And Responsive Tables
+
+The dashboard content area now widens to `92rem` from `xl` up, matching `/time` and the admin
+surfaces, and every table on it goes through `DataTable` in responsive mode — a real table from
+`md` up, stacked cards below.
+
+- On a display wider than 1500px the dashboard fills the same width as `/admin/people`, rather than
+  leaving a third of the window empty beside a `73.75rem` column.
+- The flagged users table never scrolls sideways, at any window width: check 1024, 1280 and 1920,
+  and check the same at 1024 with the sidebar collapsed. Nothing in the page scrolls horizontally
+  either — only a scrollbar the table owns would be acceptable, and there should not be one.
+- Long values shorten rather than widening the table: a member with a long address shows it
+  ellipsised from `md` up, and a project named "Internal Ops & Tooling" wraps to two lines instead
+  of holding its column open.
+- Below `md` every row becomes a card. The member's name and address head the card without a "Name"
+  label, the project and last-logged lines are labelled, and the reminder button sits on its own
+  line at the end.
+- Time and billing tracking is one full-width strip — a total, one bar and a legend that wraps —
+  not a tall column beside the table. The bar shows a band only for states that hold something: a
+  month with nothing but missing timesheets shows one band, not six slivers.
+- A state with a count of zero is still listed, in the dimmest text tier with a dimmed dot, so the
+  legend reports the zero without competing with the states that matter.
+- The panel lists eight flagged rows at most. With more than eight, the footer link reads "View all
+  N flagged users" and opens the drilldown, which lists every one; with eight or fewer it reads
+  "View details".
+- The five priority metric cards sit two-up on a phone, three-up from `md` and five-up from `xl`,
+  and the last card takes the empty cell rather than leaving a half-width gap.
+- Open each drilldown (`?drilldown=submitted`, `approved`, `invoiced`, `accepted`, `missing`,
+  `flagged`) and confirm the same: table above `md`, cards below, no sideways scroll on the page,
+  and the "Showing N of M" footer still appears on a truncated timesheet queue.
+- The employee dashboard's project breakdown behaves the same way — table above `md`, cards below —
+  and its rate, cost and missing-rate warnings all survive the switch.
+- A screen reader reaches each of these as a real table with a caption naming it ("Flagged users",
+  or the drilldown's own heading), column headers and rows. The old markup was a `div` grid with no
+  table semantics at all.
+- All of the above reads correctly in Hungarian and English, in both themes.
+
 ## Regression Checklist For Every Release
 
 - Invitation activation works for a new invited user.
@@ -3883,3 +4044,15 @@ day to open it`. Reload: it does not return.
 - Reports and exports total only the tracked hours, and state how many members and projects of
   declared hours they left out — counts, never amounts.
 - Editing a tracked report line dated the 1st of a month that holds a declared figure still saves.
+- The MCP connector connects from Claude with the URL alone, and the consent screen is complete in
+  both languages.
+- An agent can read and write only its own member's hours, and is refused on a locked month, a
+  declared project and a day over 24 hours.
+- Agent-written entries show as MCP on `/time` and record the channel and app in the audit log.
+- Disconnecting an app from `/settings` stops it acting immediately, not when its token expires.
+- The account menu puts Sign out in its own group, one divider and a clear gap below Profile and
+  settings, so it is no longer flush against the two navigational entries.
+- Choosing Sign out asks first: the session survives Escape, the close affordance and Stay signed
+  in, and ends only on the dialog's own Sign out button.
+- The confirmation opens with Stay signed in focused, so a stray Enter after the menu keeps the
+  session, and it reads correctly in Hungarian and English in both themes.

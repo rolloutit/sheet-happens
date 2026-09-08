@@ -1,0 +1,28 @@
+- main:
+  - complementary:
+    - img "Rollout IT"
+    - paragraph: Sheet Happens
+    - paragraph: Rollout IT · internal
+    - heading "One step more — for safety." [level=1]
+    - paragraph: Just making sure it's really you.
+    - text: "Tip: passkeys get you in two seconds flat."
+    - paragraph: Time tracking, timesheets and invoice checks — in one place.
+  - radiogroup "Language":
+    - radio "HU"
+    - radio "EN" [checked]
+  - button "Theme"
+  - paragraph: Connect an app
+  - heading "Sheet Happens E2E Agent wants to access your Sheet Happens account" [level=2]
+  - paragraph: You are signed in as Contractor Example. An app you allow acts as you, with exactly your own rights — it can never see or change anyone else's hours.
+  - list:
+    - listitem:
+      - paragraph: Read your time
+      - paragraph: See your own time entries, your projects, your running timer and your day, week and month totals.
+    - listitem:
+      - paragraph: Log and correct your time
+      - paragraph: Add, change and delete your own time entries, and start or stop your timer. Deleted entries can be restored. Months with a submitted timesheet stay locked.
+    - listitem:
+      - paragraph: Know who you are and stay connected
+      - paragraph: Read your name and email address, and keep the connection working without asking you to sign in again.
+  - button "Deny"
+  - button "Allow"

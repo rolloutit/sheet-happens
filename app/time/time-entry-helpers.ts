@@ -169,6 +169,8 @@ export function formatEntrySource(source: TimeGridEntry["source"], t: TimeTracki
       return t("source.timer");
     case "DECLARED":
       return t("source.declared");
+    case "MCP":
+      return t("source.mcp");
     case "GRID":
       return t("source.grid");
   }

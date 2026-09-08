@@ -5,7 +5,8 @@ import { formatDateOnly, normalizeDateOnly } from "@/src/server/time-tracking";
 export type ReportMode = "COST_FREE" | "INTERNAL";
 export type ReportView = "USER" | "PROJECT";
 export type ReportMemberProfile = "EMPLOYEE" | "CONTRACTOR";
-export type ReportTimeEntrySource = "GRID" | "FORM" | "TIMER";
+/** Every source a report can contain: `buildReportTimeEntryWhere` excludes only `DECLARED`. */
+export type ReportTimeEntrySource = "GRID" | "FORM" | "TIMER" | "MCP";
 export type ReportRateSource = "MEMBER_DEFAULT" | "PROJECT_OVERRIDE";
 
 export type ReportFiltersInput = {

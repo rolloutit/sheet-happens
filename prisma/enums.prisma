@@ -50,6 +50,7 @@ enum EntrySource {
   FORM     @map("form")
   TIMER    @map("timer")
   DECLARED @map("declared")
+  MCP      @map("mcp")
 
   @@map("entry_source")
 }

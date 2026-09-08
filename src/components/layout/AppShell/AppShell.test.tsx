@@ -1,4 +1,4 @@
-import { render, screen, within } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { NextIntlClientProvider } from "next-intl";
 import { describe, expect, it, vi } from "vitest";
@@ -19,12 +19,14 @@ function renderShell({
   profile,
   timer,
   onStopTimer,
+  onUserAction,
 }: {
   current?: string;
   locale?: "en" | "hu";
   profile?: "employee" | "contractor";
   timer?: AppShellTimer | null;
   onStopTimer?: () => Promise<{ status: "success"; message: string }>;
+  onUserAction?: (actionId: string) => void;
 } = {}) {
   const messages = locale === "hu" ? hu : en;
 
@@ -37,6 +39,7 @@ function renderShell({
           profile={profile}
           timer={timer}
           onStopTimer={onStopTimer}
+          onUserAction={onUserAction}
         >
           <p>content</p>
         </AppShell>
@@ -93,6 +96,52 @@ describe("AppShell account menu", () => {
     expect(await screen.findByText("My rates")).toBeInTheDocument();
     expect(screen.getByText("Profile and settings")).toBeInTheDocument();
     expect(screen.getByText("Sign out")).toBeInTheDocument();
+  });
+
+  it("separates sign out from the navigational actions with a divider", async () => {
+    const user = userEvent.setup();
+    renderShell();
+
+    await user.click(screen.getByRole("button", { name: "User menu" }));
+
+    const signOut = await screen.findByRole("menuitem", { name: "Sign out" });
+    const settings = screen.getByRole("menuitem", { name: "Profile and settings" });
+
+    expect(settings.nextElementSibling).toHaveAttribute("role", "separator");
+    expect(settings.nextElementSibling).toBe(signOut.previousElementSibling);
+  });
+
+  it("asks before signing out instead of firing on the first click", async () => {
+    const user = userEvent.setup();
+    const onUserAction = vi.fn();
+    renderShell({ onUserAction });
+
+    await user.click(screen.getByRole("button", { name: "User menu" }));
+    await user.click(await screen.findByRole("menuitem", { name: "Sign out" }));
+
+    const dialog = await screen.findByRole("dialog");
+
+    expect(within(dialog).getByText("Sign out?")).toBeInTheDocument();
+    expect(onUserAction).not.toHaveBeenCalled();
+
+    await user.click(within(dialog).getByRole("button", { name: "Sign out" }));
+
+    expect(onUserAction).toHaveBeenCalledWith("sign-out");
+  });
+
+  it("keeps the session when the confirmation is dismissed", async () => {
+    const user = userEvent.setup();
+    const onUserAction = vi.fn();
+    renderShell({ onUserAction });
+
+    await user.click(screen.getByRole("button", { name: "User menu" }));
+    await user.click(await screen.findByRole("menuitem", { name: "Sign out" }));
+
+    const dialog = await screen.findByRole("dialog");
+    await user.click(within(dialog).getByRole("button", { name: "Stay signed in" }));
+
+    await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+    expect(onUserAction).not.toHaveBeenCalled();
   });
 });
 

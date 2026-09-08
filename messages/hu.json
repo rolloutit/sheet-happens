@@ -85,7 +85,14 @@
       "label": "Felhasználói menü",
       "myRates": "Saját óradíjaim",
       "profileAndSettings": "Profil és beállítások",
-      "signOut": "Kijelentkezés"
+      "signOut": "Kijelentkezés",
+      "signOutConfirm": {
+        "title": "Kijelentkezel?",
+        "description": "Kijelentkeztetünk ezen az eszközön, és visszakerülsz a bejelentkezési képernyőre. A már mentett időbejegyzéseid érintetlenül maradnak.",
+        "confirm": "Kijelentkezés",
+        "cancel": "Bejelentkezve maradok",
+        "close": "Bezárás"
+      }
     },
     "timer": {
       "stop": "Időmérő leállítása",
@@ -315,6 +322,45 @@
       "signOut": "Kijelentkezés"
     }
   },
+  "Consent": {
+    "eyebrow": "Alkalmazás összekötése",
+    "title": "A {client} hozzáférést kér a Sheet Happens fiókodhoz",
+    "description": "{name} néven vagy bejelentkezve. Az engedélyezett alkalmazás a te nevedben, pontosan a te jogaiddal jár el — más munkaóráit soha nem látja és nem módosítja.",
+    "scopes": {
+      "timeRead": {
+        "title": "Munkaóráid olvasása",
+        "description": "Láthatja a saját időbejegyzéseidet, a projektjeidet, a futó időmérőt, valamint a napi, heti és havi összesítéseidet."
+      },
+      "timeWrite": {
+        "title": "Munkaóráid rögzítése és javítása",
+        "description": "Létrehozhatja, módosíthatja és törölheti a saját időbejegyzéseidet, és indíthatja vagy leállíthatja az időmérőt. A törölt bejegyzések visszaállíthatók. A beküldött timesheettel zárolt hónapok zárolva maradnak."
+      },
+      "identity": {
+        "title": "Azonosításod és a kapcsolat fenntartása",
+        "description": "Elolvashatja a nevedet és az e-mail-címedet, és fenntarthatja a kapcsolatot anélkül, hogy újra be kellene jelentkezned."
+      }
+    },
+    "unknownScopes": "Ez az alkalmazás olyan hozzáférést is kér, amelyet a Sheet Happens nem ismer: {scopes}. Ha nem tudod, miért, tagadd meg.",
+    "actions": {
+      "allow": "Engedélyezés",
+      "deny": "Megtagadás"
+    },
+    "expired": {
+      "title": "A kérés lejárt",
+      "message": "Az összekötési kérések csak néhány percig érvényesek. Indítsd újra az összekötést abban az alkalmazásban, amelyet használtál."
+    },
+    "invalid": {
+      "title": "Nincs mit jóváhagyni",
+      "message": "Ez az oldal egy alkalmazás Sheet Happenshez kötésének része. Ne közvetlenül nyisd meg, hanem abból az alkalmazásból, amelyet össze szeretnél kötni."
+    }
+  },
+  "ConsentActions": {
+    "errors": {
+      "expired": "Ez a kérés már nem érvényes. Indítsd újra az összekötést abban az alkalmazásban, amelyet használtál.",
+      "notAllowed": "A Sheet Happens fiókod jelenleg nem tud alkalmazásokat összekötni.",
+      "generic": "Az összekötést nem sikerült befejezni."
+    }
+  },
   "Help": {
     "eyebrow": "Súgó",
     "title": "Súgó és kézikönyv",
@@ -322,7 +368,8 @@
     "tabs": {
       "label": "Súgó tartalom",
       "welcome": "Üdvözlő",
-      "manual": "Kézikönyv"
+      "manual": "Kézikönyv",
+      "connector": "Claude connector"
     },
     "actions": {
       "editWelcome": "Üdvözlő tartalom szerkesztése"
@@ -344,6 +391,37 @@
       "all": "Mindenki",
       "contractor": "Kontraktorok",
       "admin": "Adminok"
+    },
+    "mcp": {
+      "badge": "Claude connector",
+      "title": "Engedd a Claude-ot a saját munkaóráidhoz",
+      "description": "A Sheet Happens connectorral a Claude elolvassa a rögzített munkaóráidat, és rögzíti is helyetted — a weben, az asztali appban, a Coworkben, mobilon vagy a Claude Code-ban. Mindenki magának köti össze, és egy kapcsolat mindig csak az adott tag saját óráit látja.",
+      "urlLabel": "Connector URL",
+      "urlHint": "Ezt a címet illeszd be oda, ahol a Claude egyéni connector URL-t kér. A belépés a szokásos Sheet Happens bejelentkezéssel történik, utána pedig egy jóváhagyó oldal pontosan felsorolja, mit tehet az agent — addig semmit nem kap meg.",
+      "copyUrl": "URL másolása",
+      "urlCopied": "A connector URL a vágólapra került.",
+      "copyFailed": "A másolás nem sikerült — jelöld ki a fenti címet, és másold ki kézzel.",
+      "app": {
+        "title": "Claude.ai, Claude Desktop, Cowork és mobil",
+        "description": "Egyetlen beállítás mind a négy felületre érvényes.",
+        "teamTitle": "Team vagy Enterprise munkaterület",
+        "teamOwner": "A connectort egy owner adja hozzá egyszer: Organization settings → Connectors → Add → Custom, a neve „Sheet Happens”, az URL a fenti, az authentication „Always required”, az OAuth-kliens pedig az Anthropic által hosztolt client metadata.",
+        "teamMember": "Ezután mindenki más a Customize → Connectors alatt a Connect gombra kattint.",
+        "personalTitle": "Pro, Max vagy Free fiók",
+        "personalStep": "Nyisd meg a Customize → Connectors → Add custom connector pontot, és illeszd be a fenti URL-t. A Claude a hitelesítési beállításokat magától a Sheet Happenstől olvassa ki és tölti ki.",
+        "tools": "Az eszközöket beszélgetésenként a „+” menüből kapcsolod be, és a connector alatt bármelyik eszköz külön Blocked állapotra állítható."
+      },
+      "code": {
+        "title": "Claude Code",
+        "description": "Add hozzá egyszer a connectort, majd jelentkezz be — a terminálból, vagy egy session-ben az /mcp paranccsal.",
+        "loginHint": "SSH-n dolgozva add hozzá a --no-browser opciót. Az eszközengedélyek neve mcp__sheet-happens__time_get_context alakú."
+      },
+      "ownership": {
+        "title": "Mit ér el a connector",
+        "body": "A kapcsolatodat használó agent pontosan azt éri el, amit te a Sheet Happensben: a saját időbejegyzéseidet, a saját projektjeidet és a saját összesítéseidet. Más munkaóráit soha nem látja és nem módosítja, a beküldött timesheettel zárolt hónap pedig az agent számára is zárolva marad.",
+        "disconnect": "Azt te döntöd el, meddig tart. Amíg a Beállításokban le nem választod, az alkalmazás a nevedben járhat el — akkor is, amikor épp nem használod.",
+        "openConnectedApps": "Összekötött alkalmazások megnyitása"
+      }
     }
   },
   "AdminInfo": {
@@ -546,6 +624,7 @@
         "lastWeek": "A múlt héten",
         "twoWeeksAgo": "2 hete",
         "viewDrilldown": "Részletek",
+        "viewAll": "Mind a {count} flagged felhasználó",
         "remind": "Emlékeztető küldése",
         "reminderSent": "Emlékeztető elküldve",
         "reminderErrors": {
@@ -1888,6 +1967,7 @@
         "member__restored": "Visszaállítva",
         "member__role_changed": "Szerepkör módosítva",
         "member__session_revoked": "Munkamenet visszavonva",
+        "member__mcp_access_revoked": "Összekötött alkalmazások visszavonva",
         "member__timezone_updated": "Időzóna frissítve",
         "member__updated": "Módosítva",
         "notification__settings_updated": "Beállítások frissítve",
@@ -2259,7 +2339,8 @@
       "timer": "Időmérő",
       "timed": "Időzített",
       "hours": "Órák",
-      "declared": "Bevallott"
+      "declared": "Bevallott",
+      "mcp": "MCP"
     },
     "fieldErrors": {
       "durationPositive": "Az időtartamnak nullánál nagyobbnak kell lennie.",
@@ -2468,6 +2549,7 @@
       "entryLocked": "Ez a bejegyzés beküldött timesheet miatt zárolt.",
       "periodLocked": "Ez az időszak beküldött timesheet miatt zárolt.",
       "weekTouchesLockedPeriod": "Ez a hét zárolt időszakot érint.",
+      "inactiveWeekHasEntries": "Töröld a hét bejegyzéseit, mielőtt inaktívnak jelölöd a projektet.",
       "stopTimerFirst": "Új időmérő indítása előtt állítsd le a futó időmérőt.",
       "noTimerRunning": "Nincs futó időmérő.",
       "projectNotActiveForDate": "Ez a projekt nem aktív a kiválasztott dátumon.",
@@ -2486,6 +2568,7 @@
     "fields": {
       "chooseProject": "Válassz projektet.",
       "validDate": "Válassz érvényes dátumot.",
+      "validTime": "Válassz érvényes időpontot.",
       "validTargetDate": "Válassz érvényes céldátumot.",
       "validWeek": "Válassz érvényes hetet.",
       "validStartTime": "Válassz érvényes kezdési időt.",
@@ -2589,6 +2672,7 @@
       "label": "Profilbeállítások szakaszai",
       "profile": "Profil",
       "security": "Biztonság és belépés",
+      "connectedApps": "Összekötött alkalmazások",
       "preferences": "Beállítások",
       "notifications": "Értesítések"
     },
@@ -2608,6 +2692,26 @@
     "securitySection": {
       "title": "Biztonság és belépés",
       "description": "Kezeld a bejelentkezési módokat, passkey-ket és az authenticator alkalmazást."
+    },
+    "connectedApps": {
+      "title": "Összekötött alkalmazások",
+      "description": "Azok az alkalmazások, amelyek a te nevedben járhatnak el a Sheet Happensben, és amit mindegyik tehet.",
+      "connectedOn": "Összekötve: {date}",
+      "scopesLabel": "Engedélyezve",
+      "disconnect": "Leválasztás",
+      "disconnectApp": "Leválasztás: {app}",
+      "keepsActingNote": "Az engedélyezett alkalmazás addig jár el a nevedben — a te jogaiddal, és csak a saját munkaóráidon —, amíg itt le nem választod.",
+      "empty": {
+        "title": "Nincs összekötött alkalmazás",
+        "body": "Az összekötéssel a Claude elolvassa és rögzíti helyetted a saját munkaóráidat. Az összekötés a Claude-ban indul, nem itt: add hozzá ott a Sheet Happens connectort, majd hagyd jóvá a kért hozzáférést. A pontos lépések a Súgó oldalon vannak.",
+        "openHelp": "Pontos lépések megnyitása"
+      },
+      "dialog": {
+        "title": "Leválasztod ezt az alkalmazást?",
+        "body": "A(z) {app} azonnal elveszíti a hozzáférést, a már megnyitott beszélgetésekben is. Az időbejegyzéseid változatlanul megmaradnak, és az alkalmazást bármikor újra összekötheted.",
+        "confirm": "Leválasztás",
+        "cancel": "Mégse"
+      }
     },
     "preferences": {
       "title": "Beállítások",
@@ -3032,6 +3136,7 @@
       "passkeyRemoved": "Passkey eltávolítva.",
       "totpDisabledAudited": "Authenticator kikapcsolás naplózva.",
       "backupCodesRegeneratedAudited": "Tartalék kód generálás naplózva.",
+      "connectedAppDisconnected": "Alkalmazás leválasztva.",
       "notificationSettingsUpdated": "Értesítési beállítások frissítve."
     },
     "errors": {
@@ -3052,6 +3157,9 @@
       "passkeyRemoveFailed": "Nem sikerült eltávolítani a passkey-t.",
       "totpDisableAuditFailed": "Az authenticator alkalmazás kikapcsolt, de a naplóeseményt nem sikerült rögzíteni.",
       "backupCodesAuditFailed": "A tartalék kódok újragenerálva, de a naplóeseményt nem sikerült rögzíteni.",
+      "connectedAppIdMissing": "Hiányzik a leválasztandó alkalmazás.",
+      "connectedAppAlreadyDisconnected": "Ez az alkalmazás már le van választva.",
+      "connectedAppDisconnectFailed": "Nem sikerült leválasztani az alkalmazást.",
       "noAuthAccount": "Ehhez a taghoz nincs kapcsolt auth fiók.",
       "notificationSettingsUpdateFailed": "Nem sikerült frissíteni az értesítési beállításokat.",
       "notificationSettingsInvalid": "Ellenőrizd az értesítési ütemezést és a kézbesítési beállításokat."

@@ -110,7 +110,7 @@ export function getTodayIsoInTimezone(timezone: string, now = new Date()) {
 
 export function parseTimeInput(value: string, message = "Choose a valid time.") {
   if (!/^\d{2}:\d{2}$/.test(value)) {
-    throw new TimeTrackingDateError(message);
+    throw new TimeTrackingDateError(message, "INVALID_TIME");
   }
 
   const [hourValue, minuteValue] = value.split(":");
@@ -125,7 +125,7 @@ export function parseTimeInput(value: string, message = "Choose a valid time.") 
     minute < 0 ||
     minute > 59
   ) {
-    throw new TimeTrackingDateError(message);
+    throw new TimeTrackingDateError(message, "INVALID_TIME");
   }
 
   return {
@@ -188,7 +188,7 @@ export function localIntervalToUtc(input: {
   const durationMinutes = Math.round((endedAt.getTime() - startedAt.getTime()) / 60_000);
 
   if (durationMinutes <= 0) {
-    throw new TimeTrackingDateError("End time must be after start time.");
+    throw new TimeTrackingDateError("End time must be after start time.", "END_BEFORE_START");
   }
 
   return {
@@ -235,10 +235,21 @@ export function formatWeekRange(weekStart: Date) {
   return `${formatter.format(weekStart)} - ${formatter.format(weekEnd)}, ${weekEnd.getUTCFullYear()}`;
 }
 
+/**
+ * Codes for the date/time failures. The message stays the human-readable sentence the web layer
+ * localizes; the code is the stable identifier a machine-facing caller (`src/server/mcp`) keys on,
+ * so renaming a sentence no longer silently changes a wire contract.
+ */
+export type TimeTrackingDateErrorCode =
+  "INVALID_DATE" | "INVALID_TIME" | "END_BEFORE_START" | "TIMEZONE_FORMAT";
+
 export class TimeTrackingDateError extends Error {
-  constructor(message: string) {
+  readonly code: TimeTrackingDateErrorCode;
+
+  constructor(message: string, code: TimeTrackingDateErrorCode = "INVALID_DATE") {
     super(message);
     this.name = "TimeTrackingDateError";
+    this.code = code;
   }
 }
 
@@ -255,7 +266,8 @@ function getZonedDateTimeParts(date: Date, timezone: string) {
 
   const get = (type: Intl.DateTimeFormatPartTypes) => {
     const value = parts.find((part) => part.type === type)?.value;
-    if (!value) throw new TimeTrackingDateError("Could not format date in timezone.");
+    if (!value)
+      throw new TimeTrackingDateError("Could not format date in timezone.", "TIMEZONE_FORMAT");
     return Number.parseInt(value, 10);
   };
 

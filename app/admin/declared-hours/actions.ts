@@ -150,6 +150,7 @@ async function getDeclaredHoursRequestMetadata(): Promise<TimeTrackingRequestMet
   return {
     ipAddress: requestHeaders.get("x-forwarded-for"),
     userAgent: requestHeaders.get("user-agent"),
+    channel: "WEB",
   };
 }
 

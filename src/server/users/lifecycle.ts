@@ -1,4 +1,5 @@
 import { prisma } from "@/src/server/db/client";
+import { revokeAllMcpAccessForUser } from "@/src/server/mcp/connections";
 import { sendInvitationEmail } from "@/src/server/auth/auth-emails";
 import {
   buildInvitationAcceptUrl,
@@ -121,6 +122,20 @@ type MemberLifecycleTransaction = {
     }): Promise<unknown>;
   };
   session: {
+    deleteMany(args: { where: { userId: string } }): Promise<{ count: number }>;
+  };
+  /*
+   * The MCP/OAuth grant tables. Declared here so revoking an agent's access happens inside the same
+   * transaction as the status change — a member cannot end up INACTIVE with a live grant, or lose a
+   * grant while staying ACTIVE.
+   */
+  oauthAccessToken: {
+    deleteMany(args: { where: { userId: string } }): Promise<{ count: number }>;
+  };
+  oauthRefreshToken: {
+    deleteMany(args: { where: { userId: string } }): Promise<{ count: number }>;
+  };
+  oauthConsent: {
     deleteMany(args: { where: { userId: string } }): Promise<{ count: number }>;
   };
   twoFactor: {
@@ -348,9 +363,16 @@ export async function deactivateMember(
       reason: "member_deactivated",
     });
 
+    const revokedConnectionCount = await revokeMcpGrantsForMember(tx, {
+      member,
+      actorMemberId: input.actorMemberId,
+      reason: "member_deactivated",
+    });
+
     return {
       memberId: member.id,
       revokedSessionCount,
+      revokedConnectionCount,
     };
   });
 }
@@ -449,10 +471,17 @@ export async function softDeleteMember(
       reason: "member_deleted",
     });
 
+    const revokedConnectionCount = await revokeMcpGrantsForMember(tx, {
+      member,
+      actorMemberId: input.actorMemberId,
+      reason: "member_deleted",
+    });
+
     return {
       memberId: member.id,
       revokedInvitationCount: revokedInvitations.count,
       revokedSessionCount,
+      revokedConnectionCount,
     };
   });
 }
@@ -781,6 +810,60 @@ async function findMember(tx: MemberLifecycleTransaction, memberId: string) {
   }
 
   return member;
+}
+
+/**
+ * Ends every connected app's access, alongside the browser sessions.
+ *
+ * Only deactivation and deletion do this. Revoking sessions on its own ("sign this person out
+ * everywhere") and resetting an authenticator deliberately leave grants alone: those are about
+ * regaining control of a browser, not about withdrawing an agent's authority, and silently
+ * disconnecting Claude because someone reset a TOTP would be a surprise.
+ *
+ * `resolveMcpActor` re-checks `ACTIVE` on every single MCP call, so this is not what makes
+ * deactivation safe — it is what stops a dormant grant from reviving on reactivation, and what
+ * empties "Connected apps" for an account that is gone.
+ */
+async function revokeMcpGrantsForMember(
+  tx: MemberLifecycleTransaction,
+  input: {
+    member: {
+      id: string;
+      authUserId: string | null;
+    };
+    actorMemberId: string;
+    reason: SessionRevocationReason;
+  },
+) {
+  if (!input.member.authUserId) return 0;
+
+  const revoked = await revokeAllMcpAccessForUser(
+    { authUserId: input.member.authUserId },
+    { db: tx },
+  );
+  const total = revoked.revokedAccessTokens + revoked.revokedRefreshTokens;
+
+  if (revoked.removedConsents === 0 && total === 0) {
+    // Nothing was connected. An audit row saying so would be noise on every deactivation.
+    return 0;
+  }
+
+  await tx.auditLog.create({
+    data: {
+      actorMemberId: input.actorMemberId,
+      action: "member.mcp_access_revoked",
+      targetType: "member",
+      targetId: input.member.id,
+      after: {
+        reason: input.reason,
+        removedConsents: revoked.removedConsents,
+        revokedAccessTokens: revoked.revokedAccessTokens,
+        revokedRefreshTokens: revoked.revokedRefreshTokens,
+      },
+    },
+  });
+
+  return revoked.removedConsents;
 }
 
 async function revokeAuthSessionsForMember(

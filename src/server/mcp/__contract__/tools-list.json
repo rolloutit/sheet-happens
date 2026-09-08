@@ -1,0 +1,1276 @@
+{
+  "tools": [
+    {
+      "name": "time_get_context",
+      "title": "Get tracking context",
+      "description": "Who you are acting for, and everything needed to make a valid call. Call this first.\n\nReturns the member's timezone and today's date in it, the current week and month, the project ids you may log against, which months are locked by a submitted timesheet, any running timer, and the argument limits every other tool enforces.\n\nDates in this API are never relative: work out YYYY-MM-DD yourself from `today`. Projects are addressed by `id` — names are not accepted. A project with `canLogTime: false` declares its hours a month at a time and will refuse individual entries.",
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false
+      },
+      "inputSchema": {
+        "type": "object",
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "properties": {},
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "member": {
+            "type": "object",
+            "properties": {
+              "id": { "type": "string" },
+              "displayName": { "type": "string" },
+              "timezone": { "type": "string" },
+              "locale": { "type": "string" },
+              "durationDisplayFormat": {
+                "type": "string",
+                "enum": ["DECIMAL_HOURS", "HOURS_MINUTES"]
+              },
+              "profile": { "type": "string", "enum": ["EMPLOYEE", "CONTRACTOR"] }
+            },
+            "required": [
+              "id",
+              "displayName",
+              "timezone",
+              "locale",
+              "durationDisplayFormat",
+              "profile"
+            ],
+            "additionalProperties": false
+          },
+          "today": { "type": "string" },
+          "week": {
+            "type": "object",
+            "properties": { "start": { "type": "string" }, "end": { "type": "string" } },
+            "required": ["start", "end"],
+            "additionalProperties": false
+          },
+          "month": {
+            "type": "object",
+            "properties": { "start": { "type": "string" }, "end": { "type": "string" } },
+            "required": ["start", "end"],
+            "additionalProperties": false
+          },
+          "limits": {
+            "type": "object",
+            "properties": {
+              "dailySoftWarningMinutes": {
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991
+              },
+              "dailyHardLimitMinutes": {
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991
+              },
+              "descriptionMaxLength": {
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991
+              },
+              "listRangeDays": {
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991
+              },
+              "summaryRangeDays": {
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991
+              }
+            },
+            "required": [
+              "dailySoftWarningMinutes",
+              "dailyHardLimitMinutes",
+              "descriptionMaxLength",
+              "listRangeDays",
+              "summaryRangeDays"
+            ],
+            "additionalProperties": false
+          },
+          "projects": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": { "type": "string" },
+                "name": { "type": "string" },
+                "color": { "type": "string" },
+                "isInternal": { "type": "boolean" },
+                "trackingMode": { "type": "string", "enum": ["TRACKED", "DECLARED"] },
+                "canLogTime": { "type": "boolean" },
+                "validFrom": {
+                  "type": "string",
+                  "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+                  "description": "Calendar date as YYYY-MM-DD, in the member's timezone."
+                },
+                "validTo": {
+                  "anyOf": [
+                    {
+                      "type": "string",
+                      "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+                      "description": "Calendar date as YYYY-MM-DD, in the member's timezone."
+                    },
+                    { "type": "null" }
+                  ]
+                }
+              },
+              "required": [
+                "id",
+                "name",
+                "color",
+                "isInternal",
+                "trackingMode",
+                "canLogTime",
+                "validFrom",
+                "validTo"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "lockedMonths": { "type": "array", "items": { "type": "string" } },
+          "runningTimer": {
+            "anyOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "id": { "type": "string" },
+                  "projectId": { "type": "string" },
+                  "projectName": { "type": "string" },
+                  "description": { "type": "string" },
+                  "startedAt": { "type": "string" },
+                  "elapsedMinutes": {
+                    "type": "integer",
+                    "minimum": -9007199254740991,
+                    "maximum": 9007199254740991
+                  }
+                },
+                "required": [
+                  "id",
+                  "projectId",
+                  "projectName",
+                  "description",
+                  "startedAt",
+                  "elapsedMinutes"
+                ],
+                "additionalProperties": false
+              },
+              { "type": "null" }
+            ]
+          },
+          "scopes": { "type": "array", "items": { "type": "string" } }
+        },
+        "required": [
+          "member",
+          "today",
+          "week",
+          "month",
+          "limits",
+          "projects",
+          "lockedMonths",
+          "runningTimer",
+          "scopes"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "time_list_entries",
+      "title": "List time entries",
+      "description": "List the signed-in member's own time entries in a date range, oldest first.\n\n`from` and `to` are `YYYY-MM-DD` in the member's timezone and both ends are included; call `time_get_context` for today's date in that timezone. A range may span at most 92 days — a wider one is refused with `RANGE_TOO_LARGE` rather than truncated. `projectId` narrows the list to one project.\n\nResults are paged: `limit` defaults to 100 and is capped at 200. `totals` describes the page that came back, NOT the whole range, so the range's total is known only once every page has been read — pass `nextCursor` back as `cursor` with the same `from`/`to` until it comes back `null`. When a range is too large, page through it; do not widen it to save a call.\n\nDeleted entries are never returned. Entries of a month whose hours are declared in bulk are excluded unless `includeDeclared` is true.",
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false
+      },
+      "inputSchema": {
+        "type": "object",
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "properties": {
+          "from": {
+            "type": "string",
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+            "description": "Calendar date as YYYY-MM-DD, in the member's timezone."
+          },
+          "to": {
+            "type": "string",
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+            "description": "Calendar date as YYYY-MM-DD, in the member's timezone."
+          },
+          "projectId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Optional. Only entries logged against this project id, from time_get_context."
+          },
+          "includeDeclared": {
+            "default": false,
+            "description": "Include the entries of a month that declares its hours in bulk. False by default: a declaration is one month-sized entry, so adding it to tracked entries counts that month twice.",
+            "type": "boolean"
+          },
+          "cursor": {
+            "type": "string",
+            "minLength": 1,
+            "description": "The nextCursor of the previous page. Opaque — pass it back unchanged."
+          },
+          "limit": {
+            "default": 100,
+            "description": "Entries per page, 1-200. A value outside that range is clamped, not refused.",
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          }
+        },
+        "required": ["from", "to"],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "range": {
+            "type": "object",
+            "properties": {
+              "from": {
+                "type": "string",
+                "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+                "description": "Calendar date as YYYY-MM-DD, in the member's timezone."
+              },
+              "to": {
+                "type": "string",
+                "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+                "description": "Calendar date as YYYY-MM-DD, in the member's timezone."
+              }
+            },
+            "required": ["from", "to"],
+            "additionalProperties": false
+          },
+          "entries": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": { "type": "string" },
+                "date": {
+                  "type": "string",
+                  "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+                  "description": "Calendar date as YYYY-MM-DD, in the member's timezone."
+                },
+                "projectId": { "type": "string" },
+                "projectName": { "type": "string" },
+                "durationMinutes": {
+                  "type": "integer",
+                  "minimum": -9007199254740991,
+                  "maximum": 9007199254740991
+                },
+                "durationText": { "type": "string" },
+                "startTime": {
+                  "anyOf": [
+                    {
+                      "type": "string",
+                      "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$",
+                      "description": "Time of day as HH:mm, 24-hour, in the member's timezone."
+                    },
+                    { "type": "null" }
+                  ]
+                },
+                "endTime": {
+                  "anyOf": [
+                    {
+                      "type": "string",
+                      "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$",
+                      "description": "Time of day as HH:mm, 24-hour, in the member's timezone."
+                    },
+                    { "type": "null" }
+                  ]
+                },
+                "description": { "type": "string" },
+                "source": {
+                  "type": "string",
+                  "enum": ["GRID", "FORM", "TIMER", "DECLARED", "MCP"]
+                },
+                "locked": { "type": "boolean" },
+                "updatedAt": { "type": "string" }
+              },
+              "required": [
+                "id",
+                "date",
+                "projectId",
+                "projectName",
+                "durationMinutes",
+                "durationText",
+                "startTime",
+                "endTime",
+                "description",
+                "source",
+                "locked",
+                "updatedAt"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "totals": {
+            "type": "object",
+            "properties": {
+              "minutes": {
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991
+              },
+              "minutesText": { "type": "string" },
+              "entryCount": {
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991
+              }
+            },
+            "required": ["minutes", "minutesText", "entryCount"],
+            "additionalProperties": false
+          },
+          "nextCursor": { "type": ["string", "null"] }
+        },
+        "required": ["range", "entries", "totals", "nextCursor"],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "time_summary",
+      "title": "Summarize tracked time",
+      "description": "Deterministic totals for the signed-in member over one period — use this instead of adding up `time_list_entries` yourself.\n\n`period` is \"day\", \"week\" (Monday to Sunday), \"month\" or \"range\". The first three are derived from `date`, which defaults to today in the member's timezone; \"range\" needs both `from` and `to` and may span at most 366 days.\n\nReturns the window's totals, a per-project and a per-day breakdown, and — unless `compareWithPrevious` is false — the same-length window immediately before it. `deltaMinutes` is signed, so a negative value is a drop; `deltaText` is that change's size without the sign.\n\nDeclared hours appear as `declaredMinutes` and are never part of `trackedMinutes`; only months lying entirely inside the window contribute any. A day over 8 hours is flagged in `byDay`, which is a fact about the week and not a rule violation.",
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false
+      },
+      "inputSchema": {
+        "type": "object",
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "properties": {
+          "period": {
+            "default": "week",
+            "description": "day, week (Monday to Sunday), or month — each derived from `date`. Use range only for an arbitrary window, which requires from and to.",
+            "type": "string",
+            "enum": ["day", "week", "month", "range"]
+          },
+          "date": {
+            "description": "Anchor day for day, week and month. Defaults to today in the member's timezone. Ignored when period is range.",
+            "type": "string",
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+          },
+          "from": {
+            "description": "First day of a range period, inclusive.",
+            "type": "string",
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+          },
+          "to": {
+            "description": "Last day of a range period, inclusive.",
+            "type": "string",
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+          },
+          "compareWithPrevious": {
+            "default": true,
+            "description": "Also total the window of the same length immediately before this one, as `previous`.",
+            "type": "boolean"
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "period": {
+            "type": "object",
+            "properties": {
+              "kind": { "type": "string", "enum": ["day", "week", "month", "range"] },
+              "start": {
+                "type": "string",
+                "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+                "description": "Calendar date as YYYY-MM-DD, in the member's timezone."
+              },
+              "end": {
+                "type": "string",
+                "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+                "description": "Calendar date as YYYY-MM-DD, in the member's timezone."
+              },
+              "locked": { "type": "boolean" }
+            },
+            "required": ["kind", "start", "end", "locked"],
+            "additionalProperties": false
+          },
+          "totals": {
+            "type": "object",
+            "properties": {
+              "trackedMinutes": {
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991
+              },
+              "trackedText": { "type": "string" },
+              "declaredMinutes": {
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991
+              },
+              "declaredText": { "type": "string" },
+              "totalMinutes": {
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991
+              },
+              "totalText": { "type": "string" },
+              "entryCount": {
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991
+              },
+              "daysWithEntries": {
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991
+              },
+              "averageMinutesPerActiveDay": {
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991
+              }
+            },
+            "required": [
+              "trackedMinutes",
+              "trackedText",
+              "declaredMinutes",
+              "declaredText",
+              "totalMinutes",
+              "totalText",
+              "entryCount",
+              "daysWithEntries",
+              "averageMinutesPerActiveDay"
+            ],
+            "additionalProperties": false
+          },
+          "byProject": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "projectId": { "type": "string" },
+                "name": { "type": "string" },
+                "minutes": {
+                  "type": "integer",
+                  "minimum": -9007199254740991,
+                  "maximum": 9007199254740991
+                },
+                "minutesText": { "type": "string" },
+                "entryCount": {
+                  "type": "integer",
+                  "minimum": -9007199254740991,
+                  "maximum": 9007199254740991
+                },
+                "share": { "type": "number" }
+              },
+              "required": ["projectId", "name", "minutes", "minutesText", "entryCount", "share"],
+              "additionalProperties": false
+            }
+          },
+          "byDay": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "date": {
+                  "type": "string",
+                  "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+                  "description": "Calendar date as YYYY-MM-DD, in the member's timezone."
+                },
+                "minutes": {
+                  "type": "integer",
+                  "minimum": -9007199254740991,
+                  "maximum": 9007199254740991
+                },
+                "minutesText": { "type": "string" },
+                "entryCount": {
+                  "type": "integer",
+                  "minimum": -9007199254740991,
+                  "maximum": 9007199254740991
+                },
+                "overSoftLimit": { "type": "boolean" }
+              },
+              "required": ["date", "minutes", "minutesText", "entryCount", "overSoftLimit"],
+              "additionalProperties": false
+            }
+          },
+          "previous": {
+            "anyOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "start": {
+                    "type": "string",
+                    "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+                    "description": "Calendar date as YYYY-MM-DD, in the member's timezone."
+                  },
+                  "end": {
+                    "type": "string",
+                    "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+                    "description": "Calendar date as YYYY-MM-DD, in the member's timezone."
+                  },
+                  "totalMinutes": {
+                    "type": "integer",
+                    "minimum": -9007199254740991,
+                    "maximum": 9007199254740991
+                  },
+                  "totalText": { "type": "string" },
+                  "deltaMinutes": {
+                    "type": "integer",
+                    "minimum": -9007199254740991,
+                    "maximum": 9007199254740991
+                  },
+                  "deltaText": { "type": "string" }
+                },
+                "required": [
+                  "start",
+                  "end",
+                  "totalMinutes",
+                  "totalText",
+                  "deltaMinutes",
+                  "deltaText"
+                ],
+                "additionalProperties": false
+              },
+              { "type": "null" }
+            ]
+          },
+          "notes": { "type": "array", "items": { "type": "string" } }
+        },
+        "required": ["period", "totals", "byProject", "byDay", "previous", "notes"],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "time_create_entry",
+      "title": "Log time",
+      "description": "Log time for the signed-in member on one calendar day.\n\nGive either `durationMinutes` (integer, 1-1440) or both `startTime` and `endTime` (`HH:mm`, 24-hour, in the member's timezone) — not both, not neither. An interval whose end is at or before its start is read as running past midnight. `date` is `YYYY-MM-DD` in the member's timezone; call `time_get_context` for today's date and the valid `projectId` values.\n\nFails if the month has a submitted timesheet (`PERIOD_LOCKED`), if the project declares its hours monthly (`PROJECT_DECLARES_MONTHLY`), if the project is not assigned on that date (`PROJECT_NOT_AVAILABLE`), or if the day would exceed 24 hours (`DAILY_LIMIT_EXCEEDED`).\n\nReturns the created entry and the day's new total. A day over 8 hours comes back as a warning, not an error.",
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": false
+      },
+      "inputSchema": {
+        "type": "object",
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "properties": {
+          "date": {
+            "type": "string",
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+            "description": "Calendar date as YYYY-MM-DD, in the member's timezone."
+          },
+          "projectId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Project id from time_get_context. Names are not accepted."
+          },
+          "description": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 1000,
+            "description": "What the time was spent on. 1-1000 characters."
+          },
+          "durationMinutes": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 1440,
+            "description": "Whole minutes, 1-1440. A day cannot exceed 1440 minutes in total."
+          },
+          "startTime": {
+            "type": "string",
+            "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$",
+            "description": "Time of day as HH:mm, 24-hour, in the member's timezone."
+          },
+          "endTime": {
+            "type": "string",
+            "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$",
+            "description": "Time of day as HH:mm, 24-hour, in the member's timezone."
+          }
+        },
+        "required": ["date", "projectId", "description"],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "entry": {
+            "type": "object",
+            "properties": {
+              "id": { "type": "string" },
+              "date": {
+                "type": "string",
+                "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+                "description": "Calendar date as YYYY-MM-DD, in the member's timezone."
+              },
+              "projectId": { "type": "string" },
+              "projectName": { "type": "string" },
+              "durationMinutes": {
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991
+              },
+              "durationText": { "type": "string" },
+              "startTime": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$",
+                    "description": "Time of day as HH:mm, 24-hour, in the member's timezone."
+                  },
+                  { "type": "null" }
+                ]
+              },
+              "endTime": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$",
+                    "description": "Time of day as HH:mm, 24-hour, in the member's timezone."
+                  },
+                  { "type": "null" }
+                ]
+              },
+              "description": { "type": "string" },
+              "source": { "type": "string", "enum": ["GRID", "FORM", "TIMER", "DECLARED", "MCP"] },
+              "locked": { "type": "boolean" },
+              "updatedAt": { "type": "string" }
+            },
+            "required": [
+              "id",
+              "date",
+              "projectId",
+              "projectName",
+              "durationMinutes",
+              "durationText",
+              "startTime",
+              "endTime",
+              "description",
+              "source",
+              "locked",
+              "updatedAt"
+            ],
+            "additionalProperties": false
+          },
+          "day": {
+            "type": "object",
+            "properties": {
+              "date": {
+                "type": "string",
+                "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+                "description": "Calendar date as YYYY-MM-DD, in the member's timezone."
+              },
+              "totalMinutes": {
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991
+              },
+              "totalText": { "type": "string" },
+              "overSoftLimit": { "type": "boolean" }
+            },
+            "required": ["date", "totalMinutes", "totalText", "overSoftLimit"],
+            "additionalProperties": false
+          },
+          "warnings": { "type": "array", "items": { "type": "string" } }
+        },
+        "required": ["entry", "day", "warnings"],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "time_update_entry",
+      "title": "Edit logged time",
+      "description": "Change one existing time entry of the signed-in member. Only the fields you send are changed.\n\nGive at least one field besides `entryId`. Timing is replaced as a whole: send `durationMinutes`, or both `startTime` and `endTime` (`HH:mm`, 24-hour, in the member's timezone) — never both forms in one call. Send neither and the entry keeps the timing it has, so changing only the description or the project never re-times it.\n\nMoving an entry with `date` re-checks the day it lands on, not the day it came from: that day's month must not be locked by a submitted timesheet (`PERIOD_LOCKED`), the project must be assigned on it (`PROJECT_NOT_AVAILABLE`), and the day's total including this entry must stay inside 24 hours (`DAILY_LIMIT_EXCEEDED`).\n\nFails with `ENTRY_NOT_FOUND` for an id that is not this member's, `ENTRY_LOCKED` once a submitted timesheet covers the entry, and `ENTRY_IS_DECLARED` for an entry in a month that declares its hours — those are corrected a month at a time in the web app, not here.\n\nReturns the entry as it now stands and its day's new total. A day over 8 hours comes back as a warning, not an error.",
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": true,
+        "idempotentHint": true,
+        "openWorldHint": false
+      },
+      "inputSchema": {
+        "type": "object",
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "properties": {
+          "entryId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Time entry id, as returned by any read tool."
+          },
+          "date": {
+            "type": "string",
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+            "description": "Calendar date as YYYY-MM-DD, in the member's timezone."
+          },
+          "projectId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Project id from time_get_context. Names are not accepted."
+          },
+          "description": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 1000,
+            "description": "What the time was spent on. 1-1000 characters."
+          },
+          "durationMinutes": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 1440,
+            "description": "Whole minutes, 1-1440. A day cannot exceed 1440 minutes in total."
+          },
+          "startTime": {
+            "type": "string",
+            "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$",
+            "description": "Time of day as HH:mm, 24-hour, in the member's timezone."
+          },
+          "endTime": {
+            "type": "string",
+            "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$",
+            "description": "Time of day as HH:mm, 24-hour, in the member's timezone."
+          }
+        },
+        "required": ["entryId"],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "entry": {
+            "type": "object",
+            "properties": {
+              "id": { "type": "string" },
+              "date": {
+                "type": "string",
+                "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+                "description": "Calendar date as YYYY-MM-DD, in the member's timezone."
+              },
+              "projectId": { "type": "string" },
+              "projectName": { "type": "string" },
+              "durationMinutes": {
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991
+              },
+              "durationText": { "type": "string" },
+              "startTime": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$",
+                    "description": "Time of day as HH:mm, 24-hour, in the member's timezone."
+                  },
+                  { "type": "null" }
+                ]
+              },
+              "endTime": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$",
+                    "description": "Time of day as HH:mm, 24-hour, in the member's timezone."
+                  },
+                  { "type": "null" }
+                ]
+              },
+              "description": { "type": "string" },
+              "source": { "type": "string", "enum": ["GRID", "FORM", "TIMER", "DECLARED", "MCP"] },
+              "locked": { "type": "boolean" },
+              "updatedAt": { "type": "string" }
+            },
+            "required": [
+              "id",
+              "date",
+              "projectId",
+              "projectName",
+              "durationMinutes",
+              "durationText",
+              "startTime",
+              "endTime",
+              "description",
+              "source",
+              "locked",
+              "updatedAt"
+            ],
+            "additionalProperties": false
+          },
+          "day": {
+            "type": "object",
+            "properties": {
+              "date": {
+                "type": "string",
+                "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+                "description": "Calendar date as YYYY-MM-DD, in the member's timezone."
+              },
+              "totalMinutes": {
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991
+              },
+              "totalText": { "type": "string" },
+              "overSoftLimit": { "type": "boolean" }
+            },
+            "required": ["date", "totalMinutes", "totalText", "overSoftLimit"],
+            "additionalProperties": false
+          },
+          "warnings": { "type": "array", "items": { "type": "string" } }
+        },
+        "required": ["entry", "day", "warnings"],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "time_delete_entry",
+      "title": "Delete time entry",
+      "description": "Delete one of the signed-in member's time entries.\n\nThis is a **soft** delete and it is reversible: `time_restore_entry` with the same `entryId` puts the entry back exactly as it was, so a wrong delete costs one more call rather than lost work. Deleting many entries is fine to propose for the same reason — but each call asks the member to confirm in the client, so expect one approval per entry instead of one for the batch.\n\nFails if the id is not one of this member's entries (`ENTRY_NOT_FOUND`), if the entry is locked by a submitted timesheet (`ENTRY_LOCKED`), if its month is locked (`PERIOD_LOCKED`), or if it belongs to a declared month (`ENTRY_IS_DECLARED`) — declared hours are corrected a month at a time in the web app.\n\nReturns the entry as it stood before the delete, the day's total after it, and `restorable: true`.",
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": true,
+        "idempotentHint": true,
+        "openWorldHint": false
+      },
+      "_meta": { "anthropic/requiresUserInteraction": true },
+      "inputSchema": {
+        "type": "object",
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "properties": {
+          "entryId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Time entry id, as returned by any read tool."
+          }
+        },
+        "required": ["entryId"],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "deleted": {
+            "type": "object",
+            "properties": {
+              "id": { "type": "string" },
+              "date": {
+                "type": "string",
+                "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+                "description": "Calendar date as YYYY-MM-DD, in the member's timezone."
+              },
+              "projectId": { "type": "string" },
+              "projectName": { "type": "string" },
+              "durationMinutes": {
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991
+              },
+              "durationText": { "type": "string" },
+              "startTime": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$",
+                    "description": "Time of day as HH:mm, 24-hour, in the member's timezone."
+                  },
+                  { "type": "null" }
+                ]
+              },
+              "endTime": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$",
+                    "description": "Time of day as HH:mm, 24-hour, in the member's timezone."
+                  },
+                  { "type": "null" }
+                ]
+              },
+              "description": { "type": "string" },
+              "source": { "type": "string", "enum": ["GRID", "FORM", "TIMER", "DECLARED", "MCP"] },
+              "locked": { "type": "boolean" },
+              "updatedAt": { "type": "string" }
+            },
+            "required": [
+              "id",
+              "date",
+              "projectId",
+              "projectName",
+              "durationMinutes",
+              "durationText",
+              "startTime",
+              "endTime",
+              "description",
+              "source",
+              "locked",
+              "updatedAt"
+            ],
+            "additionalProperties": false
+          },
+          "day": {
+            "type": "object",
+            "properties": {
+              "date": {
+                "type": "string",
+                "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+                "description": "Calendar date as YYYY-MM-DD, in the member's timezone."
+              },
+              "totalMinutes": {
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991
+              },
+              "totalText": { "type": "string" },
+              "overSoftLimit": { "type": "boolean" }
+            },
+            "required": ["date", "totalMinutes", "totalText", "overSoftLimit"],
+            "additionalProperties": false
+          },
+          "restorable": { "type": "boolean", "const": true }
+        },
+        "required": ["deleted", "day", "restorable"],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "time_restore_entry",
+      "title": "Restore deleted entry",
+      "description": "Bring a deleted time entry back, exactly as it was.\n\nA restore is re-validated as though the entry were being created now: the month must still be open (`PERIOD_LOCKED`), the project assignment must still be tracked per entry rather than declaring its hours monthly (`PROJECT_DECLARES_MONTHLY`), and the day must still fit under 24 hours with the entry back in it (`DAILY_LIMIT_EXCEEDED`). A restore can therefore fail even though the delete succeeded — the same way undo behaves in the web app.\n\nOnly a deleted entry can be restored. An id that is already live, was never deleted, or belongs to another member comes back as `ENTRY_NOT_FOUND`, so restoring the same entry twice fails on the second call rather than changing anything.\n\nReturns the entry as it now stands and the day's new total.",
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false
+      },
+      "inputSchema": {
+        "type": "object",
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "properties": {
+          "entryId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Time entry id, as returned by any read tool."
+          }
+        },
+        "required": ["entryId"],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "entry": {
+            "type": "object",
+            "properties": {
+              "id": { "type": "string" },
+              "date": {
+                "type": "string",
+                "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+                "description": "Calendar date as YYYY-MM-DD, in the member's timezone."
+              },
+              "projectId": { "type": "string" },
+              "projectName": { "type": "string" },
+              "durationMinutes": {
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991
+              },
+              "durationText": { "type": "string" },
+              "startTime": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$",
+                    "description": "Time of day as HH:mm, 24-hour, in the member's timezone."
+                  },
+                  { "type": "null" }
+                ]
+              },
+              "endTime": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$",
+                    "description": "Time of day as HH:mm, 24-hour, in the member's timezone."
+                  },
+                  { "type": "null" }
+                ]
+              },
+              "description": { "type": "string" },
+              "source": { "type": "string", "enum": ["GRID", "FORM", "TIMER", "DECLARED", "MCP"] },
+              "locked": { "type": "boolean" },
+              "updatedAt": { "type": "string" }
+            },
+            "required": [
+              "id",
+              "date",
+              "projectId",
+              "projectName",
+              "durationMinutes",
+              "durationText",
+              "startTime",
+              "endTime",
+              "description",
+              "source",
+              "locked",
+              "updatedAt"
+            ],
+            "additionalProperties": false
+          },
+          "day": {
+            "type": "object",
+            "properties": {
+              "date": {
+                "type": "string",
+                "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+                "description": "Calendar date as YYYY-MM-DD, in the member's timezone."
+              },
+              "totalMinutes": {
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991
+              },
+              "totalText": { "type": "string" },
+              "overSoftLimit": { "type": "boolean" }
+            },
+            "required": ["date", "totalMinutes", "totalText", "overSoftLimit"],
+            "additionalProperties": false
+          },
+          "warnings": { "type": "array", "items": { "type": "string" } }
+        },
+        "required": ["entry", "day", "warnings"],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "timer_start",
+      "title": "Start timer",
+      "description": "Start a running timer for the signed-in member on one project.\n\nNothing reaches the timesheet until `timer_stop`, and the entry that stop creates is attributed to the day the timer STARTED, in the member's timezone — a session running past midnight lands on the earlier day, not the day it was stopped.\n\n`projectId` comes from `time_get_context`; names are not accepted. A project with `canLogTime: false` declares its hours a month at a time and cannot be timed (`PROJECT_DECLARES_MONTHLY`). `description` is optional and becomes \"Tracked with timer\" when omitted; after the stop it can be changed with `time_update_entry`.\n\nA member can have one timer at a time. If one is already running this fails with `TIMER_ALREADY_RUNNING` and returns that timer in `details.timer`, so you can tell the member what would be stopped before you stop it. It also fails if the day's month has a submitted timesheet (`PERIOD_LOCKED`) or the project is not assigned today (`PROJECT_NOT_AVAILABLE`).\n\nReturns the running timer and how long it has been going.",
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": false
+      },
+      "inputSchema": {
+        "type": "object",
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "properties": {
+          "projectId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Project id from time_get_context. Names are not accepted."
+          },
+          "description": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 1000,
+            "description": "What the time was spent on. 1-1000 characters."
+          }
+        },
+        "required": ["projectId"],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "timer": {
+            "type": "object",
+            "properties": {
+              "id": { "type": "string" },
+              "projectId": { "type": "string" },
+              "projectName": { "type": "string" },
+              "description": { "type": "string" },
+              "startedAt": { "type": "string" },
+              "elapsedMinutes": {
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991
+              }
+            },
+            "required": [
+              "id",
+              "projectId",
+              "projectName",
+              "description",
+              "startedAt",
+              "elapsedMinutes"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": ["timer"],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "timer_stop",
+      "title": "Stop timer",
+      "description": "Stop the running timer and save it as a time entry. Takes no arguments — the project, description and start are whatever `timer_start` recorded.\n\nThe saved duration is the elapsed time rounded UP to the next whole minute, with a minimum of one minute, so a 20-second timer still saves as 1 minute. A timer started without a description is saved as \"Tracked with timer\"; call `time_update_entry` with the returned entry id to replace that text. The entry is dated to the day the timer STARTED, so a timer left running past midnight still lands on the earlier day.\n\nFails with `NO_TIMER_RUNNING` when nothing is running, and with `PERIOD_LOCKED` when the timer's own day has since been locked by a submitted timesheet. `TIMER_DISCARDED_DAILY_LIMIT` is different from both: the timer was stopped but NOT saved, because the entry would have taken that day over 24 hours. The elapsed time is discarded and cannot be recovered — report that loss rather than a save.\n\nOn success returns the saved entry and the day's new total. A day over 8 hours comes back as a warning, not an error.",
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": false
+      },
+      "inputSchema": {
+        "type": "object",
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "properties": {},
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "entry": {
+            "type": "object",
+            "properties": {
+              "id": { "type": "string" },
+              "date": {
+                "type": "string",
+                "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+                "description": "Calendar date as YYYY-MM-DD, in the member's timezone."
+              },
+              "projectId": { "type": "string" },
+              "projectName": { "type": "string" },
+              "durationMinutes": {
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991
+              },
+              "durationText": { "type": "string" },
+              "startTime": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$",
+                    "description": "Time of day as HH:mm, 24-hour, in the member's timezone."
+                  },
+                  { "type": "null" }
+                ]
+              },
+              "endTime": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$",
+                    "description": "Time of day as HH:mm, 24-hour, in the member's timezone."
+                  },
+                  { "type": "null" }
+                ]
+              },
+              "description": { "type": "string" },
+              "source": { "type": "string", "enum": ["GRID", "FORM", "TIMER", "DECLARED", "MCP"] },
+              "locked": { "type": "boolean" },
+              "updatedAt": { "type": "string" }
+            },
+            "required": [
+              "id",
+              "date",
+              "projectId",
+              "projectName",
+              "durationMinutes",
+              "durationText",
+              "startTime",
+              "endTime",
+              "description",
+              "source",
+              "locked",
+              "updatedAt"
+            ],
+            "additionalProperties": false
+          },
+          "day": {
+            "type": "object",
+            "properties": {
+              "date": {
+                "type": "string",
+                "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+                "description": "Calendar date as YYYY-MM-DD, in the member's timezone."
+              },
+              "totalMinutes": {
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991
+              },
+              "totalText": { "type": "string" },
+              "overSoftLimit": { "type": "boolean" }
+            },
+            "required": ["date", "totalMinutes", "totalText", "overSoftLimit"],
+            "additionalProperties": false
+          },
+          "warnings": { "type": "array", "items": { "type": "string" } }
+        },
+        "required": ["entry", "day", "warnings"],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "timer_status",
+      "title": "Timer status",
+      "description": "Whether a timer is running for the signed-in member right now, and for how long.\n\nNo arguments. `timer: null` means nothing is running — the normal answer, not an error. `elapsedMinutes` is exactly what `timer_stop` would save: rounded up to the next whole minute, minimum one.\n\nThis is the cheapest tool in the toolset. Prefer it over `time_get_context` whenever the timer is the only thing you need.",
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false
+      },
+      "inputSchema": {
+        "type": "object",
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "properties": {},
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "timer": {
+            "anyOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "id": { "type": "string" },
+                  "projectId": { "type": "string" },
+                  "projectName": { "type": "string" },
+                  "description": { "type": "string" },
+                  "startedAt": { "type": "string" },
+                  "elapsedMinutes": {
+                    "type": "integer",
+                    "minimum": -9007199254740991,
+                    "maximum": 9007199254740991
+                  }
+                },
+                "required": [
+                  "id",
+                  "projectId",
+                  "projectName",
+                  "description",
+                  "startedAt",
+                  "elapsedMinutes"
+                ],
+                "additionalProperties": false
+              },
+              { "type": "null" }
+            ]
+          }
+        },
+        "required": ["timer"],
+        "additionalProperties": false
+      }
+    }
+  ]
+}

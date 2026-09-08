@@ -207,7 +207,20 @@ export function AppShell({
     ([
       { id: "my-rates", label: t("userMenu.myRates"), icon: BadgeDollarSign },
       { id: "settings", label: t("userMenu.profileAndSettings"), icon: Settings },
-      { id: "sign-out", label: t("userMenu.signOut"), icon: LogOut, tone: "danger" as const },
+      {
+        id: "sign-out",
+        label: t("userMenu.signOut"),
+        icon: LogOut,
+        tone: "danger" as const,
+        separated: true,
+        confirm: {
+          title: t("userMenu.signOutConfirm.title"),
+          description: t("userMenu.signOutConfirm.description"),
+          confirmLabel: t("userMenu.signOutConfirm.confirm"),
+          cancelLabel: t("userMenu.signOutConfirm.cancel"),
+          closeLabel: t("userMenu.signOutConfirm.close"),
+        },
+      },
     ] satisfies NonNullable<AppShellProps["userActions"]>);
 
   function handleLanguageChange(nextLanguage: string) {

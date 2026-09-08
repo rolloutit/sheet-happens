@@ -17,22 +17,38 @@ import {
   localIntervalToUtc,
   normalizeDateOnly,
   parseDateOnly,
+  TimeTrackingDateError,
 } from "./dates";
 import type { TimeGridDay } from "./dates";
+import { loadAssignedProjects, loadLockedMonthStarts } from "./assignments";
 import { resolveTrackingMode, type TrackingMode, type TrackingModeMember } from "./tracking-mode";
 
 /**
  * Mirrors the `EntrySource` enum, `DECLARED` included: a declared month is materialized as a
  * `TimeEntry` too (see `tracking-mode.ts`). Nothing here writes `DECLARED` — the narrow write
- * paths below stay `Extract<..., "GRID" | "FORM">` — but the union has to carry it so a reader
- * that meets one has to say what it does with it instead of falling through.
+ * paths below stay `Extract<..., "GRID" | "FORM" | "MCP">` — but the union has to carry it so a
+ * reader that meets one has to say what it does with it instead of falling through.
+ *
+ * `MCP` is an agent writing through the MCP server (`src/server/mcp`). It is ordinary tracked time
+ * in every respect — period locks, the daily cap and tracking modes all apply identically — and it
+ * is tagged only so the grid, reports and the audit trail can tell it apart from a click.
  */
-export type TimeEntrySource = "GRID" | "FORM" | "TIMER" | "DECLARED";
+export type TimeEntrySource = "GRID" | "FORM" | "TIMER" | "DECLARED" | "MCP";
 export type TimeEntryTimingMode = "DURATION" | "INTERVAL";
 
+/**
+ * Request provenance, spread verbatim into every `auditLog.create` in this module — so the field
+ * names have to match the `AuditLog` columns exactly.
+ *
+ * `channel` and `clientId` exist so an agent write through `src/server/mcp` is distinguishable from
+ * the member clicking in the browser. Rows written before the columns existed carry `null`, which
+ * reads as "the web app".
+ */
 export type TimeTrackingRequestMetadata = {
   ipAddress?: string | null;
   userAgent?: string | null;
+  channel?: "WEB" | "MCP";
+  clientId?: string;
 };
 
 export type TimeGridAssignedProject = {
@@ -144,7 +160,7 @@ export type TimeEntryMutationInput = {
   startTime?: string | null;
   endTime?: string | null;
   description: string;
-  source?: Extract<TimeEntrySource, "GRID" | "FORM">;
+  source?: Extract<TimeEntrySource, "GRID" | "FORM" | "MCP">;
   requestMetadata?: TimeTrackingRequestMetadata;
 };
 
@@ -235,21 +251,6 @@ type TimeTrackingDeps = {
   db?: typeof prisma;
 };
 
-type AssignmentForTimeGrid = {
-  id: string;
-  validFrom: Date;
-  validTo: Date | null;
-  trackingMode: TrackingMode | null;
-  project: {
-    id: string;
-    name: string;
-    colorToken: string;
-    startsOn: Date | null;
-    endsOn: Date | null;
-    isInternal: boolean;
-  };
-};
-
 type AssignmentForMutation = {
   id: string;
   projectId: string;
@@ -306,10 +307,48 @@ type RunningTimerRecord = {
   };
 };
 
+/**
+ * Stable identifiers for the domain's refusals.
+ *
+ * The message stays the human-readable sentence `app/time/actions.ts` localizes; the code is what a
+ * machine-facing caller keys on. Several distinct conditions deliberately share a code (three
+ * different call paths all refuse a locked entry, four all refuse the 24-hour cap) — the code says
+ * *what rule* was broken, and the message says where.
+ */
+export type TimeTrackingErrorCode =
+  | "MEMBER_NOT_FOUND"
+  | "ENTRY_NOT_FOUND"
+  | "ENTRY_LOCKED"
+  | "ENTRY_IS_DECLARED"
+  | "PERIOD_LOCKED"
+  | "WEEK_LOCKED"
+  | "PROJECT_REQUIRED"
+  | "PROJECT_NOT_AVAILABLE"
+  | "PROJECT_NOT_ASSIGNED_FOR_WEEK"
+  | "PROJECT_DECLARES_MONTHLY"
+  | "DURATION_INVALID"
+  | "DAILY_LIMIT_EXCEEDED"
+  | "START_END_REQUIRED"
+  | "END_BEFORE_START"
+  | "INVALID_DATE"
+  | "INVALID_TIME"
+  | "DESCRIPTION_REQUIRED"
+  | "DESCRIPTION_TOO_LONG"
+  | "TIMER_ALREADY_RUNNING"
+  | "NO_TIMER_RUNNING"
+  | "INACTIVE_WEEK_HAS_ENTRIES"
+  | "DRAFT_KEY_INVALID"
+  | "INVALID_CURSOR"
+  /** Only reachable through a re-wrapped {@link TimeTrackingDateError}; never thrown directly. */
+  | "TIMEZONE_FORMAT";
+
 export class TimeTrackingError extends Error {
-  constructor(message: string) {
+  readonly code: TimeTrackingErrorCode;
+
+  constructor(message: string, code: TimeTrackingErrorCode) {
     super(message);
     this.name = "TimeTrackingError";
+    this.code = code;
   }
 }
 
@@ -365,7 +404,7 @@ export async function getMemberWeeklyTimeGrid(input: {
   });
 
   if (!member || member.deletedAt) {
-    throw new TimeTrackingError("Member not found.");
+    throw new TimeTrackingError("Member not found.", "MEMBER_NOT_FOUND");
   }
 
   const todayIso = getTodayIsoInTimezone(member.timezone, input.now);
@@ -374,145 +413,105 @@ export async function getMemberWeeklyTimeGrid(input: {
   const weekEnd = getWeekEnd(weekStart);
   const monthStarts = getMonthStartsInRange(weekStart, weekEnd);
 
-  const [periodLocks, projects, entries, recentEntries, runningTimer, inactiveWeeks, entryDraft] =
-    await Promise.all([
-      prisma.periodLock.findMany({
-        where: {
-          memberId: member.id,
-          periodStart: {
-            in: monthStarts,
-          },
-          unlockedAt: null,
-        },
-        select: {
-          periodStart: true,
-        },
-      }),
-      prisma.projectAssignment.findMany({
-        where: {
-          memberId: member.id,
-          active: true,
-          validFrom: {
-            lte: weekEnd,
-          },
-          OR: [{ validTo: null }, { validTo: { gte: weekStart } }],
-          project: {
-            deletedAt: null,
-            status: "ACTIVE",
-            AND: [
-              { OR: [{ startsOn: null }, { startsOn: { lte: weekEnd } }] },
-              { OR: [{ endsOn: null }, { endsOn: { gte: weekStart } }] },
-            ],
-          },
-        },
-        orderBy: [{ project: { name: "asc" } }, { validFrom: "asc" }],
-        select: {
-          id: true,
-          validFrom: true,
-          validTo: true,
-          trackingMode: true,
-          project: {
-            select: {
-              id: true,
-              name: true,
-              colorToken: true,
-              startsOn: true,
-              endsOn: true,
-              isInternal: true,
-            },
-          },
-        },
-      }),
-      prisma.timeEntry.findMany({
-        where: {
-          memberId: member.id,
-          deletedAt: null,
-          /* §4 item 3, and the reason it is a `where` rather than a filter on the way out: a
+  const [
+    lockedMonthStarts,
+    projectRows,
+    entries,
+    recentEntries,
+    runningTimer,
+    inactiveWeeks,
+    entryDraft,
+  ] = await Promise.all([
+    loadLockedMonthStarts({ memberId: member.id, monthStarts }),
+    loadAssignedProjects({ memberId: member.id, member, from: weekStart, to: weekEnd }),
+    prisma.timeEntry.findMany({
+      where: {
+        memberId: member.id,
+        deletedAt: null,
+        /* §4 item 3, and the reason it is a `where` rather than a filter on the way out: a
              declared month is one 52-hour entry sitting on the 1st, and every `/time` aggregate
              and warning — the 8h soft target, the 24h hard limit, `getCellWarnings`,
              `getEntryWarnings`, `hasOverlaps`, every day and week total — would absorb it.
              Excluding it here means L1-L3 literally cannot see one, so no downstream filter can be
              forgotten later. The month reports declarations separately. */
-          source: {
-            not: "DECLARED",
-          },
-          localDate: {
-            gte: weekStart,
-            lte: weekEnd,
+        source: {
+          not: "DECLARED",
+        },
+        localDate: {
+          gte: weekStart,
+          lte: weekEnd,
+        },
+      },
+      orderBy: [{ localDate: "asc" }, { createdAt: "asc" }],
+      select: {
+        id: true,
+        projectId: true,
+        projectAssignmentId: true,
+        localDate: true,
+        durationMinutes: true,
+        description: true,
+        source: true,
+        startedAt: true,
+        endedAt: true,
+        timezone: true,
+        lockedByTimesheetRevisionId: true,
+        updatedAt: true,
+        adminModifiedAt: true,
+        adminModificationReason: true,
+        adminModifiedBy: {
+          select: {
+            displayName: true,
           },
         },
-        orderBy: [{ localDate: "asc" }, { createdAt: "asc" }],
-        select: {
-          id: true,
-          projectId: true,
-          projectAssignmentId: true,
-          localDate: true,
-          durationMinutes: true,
-          description: true,
-          source: true,
-          startedAt: true,
-          endedAt: true,
-          timezone: true,
-          lockedByTimesheetRevisionId: true,
-          updatedAt: true,
-          adminModifiedAt: true,
-          adminModificationReason: true,
-          adminModifiedBy: {
-            select: {
-              displayName: true,
-            },
-          },
+      },
+    }),
+    prisma.timeEntry.findMany({
+      where: {
+        memberId: member.id,
+        deletedAt: null,
+        // A declared project is never a "recent" chip: the chip opens the entry form, which is
+        // the one thing a declared project must not offer.
+        source: {
+          not: "DECLARED",
         },
-      }),
-      prisma.timeEntry.findMany({
-        where: {
+        localDate: {
+          gte: addDays(weekEnd, -90),
+          lte: weekEnd,
+        },
+      },
+      distinct: ["projectId"],
+      orderBy: [{ localDate: "desc" }, { updatedAt: "desc" }],
+      select: {
+        projectId: true,
+      },
+    }),
+    getRunningTimerForMember(member.id),
+    prisma.inactiveProjectWeek.findMany({
+      where: {
+        memberId: member.id,
+        weekStartDate: weekStart,
+      },
+      select: {
+        projectId: true,
+        weekStartDate: true,
+        note: true,
+      },
+    }),
+    prisma.timeEntryDraft.findUnique({
+      where: {
+        memberId_draftKey: {
           memberId: member.id,
-          deletedAt: null,
-          // A declared project is never a "recent" chip: the chip opens the entry form, which is
-          // the one thing a declared project must not offer.
-          source: {
-            not: "DECLARED",
-          },
-          localDate: {
-            gte: addDays(weekEnd, -90),
-            lte: weekEnd,
-          },
+          draftKey: "time-entry-form",
         },
-        distinct: ["projectId"],
-        orderBy: [{ localDate: "desc" }, { updatedAt: "desc" }],
-        select: {
-          projectId: true,
-        },
-      }),
-      getRunningTimerForMember(member.id),
-      prisma.inactiveProjectWeek.findMany({
-        where: {
-          memberId: member.id,
-          weekStartDate: weekStart,
-        },
-        select: {
-          projectId: true,
-          weekStartDate: true,
-          note: true,
-        },
-      }),
-      prisma.timeEntryDraft.findUnique({
-        where: {
-          memberId_draftKey: {
-            memberId: member.id,
-            draftKey: "time-entry-form",
-          },
-        },
-        select: {
-          draftKey: true,
-          payload: true,
-          updatedAt: true,
-        },
-      }),
-    ]);
+      },
+      select: {
+        draftKey: true,
+        payload: true,
+        updatedAt: true,
+      },
+    }),
+  ]);
 
-  const lockedMonthStarts = new Set(periodLocks.map((lock) => formatDateOnly(lock.periodStart)));
-  const projectRows = projects.map((project) => mapAssignmentToProjectRow(project, member));
   const projectsById = new Map(projectRows.map((project) => [project.projectId, project]));
   const recentProjects = unique(recentEntries.map((entry) => entry.projectId))
     .map((projectId) => projectsById.get(projectId))
@@ -648,13 +647,13 @@ export async function updateTimeEntry(input: TimeEntryUpdateInput) {
     });
 
     if (!current || current.memberId !== input.memberId || current.deletedAt) {
-      throw new TimeTrackingError("Time entry not found.");
+      throw new TimeTrackingError("Time entry not found.", "ENTRY_NOT_FOUND");
     }
 
     assertEntryIsNotDeclared(current.source);
 
     if (current.lockedByTimesheetRevisionId) {
-      throw new TimeTrackingError("This entry is locked by a submitted timesheet.");
+      throw new TimeTrackingError("This entry is locked by a submitted timesheet.", "ENTRY_LOCKED");
     }
 
     const nextLocalDate = input.localDate
@@ -779,13 +778,13 @@ export async function deleteTimeEntry(input: TimeEntryDeleteInput) {
     });
 
     if (!current || current.memberId !== input.memberId || current.deletedAt) {
-      throw new TimeTrackingError("Time entry not found.");
+      throw new TimeTrackingError("Time entry not found.", "ENTRY_NOT_FOUND");
     }
 
     assertEntryIsNotDeclared(current.source);
 
     if (current.lockedByTimesheetRevisionId) {
-      throw new TimeTrackingError("This entry is locked by a submitted timesheet.");
+      throw new TimeTrackingError("This entry is locked by a submitted timesheet.", "ENTRY_LOCKED");
     }
 
     await assertDateOpen(tx, input.memberId, current.localDate);
@@ -859,13 +858,13 @@ export async function restoreTimeEntry(input: TimeEntryRestoreInput) {
     });
 
     if (!current || current.memberId !== input.memberId || !current.deletedAt) {
-      throw new TimeTrackingError("Time entry not found.");
+      throw new TimeTrackingError("Time entry not found.", "ENTRY_NOT_FOUND");
     }
 
     assertEntryIsNotDeclared(current.source);
 
     if (current.lockedByTimesheetRevisionId) {
-      throw new TimeTrackingError("This entry is locked by a submitted timesheet.");
+      throw new TimeTrackingError("This entry is locked by a submitted timesheet.", "ENTRY_LOCKED");
     }
 
     await assertDateOpen(tx, input.memberId, current.localDate);
@@ -935,7 +934,10 @@ export async function startRunningTimer(input: RunningTimerStartInput) {
     });
 
     if (existing) {
-      throw new TimeTrackingError("Stop the running timer before starting another one.");
+      throw new TimeTrackingError(
+        "Stop the running timer before starting another one.",
+        "TIMER_ALREADY_RUNNING",
+      );
     }
 
     const timer = await tx.runningTimer.create({
@@ -995,11 +997,11 @@ export async function stopRunningTimer(input: RunningTimerStopInput) {
     });
 
     if (!timer || timer.memberId !== input.memberId) {
-      throw new TimeTrackingError("No timer is running.");
+      throw new TimeTrackingError("No timer is running.", "NO_TIMER_RUNNING");
     }
 
     if (endedAt <= timer.startedAt) {
-      throw new TimeTrackingError("Timer end time must be after start time.");
+      throw new TimeTrackingError("Timer end time must be after start time.", "END_BEFORE_START");
     }
 
     const localDate = parseDateOnly(getTodayIsoInTimezone(timer.timezone, timer.startedAt));
@@ -1225,6 +1227,7 @@ export async function markInactiveProjectWeek(input: InactiveProjectWeekInput) {
     if (entryCount > 0) {
       throw new TimeTrackingError(
         "Remove this week's entries before marking the project inactive.",
+        "INACTIVE_WEEK_HAS_ENTRIES",
       );
     }
 
@@ -1426,7 +1429,7 @@ async function copyEntriesByDateShift(input: {
         (targetDailyMinutes.get(targetDateIso) ?? 0) + copiedTiming.durationMinutes;
 
       if (nextDailyTotal > DAILY_HARD_LIMIT_MINUTES) {
-        throw new TimeTrackingError("Daily total cannot exceed 24 hours.");
+        throw new TimeTrackingError("Daily total cannot exceed 24 hours.", "DAILY_LIMIT_EXCEEDED");
       }
 
       targetDailyMinutes.set(targetDateIso, nextDailyTotal);
@@ -1490,7 +1493,7 @@ async function copyEntriesByDateShift(input: {
 
 function normalizeTimeEntryMutationBase(input: TimeEntryMutationInput) {
   return {
-    projectId: normalizeId(input.projectId, "Choose a project."),
+    projectId: normalizeId(input.projectId, "Choose a project.", "PROJECT_REQUIRED"),
     localDate: normalizeDateOnly(input.localDate),
     description: normalizeDescription(input.description),
   };
@@ -1506,7 +1509,7 @@ function normalizeTimeEntryTiming(input: {
 }) {
   if (input.timingMode === "INTERVAL" || input.startTime || input.endTime) {
     if (!input.startTime || !input.endTime) {
-      throw new TimeTrackingError("Start and end time are required.");
+      throw new TimeTrackingError("Start and end time are required.", "START_END_REQUIRED");
     }
 
     try {
@@ -1517,8 +1520,15 @@ function normalizeTimeEntryTiming(input: {
         timezone: input.timezone,
       });
     } catch (error) {
+      // `localIntervalToUtc` throws `TimeTrackingDateError`s about the times it was handed. Keep
+      // both the sentence and the code, so a caller that keys on codes sees the real cause instead
+      // of a generic time failure.
+      if (error instanceof TimeTrackingDateError) {
+        throw new TimeTrackingError(error.message, error.code);
+      }
+
       if (error instanceof Error) {
-        throw new TimeTrackingError(error.message);
+        throw new TimeTrackingError(error.message, "INVALID_TIME");
       }
 
       throw error;
@@ -1526,7 +1536,7 @@ function normalizeTimeEntryTiming(input: {
   }
 
   if (input.durationMinutes === undefined) {
-    throw new TimeTrackingError("Duration must be greater than zero.");
+    throw new TimeTrackingError("Duration must be greater than zero.", "DURATION_INVALID");
   }
 
   return {
@@ -1536,19 +1546,19 @@ function normalizeTimeEntryTiming(input: {
   };
 }
 
-function normalizeId(value: string, message: string) {
+function normalizeId(value: string, message: string, code: TimeTrackingErrorCode) {
   const normalized = value.trim();
-  if (!normalized) throw new TimeTrackingError(message);
+  if (!normalized) throw new TimeTrackingError(message, code);
   return normalized;
 }
 
 function normalizeDurationMinutes(value: number) {
   if (!Number.isInteger(value) || value <= 0) {
-    throw new TimeTrackingError("Duration must be greater than zero.");
+    throw new TimeTrackingError("Duration must be greater than zero.", "DURATION_INVALID");
   }
 
   if (value > DAILY_HARD_LIMIT_MINUTES) {
-    throw new TimeTrackingError("Daily total cannot exceed 24 hours.");
+    throw new TimeTrackingError("Daily total cannot exceed 24 hours.", "DAILY_LIMIT_EXCEEDED");
   }
 
   return value;
@@ -1558,11 +1568,14 @@ function normalizeDescription(value: string) {
   const normalized = value.trim();
 
   if (!normalized) {
-    throw new TimeTrackingError("Description is required.");
+    throw new TimeTrackingError("Description is required.", "DESCRIPTION_REQUIRED");
   }
 
   if (normalized.length > 1000) {
-    throw new TimeTrackingError("Description must be 1000 characters or less.");
+    throw new TimeTrackingError(
+      "Description must be 1000 characters or less.",
+      "DESCRIPTION_TOO_LONG",
+    );
   }
 
   return normalized;
@@ -1572,7 +1585,7 @@ function normalizeDraftKey(value: string) {
   const normalized = value.trim();
 
   if (!/^[a-z0-9:_-]{1,80}$/.test(normalized)) {
-    throw new TimeTrackingError("Draft key is invalid.");
+    throw new TimeTrackingError("Draft key is invalid.", "DRAFT_KEY_INVALID");
   }
 
   return normalized;
@@ -1615,7 +1628,7 @@ async function assertDateOpen(tx: TimeTrackingTransaction, memberId: string, loc
   });
 
   if (lockedPeriod) {
-    throw new TimeTrackingError("This period is locked by a submitted timesheet.");
+    throw new TimeTrackingError("This period is locked by a submitted timesheet.", "PERIOD_LOCKED");
   }
 }
 
@@ -1629,7 +1642,7 @@ async function assertDailyTotalWithinHardLimit(
   },
 ) {
   if (input.addedMinutes > DAILY_HARD_LIMIT_MINUTES) {
-    throw new TimeTrackingError("Daily total cannot exceed 24 hours.");
+    throw new TimeTrackingError("Daily total cannot exceed 24 hours.", "DAILY_LIMIT_EXCEEDED");
   }
 
   const currentMinutes = await getDailyLoggedMinutes(tx, {
@@ -1639,7 +1652,7 @@ async function assertDailyTotalWithinHardLimit(
   });
 
   if (currentMinutes + input.addedMinutes > DAILY_HARD_LIMIT_MINUTES) {
-    throw new TimeTrackingError("Daily total cannot exceed 24 hours.");
+    throw new TimeTrackingError("Daily total cannot exceed 24 hours.", "DAILY_LIMIT_EXCEEDED");
   }
 }
 
@@ -1686,7 +1699,7 @@ async function assertWeekOpen(
   });
 
   if (lockedPeriod) {
-    throw new TimeTrackingError("This week touches a locked period.");
+    throw new TimeTrackingError("This week touches a locked period.", "WEEK_LOCKED");
   }
 }
 
@@ -1746,7 +1759,10 @@ async function assertAssignmentStillTracked(
   });
 
   if (assignment && resolveTrackingMode(assignment.member, assignment).mode !== "TRACKED") {
-    throw new TimeTrackingError("This project declares its hours monthly.");
+    throw new TimeTrackingError(
+      "This project declares its hours monthly.",
+      "PROJECT_DECLARES_MONTHLY",
+    );
   }
 }
 
@@ -1765,7 +1781,10 @@ function isTrackedAssignment(assignment: AssignmentForMutation) {
  */
 function assertAssignmentIsTracked(assignment: AssignmentForMutation) {
   if (!isTrackedAssignment(assignment)) {
-    throw new TimeTrackingError("This project declares its hours monthly.");
+    throw new TimeTrackingError(
+      "This project declares its hours monthly.",
+      "PROJECT_DECLARES_MONTHLY",
+    );
   }
 }
 
@@ -1780,7 +1799,10 @@ function assertAssignmentIsTracked(assignment: AssignmentForMutation) {
  */
 function assertEntryIsNotDeclared(source: TimeEntrySource) {
   if (source === "DECLARED") {
-    throw new TimeTrackingError("Declared hours are corrected on the month level.");
+    throw new TimeTrackingError(
+      "Declared hours are corrected on the month level.",
+      "ENTRY_IS_DECLARED",
+    );
   }
 }
 
@@ -1817,7 +1839,10 @@ async function findAssignmentForDate(
   });
 
   if (!assignment) {
-    throw new TimeTrackingError("This project is not active for the selected date.");
+    throw new TimeTrackingError(
+      "This project is not active for the selected date.",
+      "PROJECT_NOT_AVAILABLE",
+    );
   }
 
   assertAssignmentIsTracked(assignment);
@@ -1890,7 +1915,10 @@ async function findAssignmentForWeek(
   });
 
   if (!assignment) {
-    throw new TimeTrackingError("This project is not assigned for the selected week.");
+    throw new TimeTrackingError(
+      "This project is not assigned for the selected week.",
+      "PROJECT_NOT_ASSIGNED_FOR_WEEK",
+    );
   }
 
   // §4 item 4: an `InactiveProjectWeek` says "nothing happened on this project this week", which
@@ -1911,30 +1939,6 @@ async function getMemberTimezone(tx: TimeTrackingTransaction, memberId: string) 
   });
 
   return member?.timezone ?? "Europe/Budapest";
-}
-
-function mapAssignmentToProjectRow(
-  assignment: AssignmentForTimeGrid,
-  member: TrackingModeMember,
-): TimeGridAssignedProject {
-  const colorToken = isProjectColorToken(assignment.project.colorToken)
-    ? assignment.project.colorToken
-    : "teal";
-
-  return {
-    assignmentId: assignment.id,
-    projectId: assignment.project.id,
-    name: assignment.project.name,
-    color: projectColorValues[colorToken],
-    isInternal: assignment.project.isInternal,
-    validFrom: formatDateOnly(assignment.validFrom),
-    validTo: assignment.validTo ? formatDateOnly(assignment.validTo) : null,
-    projectStartsOn: assignment.project.startsOn
-      ? formatDateOnly(assignment.project.startsOn)
-      : null,
-    projectEndsOn: assignment.project.endsOn ? formatDateOnly(assignment.project.endsOn) : null,
-    trackingMode: resolveTrackingMode(member, assignment).mode,
-  };
 }
 
 function mapTimeEntry(entry: EntryRecord): TimeGridEntry {

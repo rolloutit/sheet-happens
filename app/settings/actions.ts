@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
 import { getTranslations } from "next-intl/server";
+import { z } from "zod";
 
 import {
   requireActiveAppMemberForAction,
@@ -12,6 +13,7 @@ import {
 import { clearSecondFactorCookie } from "@/src/server/auth/second-factor";
 import { AuthenticationError, AuthorizationError } from "@/src/server/auth/session";
 import { prisma } from "@/src/server/db/client";
+import { disconnectMcpConnection } from "@/src/server/mcp/connections";
 import {
   deleteMemberAvatar,
   MemberPreferenceError,
@@ -26,6 +28,7 @@ import {
 } from "@/src/server/notifications";
 import type {
   DeletePasskeyActionInput,
+  DisconnectConnectedAppActionInput,
   MemberPreferenceActionState,
   NotificationSettingsActionState,
   RenamePasskeyActionInput,
@@ -476,6 +479,79 @@ export async function auditBackupCodesRegeneratedAction(): Promise<SecuritySetti
     return {
       status: "error",
       message: t("errors.backupCodesAuditFailed"),
+    };
+  }
+}
+
+/*
+ * A `client_id` is either a Client ID Metadata Document URL (`https://claude.ai/...`) or an opaque
+ * registered id, so there is nothing narrower to check than "a non-empty string of plausible
+ * length". What actually scopes the delete is the auth user id below: `disconnectMcpConnection`
+ * filters on it, so somebody else's `client_id` removes nothing.
+ */
+const disconnectConnectedAppSchema = z.object({
+  clientId: z.string().trim().min(1).max(2048),
+});
+
+/**
+ * Ends one connected app's access to this member's account.
+ *
+ * Deleting the consent alone would not be enough — an already-issued access token keeps working for
+ * up to an hour and a refresh token for thirty days — which is why this calls
+ * `disconnectMcpConnection` rather than the provider's consent endpoint. See
+ * `src/server/mcp/connections.ts`.
+ */
+export async function disconnectConnectedAppAction(
+  input: DisconnectConnectedAppActionInput,
+): Promise<SecuritySettingsActionState> {
+  const t = await getTranslations("SettingsActions");
+  const parsed = disconnectConnectedAppSchema.safeParse(input);
+
+  if (!parsed.success) {
+    return {
+      status: "error",
+      message: t("errors.connectedAppIdMissing"),
+    };
+  }
+
+  try {
+    const { authUser } = await requireActiveAppMemberForAction();
+    const result = await disconnectMcpConnection({
+      authUserId: authUser.id,
+      clientId: parsed.data.clientId,
+    });
+
+    revalidatePath("/settings");
+
+    /*
+     * Nothing matched: the grant had already gone, from another tab or from the app revoking its own
+     * tokens. The list refreshes either way, so this reports the state rather than a failure to act.
+     * Counting the tokens too, not just the consent: a consent row lost to a crash mid-disconnect
+     * leaves live tokens behind, and removing those is a real disconnect even with no consent to go
+     * with them.
+     */
+    if (result.removedConsents + result.revokedAccessTokens + result.revokedRefreshTokens === 0) {
+      return {
+        status: "error",
+        message: t("errors.connectedAppAlreadyDisconnected"),
+      };
+    }
+
+    return {
+      status: "success",
+      message: t("success.connectedAppDisconnected"),
+    };
+  } catch (error) {
+    if (error instanceof AuthenticationError || error instanceof AuthorizationError) {
+      return {
+        status: "error",
+        message: translateSettingsActionMessage(error.message, t),
+      };
+    }
+
+    return {
+      status: "error",
+      message: t("errors.connectedAppDisconnectFailed"),
     };
   }
 }

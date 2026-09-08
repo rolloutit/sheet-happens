@@ -28,7 +28,9 @@ import {
   startRunningTimer,
   stopRunningTimer,
   TimeTrackingDateError,
+  type TimeTrackingDateErrorCode,
   TimeTrackingError,
+  type TimeTrackingErrorCode,
   unmarkInactiveProjectWeek,
   updateTimeEntry,
   uploadDeclarationProof,
@@ -846,7 +848,7 @@ function mapTimeTrackingActionError(
   if (error instanceof TimeTrackingError || error instanceof TimeTrackingDateError) {
     return {
       status: "error",
-      message: translateKnownMessage(error.message, t),
+      message: translateDomainError(error, t),
     };
   }
 
@@ -878,6 +880,60 @@ function translateKnownMessage(message: string | undefined, t: TimeTrackingActio
   const key = knownMessageKeys[message];
   return key ? t(key) : message;
 }
+
+/**
+ * The message table stays first because it is finer-grained than the codes are: `localIntervalToUtc`
+ * reports "Choose a valid start time." and "Choose a valid end time." separately, and both arrive
+ * carrying the single code `INVALID_TIME`. Keying on the code alone would tell the member which
+ * *rule* they broke but no longer which field.
+ *
+ * The code table is the safety net underneath, so a domain sentence that gets reworded still
+ * localizes instead of leaking English into the UI.
+ */
+function translateDomainError(
+  error: TimeTrackingError | TimeTrackingDateError,
+  t: TimeTrackingActionsTranslator,
+) {
+  if (error.message && knownMessageKeys[error.message]) {
+    return t(knownMessageKeys[error.message]);
+  }
+
+  const key = domainErrorKeys[error.code];
+  return key ? t(key) : translateKnownMessage(error.message, t);
+}
+
+const domainErrorKeys: Record<TimeTrackingErrorCode | TimeTrackingDateErrorCode, string> = {
+  MEMBER_NOT_FOUND: "errors.memberNotFound",
+  ENTRY_NOT_FOUND: "errors.timeEntryNotFound",
+  ENTRY_LOCKED: "errors.entryLocked",
+  ENTRY_IS_DECLARED: "errors.declaredCorrectedAtMonth",
+  PERIOD_LOCKED: "errors.periodLocked",
+  WEEK_LOCKED: "errors.weekTouchesLockedPeriod",
+  PROJECT_REQUIRED: "fields.chooseProject",
+  PROJECT_NOT_AVAILABLE: "errors.projectNotActiveForDate",
+  PROJECT_NOT_ASSIGNED_FOR_WEEK: "errors.projectNotAssignedForWeek",
+  PROJECT_DECLARES_MONTHLY: "errors.projectDeclaresMonthly",
+  DURATION_INVALID: "fields.durationPositive",
+  DAILY_LIMIT_EXCEEDED: "fields.dailyTotalTooLarge",
+  START_END_REQUIRED: "fields.startEndRequired",
+  END_BEFORE_START: "fields.endAfterStart",
+  INVALID_DATE: "fields.validDate",
+  INVALID_TIME: "fields.validTime",
+  DESCRIPTION_REQUIRED: "fields.descriptionRequired",
+  DESCRIPTION_TOO_LONG: "fields.descriptionMax",
+  TIMER_ALREADY_RUNNING: "errors.stopTimerFirst",
+  NO_TIMER_RUNNING: "errors.noTimerRunning",
+  INACTIVE_WEEK_HAS_ENTRIES: "errors.inactiveWeekHasEntries",
+  DRAFT_KEY_INVALID: "fields.draftKeyInvalid",
+  TIMEZONE_FORMAT: "errors.dateTimezoneFormatFailed",
+  /*
+   * Unreachable from the browser: nothing here paginates, so no cursor is ever sent. The entry
+   * exists because the map is exhaustive over the domain's codes — which is what caught this one
+   * being added — and `errors.generic` is the honest answer rather than a string invented for a
+   * path a member cannot take. `src/server/mcp` has the message an agent actually sees.
+   */
+  INVALID_CURSOR: "errors.generic",
+};
 
 const knownMessageKeys: Record<string, string> = {
   "Choose a project.": "fields.chooseProject",
@@ -950,5 +1006,6 @@ async function getTimeTrackingRequestMetadata(): Promise<TimeTrackingRequestMeta
   return {
     ipAddress: requestHeaders.get("x-forwarded-for"),
     userAgent: requestHeaders.get("user-agent"),
+    channel: "WEB",
   };
 }

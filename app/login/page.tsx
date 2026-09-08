@@ -10,21 +10,43 @@ import {
   securitySetupRoute,
   secondFactorRoute,
 } from "@/src/server/auth/app-access";
+import { buildAuthorizeResumeUrl } from "@/src/lib/oauth-resume";
 import { getGoogleAuthSettings } from "@/src/server/auth/sign-in-methods";
 
 type LoginPageProps = {
-  searchParams: Promise<{
-    callbackURL?: string | string[];
-    email?: string | string[];
-    error?: string | string[];
-  }>;
+  /*
+   * Open-ended rather than the three parameters this page owns: the OAuth provider redirects here
+   * with a whole authorization request in the query, and `buildAuthorizeResumeUrl` needs to see all
+   * of it.
+   */
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
 };
 
 export const dynamic = "force-dynamic";
 
 export default async function LoginPage({ searchParams }: LoginPageProps) {
   const params = await searchParams;
-  const callbackURL = sanitizeCallbackURL(getSingleParam(params.callbackURL));
+  const requestedCallbackURL = getSingleParam(params.callbackURL);
+
+  /*
+   * Normalize an OAuth hand-off into an explicit `callbackURL` and redirect, rather than just
+   * computing it for `LoginPanel`.
+   *
+   * Everything downstream reads the parameter from the address bar: `LoginPanel` navigates to it,
+   * and `getCurrentCallbackURL` in the auth client rebuilds it for the second-factor hop — and its
+   * fallback is `pathname + search`, which on `/login?client_id=…` sanitizes to `/dashboard` and
+   * loses the pending authorization. Putting the parameter in the URL once means no other file has
+   * to know this flow exists.
+   */
+  if (!requestedCallbackURL) {
+    const resumeURL = buildAuthorizeResumeUrl(params);
+
+    if (resumeURL) {
+      redirect(`/login?callbackURL=${encodeURIComponent(resumeURL)}` as Route);
+    }
+  }
+
+  const callbackURL = sanitizeCallbackURL(requestedCallbackURL);
   const googleAuthSettings = getGoogleAuthSettings();
   const access = await getAppAccessState();
 

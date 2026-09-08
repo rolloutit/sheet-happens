@@ -34,6 +34,7 @@ export type {
   TimeGridAssignedProject,
   TimeGridEntry,
   TimeGridWeek,
+  TimeTrackingErrorCode,
   TimeTrackingRequestMetadata,
 } from "./time-entries";
 export { buildDeclaredHoursRoster, listDeclaredHoursForMonth } from "./admin-declarations";
@@ -75,7 +76,13 @@ export type {
   SaveMonthlyHourDeclarationResult,
   UploadDeclarationProofInput,
 } from "./declarations";
-export { getShellRunningTimer } from "./shell-timer";
+/*
+ * `shell-timer` is deliberately NOT re-exported here. It reaches into `src/server/auth/app-access`
+ * for the current request's member, so re-exporting it made this barrel pull the whole Better Auth
+ * instance — and, since the OAuth provider seeds its resource row during plugin init, a database
+ * write — into every module that wanted a date helper. Import it from
+ * `@/src/server/time-tracking/shell-timer` instead; `app/layout.tsx` is its only caller.
+ */
 export {
   assertTrackingModeSwitchAllowed,
   collectTrackingModeConflicts,
@@ -111,4 +118,30 @@ export {
   parseDateOnly,
   TimeTrackingDateError,
 } from "./dates";
-export type { TimeGridDay, TimeGridDayState } from "./dates";
+export type { TimeGridDay, TimeGridDayState, TimeTrackingDateErrorCode } from "./dates";
+export {
+  buildAssignedProjectWhere,
+  loadAssignedProjects,
+  loadLockedMonthStarts,
+  mapAssignedProject,
+} from "./assignments";
+export type { AssignedProjectRecord } from "./assignments";
+export { getMemberTrackingContext } from "./context";
+export type {
+  MemberTrackingContext,
+  MemberTrackingContextProject,
+  TrackingContextClient,
+} from "./context";
+export { getMemberTimeEntry, listMemberTimeEntries } from "./queries";
+export type {
+  ListMemberTimeEntriesResult,
+  MemberTimeEntryRow,
+  TimeEntryQueryClient,
+} from "./queries";
+export { summarizeMemberTime } from "./summary";
+export type {
+  MemberTimeSummary,
+  MemberTimeSummaryDay,
+  MemberTimeSummaryProject,
+  TimeSummaryClient,
+} from "./summary";

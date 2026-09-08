@@ -6,7 +6,7 @@ import "./globals.css";
 import { RunningTimerProvider } from "@/src/components/layout/RunningTimerProvider";
 import { SheetToaster } from "@/src/components/sheet/Toast";
 import { ThemeProvider } from "@/src/components/layout/ThemeProvider";
-import { getShellRunningTimer } from "@/src/server/time-tracking";
+import { getShellRunningTimer } from "@/src/server/time-tracking/shell-timer";
 
 import { stopRunningTimerAction } from "./time/actions";
 
