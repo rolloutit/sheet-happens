@@ -420,6 +420,31 @@ const storyCases: StoryVisualCase[] = [
       await expect(page.getByText(/no projects found/i)).toBeVisible();
     },
   },
+  /**
+   * The suggestion list is a new panel surface with its own emphasis colour on the matched slice
+   * and its own active row, so it earns a baseline on both sides of the theme. Both stories are
+   * left open by their own `play` function, like the two controls above.
+   */
+  {
+    id: "ui-suggestinput--filtered",
+    slug: "suggest-input-filtered-dark",
+    theme: "dark",
+    locale: "en",
+    projects: ["desktop"],
+    prepare: async (page) => {
+      await expect(page.getByRole("option", { name: /code review/i })).toBeVisible();
+    },
+  },
+  {
+    id: "ui-suggestinput--zero-keystroke-light",
+    slug: "suggest-input-zero-keystroke-light",
+    theme: "light",
+    locale: "en",
+    projects: ["desktop"],
+    prepare: async (page) => {
+      await expect(page.getByRole("listbox", { name: /recent descriptions/i })).toBeVisible();
+    },
+  },
   {
     // Hungarian weekday abbreviations and month name are the highest-risk locale detail
     // in the calendar, and mobile is where the popover width is tightest.
