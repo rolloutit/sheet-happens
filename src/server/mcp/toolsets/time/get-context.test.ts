@@ -105,6 +105,7 @@ function context(overrides: Record<string, unknown> = {}) {
         projectEndsOn: null,
         trackingMode: "TRACKED",
         canLogTime: true,
+        recentDescriptions: ["API endpoint implementation", "Sprint planning"],
       },
       {
         assignmentId: "assignment-2",
@@ -118,6 +119,7 @@ function context(overrides: Record<string, unknown> = {}) {
         projectEndsOn: null,
         trackingMode: "DECLARED",
         canLogTime: false,
+        recentDescriptions: [],
       },
     ],
     lockedMonths: ["2026-07", "2026-06"],
@@ -186,6 +188,29 @@ describe("time_get_context", () => {
     expect(structured.week).toEqual({ start: "2026-09-07", end: "2026-09-13" });
     expect(structured.scopes).toEqual(["time:read", "time:write"]);
     expect(structured.lockedMonths).toEqual(["2026-07", "2026-06"]);
+  });
+
+  /**
+   * The member's own wording, passed through per project.
+   *
+   * Here so an agent logs "API endpoint implementation" rather than inventing "worked on the API":
+   * these strings reach a report line and a contractor invoice, where a one-off phrasing among
+   * thirty consistent ones is what a reviewer stops to ask about.
+   */
+  it("passes each project's recent descriptions through untouched", async () => {
+    getMemberTrackingContext.mockResolvedValue(context());
+
+    const { handler } = register(getContextTool, makeActor());
+    const result = await handler();
+
+    const structured = result.structuredContent as {
+      projects: Array<{ id: string; recentDescriptions: string[] }>;
+    };
+
+    expect(structured.projects.map((project) => project.recentDescriptions)).toEqual([
+      ["API endpoint implementation", "Sprint planning"],
+      [],
+    ]);
   });
 
   /**

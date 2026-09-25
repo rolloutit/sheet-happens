@@ -581,6 +581,7 @@ agent is acting for and everything needed to make valid calls:
       "canLogTime": true,
       "validFrom": "2026-01-01",
       "validTo": null,
+      "recentDescriptions": ["API endpoint implementation", "Sprint planning"],
     },
   ],
   "lockedMonths": ["2026-07"],
@@ -593,6 +594,17 @@ agent is acting for and everything needed to make valid calls:
 (`resolveTrackingMode(member, assignment)`); `canLogTime` is false for `DECLARED` projects and the
 description says why. `lockedMonths` comes from `PeriodLock` rows, the same source
 `getMemberWeeklyTimeGrid` uses for `lockedMonthStarts`.
+
+`recentDescriptions` is up to five of the member's **own** past descriptions on that project, most
+useful first, from `buildDescriptionSuggestions` — the same ranking and the same rules the composer
+on `/time` shows the member (`docs/time-entry-suggestions.md` §10), capped tighter because this is a
+prompt rather than a panel. It is there so an agent reuses the member's wording instead of
+paraphrasing it: a line reading "worked on the API" among thirty saying "API endpoint
+implementation" is the outlier a timesheet reviewer stops to ask about. Never another member's
+phrasing — the read is member-scoped in the same way every other one here is — and empty for a
+project with no history in the last ninety days. Adding it made `time_get_context` a fourth indexed
+read (one `groupBy`), and changed the `tools/list` contract baseline, which was regenerated
+deliberately.
 
 **`time_list_entries`** — `{ from, to, projectId?, includeDeclared? = false, cursor?, limit? = 100 }`
 with `to − from ≤ 92 days` and `limit ≤ 200`. Ordered by date, then start time, then creation.
