@@ -15,21 +15,50 @@
  * from the *visible* week's end (`SUGGESTION_LOOKBACK_DAYS`), the frozen week sits at
  * `FROZEN_WEEK_START`, and the dev seed only generates entries from twelve months before today
  * forward — so on the frozen week the window contains the frozen entries and nothing else, and the
- * gap only widens as time passes. Even so the assertions are about *containment* (this description
- * is offered) rather than about the exact list, so a future seed change cannot make them lie.
+ * gap only widens as time passes. Even so no test names a description: each one reads what the
+ * list actually offered and asserts what the field does with it, because the list is scoped to the
+ * project the dialog opens on, and a literal would be pinning that choice rather than the feature.
  */
+import type { Page } from "@playwright/test";
+
 import { expect, test, visit } from "../fixtures";
 import { FROZEN_WEEK_PATH } from "../seed";
 
-/** A frozen-week description that exists for both signed-in roles. */
-const KNOWN_DESCRIPTION = /Sprint planning|Integration testing/;
+/* One test at a time within this file, and room for a cold `/time` render on top.
+ *
+ * Every test here needs a hydrated page, which the aria-snapshot specs do not. Run fully parallel,
+ * all of them load `/time` in the same instant, and the Turbopack dev server leaves some of the
+ * page's chunk requests hanging (the failure `visit` in fixtures.ts describes): the page renders,
+ * never hydrates, and `New entry` never gets a handler however often it is clicked. In order, each
+ * one hydrates in about a second. The budget is `time.spec.ts`'s reasoning for its own navigation
+ * test: a cold first render of a `force-dynamic` page can take well over the default. */
+test.describe.configure({ mode: "default", timeout: 60_000 });
 
 test.beforeEach(async ({ page }) => {
   await visit(page, FROZEN_WEEK_PATH);
 });
 
+/**
+ * Opens the entry dialog from the header's `New entry` button.
+ *
+ * The button is in the DOM before React hydrates, so a click can land on markup that has no
+ * handler yet and silently do nothing — the race `time.spec.ts` names. Retrying the click-and-assert
+ * pair is the honest wait. The click is skipped once a dialog is showing: a retry fired at a dialog
+ * that was merely slow to appear would otherwise wait on the modal overlay until the test timed out.
+ */
+async function openEntryDialog(page: Page) {
+  const dialog = page.getByRole("dialog");
+
+  await expect(async () => {
+    if (!(await dialog.isVisible())) {
+      await page.getByRole("button", { name: "New entry" }).click();
+    }
+    await expect(dialog).toBeVisible({ timeout: 2_000 });
+  }).toPass({ timeout: 30_000 });
+}
+
 test("preloads the member's own descriptions into the entry dialog", async ({ page }) => {
-  await page.getByRole("button", { name: "New entry" }).click();
+  await openEntryDialog(page);
 
   const description = page.getByRole("combobox", { name: /Description/ });
 
@@ -48,19 +77,23 @@ test("preloads the member's own descriptions into the entry dialog", async ({ pa
 });
 
 test("accepts a suggestion with the keyboard without logging the entry", async ({ page }) => {
-  await page.getByRole("button", { name: "New entry" }).click();
+  await openEntryDialog(page);
 
   const description = page.getByRole("combobox", { name: /Description/ });
   await expect(description).toBeFocused();
 
+  /* Whatever the list offers first, not a named description: the list is scoped to the project the
+     dialog opens on, and which project that is follows the member's recent chips, so a literal
+     would be asserting the chip order rather than the keyboard. `ArrowDown` from a fresh list lands
+     on the first option, which is the one read here. */
   const option = page
     .getByRole("listbox", { name: "Recent descriptions" })
-    .getByRole("option", { name: KNOWN_DESCRIPTION })
+    .getByRole("option")
     .first();
 
   await expect(
     option,
-    `the frozen week offered no known description — is the e2e database seeded? \`pnpm db:test\``,
+    `the frozen week offered no description — is the e2e database seeded? \`pnpm db:test\``,
   ).toBeVisible();
 
   // The row's first span is the description itself; the second is the `12 times · last used …`
@@ -68,7 +101,8 @@ test("accepts a suggestion with the keyboard without logging the entry", async (
   const accepted = ((await option.locator("span").first().textContent()) ?? "").trim();
 
   await description.press("ArrowDown");
-  await expect(description).toHaveAttribute("aria-activedescendant", /option-\d+$/);
+  await expect(description).toHaveAttribute("aria-activedescendant", /option-0$/);
+  await expect(option).toHaveAttribute("aria-selected", "true");
   await description.press("Enter");
 
   // Accepted verbatim into the field, list closed — and the dialog is still open, because a
@@ -79,7 +113,7 @@ test("accepts a suggestion with the keyboard without logging the entry", async (
 });
 
 test("closes the list on Escape and the dialog only on the second one", async ({ page }) => {
-  await page.getByRole("button", { name: "New entry" }).click();
+  await openEntryDialog(page);
 
   const description = page.getByRole("combobox", { name: /Description/ });
   await expect(description).toBeFocused();
@@ -96,7 +130,7 @@ test("closes the list on Escape and the dialog only on the second one", async ({
 });
 
 test("filters the list as a query is typed, and says when nothing matches", async ({ page }) => {
-  await page.getByRole("button", { name: "New entry" }).click();
+  await openEntryDialog(page);
 
   const description = page.getByRole("combobox", { name: /Description/ });
   await expect(description).toBeFocused();
@@ -132,7 +166,7 @@ test(
   "has no WCAG 2.2 AA violations with the list open",
   { tag: "@a11y" },
   async ({ page, makeAxeBuilder }, testInfo) => {
-    await page.getByRole("button", { name: "New entry" }).click();
+    await openEntryDialog(page);
     await expect(page.getByRole("listbox", { name: "Recent descriptions" })).toBeVisible();
 
     const results = await makeAxeBuilder().analyze();
