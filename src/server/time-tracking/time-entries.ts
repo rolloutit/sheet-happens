@@ -21,6 +21,11 @@ import {
 } from "./dates";
 import type { TimeGridDay } from "./dates";
 import { loadAssignedProjects, loadLockedMonthStarts } from "./assignments";
+import {
+  buildDescriptionSuggestions,
+  loadDescriptionSuggestionRows,
+  type DescriptionSuggestion,
+} from "./description-suggestions";
 import { resolveTrackingMode, type TrackingMode, type TrackingModeMember } from "./tracking-mode";
 
 /**
@@ -148,6 +153,15 @@ export type TimeGridWeek = {
   runningTimer: RunningTimerView | null;
   inactiveWeeks: InactiveProjectWeekRow[];
   entryDraft: TimeEntryDraftView | null;
+  /**
+   * The member's own recent descriptions, per project, ranked — advice for the composer and the
+   * entry dialog (`docs/time-entry-suggestions.md`).
+   *
+   * A flat array rather than a map keyed by project: it serializes smaller, the client already
+   * groups by project id for its chips, and a map would tempt a consumer into reading a missing key
+   * as "no project". Never written back, and never another member's.
+   */
+  descriptionSuggestions: DescriptionSuggestion[];
 };
 
 export type TimeEntryMutationInput = {
@@ -421,6 +435,7 @@ export async function getMemberWeeklyTimeGrid(input: {
     runningTimer,
     inactiveWeeks,
     entryDraft,
+    suggestionRows,
   ] = await Promise.all([
     loadLockedMonthStarts({ memberId: member.id, monthStarts }),
     loadAssignedProjects({ memberId: member.id, member, from: weekStart, to: weekEnd }),
@@ -510,6 +525,10 @@ export async function getMemberWeeklyTimeGrid(input: {
         updatedAt: true,
       },
     }),
+    /* Anchored to the week being looked at, not to today: someone adding a forgotten entry in March
+       should be offered what they were writing in March. It also means the window over a fixed past
+       week is a fixed set of rows, which is what makes the e2e assertion possible. */
+    loadDescriptionSuggestionRows({ memberId: member.id, windowEnd: weekEnd }),
   ]);
 
   const projectsById = new Map(projectRows.map((project) => [project.projectId, project]));
@@ -543,6 +562,13 @@ export async function getMemberWeeklyTimeGrid(input: {
       note: inactiveWeek.note,
     })),
     entryDraft: mapTimeEntryDraft(entryDraft),
+    // Intersected against the assignments here, the same way `recentProjects` is: the read beside
+    // them could not know which projects this member has, and a suggestion for a project with no
+    // chip has nowhere to be used.
+    descriptionSuggestions: buildDescriptionSuggestions(suggestionRows, {
+      anchor: weekEnd,
+      projectIds: projectRows.map((project) => project.projectId),
+    }),
   };
 }
 
