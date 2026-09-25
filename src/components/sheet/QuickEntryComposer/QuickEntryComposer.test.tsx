@@ -25,6 +25,12 @@ const labels = {
   invalidDuration: "Use time like 3.5.",
   descriptionRequired: "Describe what you did.",
   noProject: "Pick a project first.",
+  suggestions: {
+    list: "Recent descriptions",
+    count: (count: number) => `${count} suggestions`,
+    empty: "No matching description",
+    hint: "\u2191\u2193 to choose \u00b7 \u21b5 to insert",
+  },
 };
 
 function Harness({
@@ -59,7 +65,7 @@ describe("QuickEntryComposer", () => {
 
     await user.click(screen.getByRole("radio", { name: "Internal Ops" }));
     await user.type(screen.getByRole("textbox", { name: "Duration" }), "3:30");
-    await user.type(screen.getByRole("textbox", { name: "Description" }), "  Code review {Enter}");
+    await user.type(screen.getByRole("combobox", { name: "Description" }), "  Code review {Enter}");
 
     expect(onSubmit).toHaveBeenCalledWith({
       projectId: "ops",

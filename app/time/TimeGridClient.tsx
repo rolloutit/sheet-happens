@@ -121,6 +121,7 @@ import { TIME_OVERLAY_PARAM, TIMER_OVERLAY_VALUE } from "./time-overlays";
 import { TimerControl } from "./TimerControl";
 import { TimerCreateDialog } from "./TimerCreateDialog";
 import { TimeZoomShell, type TimeZoomDay } from "./TimeZoomShell";
+import { useDescriptionSuggestions } from "./use-description-suggestions";
 import { DurationDisplayContext, useDurationFormatting } from "./use-duration-formatting";
 import { useTimeView } from "./use-time-view";
 import { WeekGridLens } from "./WeekGridLens";
@@ -266,6 +267,8 @@ function TimeGridContent({ week, months }: { week: TimeGridWeek; months: MemberM
     description: "",
   });
   const [composerError, setComposerError] = useState<string | null>(null);
+  /* The member's own recent descriptions, ready to be scoped to whichever chip is selected. */
+  const descriptionSuggestions = useDescriptionSuggestions(week.descriptionSuggestions);
   const [composerDraftStatus, setComposerDraftStatus] = useState<"idle" | "saving" | "saved">(
     "idle",
   );
@@ -979,6 +982,9 @@ function TimeGridContent({ week, months }: { week: TimeGridWeek; months: MemberM
       }
 
       setPendingHighlight({ type: "new" });
+      /* The refresh below is what makes this description a real suggestion. Until it lands the
+         composer may already be open again, so it is remembered locally too (§7). */
+      descriptionSuggestions.remember(value.projectId, value.description);
       await clearTimeEntryDraftAction({ draftKey: TIME_ENTRY_FORM_DRAFT_KEY });
       setComposerValue((current) => ({ ...current, durationText: "", description: "" }));
       setComposerDraftStatus("idle");
@@ -1014,6 +1020,7 @@ function TimeGridContent({ week, months }: { week: TimeGridWeek; months: MemberM
       <QuickEntryComposer
         projects={composerProjects}
         value={effectiveComposerValue}
+        suggestions={descriptionSuggestions.optionsFor(effectiveComposerValue.projectId)}
         pending={isPending}
         error={composerError}
         autoFocus={autoFocus}
@@ -1041,6 +1048,7 @@ function TimeGridContent({ week, months }: { week: TimeGridWeek; months: MemberM
           invalidDuration: t("errors.invalidDurationFormat"),
           descriptionRequired: t("composer.descriptionRequired"),
           noProject: t("composer.noProject"),
+          suggestions: descriptionSuggestions.labels,
         }}
         onValueChange={updateComposerValue}
         onSubmit={(value) => submitComposer(localDate, value)}
@@ -1818,6 +1826,7 @@ function TimeGridContent({ week, months }: { week: TimeGridWeek; months: MemberM
       <TimerCreateDialog
         projects={projectRows}
         recentProjects={recentProjects}
+        suggestions={descriptionSuggestions}
         onStarted={refreshWithResult}
       />
 
@@ -1826,6 +1835,7 @@ function TimeGridContent({ week, months }: { week: TimeGridWeek; months: MemberM
           state={entryModal}
           week={week}
           projects={projectRows}
+          suggestions={descriptionSuggestions}
           onClose={() => setEntryModal(null)}
           onDone={(result) => {
             if (result.status === "success") {

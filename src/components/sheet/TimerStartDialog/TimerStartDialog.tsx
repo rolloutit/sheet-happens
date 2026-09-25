@@ -14,7 +14,7 @@ import {
   DialogTitle,
 } from "@/src/components/ui/Dialog";
 import { Field } from "@/src/components/ui/Field";
-import { Input } from "@/src/components/ui/Input";
+import { SuggestInput } from "@/src/components/ui/SuggestInput";
 import { cn } from "@/src/lib/utils";
 import type { TimerStartDialogProps } from "./TimerStartDialog.types";
 
@@ -51,16 +51,28 @@ export function TimerStartDialog({ open, onOpenChange, labels, ...form }: TimerS
 function TimerStartForm({
   projects,
   recentProjects = [],
+  suggestions = [],
   labels,
   pending = false,
   error = null,
   onCancel,
   onStart,
+  onProjectChange,
 }: Omit<TimerStartDialogProps, "open" | "onOpenChange"> & { onCancel: () => void }) {
   const [description, setDescription] = useState("");
   const [projectId, setProjectId] = useState("");
 
   const selectedProjectId = projectId || (projects[0]?.projectId ?? "");
+
+  /**
+   * One place to change the project, because two controls do it and the description suggestions
+   * follow whichever was used. A picker that reported only half its changes would offer the wrong
+   * project's wording — the one hazard this feature has to avoid.
+   */
+  function pickProject(next: string) {
+    setProjectId(next);
+    onProjectChange?.(next);
+  }
   const ready = Boolean(selectedProjectId && description.trim()) && !pending;
   const visibleRecent = recentProjects.slice(0, RECENT_PROJECT_LIMIT);
 
@@ -75,16 +87,18 @@ function TimerStartForm({
         }}
       >
         <Field label={labels.descriptionLabel} required>
-          {({ id, describedBy, invalid, required }) => (
-            <Input
+          {({ id, describedBy, invalid }) => (
+            <SuggestInput
               id={id}
               autoFocus
               value={description}
+              options={suggestions}
+              labels={labels.suggestions}
+              emptyStateLimit={4}
               placeholder={labels.descriptionPlaceholder}
               aria-describedby={describedBy}
               invalid={invalid}
-              required={required}
-              onChange={(event) => setDescription(event.target.value)}
+              onValueChange={setDescription}
             />
           )}
         </Field>
@@ -103,7 +117,7 @@ function TimerStartForm({
                 value: project.projectId,
                 label: project.name,
               }))}
-              onValueChange={setProjectId}
+              onValueChange={pickProject}
             />
           )}
         </Field>
@@ -124,7 +138,7 @@ function TimerStartForm({
                     ? "border-accent bg-accent-soft text-accent"
                     : "border-border bg-background text-foreground hover:border-accent-line hover:bg-accent-soft",
                 )}
-                onClick={() => setProjectId(project.projectId)}
+                onClick={() => pickProject(project.projectId)}
               >
                 <span
                   className="size-2 rounded-full"

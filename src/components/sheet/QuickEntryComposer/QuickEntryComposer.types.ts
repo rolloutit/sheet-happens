@@ -1,3 +1,5 @@
+import type { SuggestInputLabels, SuggestOption } from "../../ui/SuggestInput";
+
 export type QuickEntryComposerProject = {
   projectId: string;
   name: string;
@@ -31,12 +33,20 @@ export type QuickEntryComposerLabels = {
   invalidDuration: string;
   descriptionRequired: string;
   noProject: string;
+  /** The description field's suggestion list. */
+  suggestions: SuggestInputLabels;
 };
 
 export type QuickEntryComposerProps = {
   /** Recent first, then the rest of the assigned projects. The caller decides the order. */
   projects: QuickEntryComposerProject[];
   value: QuickEntryComposerValue;
+  /**
+   * This member's own recent descriptions, ranked and already scoped to `value.projectId` by the
+   * caller — the composer re-renders the list when the chip changes, it does not re-scope it.
+   * Empty is the ordinary state for a first week on a project, and renders a plain text field.
+   */
+  suggestions?: readonly SuggestOption[];
   labels: QuickEntryComposerLabels;
   /** The action is in flight. */
   pending?: boolean;

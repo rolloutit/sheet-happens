@@ -7,6 +7,7 @@ import { useEffect, useId, useRef, useState, useTransition, type ReactNode } fro
 import { Combobox } from "@/src/components/ui/Combobox";
 import { DatePicker } from "@/src/components/ui/DatePicker";
 import { focusChromeClassName } from "@/src/components/ui/focusRing";
+import { SuggestInput } from "@/src/components/ui/SuggestInput";
 import { TimeInput } from "@/src/components/ui/TimeInput";
 import { parseDurationToMinutes } from "@/src/lib/duration";
 import { DAILY_HARD_LIMIT_MINUTES, DAILY_SOFT_WARNING_MINUTES } from "@/src/lib/time-entry-limits";
@@ -35,6 +36,7 @@ import {
   getDayLoggedMinutes,
   type TimeTrackingTranslator,
 } from "./time-entry-helpers";
+import type { DescriptionSuggestionsController } from "./use-description-suggestions";
 import { useDurationFormatting } from "./use-duration-formatting";
 
 /**
@@ -70,12 +72,22 @@ export type EntryModalProps = {
   state: NonNullable<EntryModalState>;
   week: TimeGridWeek;
   projects: TimeGridAssignedProject[];
+  /** The member's own recent descriptions, scoped here to whichever project is selected. */
+  suggestions: DescriptionSuggestionsController;
   onClose: () => void;
   onDone: (result: TimeTrackingActionState) => void;
   t: TimeTrackingTranslator;
 };
 
-export function EntryModal({ state, week, projects, onClose, onDone, t }: EntryModalProps) {
+export function EntryModal({
+  state,
+  week,
+  projects,
+  suggestions,
+  onClose,
+  onDone,
+  t,
+}: EntryModalProps) {
   const locale = useLocale();
   const { formatMinutesForInput, formatMinutesWithUnit } = useDurationFormatting();
   const pickerLabels = usePickerLabels();
@@ -104,9 +116,9 @@ export function EntryModal({ state, week, projects, onClose, onDone, t }: EntryM
   const [endTime, setEndTime] = useState(
     state.mode === "edit" ? (state.entry.endTime ?? "10:00") : (state.endTime ?? "10:00"),
   );
-  const [description, setDescription] = useState(
-    state.mode === "edit" ? state.entry.description : (state.description ?? ""),
-  );
+  const initialDescription =
+    state.mode === "edit" ? state.entry.description : (state.description ?? "");
+  const [description, setDescription] = useState(initialDescription);
   const [draftStatus, setDraftStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
   const [fieldErrors, setFieldErrors] = useState<TimeTrackingActionState["fieldErrors"]>();
   const [submitError, setSubmitError] = useState<string | null>(null);
@@ -222,6 +234,24 @@ export function EntryModal({ state, week, projects, onClose, onDone, t }: EntryM
   }
 
   const dialogRef = useModalFocusTrap<HTMLDivElement>(closeModal);
+  const descriptionRef = useRef<HTMLInputElement | HTMLTextAreaElement>(null);
+
+  /**
+   * The prefill moment: a duration typed into an empty grid cell opens this dialog with everything
+   * filled in *except* the description, and the same is true of an entry whose description was
+   * never written. That is the one place in the app where the next keystroke is genuinely
+   * predictable, so focus goes there and the field's own focus handler offers what this member
+   * usually writes on this project. Nothing is inserted.
+   *
+   * Declared after `useModalFocusTrap` on purpose: the trap claims focus for the first focusable
+   * element in its own effect, and effects in one component run in declaration order, so this is
+   * what makes "focus the description" win rather than a race.
+   */
+  useEffect(() => {
+    if (initialDescription.trim()) return;
+
+    descriptionRef.current?.focus();
+  }, [initialDescription]);
 
   function submit() {
     const durationMinutes = parseDurationToMinutes(durationText);
@@ -272,6 +302,12 @@ export function EntryModal({ state, week, projects, onClose, onDone, t }: EntryM
 
       setFieldErrors(result.fieldErrors);
       setSubmitError(result.status === "error" ? result.message : null);
+
+      if (result.status === "success") {
+        // So a second entry in the same session is offered what the first one said, before the
+        // page revalidates and the server's own list catches up.
+        suggestions.remember(projectId, description);
+      }
 
       if (result.status === "success" && createDraftKey) {
         await clearTimeEntryDraftAction({ draftKey: createDraftKey });
@@ -353,18 +389,29 @@ export function EntryModal({ state, week, projects, onClose, onDone, t }: EntryM
             <AdminModificationNotice modification={state.entry.adminModification} t={t} />
           ) : null}
 
+          {/* The render-prop form of `Field`, not the plain one: a `<label>` may wrap a single
+              control, and this one brings a listbox of its own. */}
           <Field label={t("fields.description")} required error={fieldErrors?.description}>
-            <textarea
-              rows={3}
-              value={description}
-              placeholder={t("fields.descriptionPlaceholder")}
-              className={inputClassName(Boolean(fieldErrors?.description))}
-              onChange={(event) => {
-                clearSubmitFeedback();
-                setDescription(event.target.value);
-                markDraftDirty(event.target.value);
-              }}
-            />
+            {({ id, describedBy, invalid }) => (
+              <SuggestInput
+                as="textarea"
+                id={id}
+                rows={3}
+                fieldRef={descriptionRef}
+                value={description}
+                options={suggestions.optionsFor(projectId)}
+                labels={suggestions.labels}
+                emptyStateLimit={6}
+                placeholder={t("fields.descriptionPlaceholder")}
+                aria-describedby={describedBy}
+                invalid={invalid}
+                onValueChange={(next) => {
+                  clearSubmitFeedback();
+                  setDescription(next);
+                  markDraftDirty(next);
+                }}
+              />
+            )}
           </Field>
 
           <Field label={t("fields.project")} required error={fieldErrors?.projectId}>

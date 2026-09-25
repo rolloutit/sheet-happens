@@ -7,6 +7,7 @@ import { parseDurationToMinutes } from "@/src/lib/duration";
 import { cn } from "@/src/lib/utils";
 import { Button } from "../../ui/Button";
 import { Input } from "../../ui/Input";
+import { SuggestInput } from "../../ui/SuggestInput";
 import type { QuickEntryComposerProps } from "./QuickEntryComposer.types";
 
 /**
@@ -33,6 +34,7 @@ import type { QuickEntryComposerProps } from "./QuickEntryComposer.types";
 export function QuickEntryComposer({
   projects,
   value,
+  suggestions = [],
   labels,
   pending = false,
   error = null,
@@ -158,18 +160,24 @@ export function QuickEntryComposer({
           ) : null}
         </div>
         <div className="grid gap-1">
-          <Input
+          {/* The one field in this app with a memory: focus it empty and the member's own recent
+              descriptions for the selected chip are already there (§6.2 of
+              `docs/time-entry-suggestions.md`). Enter accepts the highlighted one *without*
+              submitting; the next Enter adds the entry. */}
+          <SuggestInput
             aria-label={labels.description}
-            autoComplete="off"
             autoFocus={autoFocus === "description"}
             placeholder={labels.descriptionPlaceholder}
             value={value.description}
+            options={suggestions}
+            labels={labels.suggestions}
+            emptyStateLimit={4}
             invalid={Boolean(fieldErrors.description)}
             disabled={pending}
-            className="h-9"
-            onChange={(event) => {
+            fieldClassName="h-9 py-0"
+            onValueChange={(description) => {
               setFieldErrors((current) => ({ ...current, description: undefined }));
-              onValueChange({ ...value, description: event.target.value });
+              onValueChange({ ...value, description });
             }}
           />
           {fieldErrors.description ? (

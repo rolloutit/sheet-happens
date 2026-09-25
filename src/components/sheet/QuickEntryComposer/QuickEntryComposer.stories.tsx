@@ -25,16 +25,32 @@ const labels = {
   invalidDuration: "Use time like 3.5, 3:30, 3h 20m, or 200m.",
   descriptionRequired: "Describe what you did.",
   noProject: "Pick a project first.",
+  suggestions: {
+    list: "Recent descriptions",
+    count: (count: number) => `${count} suggestions`,
+    empty: "No matching description",
+    hint: "\u2191\u2193 to choose \u00b7 \u21b5 to insert",
+  },
 };
+
+/** What this member has been calling their work on Atlas lately — ranked, not alphabetical. */
+const suggestions = [
+  { text: "API endpoint implementation", meta: "18 times \u00b7 last used Sep 3" },
+  { text: "Sprint planning", meta: "9 times \u00b7 last used Sep 1" },
+  { text: "Code review", meta: "7 times \u00b7 last used Sep 2" },
+  { text: "Bug triage", meta: "2 times \u00b7 last used Aug 19" },
+];
 
 function Demo({
   onSubmit,
   pending,
   error,
+  withSuggestions = false,
 }: {
   onSubmit: (value: QuickEntryComposerValue & { durationMinutes: number }) => void;
   pending?: boolean;
   error?: string | null;
+  withSuggestions?: boolean;
 }) {
   const [value, setValue] = useState<QuickEntryComposerValue>({
     projectId: "atlas",
@@ -46,6 +62,7 @@ function Demo({
     <QuickEntryComposer
       projects={projects}
       value={value}
+      suggestions={withSuggestions ? suggestions : []}
       labels={labels}
       pending={pending}
       error={error}
@@ -65,6 +82,7 @@ const meta = {
   args: {
     projects,
     value: { projectId: "atlas", durationText: "", description: "" },
+    suggestions: [],
     labels,
     autoFocus: null,
     onValueChange: fn(),
@@ -91,7 +109,7 @@ export const Default: Story = {
     await userEvent.click(canvas.getByRole("radio", { name: "Internal Ops & Tooling" }));
     await userEvent.type(canvas.getByRole("textbox", { name: "Duration" }), "2h30");
     await userEvent.type(
-      canvas.getByRole("textbox", { name: "Description" }),
+      canvas.getByRole("combobox", { name: "Description" }),
       "Sprint planning{Enter}",
     );
 
@@ -132,4 +150,46 @@ export const DefaultLight: Story = {
 export const Mobile: Story = {
   render: (args) => <Demo onSubmit={args.onSubmit} />,
   parameters: { viewport: { defaultViewport: "mobile1" } },
+};
+
+/**
+ * With history behind it: focus the empty description and the member's own recent wording for the
+ * selected chip is already offered, no keystroke involved.
+ */
+export const WithSuggestions: Story = {
+  render: (args) => <Demo onSubmit={args.onSubmit} withSuggestions />,
+  decorators: [
+    (Story) => (
+      <div className="pb-56">
+        <Story />
+      </div>
+    ),
+  ],
+  play: async ({ canvas, userEvent }) => {
+    await userEvent.click(canvas.getByRole("combobox", { name: "Description" }));
+
+    await expect(canvas.getByRole("option", { name: /API endpoint implementation/ })).toBeVisible();
+  },
+};
+
+/** The same list, filtered by three letters, with the matched slice emphasized. */
+export const SuggestionsFiltered: Story = {
+  render: (args) => <Demo onSubmit={args.onSubmit} withSuggestions />,
+  decorators: [
+    (Story) => (
+      <div className="pb-56">
+        <Story />
+      </div>
+    ),
+  ],
+  play: async ({ args, canvas, userEvent }) => {
+    await userEvent.type(canvas.getByRole("combobox", { name: "Description" }), "spr");
+    // Down then Enter accepts the suggestion; it must not also submit the composer.
+    await userEvent.keyboard("{ArrowDown}{Enter}");
+
+    await expect(canvas.getByRole("combobox", { name: "Description" })).toHaveValue(
+      "Sprint planning",
+    );
+    await expect(args.onSubmit).not.toHaveBeenCalled();
+  },
 };

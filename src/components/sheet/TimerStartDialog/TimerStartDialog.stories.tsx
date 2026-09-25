@@ -22,7 +22,21 @@ const labels = {
   projectLabel: "Project",
   recent: "Recent",
   combobox: { search: "Search", searchPlaceholder: "Search...", empty: "No results" },
+  suggestions: {
+    list: "Recent descriptions",
+    count: (count: number) => `${count} suggestions`,
+    empty: "No matching description",
+    hint: "\u2191\u2193 to choose \u00b7 \u21b5 to insert",
+  },
 };
+
+/** What this member logged on the selected project lately — the dialog opens blank, so this is
+ *  where a zero-keystroke list saves the most typing. */
+const suggestions = [
+  { text: "Rate table migration", meta: "6 times \u00b7 last used Sep 4" },
+  { text: "Client sync call", meta: "5 times \u00b7 last used Sep 2" },
+  { text: "Invoice export refactor", meta: "3 times \u00b7 last used Aug 29" },
+];
 
 /**
  * The dialog is normally driven by a URL param, so the harness supplies the opener a real page
@@ -167,4 +181,22 @@ export const Mobile: Story = {
   ...Light,
   globals: { theme: "dark", locale: "en" },
   parameters: { viewport: { defaultViewport: "mobile1" } },
+};
+
+/**
+ * With history: focusing the blank description offers what this member has been calling their work
+ * on the selected project, and picking another project re-scopes the list.
+ */
+export const WithSuggestions: Story = {
+  args: { suggestions },
+  play: async ({ canvas, userEvent }) => {
+    await userEvent.click(canvas.getByRole("button", { name: /new timer/i }));
+    const dialog = await screen.findByRole("dialog", { name: /new timer/i });
+
+    await userEvent.click(within(dialog).getByRole("combobox", { name: /description/i }));
+
+    await expect(
+      within(dialog).getByRole("option", { name: /Rate table migration/ }),
+    ).toBeVisible();
+  },
 };
