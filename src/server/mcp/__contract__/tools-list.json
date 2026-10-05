@@ -3,7 +3,7 @@
     {
       "name": "time_get_context",
       "title": "Get tracking context",
-      "description": "Who you are acting for, and everything needed to make a valid call. Call this first.\n\nReturns the member's timezone and today's date in it, the current week and month, the project ids you may log against, which months are locked by a submitted timesheet, any running timer, and the argument limits every other tool enforces.\n\nDates in this API are never relative: work out YYYY-MM-DD yourself from `today`. Projects are addressed by `id` — names are not accepted. A project with `canLogTime: false` declares its hours a month at a time and will refuse individual entries.",
+      "description": "Who you are acting for, and everything needed to make a valid call. Call this first.\n\nReturns the member's timezone and today's date in it, the current week and month, the project ids you may log against, which months are locked by a submitted timesheet, any running timer, and the argument limits every other tool enforces.\n\nDates in this API are never relative: work out YYYY-MM-DD yourself from `today`. Projects are addressed by `id` — names are not accepted. A project with `canLogTime: false` declares its hours a month at a time and will refuse individual entries.\n\nEach project also carries `recentDescriptions`: how this member has actually been describing their work there lately, most useful first. Reuse that wording when it fits what you are logging instead of paraphrasing it — these descriptions reach a report line and a contractor invoice, where an outlier phrasing reads as a mistake.",
       "annotations": {
         "readOnlyHint": true,
         "destructiveHint": false,
@@ -119,7 +119,8 @@
                     },
                     { "type": "null" }
                   ]
-                }
+                },
+                "recentDescriptions": { "type": "array", "items": { "type": "string" } }
               },
               "required": [
                 "id",
@@ -129,7 +130,8 @@
                 "trackingMode",
                 "canLogTime",
                 "validFrom",
-                "validTo"
+                "validTo",
+                "recentDescriptions"
               ],
               "additionalProperties": false
             }

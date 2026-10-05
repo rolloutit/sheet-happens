@@ -2447,6 +2447,15 @@
       "noProject": "Először válassz projektet.",
       "close": "Bezárás"
     },
+    "suggestions": {
+      "label": "Legutóbbi leírások",
+      "otherProjects": "Más projektekből",
+      "meta": "{count, plural, one {# alkalommal} other {# alkalommal}} · utoljára: {date}",
+      "justUsed": "Most használtad",
+      "count": "{count, plural, one {# javaslat} other {# javaslat}}",
+      "empty": "Nincs egyező leírás",
+      "hint": "↑↓ választás · ↵ beszúrás"
+    },
     "card": {
       "continue": "{description} folytatása",
       "more": "További műveletek: {description}",

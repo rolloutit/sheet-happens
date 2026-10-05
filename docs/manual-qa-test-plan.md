@@ -4060,3 +4060,25 @@ surfaces, and every table on it goes through `DataTable` in responsive mode — 
   in, and ends only on the dialog's own Sign out button.
 - The confirmation opens with Stay signed in focused, so a stray Enter after the menu keeps the
   session, and it reads correctly in Hungarian and English in both themes.
+- Focusing an empty description on `/time` — in the quick composer, the entry dialog or the New
+  timer dialog — offers this member's own recent descriptions for the selected project, most useful
+  first, with how often and when each was last used; nothing is filled in until one is chosen.
+- Typing filters that list, an accented Hungarian description is found from an unaccented query
+  (`arajanlat` finds `Árajánlat`), the matched letters are emphasized in place, and a query that
+  matches nothing says so rather than showing an unfiltered list.
+- Choosing a suggestion with Enter inserts it and nothing else: the entry is logged only by the
+  next Enter or by Save. Escape closes the list and leaves the dialog open; a second Escape closes
+  the dialog.
+- Changing the project chip re-scopes the list and leaves half-typed text alone. A project with
+  almost no history of its own borrows a few descriptions from the others, always under a heading
+  that says so.
+- A description logged minutes ago is offered for the next entry in the same session, and the list
+  never contains another member's wording, a declared month's note, or a description from a deleted
+  entry — deleting an entry removes it and Undo brings it back.
+- Typing a duration into an empty grid cell opens the dialog with the description focused and its
+  list already open, and the same happens when editing an entry whose description is empty — the
+  one-gesture fix for a `Description needed` warning.
+- The list is complete in Hungarian and English, in both themes, and on a phone it appears below
+  the field rather than floating over the keyboard.
+- An agent connected over MCP sees the same recent descriptions per project in `time_get_context`
+  and reuses that wording instead of inventing its own.

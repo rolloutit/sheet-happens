@@ -12,6 +12,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
  */
 
 const timeEntryFindMany = vi.fn();
+const timeEntryGroupBy = vi.fn();
 
 vi.mock("@/src/server/db/client", () => ({
   prisma: {
@@ -25,7 +26,10 @@ vi.mock("@/src/server/db/client", () => ({
     },
     periodLock: { findMany: vi.fn(async () => []) },
     projectAssignment: { findMany: vi.fn(async () => []) },
-    timeEntry: { findMany: (args: unknown) => timeEntryFindMany(args) },
+    timeEntry: {
+      findMany: (args: unknown) => timeEntryFindMany(args),
+      groupBy: (args: unknown) => timeEntryGroupBy(args),
+    },
     runningTimer: { findUnique: vi.fn(async () => null) },
     inactiveProjectWeek: { findMany: vi.fn(async () => []) },
     timeEntryDraft: { findUnique: vi.fn(async () => null) },
@@ -38,6 +42,8 @@ describe("getMemberWeeklyTimeGrid", () => {
   beforeEach(() => {
     timeEntryFindMany.mockReset();
     timeEntryFindMany.mockResolvedValue([]);
+    timeEntryGroupBy.mockReset();
+    timeEntryGroupBy.mockResolvedValue([]);
   });
 
   it("excludes declared entries from the week, at the query", async () => {
@@ -50,8 +56,11 @@ describe("getMemberWeeklyTimeGrid", () => {
     // Both reads of `timeEntry`: the week's own entries, and the 90-day lookback the "recent"
     // chips come from. A declared project must not become a chip that opens the entry form.
     expect(timeEntryFindMany).toHaveBeenCalledTimes(2);
+    // And the third, which is a `groupBy`: the description suggestions. A declaration note is not
+    // a description of work, and the project it belongs to cannot take a per-day entry anyway.
+    expect(timeEntryGroupBy).toHaveBeenCalledTimes(1);
 
-    for (const call of timeEntryFindMany.mock.calls) {
+    for (const call of [...timeEntryFindMany.mock.calls, ...timeEntryGroupBy.mock.calls]) {
       const args = call[0] as { where: { source?: { not?: string } } };
       expect(args.where.source).toEqual({ not: "DECLARED" });
     }

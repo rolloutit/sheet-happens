@@ -2447,6 +2447,15 @@
       "noProject": "Pick a project first.",
       "close": "Close"
     },
+    "suggestions": {
+      "label": "Recent descriptions",
+      "otherProjects": "From other projects",
+      "meta": "{count, plural, one {# time} other {# times}} · last used {date}",
+      "justUsed": "Just used",
+      "count": "{count, plural, one {# suggestion} other {# suggestions}}",
+      "empty": "No matching description",
+      "hint": "↑↓ to choose · ↵ to insert"
+    },
     "card": {
       "continue": "Continue {description}",
       "more": "More actions for {description}",

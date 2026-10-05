@@ -99,6 +99,14 @@ export const projectRef = z
     canLogTime: z.boolean(),
     validFrom: isoDate,
     validTo: isoDate.nullable(),
+    /**
+     * The member's own recent descriptions on this project, most useful first.
+     *
+     * Advice, not a vocabulary: an agent should reuse the member's wording instead of paraphrasing
+     * it, because these strings end up on a report line a human verifies. Empty for a project with
+     * no history in the last ninety days.
+     */
+    recentDescriptions: z.array(z.string()),
   })
   .strict();
 

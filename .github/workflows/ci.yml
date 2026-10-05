@@ -136,15 +136,17 @@ jobs:
           restore-keys: playwright-${{ runner.os }}-
       - run: pnpm exec playwright install --with-deps chromium
       # The image the dev compose uses, started as a step rather than a service container because
-      # `services:` cannot pass the `server /data` command minio/minio needs. Credentials are the
-      # S3_* values above, so the seed and the app under test both authenticate against it, and
+      # `services:` cannot pass the `server /data` command MinIO needs. Credentials are the S3_*
+      # values above, so the seed and the app under test both authenticate against it, and
       # `pnpm db:test:reset` waits for it and creates the bucket — hence no readiness step here.
+      # `pgsty/minio` because MinIO withdrew its own images: `minio/minio` no longer exists on
+      # Docker Hub or quay.io. Pinned to a release, like every other dependency.
       - name: Start MinIO
         run: |
           docker run -d --name minio -p 9000:9000 \
             -e MINIO_ROOT_USER="$S3_ACCESS_KEY_ID" \
             -e MINIO_ROOT_PASSWORD="$S3_SECRET_ACCESS_KEY" \
-            minio/minio:latest server /data
+            pgsty/minio:RELEASE.2026-08-04T00-00-00Z server /data
       # Creates, migrates and seeds the suite's own database — `sheet_happens_e2e`, derived from
       # DATABASE_URL above — on the service container. It touches Docker not at all, so this is the
       # same code path a developer runs locally, and `migrate deploy` keeps the release path

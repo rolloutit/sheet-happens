@@ -4,6 +4,7 @@ import { projectColorValues } from "@/src/lib/project-colors";
 
 import type { AssignedProjectRecord } from "./assignments";
 import { getMemberTrackingContext } from "./context";
+import type { DescriptionSuggestionRow } from "./description-suggestions";
 import { TimeTrackingError } from "./time-entries";
 
 function dateOnly(value: string) {
@@ -56,6 +57,7 @@ function createContextDb(
       startedAt: Date;
       projectAssignment: { project: { name: string; colorToken: string } };
     } | null;
+    descriptions?: DescriptionSuggestionRow[];
   } = {},
 ) {
   return {
@@ -80,6 +82,25 @@ function createContextDb(
     runningTimer: {
       findUnique: vi.fn(async () => overrides.timer ?? null),
     },
+    timeEntry: {
+      groupBy: vi.fn<(args: unknown) => Promise<DescriptionSuggestionRow[]>>(
+        async () => overrides.descriptions ?? [],
+      ),
+    },
+  };
+}
+
+function descriptionRow(
+  projectId: string,
+  description: string,
+  count: number,
+  lastUsedOn: string,
+): DescriptionSuggestionRow {
+  return {
+    projectId,
+    description,
+    _count: { _all: count },
+    _max: { localDate: dateOnly(lastUsedOn) },
   };
 }
 
@@ -251,6 +272,67 @@ describe("getMemberTrackingContext", () => {
     expect(context.month).toEqual({ start: "2026-09-01", end: "2026-09-30" });
     // A Tuesday, so the week it belongs to still starts in August.
     expect(context.week).toEqual({ start: "2026-08-31", end: "2026-09-06" });
+  });
+
+  it("tells the agent this member's own recent wording, per project and capped", async () => {
+    const db = createContextDb({
+      assignments: [assignment("project-atlas"), assignment("project-orion")],
+      descriptions: [
+        descriptionRow("project-atlas", "API endpoint implementation", 12, "2026-09-05"),
+        descriptionRow("project-atlas", "Sprint planning", 4, "2026-09-01"),
+        // Six on one project, so the five-per-project cap has something to cut.
+        ...["Bug triage", "Code review", "Client sync call", "Release prep"].map((text, index) =>
+          descriptionRow("project-atlas", text, 3 - index * 0.5, "2026-08-28"),
+        ),
+        descriptionRow("project-orion", "Monthly declaration note", 1, "2026-09-02"),
+        // Not an assigned project, so it must not reach the agent at all.
+        descriptionRow("project-gone", "Archived work", 30, "2026-09-05"),
+      ],
+      locks: [],
+    });
+
+    const context = await getMemberTrackingContext(
+      { memberId: "member-1", now: new Date("2026-09-07T09:00:00.000Z") },
+      { db: db as never },
+    );
+
+    const atlas = context.projects.find((project) => project.projectId === "project-atlas");
+    const orion = context.projects.find((project) => project.projectId === "project-orion");
+
+    expect(atlas?.recentDescriptions).toHaveLength(5);
+    expect(atlas?.recentDescriptions.slice(0, 2)).toEqual([
+      "API endpoint implementation",
+      "Sprint planning",
+    ]);
+    expect(orion?.recentDescriptions).toEqual(["Monthly declaration note"]);
+    expect(context.projects.flatMap((project) => project.recentDescriptions)).not.toContain(
+      "Archived work",
+    );
+  });
+
+  it("reads descriptions for this member, undeclared and dated in the member's own today", async () => {
+    const db = createContextDb();
+
+    await getMemberTrackingContext(
+      { memberId: "member-1", now: new Date("2026-09-07T09:00:00.000Z") },
+      { db: db as never },
+    );
+
+    const args = db.timeEntry.groupBy.mock.calls[0]?.[0] as {
+      where: {
+        memberId: string;
+        deletedAt: null;
+        source: { not: string };
+        localDate: { gte: Date; lte: Date };
+      };
+    };
+
+    expect(args.where.memberId).toBe("member-1");
+    expect(args.where.deletedAt).toBeNull();
+    expect(args.where.source).toEqual({ not: "DECLARED" });
+    // Ninety days back from the member's local today, which on a Budapest morning is the 7th.
+    expect(args.where.localDate.lte).toEqual(dateOnly("2026-09-07"));
+    expect(args.where.localDate.gte).toEqual(dateOnly("2026-06-09"));
   });
 
   it("dates today behind UTC for a timezone that has not reached the new day yet", async () => {

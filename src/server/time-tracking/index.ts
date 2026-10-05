@@ -37,6 +37,23 @@ export type {
   TimeTrackingErrorCode,
   TimeTrackingRequestMetadata,
 } from "./time-entries";
+export {
+  buildDescriptionSuggestions,
+  loadDescriptionSuggestionRows,
+  MCP_SUGGESTIONS_PER_PROJECT,
+  scoreSuggestion,
+  SUGGESTION_HALF_LIFE_DAYS,
+  SUGGESTION_LOOKBACK_DAYS,
+  SUGGESTION_TEXT_MAX_LENGTH,
+  SUGGESTIONS_PER_PAYLOAD,
+  SUGGESTIONS_PER_PROJECT,
+} from "./description-suggestions";
+export type {
+  BuildDescriptionSuggestionsInput,
+  DescriptionSuggestion,
+  DescriptionSuggestionClient,
+  DescriptionSuggestionRow,
+} from "./description-suggestions";
 export { buildDeclaredHoursRoster, listDeclaredHoursForMonth } from "./admin-declarations";
 export type {
   AdminDeclaredHoursAssignment,

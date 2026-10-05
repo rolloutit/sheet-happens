@@ -201,6 +201,13 @@ export type {
   StrengthMeterScore,
   StrengthRequirement,
 } from "./StrengthMeter";
+export { SuggestInput } from "./SuggestInput";
+export type {
+  SuggestInputLabels,
+  SuggestInputLayout,
+  SuggestInputProps,
+  SuggestOption,
+} from "./SuggestInput";
 export { Switch } from "./Switch";
 export type { SwitchProps } from "./Switch";
 export { Tabs, TabsContent, TabsList, TabsTrigger } from "./Tabs";

@@ -43,7 +43,9 @@ const DESCRIPTION = `Who you are acting for, and everything needed to make a val
 
 Returns the member's timezone and today's date in it, the current week and month, the project ids you may log against, which months are locked by a submitted timesheet, any running timer, and the argument limits every other tool enforces.
 
-Dates in this API are never relative: work out YYYY-MM-DD yourself from \`today\`. Projects are addressed by \`id\` — names are not accepted. A project with \`canLogTime: false\` declares its hours a month at a time and will refuse individual entries.`;
+Dates in this API are never relative: work out YYYY-MM-DD yourself from \`today\`. Projects are addressed by \`id\` — names are not accepted. A project with \`canLogTime: false\` declares its hours a month at a time and will refuse individual entries.
+
+Each project also carries \`recentDescriptions\`: how this member has actually been describing their work there lately, most useful first. Reuse that wording when it fits what you are logging instead of paraphrasing it — these descriptions reach a report line and a contractor invoice, where an outlier phrasing reads as a mistake.`;
 
 export const getContextTool: McpTool = {
   name: "time_get_context",
@@ -101,6 +103,7 @@ export const getContextTool: McpTool = {
               canLogTime: project.canLogTime,
               validFrom: project.validFrom,
               validTo: project.validTo,
+              recentDescriptions: project.recentDescriptions,
             })),
             lockedMonths: context.lockedMonths,
             runningTimer,

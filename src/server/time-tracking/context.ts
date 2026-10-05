@@ -17,6 +17,12 @@ import {
   parseDateOnly,
 } from "./dates";
 import {
+  buildDescriptionSuggestions,
+  loadDescriptionSuggestionRows,
+  MCP_SUGGESTIONS_PER_PROJECT,
+  type DescriptionSuggestionClient,
+} from "./description-suggestions";
+import {
   TimeTrackingError,
   type RunningTimerView,
   type TimeGridAssignedProject,
@@ -33,7 +39,8 @@ import type { TrackingMode } from "./tracking-mode";
  * here: this file decides the *window*, never the rule applied inside it.
  *
  * Nothing in this module aggregates hours. It is the cheap orientation call — one member row and
- * three indexed reads — so an agent can be told to make it before every session without cost.
+ * four indexed reads, the fourth a `groupBy` over ninety days of this member's own descriptions —
+ * so an agent can be told to make it before every session without cost.
  */
 
 /**
@@ -52,6 +59,15 @@ const LOCKED_MONTH_LOOKBACK_MONTHS = 12;
 export type MemberTrackingContextProject = TimeGridAssignedProject & {
   /** False for a DECLARED assignment: those months are written on the month level, not per day. */
   canLogTime: boolean;
+  /**
+   * Up to five of this member's **own** recent descriptions on this project, most useful first.
+   *
+   * Here so an agent writes the member's wording rather than inventing its own: a report line
+   * reading "worked on the API" among thirty saying "API endpoint implementation" is the outlier a
+   * timesheet reviewer asks about. Same ranking the composer shows the member (§10 of
+   * `docs/time-entry-suggestions.md`), capped tighter because this is a prompt, not a panel.
+   */
+  recentDescriptions: string[];
 };
 
 export type MemberTrackingContext = {
@@ -103,7 +119,7 @@ type TrackingContextTimerRecord = {
  * Only the four reads this function makes, so a test can hand over a plain object instead of
  * mocking the client module — and so the assignment and lock loaders can be handed the same one.
  */
-export type TrackingContextClient = {
+export type TrackingContextClient = DescriptionSuggestionClient & {
   member: {
     findUnique: (args: unknown) => Promise<TrackingContextMemberRecord | null>;
   };
@@ -193,7 +209,7 @@ export async function getMemberTrackingContext(
     ),
   );
 
-  const [projects, lockedMonthStarts, runningTimer] = await Promise.all([
+  const [projects, lockedMonthStarts, runningTimer, suggestionRows] = await Promise.all([
     /* The current month, not the visible week. An agent is routinely asked to log "yesterday",
        which on a Monday falls in the previous week but practically never outside the month — and
        the month is the app's timesheet period, so it is the window every lock, total and
@@ -217,7 +233,16 @@ export async function getMemberTrackingContext(
       },
       select: runningTimerSelect,
     }),
+    /* Anchored to the member's own today, which is the day an agent is about to write. The page
+       anchors to the week it is showing instead — same function, same rules, different window. */
+    loadDescriptionSuggestionRows({ memberId: member.id, windowEnd: todayDate }, { db }),
   ]);
+
+  const suggestions = buildDescriptionSuggestions(suggestionRows, {
+    anchor: todayDate,
+    projectIds: projects.map((project) => project.projectId),
+    perProject: MCP_SUGGESTIONS_PER_PROJECT,
+  });
 
   return {
     member: {
@@ -243,6 +268,9 @@ export async function getMemberTrackingContext(
       // The mode is already resolved through `resolveTrackingMode` by the shared loader, so this
       // is a rename for the agent's benefit and not a second precedence decision.
       canLogTime: project.trackingMode === "TRACKED",
+      recentDescriptions: suggestions
+        .filter((suggestion) => suggestion.projectId === project.projectId)
+        .map((suggestion) => suggestion.text),
     })),
     lockedMonths: [...lockedMonthStarts]
       .map((monthStartIso) => monthStartIso.slice(0, 7))
