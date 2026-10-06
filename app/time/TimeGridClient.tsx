@@ -2,48 +2,47 @@
 
 import {
   AlertTriangle,
-  CalendarX,
   Check,
-  ChevronLeft,
-  ChevronRight,
   Clock3,
   Copy,
-  Grid3X3,
   Info,
-  Layers,
-  List,
-  MessageSquare,
-  Moon,
-  Pencil,
-  Play,
+  Keyboard,
+  LayoutGrid as GridIcon,
+  List as ListIcon,
+  MoreHorizontal,
   Plus,
   RotateCcw,
   ShieldCheck,
-  Square,
   Trash2,
-  X,
 } from "lucide-react";
 import type { Route } from "next";
 import { useRouter } from "next/navigation";
-import {
-  createContext,
-  useCallback,
-  useContext,
-  useEffect,
-  useId,
-  useRef,
-  useMemo,
-  useState,
-  useTransition,
-  type ReactNode,
-} from "react";
 import { useLocale, useTranslations } from "next-intl";
+import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 
+import { DayAgenda, type DayAgendaEntry } from "@/src/components/sheet/DayAgenda";
+import type { EntryCardEntry, EntryHighlight } from "@/src/components/sheet/EntryCard";
+import {
+  buildHeatWeeks,
+  countWorkdays,
+  MonthHeatNavigator,
+} from "@/src/components/sheet/MonthHeatNavigator";
+import {
+  MonthOverview,
+  type MonthOverviewDeclaredProject,
+  type MonthOverviewProject,
+} from "@/src/components/sheet/MonthOverview";
+import { PeriodNavigator } from "@/src/components/sheet/PeriodNavigator";
+import { PeriodTotal, type PeriodTotalStatus } from "@/src/components/sheet/PeriodTotal";
+import {
+  QuickEntryComposer,
+  type QuickEntryComposerValue,
+} from "@/src/components/sheet/QuickEntryComposer";
+import { ShortcutSheet } from "@/src/components/sheet/ShortcutSheet";
+import { TimeScopeBar } from "@/src/components/sheet/TimeScopeBar";
+import { notify } from "@/src/components/sheet/Toast";
+import { WeekAgenda, type WeekAgendaDay } from "@/src/components/sheet/WeekAgenda";
 import { Button } from "@/src/components/ui/Button";
-import { Combobox } from "@/src/components/ui/Combobox";
-import { DatePicker } from "@/src/components/ui/DatePicker";
-import { focusChromeClassName } from "@/src/components/ui/focusRing";
-import { TimeInput } from "@/src/components/ui/TimeInput";
 import {
   Dialog,
   DialogContent,
@@ -52,18 +51,34 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/src/components/ui/Dialog";
-import { formatDurationForInput, parseDurationToMinutes } from "@/src/lib/duration";
+import { Drawer, DrawerContent, DrawerTitle } from "@/src/components/ui/Drawer";
 import {
-  formatHours as formatDurationHours,
-  formatHoursWithUnit as formatDurationHoursWithUnit,
+  Dropdown,
+  DropdownContent,
+  DropdownItem,
+  DropdownSeparator,
+  DropdownTrigger,
+} from "@/src/components/ui/Dropdown";
+import { isoWeekNumber } from "@/src/lib/date-values";
+import { parseDurationToMinutes } from "@/src/lib/duration";
+import {
+  formatDateLabel,
+  formatDateRangeLabel,
+  formatDateTime,
+  formatDayHeading,
+  formatMonthLabel,
+  formatWeekdayLabel,
   type DurationDisplayFormat,
 } from "@/src/lib/formatting";
+import { useAfterFirstPaint, type TimeMove } from "@/src/lib/motion";
 import { DAILY_HARD_LIMIT_MINUTES, DAILY_SOFT_WARNING_MINUTES } from "@/src/lib/time-entry-limits";
-import { usePickerLabels } from "@/src/i18n/picker-labels";
 import { useElapsedLabel } from "@/src/lib/use-elapsed-label";
+import { useMediaQuery } from "@/src/lib/use-media-query";
 import { useOverlayParam } from "@/src/lib/use-overlay-param";
+import { usePickerLabels } from "@/src/i18n/picker-labels";
 import { cn } from "@/src/lib/utils";
 import type {
+  MemberMonthOverview,
   TimeGridAssignedProject,
   TimeGridDay,
   TimeGridEntry,
@@ -77,46 +92,73 @@ import {
   deleteTimeEntryAction,
   duplicatePreviousWeekAction,
   markInactiveProjectWeekAction,
+  restoreTimeEntryAction,
+  saveMonthlyHourDeclarationAction,
   saveTimeEntryDraftAction,
+  startRunningTimerAction,
   stopRunningTimerAction,
   unmarkInactiveProjectWeekAction,
   updateTimeEntryAction,
+  uploadDeclarationProofAction,
 } from "./actions";
+import { TIME_ENTRY_FORM_DRAFT_KEY, type TimeTrackingActionState } from "./actions.types";
+import { BreakdownDialog } from "./BreakdownDialog";
+import { EntryModal, type EntryModalState } from "./EntryModal";
+import { TimeCommandPalette, type TimeCommand } from "./TimeCommandPalette";
 import {
-  TIME_ENTRY_FORM_DRAFT_KEY,
-  type TimeEntryTimingMode,
-  type TimeTrackingActionState,
-} from "./actions.types";
-import { TimerCreateDialog } from "./TimerCreateDialog";
+  countDaysInMonth,
+  formatAdminModifiedAt,
+  formatBytesLabel,
+  formatDraftTimestamp,
+  getCellEntries,
+  getEntryWarnings,
+  groupEntriesByCell,
+  groupEntriesByDay,
+  isSimpleDurationEntry,
+  type TimeTrackingTranslator,
+} from "./time-entry-helpers";
 import { TIME_OVERLAY_PARAM, TIMER_OVERLAY_VALUE } from "./time-overlays";
+import { TimerControl } from "./TimerControl";
+import { TimerCreateDialog } from "./TimerCreateDialog";
+import { TimeZoomShell, type TimeZoomDay } from "./TimeZoomShell";
+import { useDescriptionSuggestions } from "./use-description-suggestions";
+import { DurationDisplayContext, useDurationFormatting } from "./use-duration-formatting";
+import { useTimeView } from "./use-time-view";
+import { WeekGridLens } from "./WeekGridLens";
+import {
+  DAY_PARAM,
+  LENS_PARAM,
+  resolveMonthStartIso,
+  resolveScopeStops,
+  resolveSelectedMonthStartIso,
+  resolveWeekStartIso,
+  SCOPE_PARAM,
+  shiftIsoDate,
+  shiftMonthStartIso,
+  stepScope,
+  WEEK_PARAM,
+  type TimeScope,
+  type WeekLens,
+} from "./zoom";
 
-const GRID_ENTRY_IDLE_OPEN_DELAY_MS = 900;
+const FIRST_VISIT_HINT_KEY = "time-redesign-hint-seen";
+const UNDO_TOAST_MS = 6_000;
+const DESKTOP_QUERY = "(min-width: 64rem)";
 
 type Notice = {
   tone: "success" | "error";
   message: string;
 } | null;
 
-type EntryModalState =
-  | {
-      mode: "create";
-      source: "GRID" | "FORM";
-      projectId: string;
-      localDate: string;
-      durationMinutes: number;
-      description?: string;
-      timingMode?: TimeEntryTimingMode;
-      durationText?: string;
-      startTime?: string | null;
-      endTime?: string | null;
-      prefill?: boolean;
-      draftKey?: string;
-    }
-  | {
-      mode: "edit";
-      entry: TimeGridEntry;
-    }
-  | null;
+/** Which declared row is mid-write, and how the last write went. See `declarationState`. */
+type DeclarationRowState = {
+  projectId: string | null;
+  saving: boolean;
+  uploading: boolean;
+  /** Set on a successful save so the row can confirm it until the fields change again. */
+  savedAt: number | null;
+  error: string | null;
+};
 
 type BreakdownState = {
   projectId: string;
@@ -137,39 +179,136 @@ type PendingQuickAction =
       targetWeekStart: string;
     };
 
+/**
+ * Where the quick composer is open. `column` is the popover anchored to a Week column's `+`,
+ * `sheet` is the phone's bottom sheet. The Day scope's rail composer is not a state: it is open
+ * whenever the rail is, so it renders unconditionally there.
+ */
+type ComposerAnchor = "column" | "sheet";
+
+type ComposerState = {
+  localDate: string;
+  anchor: ComposerAnchor;
+} | null;
+
+/**
+ * What the next data arrival should light up (§7.7): the one card that was not there before, or a
+ * named card that was just edited. Resolved into `highlight` the moment the refreshed week lands,
+ * because the actions report a sentence rather than an id.
+ */
+type PendingHighlight = { type: "new" } | { type: "entry"; id: string } | null;
+
+type EntrySnapshot = {
+  ids: Set<string>;
+  /** Ids and update stamps joined, so an edit changes it as much as an arrival does. */
+  signature: string;
+};
+
+function snapshotEntries(entries: readonly TimeGridEntry[]): EntrySnapshot {
+  return {
+    ids: new Set(entries.map((entry) => entry.id)),
+    signature: entries.map((entry) => `${entry.id}:${entry.updatedAt}`).join("|"),
+  };
+}
+
 type TimeGridClientProps = {
   week: TimeGridWeek;
+  /**
+   * Every month the visible week touches — one, or two when the week spans a month boundary.
+   *
+   * A second payload beside `week` rather than a field inside it. `TimeGridWeek` means "the visible
+   * week", every field on it is week-scoped, and `getMemberMonthOverview` is its own domain
+   * function with its own queries. Shipping it with the page is what makes the Month scope
+   * reachable with no round-trip, which is what lets the scope change stay a pure layout animation.
+   */
+  months: MemberMonthOverview[];
   durationDisplayFormat: DurationDisplayFormat;
 };
 
-type TimeTrackingTranslator = ReturnType<typeof useTranslations>;
-
-const DurationDisplayContext = createContext<DurationDisplayFormat>("DECIMAL_HOURS");
-
-export function TimeGridClient({ week, durationDisplayFormat }: TimeGridClientProps) {
+export function TimeGridClient({ week, months, durationDisplayFormat }: TimeGridClientProps) {
   return (
     <DurationDisplayContext.Provider value={durationDisplayFormat}>
-      <TimeGridContent week={week} />
+      <TimeGridContent week={week} months={months} />
     </DurationDisplayContext.Provider>
   );
 }
 
-function TimeGridContent({ week }: { week: TimeGridWeek }) {
+function TimeGridContent({ week, months }: { week: TimeGridWeek; months: MemberMonthOverview[] }) {
   const router = useRouter();
   const t = useTranslations("TimeTracking");
-  const { formatMinutesAsHours, formatMinutesWithUnit } = useDurationFormatting();
+  const locale = useLocale();
+  const pickerLabels = usePickerLabels();
+  const { durationDisplayFormat, formatMinutesAsHours, formatMinutesWithUnit } =
+    useDurationFormatting();
   const [isPending, startTransition] = useTransition();
-  const [view, setView] = useState<"grid" | "day">("grid");
-  const [selectedDayIso, setSelectedDayIso] = useState(() =>
-    week.todayIso >= week.weekStart && week.todayIso <= week.weekEnd
-      ? week.todayIso
-      : week.weekStart,
-  );
+  /* Desktop-first on the server: the columns and the full chrome are in the HTML the server sends,
+     and a phone corrects itself before its first paint. */
+  const desktop = useMediaQuery(DESKTOP_QUERY, { serverSnapshot: true });
+  const animateEntries = useAfterFirstPaint();
+
+  /**
+   * The member's own scope list, derived from the resolved tracking mode on each assignment. A
+   * declared-only member gets the month alone, and no control at all.
+   */
+  const stops = useMemo(() => resolveScopeStops(week.projects), [week.projects]);
+  const { scope, lens, selectedDayIso, setScope, setLens, setSelectedDayIso, zoomToDay, openWeek } =
+    useTimeView(week, stops);
+
+  const [move, setMove] = useState<TimeMove | null>(null);
   const [notice, setNotice] = useState<Notice>(null);
   const [entryModal, setEntryModal] = useState<EntryModalState>(null);
   const [breakdown, setBreakdown] = useState<BreakdownState>(null);
   const [pendingQuickAction, setPendingQuickAction] = useState<PendingQuickAction | null>(null);
+  const [shortcutsOpen, setShortcutsOpen] = useState(false);
+  const [composer, setComposer] = useState<ComposerState>(null);
+  const [composerValue, setComposerValue] = useState<QuickEntryComposerValue>({
+    projectId: "",
+    durationText: "",
+    description: "",
+  });
+  const [composerError, setComposerError] = useState<string | null>(null);
+  /* The member's own recent descriptions, ready to be scoped to whichever chip is selected. */
+  const descriptionSuggestions = useDescriptionSuggestions(week.descriptionSuggestions);
+  const [composerDraftStatus, setComposerDraftStatus] = useState<"idle" | "saving" | "saved">(
+    "idle",
+  );
+  const [railFocusToken, setRailFocusToken] = useState(0);
+  const [highlight, setHighlight] = useState<EntryHighlight | null>(null);
+  const [pendingHighlight, setPendingHighlight] = useState<PendingHighlight>(null);
+  const [seenEntries, setSeenEntries] = useState(() => snapshotEntries(week.entries));
+  const [declarationState, setDeclarationState] = useState<DeclarationRowState>({
+    projectId: null,
+    saving: false,
+    uploading: false,
+    savedAt: null,
+    error: null,
+  });
   const [, setTimerOpen] = useOverlayParam(TIME_OVERLAY_PARAM, TIMER_OVERLAY_VALUE);
+  const periodLabelRef = useRef<HTMLButtonElement>(null);
+
+  /**
+   * The saved pulse, resolved as the data changes. Adjusted during render rather than in an effect
+   * — React's own recipe for state derived from a prop change — so the card lights up in the same
+   * paint the refreshed week arrives in, and nothing is written from an effect.
+   */
+  const entrySnapshot = snapshotEntries(week.entries);
+  if (entrySnapshot.signature !== seenEntries.signature) {
+    setSeenEntries(entrySnapshot);
+    if (pendingHighlight?.type === "new") {
+      const arrived = week.entries.filter((entry) => !seenEntries.ids.has(entry.id));
+      const arrivedId = arrived.length === 1 ? arrived[0]?.id : undefined;
+      setHighlight((current) =>
+        arrivedId ? { id: arrivedId, token: (current?.token ?? 0) + 1 } : null,
+      );
+      setPendingHighlight(null);
+    } else if (pendingHighlight?.type === "entry") {
+      const editedId = pendingHighlight.id;
+      setHighlight((current) => ({ id: editedId, token: (current?.token ?? 0) + 1 }));
+      setPendingHighlight(null);
+    } else {
+      setHighlight(null);
+    }
+  }
 
   const inactiveProjectIds = useMemo(
     () => new Set(week.inactiveWeeks.map((inactiveWeek) => inactiveWeek.projectId)),
@@ -180,11 +319,43 @@ function TimeGridContent({ week }: { week: TimeGridWeek }) {
   const weekHasLockedPeriod = week.lockedMonthStarts.length > 0;
   const adminModifiedEntryCount = week.entries.filter((entry) => entry.adminModification).length;
 
-  const projectRows = week.projects;
+  /**
+   * The projects the finer scopes are allowed to offer, and the ones they explain instead.
+   *
+   * `week.projects` stays the complete assignment list — `resolveScopeStops` reads it — and the
+   * split happens here, once. Every consumer that could offer a project to write against reads
+   * `projectRows`, the tracked list; the declared half feeds the handoff line, the Grid's ghost rows
+   * and the Month segment's badge.
+   */
+  const projectRows = useMemo(
+    () => week.projects.filter((project) => project.trackingMode === "TRACKED"),
+    [week.projects],
+  );
+  const declaredProjects = useMemo(
+    () => week.projects.filter((project) => project.trackingMode === "DECLARED"),
+    [week.projects],
+  );
+  const hasAssignments = week.projects.length > 0;
   const projectsById = useMemo(
     () => new Map(projectRows.map((project) => [project.projectId, project])),
     [projectRows],
   );
+  const recentProjects = week.recentProjects.filter((project) =>
+    projectsById.has(project.projectId),
+  );
+  /** Recent first, then the rest of the assigned projects — the composer's chip order. */
+  const composerProjects = useMemo(() => {
+    const recentIds = new Set(recentProjects.map((project) => project.projectId));
+    return [
+      ...recentProjects,
+      ...projectRows.filter((project) => !recentIds.has(project.projectId)),
+    ].map((project) => ({
+      projectId: project.projectId,
+      name: project.name,
+      color: project.color,
+    }));
+  }, [projectRows, recentProjects]);
+
   const dailyTotals = week.days.map((day) =>
     projectRows.reduce((sum, project) => {
       if (inactiveProjectIds.has(project.projectId)) return sum;
@@ -196,27 +367,243 @@ function TimeGridContent({ week }: { week: TimeGridWeek }) {
     week.days.find((day) => day.isoDate === selectedDayIso) ?? week.days[0] ?? null;
   const selectedDayEntries = selectedDay ? (entriesByDay.get(selectedDay.isoDate) ?? []) : [];
   const targetDate = selectedDay?.isoDate ?? week.weekStart;
-  const recentProjects = week.recentProjects.filter((project) =>
-    projectsById.has(project.projectId),
+  const selectedDayTotalMinutes = selectedDay
+    ? (dailyTotals[week.days.indexOf(selectedDay)] ?? 0)
+    : 0;
+
+  /**
+   * The days as every header renders them: the server's shape plus the total, and the weekday
+   * names formatted in the member's locale rather than the English the payload carries.
+   */
+  const days: TimeZoomDay[] = week.days.map((day, dayIndex) => ({
+    isoDate: day.isoDate,
+    label: capitalize(formatWeekdayLabel(day.isoDate, locale, { style: "long" })),
+    shortLabel: capitalize(formatWeekdayLabel(day.isoDate, locale, { style: "short" })),
+    dayNumber: day.dayNumber,
+    state: day.state,
+    locked: day.locked,
+    totalMinutes: dailyTotals[dayIndex] ?? 0,
+  }));
+  const daysByIso = new Map(days.map((day) => [day.isoDate, day]));
+
+  /** The month the Month scope shows, derived from the **selected day** and never from the week. */
+  const selectedMonthStart = resolveSelectedMonthStartIso(
+    selectedDayIso,
+    months.map((month) => month.monthStart),
+  );
+  const monthOverview = months.find((month) => month.monthStart === selectedMonthStart);
+  const monthLabel = formatMonthLabel(selectedMonthStart, locale);
+  const monthTotalMinutes = monthOverview?.totalMinutes ?? 0;
+  const monthLocked = week.lockedMonthStarts.includes(selectedMonthStart);
+  const heatWeeks = buildHeatWeeks({
+    monthStart: selectedMonthStart,
+    todayIso: week.todayIso,
+    totals: monthOverview?.days ?? [],
+  });
+  const workdays = countWorkdays(heatWeeks);
+  const monthProjects: MonthOverviewProject[] = (monthOverview?.tracked ?? []).map((project) => ({
+    projectId: project.projectId,
+    name: project.name,
+    color: project.color,
+    minutes: project.minutes,
+  }));
+  const declarationSanityLimitMinutes = countDaysInMonth(selectedMonthStart) * 24 * 60;
+  const declaredRows: MonthOverviewDeclaredProject[] = (monthOverview?.declared ?? []).map(
+    (project) => ({
+      projectId: project.projectId,
+      name: project.name,
+      color: project.color,
+      minutes: project.minutes,
+      note: project.note,
+      proof: project.proof
+        ? {
+            filename: project.proof.filename,
+            href: `/time/hours-proof/${project.proof.declarationId}`,
+            sizeLabel: formatBytesLabel(project.proof.byteSize, locale),
+            uploadedAtLabel: formatDateTime(project.proof.uploadedAt, locale),
+          }
+        : null,
+      warning:
+        project.minutes !== null && project.minutes > declarationSanityLimitMinutes
+          ? t("declared.sanityWarning", {
+              hours: formatMinutesWithUnit(declarationSanityLimitMinutes),
+            })
+          : null,
+      error: declarationState.projectId === project.projectId ? declarationState.error : null,
+      saving: declarationState.projectId === project.projectId && declarationState.saving,
+      uploading: declarationState.projectId === project.projectId && declarationState.uploading,
+      savedAt: declarationState.projectId === project.projectId ? declarationState.savedAt : null,
+    }),
   );
 
-  function navigateToWeek(weekStart: string) {
-    router.push(`/time?week=${weekStart}` as Route);
+  /* ------------------------------------------------------------------------------------------ */
+  /* The period: label, key, unit and "are we on today"                                         */
+  /* ------------------------------------------------------------------------------------------ */
+
+  const periodStart =
+    scope === "day" ? selectedDayIso : scope === "week" ? week.weekStart : selectedMonthStart;
+  const periodLabel =
+    scope === "day"
+      ? formatDayHeading(selectedDayIso, locale)
+      : scope === "week"
+        ? t("period.week", {
+            week: isoWeekNumber(week.weekStart),
+            range: formatDateRangeLabel(week.weekStart, week.weekEnd, locale),
+          })
+        : monthLabel;
+  const periodUnit = t(
+    scope === "day" ? "period.unitDay" : scope === "week" ? "period.unitWeek" : "period.unitMonth",
+  );
+  const atToday =
+    scope === "day"
+      ? selectedDayIso === week.todayIso
+      : scope === "week"
+        ? week.weekStart === week.thisWeek
+        : selectedMonthStart === resolveMonthStartIso(week.todayIso);
+  const viewKey = `${scope}:${scope === "week" ? lens : "-"}:${periodStart}`;
+
+  const periodTotalMinutes =
+    scope === "day" ? selectedDayTotalMinutes : scope === "week" ? weekTotal : monthTotalMinutes;
+  const targetLabel = formatMinutesWithUnit(DAILY_SOFT_WARNING_MINUTES);
+  const totalStatus: PeriodTotalStatus | null =
+    scope === "day" && selectedDayTotalMinutes > DAILY_SOFT_WARNING_MINUTES
+      ? { tone: "warning", label: t("total.overTarget", { target: targetLabel }) }
+      : scope === "day" && selectedDayTotalMinutes === DAILY_SOFT_WARNING_MINUTES
+        ? { tone: "success", label: t("total.onTarget") }
+        : null;
+
+  const announcement = t("view.announce", {
+    scope: t(`view.${scope}`) + (scope === "week" ? ` · ${t(`lens.${lens}`)}` : ""),
+    period: periodLabel,
+    total: formatMinutesWithUnit(periodTotalMinutes),
+  });
+
+  /* ------------------------------------------------------------------------------------------ */
+  /* Moves                                                                                      */
+  /* ------------------------------------------------------------------------------------------ */
+
+  function changeScope(next: TimeScope) {
+    if (next === scope) return;
+    setMove({
+      kind: "zoom",
+      direction: stops.indexOf(next) < stops.indexOf(scope) ? "in" : "out",
+    });
+    setScope(next);
   }
+
+  function changeLens(next: WeekLens) {
+    if (next === lens) return;
+    setMove({ kind: "lens" });
+    setLens(next);
+  }
+
+  function toggleLens() {
+    if (!stops.includes("week")) return;
+    if (scope !== "week") {
+      setMove({
+        kind: "zoom",
+        direction: stops.indexOf("week") < stops.indexOf(scope) ? "in" : "out",
+      });
+      openWeek("grid");
+      return;
+    }
+    setMove({ kind: "lens" });
+    setLens(lens === "grid" ? "agenda" : "grid");
+  }
+
+  /**
+   * Changing weeks is a real navigation — new data, new server queries — unlike changing scope or
+   * day, which the view writes with `replaceState`. Both of those still have to survive it.
+   */
+  function navigateTo(
+    weekStart: string,
+    dayIso: string,
+    overrides: { scope?: TimeScope; lens?: WeekLens } = {},
+  ) {
+    const nextScope = overrides.scope ?? scope;
+    const params = new URLSearchParams({
+      [WEEK_PARAM]: weekStart,
+      [SCOPE_PARAM]: nextScope,
+      [DAY_PARAM]: dayIso,
+    });
+    if (nextScope === "week") params.set(LENS_PARAM, overrides.lens ?? lens);
+
+    router.push(`/time?${params.toString()}` as Route);
+  }
+
+  function stepPeriod(direction: "previous" | "next") {
+    const sign: 1 | -1 = direction === "next" ? 1 : -1;
+    setMove({ kind: "step", direction: sign });
+
+    if (scope === "day") {
+      const target = shiftIsoDate(selectedDayIso, sign);
+      if (daysByIso.has(target)) setSelectedDayIso(target);
+      else navigateTo(resolveWeekStartIso(target), target);
+      return;
+    }
+
+    if (scope === "week") {
+      const weekdayIndex = Math.max(
+        0,
+        week.days.findIndex((day) => day.isoDate === selectedDayIso),
+      );
+      const weekStart = sign === 1 ? week.nextWeek : week.previousWeek;
+      navigateTo(weekStart, shiftIsoDate(weekStart, weekdayIndex));
+      return;
+    }
+
+    const targetMonthStart = shiftMonthStartIso(selectedMonthStart, sign);
+    navigateTo(resolveWeekStartIso(targetMonthStart), targetMonthStart);
+  }
+
+  function jumpTo(dayIso: string) {
+    const sign: 1 | -1 | 0 = dayIso > selectedDayIso ? 1 : dayIso < selectedDayIso ? -1 : 0;
+    setMove({ kind: "jump", direction: sign === 0 ? 1 : sign });
+
+    if (daysByIso.has(dayIso)) {
+      setSelectedDayIso(dayIso);
+      return;
+    }
+
+    navigateTo(resolveWeekStartIso(dayIso), dayIso);
+  }
+
+  function goToToday() {
+    if (atToday) return;
+    jumpTo(week.todayIso);
+  }
+
+  function pickMonth(month: string) {
+    jumpTo(`${month}-01`);
+  }
+
+  function openDay(isoDate: string) {
+    setMove({ kind: "zoom", direction: "in" });
+    if (daysByIso.has(isoDate)) zoomToDay(isoDate);
+    else navigateTo(resolveWeekStartIso(isoDate), isoDate, { scope: "day" });
+  }
+
+  function openWeekOf(weekStart: string) {
+    setMove({ kind: "zoom", direction: "in" });
+    if (weekStart === week.weekStart) {
+      openWeek("agenda");
+      return;
+    }
+    navigateTo(weekStart, weekStart, { scope: "week", lens: "agenda" });
+  }
+
+  /* ------------------------------------------------------------------------------------------ */
+  /* Mutations                                                                                  */
+  /* ------------------------------------------------------------------------------------------ */
 
   function refreshWithResult(result: TimeTrackingActionState) {
     setNotice(
       result.status === "success"
         ? { tone: "success", message: result.message }
-        : {
-            tone: "error",
-            message: result.message,
-          },
+        : { tone: "error", message: result.message },
     );
 
-    if (result.status === "success") {
-      router.refresh();
-    }
+    if (result.status === "success") router.refresh();
   }
 
   function runAction(action: () => Promise<TimeTrackingActionState>) {
@@ -225,11 +612,131 @@ function TimeGridContent({ week }: { week: TimeGridWeek }) {
     });
   }
 
+  function editEntryById(entryId: string) {
+    const entry = week.entries.find((candidate) => candidate.id === entryId);
+    if (entry) setEntryModal({ mode: "edit", entry });
+  }
+
+  /**
+   * Delete is undoable for six seconds (§5.8, A2). The card leaves through its exit transition, a
+   * toast offers Undo, and Undo is a real restore — a second audited write — so nothing is held
+   * back waiting on a timer.
+   */
+  function deleteEntryById(entryId: string) {
+    startTransition(async () => {
+      const result = await deleteTimeEntryAction({ timeEntryId: entryId });
+
+      if (result.status !== "success") {
+        setNotice({ tone: "error", message: result.message });
+        return;
+      }
+
+      router.refresh();
+      notify("info", t("undo.deleted"), {
+        duration: UNDO_TOAST_MS,
+        action: {
+          label: t("undo.action"),
+          onClick: () => {
+            startTransition(async () => {
+              const restored = await restoreTimeEntryAction({ timeEntryId: entryId });
+              if (restored.status === "success") {
+                router.refresh();
+                notify("success", t("undo.restored"));
+              } else {
+                notify("error", restored.message);
+              }
+            });
+          },
+        },
+      });
+    });
+  }
+
+  /** Continue (A3 / C2): a timer with this entry's project and description, one press. */
+  function continueEntry(entry: EntryCardEntry) {
+    const source = week.entries.find((candidate) => candidate.id === entry.id);
+    if (!source) return;
+    runAction(() =>
+      startRunningTimerAction({ projectId: source.projectId, description: source.description }),
+    );
+  }
+
+  function toggleTimer() {
+    if (week.runningTimer) {
+      runAction(stopRunningTimerAction);
+      return;
+    }
+    if (projectRows.length) setTimerOpen(true);
+  }
+
+  function saveDeclaration(input: { projectId: string; minutes: number; note: string }) {
+    setDeclarationState({
+      projectId: input.projectId,
+      saving: true,
+      uploading: false,
+      savedAt: null,
+      error: null,
+    });
+
+    startTransition(async () => {
+      const result = await saveMonthlyHourDeclarationAction({
+        projectId: input.projectId,
+        periodStart: selectedMonthStart,
+        minutes: input.minutes,
+        note: input.note,
+      });
+
+      setDeclarationState({
+        projectId: input.projectId,
+        saving: false,
+        uploading: false,
+        savedAt: result.status === "success" ? Date.now() : null,
+        error: result.status === "success" ? null : result.message,
+      });
+
+      if (result.status === "success") router.refresh();
+      else setNotice({ tone: "error", message: result.message });
+    });
+  }
+
+  function uploadDeclarationProof(input: { projectId: string; file: File }) {
+    setDeclarationState({
+      projectId: input.projectId,
+      saving: false,
+      uploading: true,
+      savedAt: null,
+      error: null,
+    });
+
+    startTransition(async () => {
+      const formData = new FormData();
+      formData.set("projectId", input.projectId);
+      formData.set("periodStart", selectedMonthStart);
+      formData.set("proofFile", input.file);
+
+      const result = await uploadDeclarationProofAction({ status: "idle", message: "" }, formData);
+
+      setDeclarationState({
+        projectId: input.projectId,
+        saving: false,
+        uploading: false,
+        savedAt: null,
+        error: result.status === "success" ? null : result.message,
+      });
+
+      if (result.status === "success") {
+        setNotice({ tone: "success", message: result.message });
+        router.refresh();
+      }
+    });
+  }
+
   function confirmQuickAction() {
     const action = pendingQuickAction;
     if (!action) return;
 
     setPendingQuickAction(null);
+    setPendingHighlight(null);
 
     if (action.type === "copyPreviousDay") {
       runAction(() => copyPreviousDayEntriesAction({ targetDate: action.targetDate }));
@@ -237,6 +744,24 @@ function TimeGridContent({ week }: { week: TimeGridWeek }) {
     }
 
     runAction(() => duplicatePreviousWeekAction({ weekStartDate: action.targetWeekStart }));
+  }
+
+  function requestCopyPreviousDay(target = targetDate) {
+    setPendingQuickAction({
+      type: "copyPreviousDay",
+      sourceDate: shiftIsoDate(target, -1),
+      targetDate: target,
+    });
+  }
+
+  function requestDuplicatePreviousWeek() {
+    setPendingQuickAction({
+      type: "duplicatePreviousWeek",
+      sourceWeekStart: shiftIsoDate(week.weekStart, -7),
+      sourceWeekEnd: shiftIsoDate(week.weekStart, -1),
+      targetWeekStart: week.weekStart,
+      targetWeekEnd: week.weekEnd,
+    });
   }
 
   function handleCellCommit(project: TimeGridAssignedProject, day: TimeGridDay, rawValue: string) {
@@ -250,7 +775,7 @@ function TimeGridContent({ week }: { week: TimeGridWeek }) {
 
     if (parsedMinutes <= 0) {
       if (cell.entries.length === 1 && !cell.entries[0].locked) {
-        runAction(() => deleteTimeEntryAction({ timeEntryId: cell.entries[0].id }));
+        deleteEntryById(cell.entries[0].id);
       }
       return;
     }
@@ -275,6 +800,7 @@ function TimeGridContent({ week }: { week: TimeGridWeek }) {
     const entry = cell.entries[0];
 
     if (cell.entries.length === 1 && isSimpleDurationEntry(entry) && !entry.locked) {
+      setPendingHighlight({ type: "entry", id: entry.id });
       runAction(() =>
         updateTimeEntryAction({
           timeEntryId: entry.id,
@@ -334,6 +860,414 @@ function TimeGridContent({ week }: { week: TimeGridWeek }) {
     runAction(() => clearTimeEntryDraftAction({ draftKey: draft.draftKey }));
   }
 
+  /* ------------------------------------------------------------------------------------------ */
+  /* The quick composer                                                                         */
+  /* ------------------------------------------------------------------------------------------ */
+
+  /** The chip the composer shows selected: what was picked, or the first chip when that is gone. */
+  const effectiveComposerValue: QuickEntryComposerValue = {
+    ...composerValue,
+    projectId: projectsById.has(composerValue.projectId)
+      ? composerValue.projectId
+      : (composerProjects[0]?.projectId ?? ""),
+  };
+  /** The Day rail's composer is open whenever the rail is; there is no state to open it. */
+  const railComposerOpen =
+    scope === "day" && desktop && projectRows.length > 0 && !(selectedDay?.locked ?? false);
+  const composerOpenFor = composer?.localDate ?? (railComposerOpen ? targetDate : null);
+
+  function openComposer(localDate: string, anchor: ComposerAnchor) {
+    if (!composerProjects.length) return;
+
+    setComposerError(null);
+    setComposerDraftStatus("idle");
+    setComposerValue((current) => ({ ...current, durationText: "", description: "" }));
+    setComposer({ localDate, anchor });
+  }
+
+  function updateComposerValue(next: QuickEntryComposerValue) {
+    setComposerValue(next);
+    setComposerError(null);
+    setComposerDraftStatus(next.description.trim() ? "saving" : "idle");
+  }
+
+  /** `N`: the composer for the selected day, wherever it lives at this scope and width. */
+  function compose() {
+    if (!projectRows.length || !selectedDay || selectedDay.locked) return;
+    if (!desktop) {
+      openComposer(targetDate, "sheet");
+      return;
+    }
+    if (scope === "week" && lens === "agenda") {
+      openComposer(targetDate, "column");
+      return;
+    }
+    if (scope === "day") {
+      setRailFocusToken((current) => current + 1);
+      return;
+    }
+    setEntryModal({
+      mode: "create",
+      source: "FORM",
+      projectId: effectiveComposerValue.projectId || projectRows[0].projectId,
+      localDate: targetDate,
+      durationMinutes: 60,
+    });
+  }
+
+  function closeComposer() {
+    setComposer(null);
+    setComposerError(null);
+  }
+
+  /**
+   * A half-typed entry survives a stray click, the same way the dialog's does (§15.8). The effect
+   * only schedules the save; "saving" is set where the typing happens and "saved" when the write
+   * comes back.
+   */
+  const draftProjectId = effectiveComposerValue.projectId;
+  const draftDescription = composerValue.description;
+  const draftDurationText = composerValue.durationText;
+
+  useEffect(() => {
+    if (!composerOpenFor || !draftDescription.trim() || !draftProjectId) return;
+
+    let cancelled = false;
+    const timerId = window.setTimeout(() => {
+      void saveTimeEntryDraftAction({
+        draftKey: TIME_ENTRY_FORM_DRAFT_KEY,
+        payload: {
+          kind: "time-entry-form",
+          version: 1,
+          source: "FORM",
+          projectId: draftProjectId,
+          localDate: composerOpenFor,
+          timingMode: "DURATION",
+          durationText: draftDurationText,
+          startTime: "09:00",
+          endTime: "10:00",
+          description: draftDescription,
+        },
+      }).then((result) => {
+        if (cancelled) return;
+        setComposerDraftStatus(result.status === "success" ? "saved" : "idle");
+      });
+    }, 700);
+
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timerId);
+    };
+  }, [composerOpenFor, draftDescription, draftDurationText, draftProjectId]);
+
+  function submitComposer(
+    localDate: string,
+    value: QuickEntryComposerValue & { durationMinutes: number },
+  ) {
+    startTransition(async () => {
+      const result = await createTimeEntryAction({
+        projectId: value.projectId,
+        localDate,
+        description: value.description,
+        source: "FORM",
+        timingMode: "DURATION",
+        durationMinutes: value.durationMinutes,
+        startTime: null,
+        endTime: null,
+      });
+
+      if (result.status !== "success") {
+        setComposerError(result.message);
+        return;
+      }
+
+      setPendingHighlight({ type: "new" });
+      /* The refresh below is what makes this description a real suggestion. Until it lands the
+         composer may already be open again, so it is remembered locally too (§7). */
+      descriptionSuggestions.remember(value.projectId, value.description);
+      await clearTimeEntryDraftAction({ draftKey: TIME_ENTRY_FORM_DRAFT_KEY });
+      setComposerValue((current) => ({ ...current, durationText: "", description: "" }));
+      setComposerDraftStatus("idle");
+      setComposer(null);
+      setNotice({ tone: "success", message: result.message });
+      router.refresh();
+    });
+  }
+
+  /** `More options`: the full dialog, with what was typed carried over. */
+  function expandComposer(localDate: string, timingMode: "DURATION" | "INTERVAL") {
+    const minutes = parseDurationToMinutes(composerValue.durationText);
+
+    setEntryModal({
+      mode: "create",
+      source: "FORM",
+      projectId: effectiveComposerValue.projectId || projectRows[0]?.projectId || "",
+      localDate,
+      durationMinutes: minutes && minutes > 0 ? minutes : 60,
+      durationText: composerValue.durationText || undefined,
+      description: composerValue.description || undefined,
+      timingMode,
+    });
+    closeComposer();
+  }
+
+  function renderComposer(
+    localDate: string,
+    autoFocus: "duration" | "description" | null = "duration",
+    focusToken?: number,
+  ) {
+    return (
+      <QuickEntryComposer
+        projects={composerProjects}
+        value={effectiveComposerValue}
+        suggestions={descriptionSuggestions.optionsFor(effectiveComposerValue.projectId)}
+        pending={isPending}
+        error={composerError}
+        autoFocus={autoFocus}
+        focusToken={focusToken}
+        footnote={
+          composerDraftStatus === "saving"
+            ? t("draft.saving")
+            : composerDraftStatus === "saved"
+              ? t("draft.saved")
+              : null
+        }
+        labels={{
+          title: t("composer.title", {
+            date: formatDateLabel(localDate, locale, { style: "short" }),
+          }),
+          project: t("composer.project"),
+          duration: t("composer.duration"),
+          durationPlaceholder: t("composer.durationPlaceholder"),
+          description: t("composer.description"),
+          descriptionPlaceholder: t("fields.descriptionPlaceholder"),
+          more: t("composer.more"),
+          interval: t("composer.interval"),
+          add: t("composer.add"),
+          submitHint: t("composer.submitHint"),
+          invalidDuration: t("errors.invalidDurationFormat"),
+          descriptionRequired: t("composer.descriptionRequired"),
+          noProject: t("composer.noProject"),
+          suggestions: descriptionSuggestions.labels,
+        }}
+        onValueChange={updateComposerValue}
+        onSubmit={(value) => submitComposer(localDate, value)}
+        onMoreOptions={() => expandComposer(localDate, "DURATION")}
+        onInterval={() => expandComposer(localDate, "INTERVAL")}
+      />
+    );
+  }
+
+  /* ------------------------------------------------------------------------------------------ */
+  /* First-visit hint                                                                           */
+  /* ------------------------------------------------------------------------------------------ */
+
+  useEffect(() => {
+    if (!hasAssignments) return;
+    try {
+      if (window.localStorage.getItem(FIRST_VISIT_HINT_KEY)) return;
+      window.localStorage.setItem(FIRST_VISIT_HINT_KEY, new Date().toISOString());
+    } catch {
+      return;
+    }
+    notify("info", t("hint.firstVisit"), {
+      duration: 8_000,
+      action: { label: t("hint.dismiss"), onClick: () => {} },
+    });
+  }, [hasAssignments, t]);
+
+  /* ------------------------------------------------------------------------------------------ */
+  /* View-models                                                                                */
+  /* ------------------------------------------------------------------------------------------ */
+
+  function describeEntry(entry: TimeGridEntry): EntryCardEntry {
+    const project = projectsById.get(entry.projectId);
+
+    return {
+      id: entry.id,
+      projectName: project?.name ?? t("labels.archivedProject"),
+      projectColor: project?.color ?? "var(--muted-foreground)",
+      description: entry.description,
+      durationMinutes: entry.durationMinutes,
+      startTime: entry.startTime,
+      endTime: entry.endTime,
+      timed: entry.source === "TIMER",
+      locked: entry.locked,
+      adminModified: Boolean(entry.adminModification),
+      warnings: getEntryWarnings(entry, entriesByDay.get(entry.localDate) ?? [], t),
+    };
+  }
+
+  const dayAgendaEntries: DayAgendaEntry[] = selectedDayEntries.map((entry) => {
+    const described = describeEntry(entry);
+    const { adminModification } = entry;
+
+    return {
+      ...described,
+      warnings:
+        selectedDay?.state === "future"
+          ? [...described.warnings, t("warnings.futureDate")]
+          : described.warnings,
+      adminNotice: adminModification
+        ? {
+            changedBy: t("adminModification.changedBy", {
+              name: adminModification.modifiedByName ?? t("adminModification.adminFallback"),
+              date: formatAdminModifiedAt(adminModification, locale),
+            }),
+            reason: t("adminModification.reason", { reason: adminModification.reason }),
+          }
+        : null,
+    };
+  });
+
+  const daySplit = projectRows
+    .map((project) => ({
+      projectId: project.projectId,
+      name: project.name,
+      color: project.color,
+      minutes: getCellEntries(entriesByCell, project.projectId, targetDate).totalMinutes,
+    }))
+    .filter((item) => item.minutes > 0)
+    .sort((a, b) => b.minutes - a.minutes);
+
+  const weekAgendaDays: WeekAgendaDay[] = days.map((day) => ({
+    ...day,
+    entries: (entriesByDay.get(day.isoDate) ?? []).map(describeEntry),
+    canCopyPreviousDay: (entriesByDay.get(shiftIsoDate(day.isoDate, -1))?.length ?? 0) > 0,
+  }));
+
+  const runningTimerView = week.runningTimer
+    ? {
+        projectName: week.runningTimer.projectName,
+        projectColor: week.runningTimer.projectColor,
+        description: week.runningTimer.description,
+      }
+    : null;
+  const elapsedLabel = useElapsedLabel(week.runningTimer?.startedAt ?? null);
+
+  const cardLabels = {
+    edit: (entry: EntryCardEntry) => t("week.editEntryNamed", { entry: entry.description }),
+    delete: (entry: EntryCardEntry) => t("week.deleteEntryNamed", { entry: entry.description }),
+    continue: (entry: EntryCardEntry) => t("card.continue", { description: entry.description }),
+    adminModified: t("week.adminModified"),
+    timed: t("card.timer"),
+    locked: t("card.locked"),
+  };
+  const timerLabels = { live: t("card.live"), stop: t("timer.stopTimer") };
+  const capacityLabel = (day: TimeZoomDay) =>
+    t("week.capacity", {
+      logged: formatMinutesWithUnit(day.totalMinutes),
+      target: targetLabel,
+    });
+  const overLabel = t("header.over", { target: targetLabel });
+
+  const handoff =
+    declaredProjects.length && projectRows.length ? (
+      <p>
+        {declaredProjects.length === 1
+          ? t.rich("month.declaredElsewhere", {
+              project: declaredProjects[0]?.name ?? "",
+              link: (chunks) => (
+                <button
+                  type="button"
+                  className="font-medium text-accent underline underline-offset-2"
+                  onClick={() => changeScope("month")}
+                >
+                  {chunks}
+                </button>
+              ),
+            })
+          : t.rich("month.declaredElsewhereMany", {
+              count: declaredProjects.length,
+              link: (chunks) => (
+                <button
+                  type="button"
+                  className="font-medium text-accent underline underline-offset-2"
+                  onClick={() => changeScope("month")}
+                >
+                  {chunks}
+                </button>
+              ),
+            })}
+      </p>
+    ) : null;
+
+  const shortcutGroups = [
+    {
+      id: "view",
+      title: t("shortcuts.groupView"),
+      rows: [
+        ...stops.map((stop) => ({
+          keys: [String(stops.indexOf(stop) + 1)],
+          label: t(`shortcuts.${stop}`),
+        })),
+        { keys: ["−"], label: t("shortcuts.zoomOut") },
+        { keys: ["+"], label: t("shortcuts.zoomIn") },
+        { keys: ["Esc"], label: t("shortcuts.escape") },
+        ...(stops.includes("week") ? [{ keys: ["G"], label: t("shortcuts.grid") }] : []),
+      ],
+    },
+    {
+      id: "move",
+      title: t("shortcuts.groupMove"),
+      rows: [
+        { keys: ["K", "["], label: t("shortcuts.previous", { unit: periodUnit }) },
+        { keys: ["J", "]"], label: t("shortcuts.next", { unit: periodUnit }) },
+        { keys: ["T"], label: t("shortcuts.today") },
+      ],
+    },
+    {
+      id: "add",
+      title: t("shortcuts.groupAdd"),
+      rows: [
+        { keys: ["N"], label: t("shortcuts.newEntry") },
+        { keys: ["?"], label: t("shortcuts.help") },
+        { keys: ["⌘K"], label: t("shortcuts.palette") },
+      ],
+    },
+    {
+      id: "timer",
+      title: t("shortcuts.groupTimer"),
+      rows: [{ keys: ["S"], label: t("shortcuts.timer") }],
+    },
+  ];
+
+  function handleCommand(command: TimeCommand) {
+    switch (command.type) {
+      case "today":
+        goToToday();
+        break;
+      case "scope":
+        changeScope(command.scope);
+        break;
+      case "lens":
+        if (scope === "week") changeLens(command.lens);
+        else {
+          setMove({
+            kind: "zoom",
+            direction: stops.indexOf("week") < stops.indexOf(scope) ? "in" : "out",
+          });
+          openWeek(command.lens);
+        }
+        break;
+      case "compose":
+        compose();
+        break;
+      case "timer":
+        toggleTimer();
+        break;
+      case "duplicateWeek":
+        requestDuplicatePreviousWeek();
+        break;
+      case "copyYesterday":
+        requestCopyPreviousDay();
+        break;
+      case "shortcuts":
+        setShortcutsOpen(true);
+        break;
+    }
+  }
+
   const breakdownProject = breakdown
     ? projectRows.find((project) => project.projectId === breakdown.projectId)
     : undefined;
@@ -345,224 +1279,395 @@ function TimeGridContent({ week }: { week: TimeGridWeek }) {
       ? getCellEntries(entriesByCell, breakdown.projectId, breakdown.localDate).entries
       : [];
 
-  return (
-    <div className="grid gap-4">
-      <div className="flex items-center justify-between gap-3">
-        <div className="inline-flex rounded-[var(--radius-pill)] border border-border bg-secondary p-1">
+  const canZoomIn = stepScope(scope, "in", stops) !== scope;
+  const canZoomOut = stepScope(scope, "out", stops) !== scope;
+  const nextIn = stepScope(scope, "in", stops);
+  const nextOut = stepScope(scope, "out", stops);
+
+  /* ------------------------------------------------------------------------------------------ */
+  /* Rows 1 and 2                                                                               */
+  /* ------------------------------------------------------------------------------------------ */
+
+  const actions = desktop ? (
+    <>
+      <TimerControl
+        runningTimer={week.runningTimer}
+        disabled={isPending}
+        canStart={projectRows.length > 0}
+        onStart={() => setTimerOpen(true)}
+        onStop={() => runAction(stopRunningTimerAction)}
+      />
+      <Button
+        type="button"
+        variant="cta"
+        icon={Plus}
+        disabled={!projectRows.length || isPending}
+        onClick={() =>
+          setEntryModal({
+            mode: "create",
+            source: "FORM",
+            projectId: composerProjects[0]?.projectId ?? projectRows[0]?.projectId ?? "",
+            localDate: targetDate,
+            durationMinutes: 60,
+          })
+        }
+      >
+        {t("actions.newEntry")}
+      </Button>
+    </>
+  ) : null;
+
+  const moreMenu =
+    projectRows.length > 0 ? (
+      <Dropdown>
+        <DropdownTrigger asChild>
           <button
             type="button"
-            className={cn(
-              "inline-flex items-center gap-2 rounded-[var(--radius-pill)] px-4 py-2 text-sm font-semibold transition",
-              view === "grid"
-                ? "bg-accent text-accent-foreground"
-                : "text-muted-foreground hover:text-foreground",
-            )}
-            onClick={() => setView("grid")}
+            aria-label={t("actions.more")}
+            className="grid size-9 place-items-center rounded-full border border-border bg-card text-muted-foreground transition-colors duration-[var(--duration-micro)] hover:bg-secondary hover:text-foreground"
           >
-            <Grid3X3 className="size-4" aria-hidden="true" />
-            {t("view.weeklyGrid")}
+            <MoreHorizontal className="size-4" aria-hidden="true" />
           </button>
-          <button
-            type="button"
-            className={cn(
-              "inline-flex items-center gap-2 rounded-[var(--radius-pill)] px-4 py-2 text-sm font-semibold transition",
-              view === "day"
-                ? "bg-accent text-accent-foreground"
-                : "text-muted-foreground hover:text-foreground",
-            )}
-            onClick={() => setView("day")}
+        </DropdownTrigger>
+        <DropdownContent align="end">
+          <DropdownItem
+            disabled={isPending || weekHasLockedPeriod}
+            onSelect={requestDuplicatePreviousWeek}
           >
-            <List className="size-4" aria-hidden="true" />
-            {t("view.day")}
-          </button>
-        </div>
-
-        <div className="flex items-center gap-2">
-          {/* `Button` carries `disabled:pointer-events-none`, so a title on the button itself would
-              never fire — the wrapper is what makes the disabled reason reachable on hover. */}
-          <span title={week.runningTimer ? t("tooltips.stopTimerFirst") : undefined}>
-            <Button
-              type="button"
-              variant="soft"
-              icon={Play}
-              disabled={Boolean(week.runningTimer) || !projectRows.length || isPending}
-              onClick={() => setTimerOpen(true)}
-            >
-              {t("actions.newTimer")}
-            </Button>
-          </span>
-          <Button
-            type="button"
-            variant="cta"
-            icon={Plus}
-            disabled={!projectRows.length || isPending}
-            onClick={() => {
-              const project = projectRows[0];
-              if (!project) return;
-
-              setEntryModal({
-                mode: "create",
-                source: "FORM",
-                projectId: project.projectId,
-                localDate:
-                  view === "day" && selectedDay
-                    ? selectedDay.isoDate
-                    : week.todayIso >= week.weekStart && week.todayIso <= week.weekEnd
-                      ? week.todayIso
-                      : week.weekStart,
-                durationMinutes: 60,
-              });
-            }}
+            <Copy className="size-4" aria-hidden="true" />
+            {t("actions.duplicateLastWeek")}
+          </DropdownItem>
+          <DropdownItem
+            disabled={isPending || !selectedDay || selectedDay.locked}
+            onSelect={() => requestCopyPreviousDay()}
           >
-            {t("actions.newEntry")}
-          </Button>
-        </div>
-      </div>
+            <Copy className="size-4" aria-hidden="true" />
+            {t("actions.copyYesterdayInto", {
+              day: selectedDay ? (daysByIso.get(selectedDay.isoDate)?.label ?? "") : "",
+            })}
+          </DropdownItem>
+          <DropdownSeparator />
+          <DropdownItem onSelect={() => setShortcutsOpen(true)}>
+            <Keyboard className="size-4" aria-hidden="true" />
+            {t("shortcuts.open")}
+          </DropdownItem>
+        </DropdownContent>
+      </Dropdown>
+    ) : null;
 
-      {/* Above the week navigation and outside the view branch below, so a running timer is on
-          screen in the grid as well as the day list. */}
-      {week.runningTimer ? (
-        <RunningTimerCard
+  const toolbar = (
+    <div className="grid gap-3">
+      {stops.length > 1 ? (
+        <TimeScopeBar
+          scopes={stops.map((stop) => ({
+            value: stop,
+            label: t(`view.${stop}`),
+            shortcut: String(stops.indexOf(stop) + 1),
+            badge:
+              stop === "month" && declaredProjects.length && projectRows.length && scope !== "month"
+                ? t("view.monthBadge")
+                : undefined,
+          }))}
+          scope={scope}
+          canZoomIn={canZoomIn}
+          canZoomOut={canZoomOut}
+          lenses={[
+            { value: "agenda", label: t("lens.agenda"), icon: ListIcon, shortcut: "G" },
+            { value: "grid", label: t("lens.grid"), icon: GridIcon, shortcut: "G" },
+          ]}
+          lens={lens}
+          lensVisible={scope === "week" && projectRows.length > 0}
+          labels={{
+            view: t("view.label"),
+            zoomIn: canZoomIn
+              ? t("view.zoomIn", { scope: t(`view.${nextIn}`) })
+              : t("view.zoomInMost"),
+            zoomOut: canZoomOut
+              ? t("view.zoomOut", { scope: t(`view.${nextOut}`) })
+              : t("view.zoomOutMost"),
+            lens: t("lens.label"),
+          }}
+          shortcuts={{ zoomIn: "+", zoomOut: "−" }}
+          density={desktop ? "comfortable" : "compact"}
+          actions={actions}
           disabled={isPending}
-          runningTimer={week.runningTimer}
-          onStop={() => runAction(stopRunningTimerAction)}
-          t={t}
+          onScopeChange={(value) => changeScope(value as TimeScope)}
+          onLensChange={(value) => changeLens(value as WeekLens)}
+          onZoom={(direction) => changeScope(stepScope(scope, direction, stops))}
         />
+      ) : desktop && actions ? (
+        <div className="flex justify-end gap-2">{actions}</div>
       ) : null}
 
-      <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-        <div className="flex flex-wrap items-center gap-3">
-          <div className="inline-flex items-center gap-1 rounded-[var(--radius-pill)] border border-border bg-card p-1">
-            <button
-              type="button"
-              className="grid size-8 place-items-center rounded-full text-muted-foreground transition hover:bg-secondary hover:text-foreground"
-              aria-label={t("actions.previousWeek")}
-              onClick={() => navigateToWeek(week.previousWeek)}
-            >
-              <ChevronLeft className="size-4" aria-hidden="true" />
-            </button>
-            <span className="px-3 text-sm font-medium text-foreground">{week.weekLabel}</span>
-            <button
-              type="button"
-              className="grid size-8 place-items-center rounded-full text-muted-foreground transition hover:bg-secondary hover:text-foreground"
-              aria-label={t("actions.nextWeek")}
-              onClick={() => navigateToWeek(week.nextWeek)}
-            >
-              <ChevronRight className="size-4" aria-hidden="true" />
-            </button>
-          </div>
-
-          {week.weekStart === week.thisWeek ? (
-            <span className="rounded-[var(--radius-pill)] bg-accent-soft px-3 py-1.5 font-ui text-[11px] font-semibold uppercase tracking-[0.08em] text-accent">
-              {t("labels.thisWeek")}
-            </span>
-          ) : (
-            <button
-              type="button"
-              className="inline-flex items-center gap-2 rounded-[var(--radius-pill)] border border-border bg-card px-3 py-2 text-sm font-medium text-foreground transition hover:bg-secondary"
-              onClick={() => navigateToWeek(week.thisWeek)}
-            >
-              <RotateCcw className="size-4" aria-hidden="true" />
-              {t("labels.thisWeek")}
-            </button>
+      <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
+        <PeriodNavigator
+          label={periodLabel}
+          periodKey={periodStart}
+          direction={move?.kind === "step" || move?.kind === "jump" ? move.direction : 0}
+          atToday={atToday}
+          month={selectedMonthStart.slice(0, 7)}
+          locale={locale}
+          labelRef={periodLabelRef}
+          labels={{
+            previous: t("period.previous", { unit: periodUnit }),
+            next: t("period.next", { unit: periodUnit }),
+            today: t("period.today"),
+            atToday: t("period.atToday"),
+            pick: t("period.pick"),
+            monthPicker: pickerLabels.month,
+          }}
+          shortcuts={{ previous: "K", next: "J", today: "T" }}
+          menu={moreMenu}
+          disabled={isPending}
+          onPrevious={() => stepPeriod("previous")}
+          onNext={() => stepPeriod("next")}
+          onToday={goToToday}
+          onPickMonth={pickMonth}
+        />
+        <PeriodTotal
+          figure={formatMinutesAsHours(periodTotalMinutes)}
+          unit={durationDisplayFormat === "DECIMAL_HOURS" ? "h" : undefined}
+          caption={t(
+            scope === "day" ? "total.today" : scope === "week" ? "total.week" : "total.month",
           )}
-        </div>
-
-        <div className="flex items-center gap-3 lg:justify-end">
-          <span className="font-ui text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
-            {t("labels.weekTotal")}
-          </span>
-          <span className="text-[26px] font-semibold text-foreground">
-            {formatMinutesWithUnit(weekTotal)}
-          </span>
-        </div>
+          minutes={periodTotalMinutes}
+          status={totalStatus}
+          secondary={
+            scope === "month"
+              ? t("heat.workdays", { logged: workdays.logged, workdays: workdays.workdays })
+              : null
+          }
+          align={desktop ? "end" : "start"}
+        />
       </div>
+    </div>
+  );
 
-      <div className="flex flex-wrap items-center gap-2">
-        <button
-          type="button"
-          disabled={isPending || !selectedDay || selectedDay.locked}
-          className="inline-flex items-center gap-2 rounded-[var(--radius-pill)] border border-border bg-card px-3 py-2 text-sm font-medium text-foreground transition hover:bg-secondary disabled:cursor-not-allowed disabled:text-muted-foreground disabled:opacity-50"
-          title={
-            selectedDay ? t("tooltips.copyPreviousDay", { date: selectedDay.isoDate }) : undefined
-          }
-          onClick={() =>
-            setPendingQuickAction({
-              type: "copyPreviousDay",
-              sourceDate: shiftIsoDate(targetDate, -1),
-              targetDate,
-            })
-          }
-        >
-          <Copy className="size-4" aria-hidden="true" />
-          {t("actions.sameAsYesterday")}
-        </button>
-        <button
-          type="button"
-          disabled={isPending || weekHasLockedPeriod}
-          className="inline-flex items-center gap-2 rounded-[var(--radius-pill)] border border-border bg-card px-3 py-2 text-sm font-medium text-foreground transition hover:bg-secondary disabled:cursor-not-allowed disabled:text-muted-foreground disabled:opacity-50"
-          title={t("tooltips.duplicatePreviousWeek")}
-          onClick={() =>
-            setPendingQuickAction({
-              type: "duplicatePreviousWeek",
-              sourceWeekStart: shiftIsoDate(week.weekStart, -7),
-              sourceWeekEnd: shiftIsoDate(week.weekStart, -1),
-              targetWeekStart: week.weekStart,
-              targetWeekEnd: week.weekEnd,
-            })
-          }
-        >
-          <Copy className="size-4" aria-hidden="true" />
-          {t("actions.duplicateLastWeek")}
-        </button>
-        <span className="font-ui text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
-          {t("labels.assigned")}
-        </span>
-        {projectRows.slice(0, 3).map((project) => (
-          <span
-            key={project.projectId}
-            className="inline-flex items-center gap-2 rounded-[var(--radius-pill)] border border-border bg-card px-3 py-2 text-sm font-medium"
-          >
-            <span
-              className="size-2 rounded-full"
-              style={{ backgroundColor: project.color }}
-              aria-hidden="true"
+  /* ------------------------------------------------------------------------------------------ */
+  /* Content per scope                                                                          */
+  /* ------------------------------------------------------------------------------------------ */
+
+  const content =
+    scope === "day" ? (
+      <DayAgenda
+        isoDate={targetDate}
+        dayState={selectedDay?.state ?? "normal"}
+        totalMinutes={selectedDayTotalMinutes}
+        capacityMinutes={DAILY_SOFT_WARNING_MINUTES}
+        entries={dayAgendaEntries}
+        split={daySplit}
+        locale={locale}
+        durationDisplayFormat={durationDisplayFormat}
+        disabled={isPending}
+        locked={selectedDay?.locked ?? false}
+        animateEntries={animateEntries}
+        runningTimer={runningTimerView ? { ...runningTimerView, elapsedLabel } : null}
+        highlight={highlight}
+        canContinue={!week.runningTimer}
+        canCopyPreviousDay={(entriesByDay.get(shiftIsoDate(targetDate, -1))?.length ?? 0) > 0}
+        composer={railComposerOpen ? renderComposer(targetDate, null, railFocusToken) : undefined}
+        labels={{
+          futureDay: t("warnings.futureDateAllowed"),
+          overCapacity: t("warnings.dayOver8"),
+          emptyTitle: t("day.emptyTitle"),
+          emptyDescription: t("day.emptyDescription"),
+          addEntry: t("actions.addEntry"),
+          copyYesterday: t("empty.copyYesterday"),
+          glance: t("day.glance"),
+          target: t("day.target", { target: targetLabel }),
+          over: t("total.overTarget", { target: targetLabel }),
+          split: t("day.split"),
+          noSplit: t("day.noSplit"),
+          quickAdd: t("day.quickAdd"),
+          card: cardLabels,
+          timer: timerLabels,
+        }}
+        onAddEntry={(iso) =>
+          desktop ? setRailFocusToken((current) => current + 1) : openComposer(iso, "sheet")
+        }
+        onEditEntry={(entry) => editEntryById(entry.id)}
+        onDeleteEntry={(entry) => deleteEntryById(entry.id)}
+        onContinueEntry={continueEntry}
+        onCopyPreviousDay={(iso) => requestCopyPreviousDay(iso)}
+        onStopTimer={() => runAction(stopRunningTimerAction)}
+      />
+    ) : scope === "week" && lens === "agenda" ? (
+      <WeekAgenda
+        days={weekAgendaDays}
+        selectedDayIso={targetDate}
+        capacityMinutes={DAILY_SOFT_WARNING_MINUTES}
+        layout={desktop ? "columns" : "accordion"}
+        locale={locale}
+        durationDisplayFormat={durationDisplayFormat}
+        disabled={isPending}
+        animateEntries={animateEntries}
+        runningTimer={runningTimerView ? { ...runningTimerView, elapsedLabel } : null}
+        highlight={highlight}
+        canContinue={!week.runningTimer}
+        canDuplicatePreviousWeek={!weekHasLockedPeriod}
+        composerDayIso={desktop && composer?.anchor === "column" ? composer.localDate : null}
+        renderComposer={(day) => renderComposer(day.isoDate)}
+        footnote={handoff}
+        labels={{
+          openDay: (day) => t("header.open", { date: `${day.label}, ${day.dayNumber}` }),
+          expandDay: (day) => t("week.expandDay", { day: day.label }),
+          capacity: capacityLabel,
+          over: overLabel,
+          locked: t("header.locked"),
+          today: t("header.today"),
+          columnEmpty: t("week.columnEmpty"),
+          copyYesterday: t("empty.copyYesterday"),
+          addEntry: (day) => t("week.addEntryOn", { day: day.label }),
+          emptyWeekTitle: t("empty.weekTitle"),
+          emptyWeekDescription: t("empty.weekDescription"),
+          addEntryPlain: t("actions.addEntry"),
+          duplicateLastWeek: t("actions.duplicateLastWeek"),
+          card: cardLabels,
+          timer: timerLabels,
+        }}
+        onSelectDay={setSelectedDayIso}
+        onOpenDay={openDay}
+        onAddEntry={(iso) => (desktop ? openComposer(iso, "column") : openComposer(iso, "sheet"))}
+        onComposerOpenChange={(iso, open) => {
+          if (!open && composer?.anchor === "column" && composer.localDate === iso) closeComposer();
+        }}
+        onEditEntry={(entry) => editEntryById(entry.id)}
+        onDeleteEntry={(entry) => deleteEntryById(entry.id)}
+        onContinueEntry={continueEntry}
+        onCopyPreviousDay={(iso) => requestCopyPreviousDay(iso)}
+        onDuplicatePreviousWeek={requestDuplicatePreviousWeek}
+        onStopTimer={() => runAction(stopRunningTimerAction)}
+      />
+    ) : scope === "week" ? (
+      <WeekGridLens
+        days={days}
+        projects={projectRows}
+        declaredProjects={declaredProjects}
+        inactiveProjectIds={inactiveProjectIds}
+        entriesByCell={entriesByCell}
+        entriesByDay={entriesByDay}
+        dailyTotals={dailyTotals}
+        weekTotal={weekTotal}
+        weekHasLockedPeriod={weekHasLockedPeriod}
+        layout={desktop ? "table" : "stack"}
+        disabled={isPending}
+        animateRows={animateEntries}
+        onOpenDay={openDay}
+        onCellCommit={handleCellCommit}
+        onOpenBreakdown={(projectId, localDate) => setBreakdown({ projectId, localDate })}
+        onCreateFromCell={(project, day) =>
+          setEntryModal({
+            mode: "create",
+            source: "GRID",
+            projectId: project.projectId,
+            localDate: day.isoDate,
+            durationMinutes: 60,
+            prefill: true,
+          })
+        }
+        onToggleInactive={toggleInactive}
+        onSeeMonth={() => changeScope("month")}
+      />
+    ) : (
+      <MonthOverview
+        projects={monthProjects}
+        declared={declaredRows}
+        monthLocked={monthLocked}
+        locale={locale}
+        durationDisplayFormat={durationDisplayFormat}
+        disabled={isPending}
+        animateRows={animateEntries}
+        navigator={
+          projectRows.length ? (
+            <MonthHeatNavigator
+              weeks={heatWeeks}
+              weekdayLabels={days.map((day) => day.shortLabel)}
+              selectedWeekStart={week.weekStart}
+              selectedDayIso={selectedDayIso}
+              capacityMinutes={DAILY_SOFT_WARNING_MINUTES}
+              locked={monthLocked}
+              formatMinutes={formatMinutesWithUnit}
+              animate={animateEntries}
+              disabled={isPending}
+              labels={{
+                grid: t("heat.label", { month: monthLabel }),
+                openWeek: (heatWeek) => t("heat.openWeek", { week: heatWeek.weekNumber }),
+                weekRow: (heatWeek) => `W${heatWeek.weekNumber}`,
+                cell: (day) =>
+                  t("heat.cell", {
+                    date: formatDateLabel(day.isoDate, locale, { style: "full" }),
+                    hours: formatMinutesWithUnit(day.minutes),
+                  }),
+                empty: (day) =>
+                  t("heat.empty", {
+                    date: formatDateLabel(day.isoDate, locale, { style: "full" }),
+                  }),
+                future: (day) =>
+                  t("heat.future", {
+                    date: formatDateLabel(day.isoDate, locale, { style: "full" }),
+                  }),
+                outside: (day) =>
+                  t("heat.outside", {
+                    date: formatDateLabel(day.isoDate, locale, { style: "full" }),
+                  }),
+                detail: (day) =>
+                  t("heat.cellDetail", {
+                    hours: formatMinutesWithUnit(day.minutes),
+                    count: day.entryCount,
+                  }),
+                locked: t("heat.locked"),
+                legendLogged: t("heat.legendLogged"),
+                legendEmpty: t("heat.legendEmpty"),
+                legendFuture: t("heat.legendFuture"),
+              }}
+              onSelectDay={openDay}
+              onSelectWeek={openWeekOf}
             />
-            {project.name}
-          </span>
-        ))}
-        {recentProjects.length ? (
-          <>
-            <span className="font-ui text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
-              {t("labels.recent")}
-            </span>
-            {recentProjects.slice(0, 3).map((project) => (
-              <button
-                key={project.projectId}
-                type="button"
-                className="inline-flex items-center gap-2 rounded-[var(--radius-pill)] border border-border bg-card px-3 py-2 text-sm font-medium text-foreground transition hover:border-accent-line hover:bg-accent-soft"
-                onClick={() =>
-                  setEntryModal({
-                    mode: "create",
-                    source: "FORM",
-                    projectId: project.projectId,
-                    localDate: targetDate,
-                    durationMinutes: 60,
-                  })
-                }
-              >
-                <span
-                  className="size-2 rounded-full"
-                  style={{ backgroundColor: project.color }}
-                  aria-hidden="true"
-                />
-                {project.name}
-              </button>
-            ))}
-          </>
-        ) : null}
-      </div>
+          ) : undefined
+        }
+        labels={{
+          trackedHeading: t("month.trackedHeading"),
+          declaredHeading: t("month.declaredHeading"),
+          zoomToProject: (project) => t("zoom.zoomToProject", { project: project.name }),
+          emptyTitle: t("month.emptyTitle"),
+          emptyDescription: t("month.emptyDescription"),
+          declared: {
+            hoursLabel: (project) => t("declared.hoursLabel", { project: project.name }),
+            hoursPlaceholder: t("declared.hoursPlaceholder"),
+            hoursHint: t("declared.hoursHint"),
+            noteLabel: (project) => t("declared.noteLabel", { project: project.name }),
+            notePlaceholder: t("declared.notePlaceholder"),
+            noteRequired: t("declared.noteRequired"),
+            proofLabel: t("declared.proofLabel"),
+            proofUpload: t("declared.proofUpload"),
+            proofReplace: t("declared.proofReplace"),
+            proofView: t("declared.proofView"),
+            proofMissing: t("declared.proofMissing"),
+            proofNeedsHours: t("declared.proofNeedsHours"),
+            proofUploading: t("declared.proofUploading"),
+            save: t("declared.save"),
+            saving: t("declared.saving"),
+            saved: t("declared.saved"),
+            locked: t("declared.locked"),
+            nothingDeclared: t("declared.nothingDeclared"),
+            externalSystem: t("declared.externalSystem"),
+          },
+        }}
+        onSaveDeclaration={saveDeclaration}
+        onUploadProof={uploadDeclarationProof}
+        /* A pure scope change, not a filter: the Grid lens of the week the month is anchored on. */
+        onZoomToProject={() => {
+          setMove({ kind: "zoom", direction: "in" });
+          openWeek("grid");
+        }}
+      />
+    );
 
+  const fabVisible = hasAssignments && projectRows.length > 0 && !desktop;
+
+  return (
+    /* Room under the last card for the FAB on a phone, so nothing ends up permanently behind it. */
+    <div className={cn("grid gap-4", fabVisible && "pb-20")}>
       {notice ? (
         <div
           className={cn(
@@ -571,6 +1676,7 @@ function TimeGridContent({ week }: { week: TimeGridWeek }) {
               ? "border-success/35 bg-success-soft text-success"
               : "border-destructive/35 bg-destructive-soft text-destructive",
           )}
+          role="status"
         >
           {notice.tone === "success" ? (
             <Check className="size-4" aria-hidden="true" />
@@ -610,282 +1716,44 @@ function TimeGridContent({ week }: { week: TimeGridWeek }) {
         />
       ) : null}
 
-      {projectRows.length ? (
-        view === "day" && selectedDay ? (
-          <DayView
-            day={selectedDay}
-            days={week.days}
-            dailyTotalMinutes={dailyTotals[week.days.indexOf(selectedDay)] ?? 0}
-            entries={selectedDayEntries}
-            entriesByDay={entriesByDay}
-            isPending={isPending}
-            projectsById={projectsById}
-            onAddEntry={(localDate) => {
-              const project = projectRows[0];
-              if (!project) return;
-
-              setEntryModal({
-                mode: "create",
-                source: "FORM",
-                projectId: project.projectId,
-                localDate,
-                durationMinutes: 60,
-              });
-            }}
-            onDeleteEntry={(entry) =>
-              runAction(() => deleteTimeEntryAction({ timeEntryId: entry.id }))
-            }
-            onEditEntry={(entry) => setEntryModal({ mode: "edit", entry })}
-            onSelectDay={setSelectedDayIso}
-            t={t}
-          />
-        ) : (
-          <>
-            <div className="hidden overflow-x-auto lg:block">
-              <div className="min-w-[900px] overflow-hidden rounded-[var(--radius-lg)] border border-border bg-card">
-                <div className="grid grid-cols-[minmax(190px,1.5fr)_repeat(7,minmax(54px,1fr))_92px]">
-                  <GridHeaderCell label={t("grid.projects")} />
-                  {week.days.map((day) => (
-                    <div
-                      key={day.isoDate}
-                      className={cn(
-                        "border-b border-r border-border px-2 py-3 text-center",
-                        day.state === "today" && "text-accent",
-                        day.state === "future" && "opacity-55",
-                      )}
-                    >
-                      <span className="block font-ui text-[11px] font-semibold uppercase tracking-[0.06em] text-muted-foreground">
-                        {day.shortLabel}
-                      </span>
-                      <span className="mt-0.5 block text-[15px] font-medium">{day.dayNumber}</span>
-                    </div>
-                  ))}
-                  <GridHeaderCell label={t("grid.total")} noRightBorder />
-
-                  {projectRows.map((project) => {
-                    const inactive = inactiveProjectIds.has(project.projectId);
-                    const rowTotal = week.days.reduce(
-                      (sum, day) =>
-                        sum +
-                        getCellEntries(entriesByCell, project.projectId, day.isoDate).totalMinutes,
-                      0,
-                    );
-                    const canToggleInactive = !weekHasLockedPeriod && rowTotal === 0;
-
-                    return (
-                      <div key={project.projectId} className="contents">
-                        <div
-                          className={cn(
-                            "flex min-h-14 items-center gap-2 border-b border-r border-border px-3",
-                            inactive && "opacity-65",
-                          )}
-                        >
-                          <span
-                            className="size-2.5 shrink-0 rounded-full"
-                            style={{ backgroundColor: project.color }}
-                            aria-hidden="true"
-                          />
-                          <span className="min-w-0 flex-1 truncate text-sm font-medium">
-                            {project.name}
-                          </span>
-                          <button
-                            type="button"
-                            disabled={!canToggleInactive && !inactive}
-                            title={
-                              inactive
-                                ? t("inactive.undo")
-                                : canToggleInactive
-                                  ? t("inactive.mark")
-                                  : t("inactive.removeEntriesFirst")
-                            }
-                            className="grid size-7 place-items-center rounded-[var(--radius-xs)] text-muted-foreground transition hover:bg-secondary hover:text-accent disabled:cursor-not-allowed disabled:opacity-35"
-                            onClick={() => toggleInactive(project, inactive)}
-                          >
-                            <CalendarX className="size-4" aria-hidden="true" />
-                          </button>
-                        </div>
-
-                        {inactive ? (
-                          <InactiveProjectRow onUndo={() => toggleInactive(project, true)} />
-                        ) : (
-                          <>
-                            {week.days.map((day, dayIndex) => (
-                              <TimeGridCell
-                                key={day.isoDate}
-                                day={day}
-                                dayTotalMinutes={dailyTotals[dayIndex] ?? 0}
-                                entriesByDay={entriesByDay}
-                                project={project}
-                                cell={getCellEntries(entriesByCell, project.projectId, day.isoDate)}
-                                disabled={
-                                  isPending ||
-                                  day.locked ||
-                                  !isProjectAssignableOnDate(project, day.isoDate)
-                                }
-                                onCommit={(rawValue) => handleCellCommit(project, day, rawValue)}
-                                onOpenBreakdown={() =>
-                                  setBreakdown({
-                                    projectId: project.projectId,
-                                    localDate: day.isoDate,
-                                  })
-                                }
-                                t={t}
-                              />
-                            ))}
-                            <div className="flex min-h-14 items-center justify-center border-b border-border text-base font-semibold">
-                              {formatMinutesAsHours(rowTotal)}
-                            </div>
-                          </>
-                        )}
-                      </div>
-                    );
-                  })}
-
-                  <div className="flex min-h-[52px] items-center border-r border-border bg-secondary px-3 font-ui text-[11px] font-semibold uppercase tracking-[0.06em] text-muted-foreground">
-                    {t("grid.dailyTotal")}
-                  </div>
-                  {week.days.map((day, dayIndex) => {
-                    const total = dailyTotals[dayIndex] ?? 0;
-                    const over = total > DAILY_SOFT_WARNING_MINUTES;
-
-                    return (
-                      <div
-                        key={day.isoDate}
-                        className={cn(
-                          "relative flex min-h-[52px] items-center justify-center gap-1 border-r border-border bg-secondary text-sm font-semibold",
-                          day.state === "today" && "bg-accent-soft",
-                          over
-                            ? "text-warning"
-                            : total
-                              ? "text-foreground"
-                              : "text-muted-foreground",
-                        )}
-                      >
-                        {formatMinutesAsHours(total)}
-                        {over ? (
-                          <WarningTip
-                            text={t("warnings.dailyTotalExact", {
-                              hours: formatMinutesWithUnit(total),
-                            })}
-                          />
-                        ) : null}
-                      </div>
-                    );
-                  })}
-                  <div className="flex min-h-[52px] items-center justify-center bg-secondary text-[17px] font-semibold text-accent">
-                    {formatMinutesAsHours(weekTotal)}
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div className="grid gap-3 lg:hidden">
-              <div className="grid grid-cols-7 gap-1.5">
-                {week.days.map((day) => (
-                  <div
-                    key={day.isoDate}
-                    className={cn(
-                      "rounded-[var(--radius-md)] border border-border bg-card px-1 py-2 text-center",
-                      day.state === "today" && "border-accent bg-accent-soft text-accent",
-                    )}
-                  >
-                    <span className="block font-ui text-[10px] font-semibold uppercase tracking-[0.04em] text-muted-foreground">
-                      {day.shortLabel}
-                    </span>
-                    <span className="block text-base font-semibold">{day.dayNumber}</span>
-                    {day.state === "today" ? (
-                      <span className="mx-auto mt-1 block size-1.5 rounded-full bg-accent" />
-                    ) : (
-                      <span className="mt-1 block h-1.5" />
-                    )}
-                  </div>
-                ))}
-              </div>
-
-              <div className="overflow-hidden rounded-[var(--radius-lg)] border border-border bg-card">
-                {projectRows.map((project) => {
-                  const inactive = inactiveProjectIds.has(project.projectId);
-                  return (
-                    <div key={project.projectId} className="border-b border-border last:border-b-0">
-                      <div className="flex items-center gap-2 px-4 py-3">
-                        <span
-                          className="size-2.5 shrink-0 rounded-full"
-                          style={{ backgroundColor: project.color }}
-                          aria-hidden="true"
-                        />
-                        <span className="min-w-0 flex-1 truncate text-sm font-medium">
-                          {project.name}
-                        </span>
-                        {inactive ? (
-                          <button
-                            type="button"
-                            className="text-xs font-semibold text-accent"
-                            onClick={() => toggleInactive(project, true)}
-                          >
-                            {t("actions.undo")}
-                          </button>
-                        ) : null}
-                      </div>
-                      {inactive ? (
-                        <div className="px-4 pb-4 text-sm italic text-muted-foreground">
-                          {t("inactive.title")}
-                        </div>
-                      ) : (
-                        <div className="grid grid-cols-7 gap-1 px-3 pb-3">
-                          {week.days.map((day) => {
-                            const cell = getCellEntries(
-                              entriesByCell,
-                              project.projectId,
-                              day.isoDate,
-                            );
-                            return (
-                              <button
-                                key={day.isoDate}
-                                type="button"
-                                disabled={
-                                  day.locked || !isProjectAssignableOnDate(project, day.isoDate)
-                                }
-                                className={cn(
-                                  "rounded-[var(--radius-sm)] border border-border bg-background px-1 py-2 text-sm font-semibold disabled:opacity-35",
-                                  cell.totalMinutes > 0 &&
-                                    "border-accent-line bg-accent-soft text-accent",
-                                )}
-                                onClick={() => {
-                                  if (cell.entries.length === 0) {
-                                    setEntryModal({
-                                      mode: "create",
-                                      source: "GRID",
-                                      projectId: project.projectId,
-                                      localDate: day.isoDate,
-                                      durationMinutes: 60,
-                                      prefill: true,
-                                    });
-                                  } else {
-                                    setBreakdown({
-                                      projectId: project.projectId,
-                                      localDate: day.isoDate,
-                                    });
-                                  }
-                                }}
-                              >
-                                {formatMinutesAsHours(cell.totalMinutes)}
-                              </button>
-                            );
-                          })}
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-
-            <div className="flex items-center gap-2 text-xs text-muted-foreground">
-              <Info className="size-4" aria-hidden="true" />
-              {t("help.durationFormats")}
-            </div>
-          </>
-        )
+      {hasAssignments ? (
+        <TimeZoomShell
+          scope={scope}
+          lens={lens}
+          stops={stops}
+          days={days}
+          selectedDayIso={selectedDayIso}
+          weekStart={week.weekStart}
+          viewKey={viewKey}
+          move={move}
+          announcement={announcement}
+          toolbar={toolbar}
+          swipeEnabled={!(scope === "week" && lens === "grid")}
+          focusFallback={periodLabelRef}
+          formatMinutes={formatMinutesWithUnit}
+          disabled={isPending}
+          ribbonLabels={{
+            group: t("zoom.dayStrip"),
+            selectDay: (day) => t("zoom.selectDay", { day: day.label }),
+            capacity: capacityLabel,
+            over: overLabel,
+            locked: t("header.locked"),
+            today: t("header.today"),
+          }}
+          onScopeChange={changeScope}
+          onSelectDay={(iso) => {
+            setMove({ kind: "step", direction: iso > selectedDayIso ? 1 : -1 });
+            setSelectedDayIso(iso);
+          }}
+          onPeriod={stepPeriod}
+          onToday={goToToday}
+          onToggleLens={toggleLens}
+          onCompose={compose}
+          onTimer={toggleTimer}
+          onHelp={() => setShortcutsOpen(true)}
+        >
+          {content}
+        </TimeZoomShell>
       ) : (
         <div className="rounded-[var(--radius-lg)] border border-border bg-card px-6 py-12 text-center">
           <div className="mx-auto grid size-12 place-items-center rounded-full bg-secondary text-muted-foreground">
@@ -898,9 +1766,67 @@ function TimeGridContent({ week }: { week: TimeGridWeek }) {
         </div>
       )}
 
+      {/* The phone's `+`: a fixed FAB above the bottom bar, opening the composer as a sheet (§9). */}
+      {fabVisible ? (
+        <button
+          type="button"
+          aria-label={t("mobile.addEntry")}
+          disabled={isPending || (selectedDay?.locked ?? false)}
+          className="fixed bottom-24 right-4 z-30 grid size-14 place-items-center rounded-full bg-[linear-gradient(135deg,var(--cta),var(--cta-hover))] text-cta-foreground shadow-cta-glow transition-transform duration-[var(--duration-micro)] active:scale-95 disabled:opacity-50 lg:hidden"
+          onClick={() => openComposer(targetDate, "sheet")}
+        >
+          <Plus className="size-6" aria-hidden="true" />
+        </button>
+      ) : null}
+
+      <Drawer
+        open={composer?.anchor === "sheet"}
+        onOpenChange={(open) => {
+          if (!open) closeComposer();
+        }}
+      >
+        <DrawerContent
+          side="bottom"
+          closeLabel={t("composer.close")}
+          className="pb-8"
+          /* The composer names itself; a description would repeat its title. */
+          aria-describedby={undefined}
+        >
+          <DrawerTitle className="sr-only">
+            {composer
+              ? t("composer.title", { date: formatDateLabel(composer.localDate, locale) })
+              : ""}
+          </DrawerTitle>
+          {composer?.anchor === "sheet" ? renderComposer(composer.localDate, "duration") : null}
+        </DrawerContent>
+      </Drawer>
+
+      {hasAssignments ? (
+        <TimeCommandPalette
+          stops={stops}
+          timerRunning={Boolean(week.runningTimer)}
+          canCompose={projectRows.length > 0}
+          onCommand={handleCommand}
+        />
+      ) : null}
+
+      <ShortcutSheet
+        open={shortcutsOpen}
+        onOpenChange={setShortcutsOpen}
+        groups={shortcutGroups}
+        labels={{
+          title: t("shortcuts.title"),
+          description: t("shortcuts.description"),
+          close: t("actions.close"),
+          keyHeader: t("shortcuts.keyHeader"),
+          actionHeader: t("shortcuts.actionHeader"),
+        }}
+      />
+
       <TimerCreateDialog
         projects={projectRows}
         recentProjects={recentProjects}
+        suggestions={descriptionSuggestions}
         onStarted={refreshWithResult}
       />
 
@@ -909,10 +1835,18 @@ function TimeGridContent({ week }: { week: TimeGridWeek }) {
           state={entryModal}
           week={week}
           projects={projectRows}
+          suggestions={descriptionSuggestions}
           onClose={() => setEntryModal(null)}
           onDone={(result) => {
+            if (result.status === "success") {
+              setPendingHighlight(
+                entryModal.mode === "create"
+                  ? { type: "new" }
+                  : { type: "entry", id: entryModal.entry.id },
+              );
+              setEntryModal(null);
+            }
             refreshWithResult(result);
-            if (result.status === "success") setEntryModal(null);
           }}
           t={t}
         />
@@ -936,7 +1870,7 @@ function TimeGridContent({ week }: { week: TimeGridWeek }) {
             });
           }}
           onClose={() => setBreakdown(null)}
-          onDelete={(entry) => runAction(() => deleteTimeEntryAction({ timeEntryId: entry.id }))}
+          onDelete={(entry) => deleteEntryById(entry.id)}
           onEdit={(entry) => {
             setBreakdown(null);
             setEntryModal({ mode: "edit", entry });
@@ -956,208 +1890,8 @@ function TimeGridContent({ week }: { week: TimeGridWeek }) {
   );
 }
 
-function GridHeaderCell({
-  label,
-  noRightBorder = false,
-}: {
-  label: string;
-  noRightBorder?: boolean;
-}) {
-  return (
-    <div
-      className={cn(
-        "flex min-h-[52px] items-center border-b border-border px-3 font-ui text-[11px] font-semibold uppercase tracking-[0.06em] text-muted-foreground",
-        !noRightBorder && "border-r",
-      )}
-    >
-      {label}
-    </div>
-  );
-}
-
-type TimeGridCellProps = {
-  day: TimeGridDay;
-  dayTotalMinutes: number;
-  entriesByDay: Map<string, TimeGridEntry[]>;
-  project: TimeGridAssignedProject;
-  cell: CellEntries;
-  disabled: boolean;
-  onCommit: (rawValue: string) => void;
-  onOpenBreakdown: () => void;
-  t: TimeTrackingTranslator;
-};
-
-function TimeGridCell({
-  day,
-  dayTotalMinutes,
-  entriesByDay,
-  project,
-  cell,
-  disabled,
-  onCommit,
-  onOpenBreakdown,
-  t,
-}: TimeGridCellProps) {
-  const { formatMinutesAsHours, formatMinutesForInput } = useDurationFormatting();
-  const simpleEntry =
-    cell.entries.length === 1 && isSimpleDurationEntry(cell.entries[0]) ? cell.entries[0] : null;
-  const canInlineEdit = !disabled && !cell.locked && (cell.entries.length === 0 || simpleEntry);
-  const warningTexts = getCellWarnings(
-    {
-      day,
-      dayTotalMinutes,
-      entriesByDay,
-      cell,
-    },
-    t,
-  );
-  const idleEditorTimerRef = useRef<number | null>(null);
-  const skipNextBlurCommitValueRef = useRef<string | null>(null);
-
-  useEffect(() => {
-    return () => {
-      if (idleEditorTimerRef.current !== null) {
-        window.clearTimeout(idleEditorTimerRef.current);
-      }
-    };
-  }, []);
-
-  function clearIdleEditorTimer() {
-    if (idleEditorTimerRef.current !== null) {
-      window.clearTimeout(idleEditorTimerRef.current);
-      idleEditorTimerRef.current = null;
-    }
-  }
-
-  function scheduleIdleEditorOpen(input: HTMLInputElement) {
-    clearIdleEditorTimer();
-
-    if (cell.entries.length !== 0) return;
-
-    const parsedMinutes = parseDurationToMinutes(input.value);
-    if (parsedMinutes === null || parsedMinutes <= 0) return;
-
-    idleEditorTimerRef.current = window.setTimeout(() => {
-      if (document.activeElement !== input) return;
-
-      const currentValue = input.value;
-      const currentMinutes = parseDurationToMinutes(currentValue);
-      if (currentMinutes === null || currentMinutes <= 0) return;
-
-      skipNextBlurCommitValueRef.current = currentValue;
-      onCommit(currentValue);
-    }, GRID_ENTRY_IDLE_OPEN_DELAY_MS);
-  }
-
-  function commitOnBlur(rawValue: string) {
-    clearIdleEditorTimer();
-
-    if (skipNextBlurCommitValueRef.current === rawValue) {
-      skipNextBlurCommitValueRef.current = null;
-      return;
-    }
-
-    onCommit(rawValue);
-  }
-
-  if (!isProjectAssignableOnDate(project, day.isoDate)) {
-    return (
-      <div className="flex min-h-14 items-center justify-center border-b border-r border-border text-muted-foreground">
-        ·
-      </div>
-    );
-  }
-
-  if (!canInlineEdit) {
-    return (
-      <button
-        type="button"
-        disabled={disabled}
-        className={cn(
-          "relative flex min-h-14 items-center justify-center gap-1 border-b border-r border-border text-[13px] font-semibold transition hover:bg-secondary disabled:cursor-not-allowed disabled:opacity-60",
-          day.state === "today" && "bg-accent-soft",
-          warningTexts.length > 0 && "text-warning",
-        )}
-        onClick={onOpenBreakdown}
-      >
-        {formatMinutesAsHours(cell.totalMinutes)}
-        {cell.entries.length > 1 ? (
-          <span className="inline-flex items-center gap-0.5 text-muted-foreground">
-            <Layers className="size-3" aria-hidden="true" />
-            <span className="font-ui text-[10px] font-bold">{cell.entries.length}</span>
-          </span>
-        ) : cell.entries.some((entry) => entry.startedAt || entry.endedAt) ? (
-          <Clock3 className="size-3 text-muted-foreground" aria-hidden="true" />
-        ) : null}
-        {warningTexts.length > 0 ? <WarningTip text={warningTexts.join(" ")} /> : null}
-      </button>
-    );
-  }
-
-  return (
-    <div
-      className={cn(
-        "relative min-h-14 border-b border-r border-border transition hover:bg-secondary",
-        day.state === "today" && "bg-accent-soft",
-      )}
-    >
-      <input
-        key={`${cell.totalMinutes}:${cell.entries.map((entry) => entry.updatedAt).join(":")}`}
-        inputMode="text"
-        defaultValue={formatMinutesForInput(cell.totalMinutes)}
-        placeholder="0"
-        disabled={disabled}
-        aria-label={`${project.name}, ${day.label}`}
-        // An inset ring rather than the global outline or a border brighten: the cell's own edge is
-        // only the shared bottom/right hairline of the grid, so there is no full border to brighten,
-        // and an outward outline would spill over the neighbouring cells.
-        className={cn(
-          "h-full min-h-14 w-full border-0 bg-transparent px-1 text-center text-[13px] font-medium text-foreground outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring disabled:cursor-not-allowed disabled:text-muted-foreground",
-          warningTexts.length > 0 && "text-warning",
-        )}
-        onChange={(event) => scheduleIdleEditorOpen(event.currentTarget)}
-        onBlur={(event) => commitOnBlur(event.currentTarget.value)}
-        onKeyDown={(event) => {
-          if (event.key === "Enter") {
-            event.preventDefault();
-            event.currentTarget.blur();
-          }
-        }}
-      />
-      {cell.entries.length > 0 ? (
-        <button
-          type="button"
-          className="absolute left-1.5 top-1.5 grid size-4 place-items-center text-muted-foreground hover:text-accent"
-          title={
-            cell.needsDescription ? t("warnings.descriptionNeeded") : t("warnings.descriptionSaved")
-          }
-          onClick={onOpenBreakdown}
-        >
-          <MessageSquare className="size-3" aria-hidden="true" />
-        </button>
-      ) : null}
-      {warningTexts.length > 0 ? <WarningTip text={warningTexts.join(" ")} /> : null}
-    </div>
-  );
-}
-
-function InactiveProjectRow({ onUndo }: { onUndo: () => void }) {
-  const t = useTranslations("TimeTracking");
-
-  return (
-    <div className="col-span-8 flex min-h-14 items-center gap-3 border-b border-border bg-[repeating-linear-gradient(135deg,transparent,transparent_8px,var(--secondary)_8px,var(--secondary)_16px)] px-4">
-      <Moon className="size-4 text-muted-foreground" aria-hidden="true" />
-      <span className="text-sm font-semibold text-muted-foreground">{t("inactive.title")}</span>
-      <span className="text-xs text-muted-foreground">· {t("inactive.description")}</span>
-      <button
-        type="button"
-        className="ml-auto text-sm font-semibold text-accent hover:underline"
-        onClick={onUndo}
-      >
-        {t("actions.undo")}
-      </button>
-    </div>
-  );
+function capitalize(value: string) {
+  return value.charAt(0).toLocaleUpperCase() + value.slice(1);
 }
 
 function DraftRestoreBanner({
@@ -1259,1316 +1993,4 @@ function QuickActionConfirmDialog({
       </DialogContent>
     </Dialog>
   );
-}
-
-type DayViewProps = {
-  day: TimeGridDay;
-  days: TimeGridDay[];
-  dailyTotalMinutes: number;
-  entries: TimeGridEntry[];
-  entriesByDay: Map<string, TimeGridEntry[]>;
-  isPending: boolean;
-  projectsById: Map<string, TimeGridAssignedProject>;
-  onAddEntry: (localDate: string) => void;
-  onDeleteEntry: (entry: TimeGridEntry) => void;
-  onEditEntry: (entry: TimeGridEntry) => void;
-  onSelectDay: (localDate: string) => void;
-  t: TimeTrackingTranslator;
-};
-
-function DayView({
-  day,
-  days,
-  dailyTotalMinutes,
-  entries,
-  entriesByDay,
-  isPending,
-  projectsById,
-  onAddEntry,
-  onDeleteEntry,
-  onEditEntry,
-  onSelectDay,
-  t,
-}: DayViewProps) {
-  const { formatMinutesWithUnit } = useDurationFormatting();
-  const sortedEntries = [...entries].sort((a, b) => {
-    const aTime = a.startTime ?? "99:99";
-    const bTime = b.startTime ?? "99:99";
-    return aTime.localeCompare(bTime);
-  });
-
-  return (
-    <div className="grid gap-4">
-      <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
-        <div className="grid grid-cols-7 gap-1.5 sm:w-auto">
-          {days.map((option) => (
-            <button
-              key={option.isoDate}
-              type="button"
-              className={cn(
-                "rounded-[var(--radius-md)] border border-border bg-card px-3 py-2 text-center transition hover:border-accent/45 hover:bg-accent-soft",
-                option.isoDate === day.isoDate && "border-accent bg-accent-soft text-accent",
-                option.state === "future" && "opacity-65",
-              )}
-              onClick={() => onSelectDay(option.isoDate)}
-            >
-              <span className="block font-ui text-[10px] font-semibold uppercase tracking-[0.06em] text-muted-foreground">
-                {option.shortLabel}
-              </span>
-              <span className="block text-base font-semibold">{option.dayNumber}</span>
-            </button>
-          ))}
-        </div>
-
-        <div className="flex items-center gap-3 sm:justify-end">
-          <span className="font-ui text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
-            {t("labels.dayTotal")}
-          </span>
-          <span
-            className={cn(
-              "text-[26px] font-semibold",
-              dailyTotalMinutes > DAILY_SOFT_WARNING_MINUTES ? "text-warning" : "text-foreground",
-            )}
-          >
-            {formatMinutesWithUnit(dailyTotalMinutes)}
-          </span>
-        </div>
-      </div>
-
-      {day.state === "future" ? (
-        <div className="flex items-start gap-3 rounded-[var(--radius-md)] border border-warning/30 bg-warning-soft px-4 py-3 text-sm text-warning">
-          <AlertTriangle className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
-          {t("warnings.futureDateAllowed")}
-        </div>
-      ) : null}
-
-      {dailyTotalMinutes > DAILY_SOFT_WARNING_MINUTES ? (
-        <div className="flex items-start gap-3 rounded-[var(--radius-md)] border border-warning/30 bg-warning-soft px-4 py-3 text-sm text-warning">
-          <AlertTriangle className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
-          {t("warnings.dayOver8")}
-        </div>
-      ) : null}
-
-      <div className="overflow-hidden rounded-[var(--radius-lg)] border border-border bg-card">
-        {sortedEntries.length ? (
-          sortedEntries.map((entry) => {
-            const project = projectsById.get(entry.projectId);
-            const warnings = getEntryWarnings(entry, entriesByDay.get(entry.localDate) ?? [], t);
-
-            if (day.state === "future") warnings.push(t("warnings.futureDate"));
-
-            return (
-              <div
-                key={entry.id}
-                className={cn(
-                  "grid gap-3 border-b border-border p-4 last:border-b-0 sm:grid-cols-[5.5rem_1fr_auto]",
-                  warnings.length && "bg-warning-soft",
-                )}
-              >
-                <div className="font-ui text-xs font-semibold uppercase tracking-[0.06em] text-muted-foreground">
-                  {entry.startTime && entry.endTime ? (
-                    <>
-                      <span className="block text-foreground">{entry.startTime}</span>
-                      <span className="block">{entry.endTime}</span>
-                    </>
-                  ) : (
-                    <span className="italic">{t("mode.duration")}</span>
-                  )}
-                </div>
-
-                <div className="min-w-0">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <p className="text-sm font-semibold text-foreground">{entry.description}</p>
-                    <span className="rounded-[var(--radius-pill)] bg-secondary px-2 py-0.5 font-ui text-[10px] font-semibold uppercase tracking-[0.06em] text-muted-foreground">
-                      {formatEntrySource(entry.source, t)}
-                    </span>
-                  </div>
-                  <div className="mt-1 flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
-                    <span className="inline-flex items-center gap-1.5">
-                      <span
-                        className="size-2 rounded-full"
-                        style={{ backgroundColor: project?.color ?? "var(--muted-foreground)" }}
-                        aria-hidden="true"
-                      />
-                      {project?.name ?? t("labels.archivedProject")}
-                    </span>
-                    <span>·</span>
-                    <span className="font-semibold text-foreground">
-                      {formatMinutesWithUnit(entry.durationMinutes)}
-                    </span>
-                  </div>
-                  {entry.adminModification ? (
-                    <AdminModificationNotice modification={entry.adminModification} compact t={t} />
-                  ) : null}
-                  {warnings.length ? (
-                    <div className="mt-2 flex flex-wrap gap-2">
-                      {warnings.map((warning) => (
-                        <span
-                          key={warning}
-                          className="inline-flex items-center gap-1 text-xs font-medium text-warning"
-                        >
-                          <AlertTriangle className="size-3.5" aria-hidden="true" />
-                          {warning}
-                        </span>
-                      ))}
-                    </div>
-                  ) : null}
-                </div>
-
-                <div className="flex items-center gap-1 sm:justify-end">
-                  <button
-                    type="button"
-                    disabled={entry.locked || isPending}
-                    className="grid size-9 place-items-center rounded-[var(--radius-sm)] text-muted-foreground transition hover:bg-secondary hover:text-accent disabled:cursor-not-allowed disabled:opacity-40"
-                    aria-label={t("actions.editEntry")}
-                    onClick={() => onEditEntry(entry)}
-                  >
-                    <Pencil className="size-4" aria-hidden="true" />
-                  </button>
-                  <button
-                    type="button"
-                    disabled={entry.locked || isPending}
-                    className="grid size-9 place-items-center rounded-[var(--radius-sm)] text-muted-foreground transition hover:bg-destructive-soft hover:text-destructive disabled:cursor-not-allowed disabled:opacity-40"
-                    aria-label={t("actions.deleteEntry")}
-                    onClick={() => onDeleteEntry(entry)}
-                  >
-                    <Trash2 className="size-4" aria-hidden="true" />
-                  </button>
-                </div>
-              </div>
-            );
-          })
-        ) : (
-          <div className="px-6 py-14 text-center">
-            <div className="mx-auto grid size-12 place-items-center rounded-full bg-secondary text-muted-foreground">
-              <Clock3 className="size-6" aria-hidden="true" />
-            </div>
-            <h2 className="mt-4 text-base font-semibold">{t("day.emptyTitle")}</h2>
-            <p className="mx-auto mt-2 max-w-sm text-sm leading-6 text-muted-foreground">
-              {t("day.emptyDescription")}
-            </p>
-          </div>
-        )}
-      </div>
-
-      <div>
-        <button
-          type="button"
-          disabled={isPending}
-          className="inline-flex items-center gap-2 rounded-[var(--radius-md)] border border-dashed border-accent/45 bg-card px-4 py-2.5 text-sm font-semibold text-accent transition hover:bg-accent-soft disabled:cursor-not-allowed disabled:opacity-50"
-          onClick={() => onAddEntry(day.isoDate)}
-        >
-          <Plus className="size-4" aria-hidden="true" />
-          {t("actions.addEntry")}
-        </button>
-      </div>
-    </div>
-  );
-}
-
-/**
- * The running timer, in full size, on the page where time gets tracked.
- *
- * The header pill covers every other route; this exists because `/time` is where you want the
- * elapsed reading big enough to glance at and the stop button where your hand already is. It has no
- * idle state any more — starting a timer is the `New timer` overlay.
- */
-function RunningTimerCard({
-  disabled,
-  runningTimer,
-  onStop,
-  t,
-}: {
-  disabled: boolean;
-  runningTimer: NonNullable<TimeGridWeek["runningTimer"]>;
-  onStop: () => void;
-  t: TimeTrackingTranslator;
-}) {
-  const elapsed = useElapsedLabel(runningTimer.startedAt);
-
-  return (
-    <div className="flex flex-col gap-3 rounded-[var(--radius-lg)] border border-accent-line bg-accent-soft p-4 sm:flex-row sm:items-center">
-      <span className="relative flex size-3 shrink-0">
-        <span className="absolute inline-flex size-full animate-ping rounded-full bg-accent opacity-45" />
-        <span className="relative inline-flex size-3 rounded-full bg-accent" />
-      </span>
-      <div className="min-w-0 flex-1">
-        <p className="truncate text-sm font-semibold text-foreground">
-          {runningTimer.description || t("timer.trackedWithTimer")}
-        </p>
-        <p className="mt-1 flex items-center gap-2 text-sm text-muted-foreground">
-          <span
-            className="size-2 rounded-full"
-            style={{ backgroundColor: runningTimer.projectColor }}
-            aria-hidden="true"
-          />
-          {runningTimer.projectName}
-        </p>
-      </div>
-      <span className="text-2xl font-semibold text-accent">{elapsed}</span>
-      <button
-        type="button"
-        disabled={disabled}
-        className="inline-flex items-center justify-center gap-2 rounded-[var(--radius-md)] bg-destructive px-4 py-2.5 text-sm font-semibold text-destructive-foreground transition hover:bg-destructive/90 disabled:cursor-not-allowed disabled:opacity-50"
-        onClick={onStop}
-      >
-        <Square className="size-3.5 fill-current" aria-hidden="true" />
-        {t("timer.stop")}
-      </button>
-    </div>
-  );
-}
-
-type EntryModalProps = {
-  state: NonNullable<EntryModalState>;
-  week: TimeGridWeek;
-  projects: TimeGridAssignedProject[];
-  onClose: () => void;
-  onDone: (result: TimeTrackingActionState) => void;
-  t: TimeTrackingTranslator;
-};
-
-function EntryModal({ state, week, projects, onClose, onDone, t }: EntryModalProps) {
-  const locale = useLocale();
-  const { formatMinutesForInput, formatMinutesWithUnit } = useDurationFormatting();
-  const pickerLabels = usePickerLabels();
-  const [isPending, startTransition] = useTransition();
-  const initialProjectId = state.mode === "edit" ? state.entry.projectId : state.projectId;
-  const initialLocalDate = state.mode === "edit" ? state.entry.localDate : state.localDate;
-  const initialDuration =
-    state.mode === "edit" ? state.entry.durationMinutes : state.durationMinutes;
-  const initialTimingMode: TimeEntryTimingMode =
-    state.mode === "edit" && state.entry.startTime && state.entry.endTime
-      ? "INTERVAL"
-      : state.mode === "create" && state.timingMode
-        ? state.timingMode
-        : "DURATION";
-  const initialDurationText =
-    state.mode === "create" && state.durationText
-      ? state.durationText
-      : formatMinutesForInput(initialDuration) || "1";
-  const [projectId, setProjectId] = useState(initialProjectId);
-  const [localDate, setLocalDate] = useState(initialLocalDate);
-  const [timingMode, setTimingMode] = useState<TimeEntryTimingMode>(initialTimingMode);
-  const [durationText, setDurationText] = useState(initialDurationText);
-  const [startTime, setStartTime] = useState(
-    state.mode === "edit" ? (state.entry.startTime ?? "09:00") : (state.startTime ?? "09:00"),
-  );
-  const [endTime, setEndTime] = useState(
-    state.mode === "edit" ? (state.entry.endTime ?? "10:00") : (state.endTime ?? "10:00"),
-  );
-  const [description, setDescription] = useState(
-    state.mode === "edit" ? state.entry.description : (state.description ?? ""),
-  );
-  const [draftStatus, setDraftStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
-  const [fieldErrors, setFieldErrors] = useState<TimeTrackingActionState["fieldErrors"]>();
-  const [submitError, setSubmitError] = useState<string | null>(null);
-  const project = projects.find((item) => item.projectId === projectId) ?? projects[0];
-  const parsedMinutes = parseDurationToMinutes(durationText);
-  const intervalMinutes = calculateIntervalMinutes(startTime, endTime);
-  const entryMinutes =
-    timingMode === "INTERVAL" ? intervalMinutes : parsedMinutes !== null ? parsedMinutes : 0;
-  const projectedDayTotalMinutes =
-    entryMinutes > 0
-      ? getDayLoggedMinutes(
-          week.entries,
-          localDate,
-          state.mode === "edit" ? state.entry.id : null,
-        ) + entryMinutes
-      : 0;
-  const durationOverHardLimit =
-    timingMode === "DURATION" && parsedMinutes !== null && parsedMinutes > DAILY_HARD_LIMIT_MINUTES;
-  const projectedDayOverHardLimit =
-    projectedDayTotalMinutes > DAILY_HARD_LIMIT_MINUTES && !durationOverHardLimit;
-  const projectedDayOverSoftLimit =
-    projectedDayTotalMinutes > DAILY_SOFT_WARNING_MINUTES && !projectedDayOverHardLimit;
-  const createDraftKey =
-    state.mode === "create" ? (state.draftKey ?? TIME_ENTRY_FORM_DRAFT_KEY) : null;
-  const createDraftSource = state.mode === "create" ? state.source : null;
-  const createDraftPrefill = state.mode === "create" ? state.prefill : undefined;
-  const ready = Boolean(
-    projectId &&
-    localDate &&
-    description.trim() &&
-    !durationOverHardLimit &&
-    !projectedDayOverHardLimit &&
-    (timingMode === "INTERVAL" ? intervalMinutes > 0 : parsedMinutes && parsedMinutes > 0),
-  );
-
-  useEffect(() => {
-    if (!createDraftKey || !createDraftSource || !description.trim()) return;
-
-    let cancelled = false;
-    const timerId = window.setTimeout(() => {
-      void saveTimeEntryDraftAction({
-        draftKey: createDraftKey,
-        payload: {
-          kind: "time-entry-form",
-          version: 1,
-          source: createDraftSource,
-          projectId,
-          localDate,
-          timingMode,
-          durationText,
-          startTime,
-          endTime,
-          description,
-          prefill: createDraftPrefill,
-        },
-      }).then((result) => {
-        if (cancelled) return;
-        setDraftStatus(result.status === "success" ? "saved" : "error");
-      });
-    }, 700);
-
-    return () => {
-      cancelled = true;
-      window.clearTimeout(timerId);
-    };
-  }, [
-    createDraftKey,
-    createDraftPrefill,
-    createDraftSource,
-    description,
-    durationText,
-    endTime,
-    localDate,
-    projectId,
-    startTime,
-    timingMode,
-  ]);
-
-  function markDraftDirty(nextDescription = description) {
-    if (!createDraftKey) return;
-    setDraftStatus(nextDescription.trim() ? "saving" : "idle");
-  }
-
-  function clearSubmitFeedback() {
-    setFieldErrors(undefined);
-    setSubmitError(null);
-  }
-
-  function saveCurrentDraft() {
-    if (!createDraftKey || !createDraftSource || !description.trim()) return;
-
-    void saveTimeEntryDraftAction({
-      draftKey: createDraftKey,
-      payload: {
-        kind: "time-entry-form",
-        version: 1,
-        source: createDraftSource,
-        projectId,
-        localDate,
-        timingMode,
-        durationText,
-        startTime,
-        endTime,
-        description,
-        prefill: createDraftPrefill,
-      },
-    });
-  }
-
-  function closeModal() {
-    saveCurrentDraft();
-    onClose();
-  }
-
-  const dialogRef = useModalFocusTrap<HTMLDivElement>(closeModal);
-
-  function submit() {
-    const durationMinutes = parseDurationToMinutes(durationText);
-
-    setSubmitError(null);
-
-    if (timingMode === "DURATION" && (!durationMinutes || durationMinutes <= 0)) {
-      setFieldErrors({ durationMinutes: t("fieldErrors.durationPositive") });
-      return;
-    }
-
-    if (timingMode === "INTERVAL" && intervalMinutes <= 0) {
-      setFieldErrors({ endTime: t("fieldErrors.endAfterStart") });
-      return;
-    }
-
-    startTransition(async () => {
-      const durationPayloadMinutes = durationMinutes ?? 0;
-      const timingPayload =
-        timingMode === "INTERVAL"
-          ? {
-              timingMode,
-              startTime,
-              endTime,
-            }
-          : {
-              timingMode,
-              durationMinutes: durationPayloadMinutes,
-              startTime: null,
-              endTime: null,
-            };
-      const result =
-        state.mode === "edit"
-          ? await updateTimeEntryAction({
-              timeEntryId: state.entry.id,
-              projectId,
-              localDate,
-              description,
-              ...timingPayload,
-            })
-          : await createTimeEntryAction({
-              projectId,
-              localDate,
-              description,
-              source: state.source,
-              ...timingPayload,
-            });
-
-      setFieldErrors(result.fieldErrors);
-      setSubmitError(result.status === "error" ? result.message : null);
-
-      if (result.status === "success" && createDraftKey) {
-        await clearTimeEntryDraftAction({ draftKey: createDraftKey });
-      }
-
-      onDone(result);
-    });
-  }
-
-  return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm"
-      onMouseDown={closeModal}
-    >
-      <div
-        ref={dialogRef}
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="time-entry-dialog-title"
-        tabIndex={-1}
-        className="max-h-[92vh] w-full max-w-[540px] overflow-y-auto rounded-[var(--radius-xl)] border border-border bg-card shadow-panel"
-        onMouseDown={(event) => event.stopPropagation()}
-      >
-        <div className="flex items-center justify-between border-b border-border px-6 py-5">
-          <h2 id="time-entry-dialog-title" className="text-xl font-semibold">
-            {state.mode === "edit" ? t("entryModal.editTitle") : t("entryModal.newTitle")}
-          </h2>
-          <button
-            type="button"
-            className="grid size-8 place-items-center rounded-full text-muted-foreground hover:bg-secondary hover:text-foreground"
-            onClick={closeModal}
-            aria-label={t("actions.close")}
-          >
-            <X className="size-5" aria-hidden="true" />
-          </button>
-        </div>
-
-        <div className="grid gap-5 px-6 py-6">
-          {state.mode === "create" && state.prefill && project ? (
-            <div className="flex items-center gap-3 rounded-[var(--radius-md)] border border-accent-line bg-accent-soft p-3">
-              <span className="grid size-9 place-items-center rounded-[var(--radius-sm)] bg-card text-accent">
-                <Grid3X3 className="size-4" aria-hidden="true" />
-              </span>
-              <div className="min-w-0 flex-1">
-                <div className="flex flex-wrap items-center gap-2 text-sm font-semibold">
-                  <span className="inline-flex items-center gap-1.5">
-                    <span
-                      className="size-2 rounded-full"
-                      style={{ backgroundColor: project.color }}
-                      aria-hidden="true"
-                    />
-                    {project.name}
-                  </span>
-                  <span className="text-muted-foreground">·</span>
-                  <span className="text-muted-foreground">{localDate}</span>
-                  <span className="rounded-[var(--radius-pill)] border border-accent-line bg-card px-2 py-0.5 font-ui text-[11px] font-bold text-accent">
-                    {formatMinutesWithUnit(state.durationMinutes)}
-                  </span>
-                </div>
-                <div className="mt-1 flex items-center gap-1.5 text-xs text-muted-foreground">
-                  <Info className="size-3.5 text-accent" aria-hidden="true" />
-                  {t("entryModal.prefillHint")}
-                </div>
-              </div>
-            </div>
-          ) : null}
-
-          {submitError ? (
-            <div
-              role="alert"
-              className="flex items-start gap-2 rounded-[var(--radius-md)] border border-destructive/35 bg-destructive-soft px-3 py-2 text-sm font-medium text-destructive"
-            >
-              <AlertTriangle className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
-              <span>{submitError}</span>
-            </div>
-          ) : null}
-
-          {state.mode === "edit" && state.entry.adminModification ? (
-            <AdminModificationNotice modification={state.entry.adminModification} t={t} />
-          ) : null}
-
-          <Field label={t("fields.description")} required error={fieldErrors?.description}>
-            <textarea
-              rows={3}
-              value={description}
-              placeholder={t("fields.descriptionPlaceholder")}
-              className={inputClassName(Boolean(fieldErrors?.description))}
-              onChange={(event) => {
-                clearSubmitFeedback();
-                setDescription(event.target.value);
-                markDraftDirty(event.target.value);
-              }}
-            />
-          </Field>
-
-          <Field label={t("fields.project")} required error={fieldErrors?.projectId}>
-            {({ id, describedBy, invalid, required }) => (
-              <Combobox
-                id={id}
-                label={t("fields.project")}
-                value={projectId}
-                aria-describedby={describedBy}
-                invalid={invalid}
-                required={required}
-                labels={pickerLabels.combobox}
-                options={projects.map((option) => ({
-                  value: option.projectId,
-                  label: option.name,
-                }))}
-                onValueChange={(value) => {
-                  clearSubmitFeedback();
-                  setProjectId(value);
-                  markDraftDirty();
-                }}
-              />
-            )}
-          </Field>
-
-          <div className="grid gap-4 sm:grid-cols-[1fr_160px]">
-            <Field label={t("fields.date")} required error={fieldErrors?.localDate}>
-              {({ id, describedBy, invalid, required }) => (
-                <DatePicker
-                  id={id}
-                  label={t("fields.date")}
-                  locale={locale}
-                  value={localDate}
-                  min={week.weekStart}
-                  max={week.weekEnd}
-                  aria-describedby={describedBy}
-                  invalid={invalid}
-                  required={required}
-                  // The action rejects an empty date, so there is nothing to clear to.
-                  clearable={false}
-                  labels={pickerLabels.date}
-                  onValueChange={(value) => {
-                    clearSubmitFeedback();
-                    setLocalDate(value ?? "");
-                    markDraftDirty();
-                  }}
-                />
-              )}
-            </Field>
-            <Field label={t("fields.mode")} required>
-              <div className="inline-flex rounded-[var(--radius-pill)] border border-border bg-secondary p-1">
-                <button
-                  type="button"
-                  className={cn(
-                    "rounded-[var(--radius-pill)] px-3 py-2 text-sm font-semibold transition",
-                    timingMode === "DURATION"
-                      ? "bg-accent text-accent-foreground"
-                      : "text-muted-foreground",
-                  )}
-                  onClick={() => {
-                    clearSubmitFeedback();
-                    setTimingMode("DURATION");
-                    markDraftDirty();
-                  }}
-                >
-                  {t("mode.duration")}
-                </button>
-                <button
-                  type="button"
-                  className={cn(
-                    "rounded-[var(--radius-pill)] px-3 py-2 text-sm font-semibold transition",
-                    timingMode === "INTERVAL"
-                      ? "bg-accent text-accent-foreground"
-                      : "text-muted-foreground",
-                  )}
-                  onClick={() => {
-                    clearSubmitFeedback();
-                    setTimingMode("INTERVAL");
-                    markDraftDirty();
-                  }}
-                >
-                  {t("mode.interval")}
-                </button>
-              </div>
-            </Field>
-          </div>
-
-          {timingMode === "DURATION" ? (
-            <Field label={t("fields.duration")} required error={fieldErrors?.durationMinutes}>
-              <input
-                inputMode="decimal"
-                value={durationText}
-                placeholder="3h 20m"
-                className={inputClassName(Boolean(fieldErrors?.durationMinutes))}
-                onChange={(event) => {
-                  clearSubmitFeedback();
-                  setDurationText(event.target.value);
-                  markDraftDirty();
-                }}
-              />
-            </Field>
-          ) : (
-            <div className="grid gap-4 sm:grid-cols-[1fr_1fr_auto] sm:items-end">
-              <Field label={t("fields.start")} required error={fieldErrors?.startTime}>
-                {({ id, describedBy, invalid, required }) => (
-                  <TimeInput
-                    id={id}
-                    value={startTime}
-                    aria-describedby={describedBy}
-                    invalid={invalid}
-                    required={required}
-                    onChange={(event) => {
-                      clearSubmitFeedback();
-                      setStartTime(event.target.value);
-                      markDraftDirty();
-                    }}
-                  />
-                )}
-              </Field>
-              <Field label={t("fields.end")} required error={fieldErrors?.endTime}>
-                {({ id, describedBy, invalid, required }) => (
-                  <TimeInput
-                    id={id}
-                    value={endTime}
-                    aria-describedby={describedBy}
-                    invalid={invalid}
-                    required={required}
-                    onChange={(event) => {
-                      clearSubmitFeedback();
-                      setEndTime(event.target.value);
-                      markDraftDirty();
-                    }}
-                  />
-                )}
-              </Field>
-              <div className="pb-2 text-xl font-semibold text-accent">
-                {formatMinutesWithUnit(intervalMinutes)}
-              </div>
-            </div>
-          )}
-
-          {durationOverHardLimit ? (
-            <div className="flex items-center gap-2 text-sm text-destructive">
-              <AlertTriangle className="size-4" aria-hidden="true" />
-              {t("warnings.durationOver24Blocked")}
-            </div>
-          ) : null}
-
-          {projectedDayOverHardLimit ? (
-            <div className="flex items-center gap-2 text-sm text-destructive">
-              <AlertTriangle className="size-4" aria-hidden="true" />
-              {t("warnings.dailyTotalOver24Projected", {
-                hours: formatMinutesWithUnit(projectedDayTotalMinutes),
-              })}
-            </div>
-          ) : null}
-
-          {projectedDayOverSoftLimit ? (
-            <div className="flex items-center gap-2 text-sm text-warning">
-              <AlertTriangle className="size-4" aria-hidden="true" />
-              {t("warnings.dayOver8Projected", {
-                hours: formatMinutesWithUnit(projectedDayTotalMinutes),
-              })}
-            </div>
-          ) : null}
-
-          {timingMode === "INTERVAL" && intervalMinutes >= 480 ? (
-            <div className="flex items-center gap-2 text-sm text-warning">
-              <AlertTriangle className="size-4" aria-hidden="true" />
-              {t("warnings.longSessionNotBlocked")}
-            </div>
-          ) : null}
-
-          <div className="flex items-center gap-2 text-xs text-muted-foreground">
-            <Info className="size-4" aria-hidden="true" />
-            {t("entryModal.requiredHint")}
-          </div>
-
-          {createDraftKey && description.trim() && draftStatus !== "idle" ? (
-            <div
-              className={cn(
-                "font-ui text-[11px] font-semibold uppercase tracking-[0.08em]",
-                draftStatus === "error" ? "text-destructive" : "text-muted-foreground",
-              )}
-              aria-live="polite"
-            >
-              {draftStatus === "saving"
-                ? t("draft.saving")
-                : draftStatus === "saved"
-                  ? t("draft.saved")
-                  : t("draft.notSaved")}
-            </div>
-          ) : null}
-        </div>
-
-        <div className="flex justify-end gap-3 border-t border-border px-6 py-4">
-          <button
-            type="button"
-            className="rounded-[var(--radius-md)] border border-border px-4 py-2 text-sm font-semibold hover:bg-secondary"
-            onClick={closeModal}
-          >
-            {t("actions.cancel")}
-          </button>
-          <button
-            type="button"
-            disabled={!ready || isPending}
-            className="inline-flex items-center gap-2 rounded-[var(--radius-md)] bg-gradient-to-br from-primary to-accent px-4 py-2 text-sm font-semibold text-accent-foreground disabled:cursor-not-allowed disabled:opacity-50"
-            onClick={submit}
-          >
-            <Check className="size-4" aria-hidden="true" />
-            {t("actions.save")}
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-type BreakdownDialogProps = {
-  day: TimeGridDay;
-  project: TimeGridAssignedProject;
-  entries: TimeGridEntry[];
-  entriesByDay: Map<string, TimeGridEntry[]>;
-  onAdd: () => void;
-  onClose: () => void;
-  onDelete: (entry: TimeGridEntry) => void;
-  onEdit: (entry: TimeGridEntry) => void;
-  t: TimeTrackingTranslator;
-};
-
-function BreakdownDialog({
-  day,
-  project,
-  entries,
-  entriesByDay,
-  onAdd,
-  onClose,
-  onDelete,
-  onEdit,
-  t,
-}: BreakdownDialogProps) {
-  const { formatMinutesWithUnit } = useDurationFormatting();
-  const total = entries.reduce((sum, entry) => sum + entry.durationMinutes, 0);
-  const dialogRef = useModalFocusTrap<HTMLDivElement>(onClose);
-
-  return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm"
-      onMouseDown={onClose}
-    >
-      <div
-        ref={dialogRef}
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="time-entry-breakdown-title"
-        tabIndex={-1}
-        className="max-h-[88vh] w-full max-w-[520px] overflow-y-auto rounded-[var(--radius-xl)] border border-border bg-card shadow-panel"
-        onMouseDown={(event) => event.stopPropagation()}
-      >
-        <div className="flex items-start justify-between border-b border-border px-6 py-5">
-          <div>
-            <div className="flex items-center gap-2 font-ui text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
-              <span
-                className="size-2 rounded-full"
-                style={{ backgroundColor: project.color }}
-                aria-hidden="true"
-              />
-              {project.name} · {day.shortLabel} {day.dayNumber}
-            </div>
-            <h2 id="time-entry-breakdown-title" className="mt-1 text-lg font-semibold">
-              {t("breakdown.entries")} · {formatMinutesWithUnit(total)}
-            </h2>
-          </div>
-          <button
-            type="button"
-            className="grid size-8 place-items-center rounded-full text-muted-foreground hover:bg-secondary hover:text-foreground"
-            onClick={onClose}
-            aria-label={t("actions.close")}
-          >
-            <X className="size-5" aria-hidden="true" />
-          </button>
-        </div>
-
-        <div className="grid gap-3 p-5">
-          {entries.length ? (
-            entries.map((entry) => {
-              const warnings = getEntryWarnings(entry, entriesByDay.get(entry.localDate) ?? [], t);
-              return (
-                <div
-                  key={entry.id}
-                  className={cn(
-                    "flex items-start gap-3 rounded-[var(--radius-md)] border bg-secondary p-3",
-                    warnings.length ? "border-warning/35" : "border-border",
-                  )}
-                >
-                  <div className="w-20 shrink-0 text-center">
-                    <div className="text-lg font-semibold">
-                      {formatMinutesWithUnit(entry.durationMinutes)}
-                    </div>
-                    <div className="font-ui text-[10px] font-semibold uppercase tracking-[0.05em] text-muted-foreground">
-                      {entry.startedAt ? t("source.timed") : t("source.hours")}
-                    </div>
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <p className="text-sm font-medium">
-                      {entry.description || t("labels.noDescription")}
-                    </p>
-                    {entry.adminModification ? (
-                      <AdminModificationNotice
-                        modification={entry.adminModification}
-                        compact
-                        t={t}
-                      />
-                    ) : null}
-                    {warnings.length ? (
-                      <div className="mt-2 flex flex-wrap gap-2">
-                        {warnings.map((warning) => (
-                          <span
-                            key={warning}
-                            className="inline-flex items-center gap-1 text-xs font-medium text-warning"
-                          >
-                            <AlertTriangle className="size-3.5" aria-hidden="true" />
-                            {warning}
-                          </span>
-                        ))}
-                      </div>
-                    ) : null}
-                  </div>
-                  <div className="flex gap-1">
-                    <button
-                      type="button"
-                      className="rounded-[var(--radius-sm)] px-2 py-1 text-xs font-semibold text-accent hover:bg-card"
-                      onClick={() => onEdit(entry)}
-                    >
-                      {t("actions.edit")}
-                    </button>
-                    <button
-                      type="button"
-                      disabled={entry.locked}
-                      className="grid size-8 place-items-center rounded-[var(--radius-sm)] text-muted-foreground hover:bg-destructive-soft hover:text-destructive disabled:cursor-not-allowed disabled:opacity-40"
-                      onClick={() => onDelete(entry)}
-                      aria-label={t("actions.deleteEntry")}
-                    >
-                      <Trash2 className="size-4" aria-hidden="true" />
-                    </button>
-                  </div>
-                </div>
-              );
-            })
-          ) : (
-            <div className="py-8 text-center text-sm text-muted-foreground">
-              {t("breakdown.noEntries")}
-            </div>
-          )}
-        </div>
-
-        <div className="flex items-center justify-between gap-3 border-t border-border px-5 py-4">
-          <span className="flex items-center gap-2 text-xs text-muted-foreground">
-            <Info className="size-4" aria-hidden="true" />
-            {t("breakdown.descriptionRequired")}
-          </span>
-          <button
-            type="button"
-            className="inline-flex items-center gap-2 rounded-[var(--radius-md)] border border-dashed border-accent/45 px-3 py-2 text-sm font-semibold text-accent hover:bg-accent-soft"
-            onClick={onAdd}
-          >
-            <Plus className="size-4" aria-hidden="true" />
-            {t("actions.addEntry")}
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function AdminModificationNotice({
-  modification,
-  compact = false,
-  t,
-}: {
-  modification: NonNullable<TimeGridEntry["adminModification"]>;
-  compact?: boolean;
-  t: TimeTrackingTranslator;
-}) {
-  const locale = useLocale();
-  const modifiedAt = new Intl.DateTimeFormat(locale, {
-    dateStyle: "medium",
-    timeStyle: "short",
-    timeZone: modification.timezone,
-  }).format(new Date(modification.modifiedAt));
-
-  return (
-    <div
-      className={cn(
-        "mt-2 flex items-start gap-2 rounded-[var(--radius-sm)] border border-accent-line bg-accent-soft text-xs leading-relaxed",
-        compact ? "px-2.5 py-2" : "px-3 py-2.5",
-      )}
-    >
-      <ShieldCheck className="mt-0.5 size-3.5 shrink-0 text-accent" aria-hidden="true" />
-      <span>
-        <span className="font-semibold text-foreground">
-          {t("adminModification.changedBy", {
-            name: modification.modifiedByName ?? t("adminModification.adminFallback"),
-            date: modifiedAt,
-          })}
-        </span>{" "}
-        <span className="text-muted-foreground">
-          {t("adminModification.reason", { reason: modification.reason })}
-        </span>
-      </span>
-    </div>
-  );
-}
-
-type TimeFieldRenderProps = {
-  id: string;
-  describedBy?: string;
-  invalid: boolean;
-  required?: boolean;
-};
-
-const timeFieldLabelClassName =
-  "font-ui text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground";
-
-/**
- * The entry modal's own field wrapper, kept local because its label is smaller and
- * uppercase compared with `src/components/ui/Field`.
- *
- * Takes either a plain node — wrapped in a `<label>`, which implicitly labels a single
- * input — or a render prop, which is what the popover-based controls need: a `<label>`
- * cannot wrap a button trigger, so those get an explicit `htmlFor` instead.
- */
-function Field({
-  label,
-  required,
-  error,
-  children,
-}: {
-  label: string;
-  required?: boolean;
-  error?: string;
-  children: ReactNode | ((field: TimeFieldRenderProps) => ReactNode);
-}) {
-  const generatedId = useId();
-
-  if (typeof children !== "function") {
-    return (
-      <label className="grid gap-2">
-        <span className={timeFieldLabelClassName}>
-          {label} {required ? <span className="text-destructive">*</span> : null}
-        </span>
-        {children}
-        {error ? <span className="text-xs font-medium text-destructive">{error}</span> : null}
-      </label>
-    );
-  }
-
-  const controlId = `time-field-${generatedId}`;
-  const errorId = error ? `${controlId}-error` : undefined;
-
-  return (
-    <div className="grid gap-2">
-      <label htmlFor={controlId} className={timeFieldLabelClassName}>
-        {label} {required ? <span className="text-destructive">*</span> : null}
-      </label>
-      {children({ id: controlId, describedBy: errorId, invalid: Boolean(error), required })}
-      {error ? (
-        <span id={errorId} className="text-xs font-medium text-destructive">
-          {error}
-        </span>
-      ) : null}
-    </div>
-  );
-}
-
-function inputClassName(error: boolean) {
-  return cn(
-    "w-full rounded-[var(--radius-md)] border bg-card px-3 py-2.5 text-sm text-foreground outline-none transition",
-    focusChromeClassName,
-    error ? "border-destructive" : "border-border",
-  );
-}
-
-function WarningTip({ text }: { text: string }) {
-  return (
-    <span className="absolute bottom-1 right-1 text-warning" title={text}>
-      <AlertTriangle className="size-3.5" aria-hidden="true" />
-    </span>
-  );
-}
-
-type CellEntries = {
-  entries: TimeGridEntry[];
-  totalMinutes: number;
-  locked: boolean;
-  needsDescription: boolean;
-};
-
-function groupEntriesByCell(entries: TimeGridEntry[]) {
-  const map = new Map<string, TimeGridEntry[]>();
-
-  for (const entry of entries) {
-    const key = cellKey(entry.projectId, entry.localDate);
-    map.set(key, [...(map.get(key) ?? []), entry]);
-  }
-
-  return map;
-}
-
-function groupEntriesByDay(entries: TimeGridEntry[]) {
-  const map = new Map<string, TimeGridEntry[]>();
-
-  for (const entry of entries) {
-    map.set(entry.localDate, [...(map.get(entry.localDate) ?? []), entry]);
-  }
-
-  return map;
-}
-
-function getDayLoggedMinutes(
-  entries: TimeGridEntry[],
-  localDate: string,
-  excludingEntryId: string | null,
-) {
-  return entries.reduce((sum, entry) => {
-    if (entry.localDate !== localDate || entry.id === excludingEntryId) return sum;
-    return sum + entry.durationMinutes;
-  }, 0);
-}
-
-function getCellEntries(
-  map: Map<string, TimeGridEntry[]>,
-  projectId: string,
-  localDate: string,
-): CellEntries {
-  const entries = map.get(cellKey(projectId, localDate)) ?? [];
-
-  return {
-    entries,
-    totalMinutes: entries.reduce((sum, entry) => sum + entry.durationMinutes, 0),
-    locked: entries.some((entry) => entry.locked),
-    needsDescription: entries.some((entry) => !entry.description.trim()),
-  };
-}
-
-function cellKey(projectId: string, localDate: string) {
-  return `${projectId}:${localDate}`;
-}
-
-function isSimpleDurationEntry(entry: TimeGridEntry | undefined): entry is TimeGridEntry {
-  return Boolean(entry && !entry.startedAt && !entry.endedAt);
-}
-
-function isProjectAssignableOnDate(project: TimeGridAssignedProject, localDate: string) {
-  if (localDate < project.validFrom) return false;
-  if (project.validTo && localDate > project.validTo) return false;
-  if (project.projectStartsOn && localDate < project.projectStartsOn) return false;
-  if (project.projectEndsOn && localDate > project.projectEndsOn) return false;
-  return true;
-}
-
-function shiftIsoDate(isoDate: string, days: number) {
-  const date = new Date(`${isoDate}T00:00:00.000Z`);
-  if (Number.isNaN(date.getTime())) return isoDate;
-
-  date.setUTCDate(date.getUTCDate() + days);
-  return date.toISOString().slice(0, 10);
-}
-
-function getCellWarnings(
-  input: {
-    day: TimeGridDay;
-    dayTotalMinutes: number;
-    entriesByDay: Map<string, TimeGridEntry[]>;
-    cell: CellEntries;
-  },
-  t: TimeTrackingTranslator,
-) {
-  const warnings: string[] = [];
-
-  if (input.cell.needsDescription) warnings.push(t("warnings.descriptionNeededSentence"));
-  if (input.day.state === "future" && input.cell.totalMinutes > 0) {
-    warnings.push(t("warnings.futureDay"));
-  }
-  if (input.dayTotalMinutes > DAILY_SOFT_WARNING_MINUTES) {
-    warnings.push(t("warnings.dailyTotalOver8"));
-  }
-  if (hasOverlaps(input.entriesByDay.get(input.day.isoDate) ?? [])) {
-    warnings.push(t("warnings.dayHasOverlaps"));
-  }
-
-  return warnings;
-}
-
-function getEntryWarnings(
-  entry: TimeGridEntry,
-  dayEntries: TimeGridEntry[],
-  t: TimeTrackingTranslator,
-) {
-  const warnings: string[] = [];
-
-  if (!entry.description.trim()) warnings.push(t("warnings.descriptionNeeded"));
-  if (entry.durationMinutes >= 480) warnings.push(t("warnings.longContinuousSession"));
-  if (entryHasOverlap(entry, dayEntries)) warnings.push(t("warnings.overlapsAnotherEntry"));
-
-  return warnings;
-}
-
-function formatEntrySource(source: TimeGridEntry["source"], t: TimeTrackingTranslator) {
-  if (source === "FORM") return t("source.form");
-  if (source === "TIMER") return t("source.timer");
-  return t("source.grid");
-}
-
-function hasOverlaps(entries: TimeGridEntry[]) {
-  return entries.some((entry) => entryHasOverlap(entry, entries));
-}
-
-function entryHasOverlap(entry: TimeGridEntry, entries: TimeGridEntry[]) {
-  if (!entry.startedAt || !entry.endedAt) return false;
-  const start = Date.parse(entry.startedAt);
-  const end = Date.parse(entry.endedAt);
-
-  if (Number.isNaN(start) || Number.isNaN(end)) return false;
-
-  return entries.some((other) => {
-    if (other.id === entry.id || !other.startedAt || !other.endedAt) return false;
-    const otherStart = Date.parse(other.startedAt);
-    const otherEnd = Date.parse(other.endedAt);
-    if (Number.isNaN(otherStart) || Number.isNaN(otherEnd)) return false;
-    return start < otherEnd && otherStart < end;
-  });
-}
-
-function calculateIntervalMinutes(startTime: string, endTime: string) {
-  const start = parseTimeToMinutes(startTime);
-  const end = parseTimeToMinutes(endTime);
-
-  if (start === null || end === null) return 0;
-
-  const minutes = end > start ? end - start : end + DAILY_HARD_LIMIT_MINUTES - start;
-  return minutes > 0 ? minutes : 0;
-}
-
-function parseTimeToMinutes(value: string) {
-  if (!/^\d{2}:\d{2}$/.test(value)) return null;
-
-  const [hourValue, minuteValue] = value.split(":");
-  const hour = Number.parseInt(hourValue ?? "", 10);
-  const minute = Number.parseInt(minuteValue ?? "", 10);
-
-  if (
-    Number.isNaN(hour) ||
-    Number.isNaN(minute) ||
-    hour < 0 ||
-    hour > 23 ||
-    minute < 0 ||
-    minute > 59
-  ) {
-    return null;
-  }
-
-  return hour * 60 + minute;
-}
-
-function useModalFocusTrap<T extends HTMLElement>(onClose: () => void) {
-  const containerRef = useRef<T>(null);
-  const onCloseRef = useRef(onClose);
-
-  useEffect(() => {
-    onCloseRef.current = onClose;
-  }, [onClose]);
-
-  useEffect(() => {
-    const previouslyFocused =
-      document.activeElement instanceof HTMLElement ? document.activeElement : null;
-    const container = containerRef.current;
-    const focusableElements = getFocusableElements(container);
-
-    (focusableElements[0] ?? container)?.focus();
-
-    function handleKeyDown(event: KeyboardEvent) {
-      if (event.key === "Escape") {
-        event.preventDefault();
-        onCloseRef.current();
-        return;
-      }
-
-      if (event.key !== "Tab" || focusableElements.length === 0) return;
-
-      const firstElement = focusableElements[0];
-      const lastElement = focusableElements[focusableElements.length - 1];
-
-      if (!event.shiftKey && document.activeElement === lastElement) {
-        event.preventDefault();
-        firstElement.focus();
-      }
-
-      if (event.shiftKey && document.activeElement === firstElement) {
-        event.preventDefault();
-        lastElement.focus();
-      }
-    }
-
-    document.addEventListener("keydown", handleKeyDown);
-
-    return () => {
-      document.removeEventListener("keydown", handleKeyDown);
-      previouslyFocused?.focus();
-    };
-  }, []);
-
-  return containerRef;
-}
-
-function getFocusableElements(container: HTMLElement | null) {
-  if (!container) return [];
-
-  return Array.from(
-    container.querySelectorAll<HTMLElement>(
-      [
-        "a[href]",
-        "button:not([disabled])",
-        "input:not([disabled])",
-        "select:not([disabled])",
-        "textarea:not([disabled])",
-        "[tabindex]:not([tabindex='-1'])",
-      ].join(","),
-    ),
-  ).filter((element) => element.offsetParent !== null);
-}
-
-function formatDraftTimestamp(value: string) {
-  return value.replace("T", " ").slice(0, 16);
-}
-
-function useDurationFormatting() {
-  const locale = useLocale();
-  const durationDisplayFormat = useContext(DurationDisplayContext);
-  const formatMinutesAsHours = useCallback(
-    (minutes: number) => formatDurationHours(minutes, locale, durationDisplayFormat),
-    [durationDisplayFormat, locale],
-  );
-  const formatMinutesWithUnit = useCallback(
-    (minutes: number) => formatDurationHoursWithUnit(minutes, locale, durationDisplayFormat),
-    [durationDisplayFormat, locale],
-  );
-  const formatMinutesForInput = useCallback(
-    (minutes: number) => formatDurationForInput(minutes, durationDisplayFormat),
-    [durationDisplayFormat],
-  );
-
-  return { formatMinutesAsHours, formatMinutesForInput, formatMinutesWithUnit };
 }

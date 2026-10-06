@@ -24,7 +24,7 @@ export const Default: Story = {
   },
   play: async ({ canvas, userEvent }) => {
     await expect(canvas.getByRole("navigation", { name: /pagination/i })).toBeInTheDocument();
-    await userEvent.click(canvas.getByRole("button", { name: /go to page 3/i }));
+    await userEvent.click(canvas.getByRole("button", { name: /^next page$/i }));
     await expect(canvas.getByText("3")).toBeVisible();
   },
 };
@@ -36,7 +36,7 @@ export const FirstPage: Story = {
     totalItems: 124,
   },
   play: async ({ canvas }) => {
-    await expect(canvas.getByRole("button", { name: /go to page 1/i })).toBeDisabled();
+    await expect(canvas.getByRole("button", { name: /^previous page$/i })).toBeDisabled();
   },
 };
 
@@ -53,7 +53,20 @@ export const WithPageNumbers: Story = {
       "aria-current",
       "page",
     );
-    await userEvent.click(canvas.getAllByRole("button", { name: /go to page 6/i })[0]);
+
+    /**
+     * The regression this story used to hide. The step controls were labelled after the page they
+     * lead to — "Go to page 4" and "Go to page 6" — which is exactly what the numbered buttons are
+     * called, so each of those names matched two buttons and the story had to reach past the
+     * ambiguity with `getAllByRole(...)[0]`. Both names now resolve to one element, and the step
+     * controls are named for what they do.
+     */
+    await expect(canvas.getAllByRole("button", { name: /go to page 6/i })).toHaveLength(1);
+    await expect(canvas.getAllByRole("button", { name: /go to page 4/i })).toHaveLength(1);
+    await expect(canvas.getByRole("button", { name: /^next page$/i })).toBeInTheDocument();
+    await expect(canvas.getByRole("button", { name: /^previous page$/i })).toBeInTheDocument();
+
+    await userEvent.click(canvas.getByRole("button", { name: /go to page 6/i }));
     await expect(canvas.getByRole("button", { name: /current page, page 6/i })).toHaveAttribute(
       "aria-current",
       "page",

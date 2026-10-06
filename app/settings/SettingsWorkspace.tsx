@@ -1,6 +1,6 @@
 "use client";
 
-import { Bell, LockKeyhole, ShieldCheck, SlidersHorizontal, User } from "lucide-react";
+import { Bell, LockKeyhole, Plug, ShieldCheck, SlidersHorizontal, User } from "lucide-react";
 import { useState } from "react";
 import { useTranslations } from "next-intl";
 
@@ -16,11 +16,12 @@ import {
 import { cn } from "@/src/lib/utils";
 import type { DurationDisplayFormat } from "@/src/lib/formatting";
 import type { NotificationConfigurationValue } from "@/src/server/notifications";
+import { ConnectedAppsClient, type ConnectedAppView } from "./ConnectedAppsClient";
 import { NotificationSettingsClient } from "./NotificationSettingsClient";
 import { ProfilePreferencesClient } from "./ProfilePreferencesClient";
 import { SecuritySettingsClient, type SecuritySettingsClientProps } from "./SecuritySettingsClient";
 
-type SettingsSection = "profile" | "security" | "preferences" | "notifications";
+type SettingsSection = "profile" | "security" | "connectedApps" | "preferences" | "notifications";
 
 export type SettingsWorkspaceProps = {
   defaultSection?: SettingsSection;
@@ -35,6 +36,7 @@ export type SettingsWorkspaceProps = {
   };
   timezoneOptions: readonly { value: string; label: string }[];
   security: SecuritySettingsClientProps;
+  connectedApps: readonly ConnectedAppView[];
   notificationConfiguration?: NotificationConfigurationValue;
 };
 
@@ -43,6 +45,7 @@ export function SettingsWorkspace({
   member,
   timezoneOptions,
   security,
+  connectedApps,
   notificationConfiguration,
 }: SettingsWorkspaceProps) {
   const t = useTranslations("Settings");
@@ -50,6 +53,7 @@ export function SettingsWorkspace({
   const sections = [
     { id: "profile" as const, icon: User, label: t("sections.profile") },
     { id: "security" as const, icon: ShieldCheck, label: t("sections.security") },
+    { id: "connectedApps" as const, icon: Plug, label: t("sections.connectedApps") },
     { id: "preferences" as const, icon: SlidersHorizontal, label: t("sections.preferences") },
     ...(notificationConfiguration
       ? [{ id: "notifications" as const, icon: Bell, label: t("sections.notifications") }]
@@ -109,6 +113,15 @@ export function SettingsWorkspace({
           unframed
         >
           <SecuritySettingsClient {...security} />
+        </SettingsPanel>
+        <SettingsPanel
+          id="connectedApps"
+          active={activeSection === "connectedApps"}
+          title={t("connectedApps.title")}
+          description={t("connectedApps.description")}
+          compact
+        >
+          <ConnectedAppsClient connections={connectedApps} />
         </SettingsPanel>
         <SettingsPanel
           id="preferences"

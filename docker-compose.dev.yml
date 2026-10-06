@@ -18,8 +18,10 @@ services:
       # (PGDATA=/var/lib/postgresql/18/docker), so the mount goes one level up.
       - sheet_happens_dev_db:/var/lib/postgresql
 
+  # `pgsty/*` because MinIO withdrew its own images (`minio/minio` and `minio/mc` no longer exist
+  # on Docker Hub or quay.io). Same server, same flags; the same release CI starts.
   minio:
-    image: minio/minio:latest
+    image: pgsty/minio:RELEASE.2026-08-04T00-00-00Z
     container_name: sheet-happens-dev-minio
     command: server /data --console-address ":9001"
     environment:
@@ -32,7 +34,7 @@ services:
       - sheet_happens_dev_minio:/data
 
   minio-init:
-    image: minio/mc:latest
+    image: pgsty/mc:RELEASE.2026-09-16T00-00-00Z
     depends_on:
       - minio
     entrypoint:

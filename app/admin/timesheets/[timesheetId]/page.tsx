@@ -237,6 +237,8 @@ function ProjectSnapshot({
               <ProjectSnapshotCard
                 key={project.projectId}
                 project={project}
+                timesheetId={review.id}
+                periodStart={review.periodStart}
                 locale={locale}
                 t={t}
               />
@@ -254,13 +256,19 @@ function ProjectSnapshot({
 
 function ProjectSnapshotCard({
   project,
+  timesheetId,
+  periodStart,
   locale,
   t,
 }: {
   project: AdminTimesheetReviewProject;
+  timesheetId: string;
+  periodStart: string;
   locale: string;
   t: AdminTimesheetsTranslator;
 }) {
+  const declared = project.trackingMode === "DECLARED";
+
   return (
     <div className="overflow-hidden rounded-[var(--radius-lg)] border border-border">
       <div className="flex flex-wrap items-start justify-between gap-3 border-b border-border bg-background/45 px-4 py-3">
@@ -271,14 +279,25 @@ function ProjectSnapshotCard({
             aria-hidden="true"
           />
           <div>
-            <h3 className="font-ui text-sm font-semibold text-foreground">{project.projectName}</h3>
+            <div className="flex flex-wrap items-center gap-2">
+              <h3 className="font-ui text-sm font-semibold text-foreground">
+                {project.projectName}
+              </h3>
+              {/* §4 item 6: without this, a declared project's entry count of 1 reads as "this
+                  person logged one entry all month" rather than "these hours came from outside". */}
+              {declared ? <Badge tone="info">{t("snapshot.declared")}</Badge> : null}
+            </div>
             <p className="text-xs text-muted-foreground">
               {/* The project's total amount sits right beside this caption, so hours are
                   pinned decimal (formatDecimalHours) regardless of the admin's preference. */}
-              {t("snapshot.projectSummary", {
-                hours: formatDecimalHours(project.totalMinutes, locale),
-                entries: project.entryCount,
-              })}
+              {declared
+                ? t("snapshot.declaredSummary", {
+                    hours: formatDecimalHours(project.totalMinutes, locale),
+                  })
+                : t("snapshot.projectSummary", {
+                    hours: formatDecimalHours(project.totalMinutes, locale),
+                    entries: project.entryCount,
+                  })}
             </p>
           </div>
         </div>
@@ -286,6 +305,10 @@ function ProjectSnapshotCard({
           {formatMoney(project.totalAmount, project.currencyCode, locale)}
         </p>
       </div>
+
+      {declared ? (
+        <DeclaredProofRow project={project} timesheetId={timesheetId} locale={locale} t={t} />
+      ) : null}
       <div className="overflow-x-auto">
         <table className="w-full min-w-[52rem] border-collapse">
           <caption className="sr-only">{t("snapshot.lineCaption")}</caption>
@@ -300,7 +323,14 @@ function ProjectSnapshotCard({
           </thead>
           <tbody>
             {project.lines.map((line) => (
-              <SnapshotLineRow key={line.id} line={line} locale={locale} t={t} />
+              <SnapshotLineRow
+                key={line.id}
+                line={line}
+                declared={declared}
+                periodStart={periodStart}
+                locale={locale}
+                t={t}
+              />
             ))}
           </tbody>
         </table>
@@ -309,19 +339,79 @@ function ProjectSnapshotCard({
   );
 }
 
+/**
+ * The proof, or the fact that there is none.
+ *
+ * The same viewing path as the invoice beside it — a route on this page that streams the document
+ * — so a reviewer compares the hours, the proof and the invoice without leaving the screen. A
+ * missing proof is stated rather than left blank: for a contractor it should be impossible,
+ * because submission is blocked on it, so seeing one means something is wrong.
+ */
+function DeclaredProofRow({
+  project,
+  timesheetId,
+  locale,
+  t,
+}: {
+  project: AdminTimesheetReviewProject;
+  timesheetId: string;
+  locale: string;
+  t: AdminTimesheetsTranslator;
+}) {
+  const proof = project.declaredProof;
+
+  if (!proof) {
+    return (
+      <p className="flex items-center gap-2 border-b border-border bg-warning-soft px-4 py-2.5 text-sm text-warning">
+        <AlertTriangle className="size-4 shrink-0" aria-hidden="true" />
+        {t("snapshot.proofMissing")}
+      </p>
+    );
+  }
+
+  const href = `/admin/timesheets/${timesheetId}/hours-proof/${proof.declarationId}` as Route;
+
+  return (
+    <div className="flex flex-wrap items-center gap-3 border-b border-border bg-background/25 px-4 py-2.5 text-sm">
+      <FileText className="size-4 shrink-0 text-destructive" aria-hidden="true" />
+      <span className="min-w-0 flex-1 truncate font-medium text-foreground">
+        {proof.originalFilename}
+      </span>
+      <span className="text-xs text-muted-foreground">
+        {formatBytes(proof.byteSize, locale)} · {formatTimestamp(proof.uploadedAt, locale)}
+      </span>
+      <Button asChild variant="ghost" size="sm">
+        <Link href={href} target="_blank">
+          <Download className="size-4" aria-hidden="true" />
+          {t("snapshot.openProof")}
+        </Link>
+      </Button>
+    </div>
+  );
+}
+
 function SnapshotLineRow({
   line,
+  declared,
+  periodStart,
   locale,
   t,
 }: {
   line: AdminTimesheetReviewLine;
+  declared: boolean;
+  periodStart: string;
   locale: string;
   t: AdminTimesheetsTranslator;
 }) {
   return (
     <tr className="border-b border-border last:border-b-0">
       <td className="px-4 py-3 text-sm text-muted-foreground">
-        {formatDateOnlyLabel(line.localDate, locale)}
+        {/* §4 item 6's display rule. A declared line is dated the 1st because that is what makes
+            rate resolution deterministic, and "Sep 1" would tell a reviewer the work happened that
+            day. It covers the month, so it says the month. */}
+        {declared
+          ? t("snapshot.declaredLineDate", { month: formatMonthLabel(periodStart, locale) })
+          : formatDateOnlyLabel(line.localDate, locale)}
       </td>
       <td className="px-4 py-3 text-sm text-foreground">{line.description}</td>
       <td className="px-4 py-3 font-ui text-sm font-semibold text-foreground">

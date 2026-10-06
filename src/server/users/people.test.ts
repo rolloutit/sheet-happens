@@ -16,6 +16,7 @@ const baseMember: PeopleMemberRow = {
   defaultCurrencyCode: "EUR",
   timezone: "Europe/Budapest",
   locale: "en",
+  defaultTrackingMode: "TRACKED",
   deletedAt: null,
 };
 
@@ -37,6 +38,7 @@ describe("mapMemberToPersonRow", () => {
       defaultCurrencyCode: "EUR",
       timezone: "Europe/Budapest",
       locale: "en",
+      defaultTrackingMode: "TRACKED",
       hasAuthUser: true,
     });
   });
@@ -99,7 +101,7 @@ describe("people admin filters", () => {
       }),
     ).toEqual({
       query: "alex@example.com",
-      state: "active",
+      states: ["active"],
       role: "ADMIN",
       profile: "CONTRACTOR",
       page: 3,
@@ -118,7 +120,7 @@ describe("people admin filters", () => {
       }),
     ).toEqual({
       query: "",
-      state: "",
+      states: [],
       role: "",
       profile: "",
       page: 1,
@@ -147,7 +149,7 @@ describe("people admin filters", () => {
           ],
         },
         {
-          status: "INVITED",
+          status: { in: ["INVITED"] },
           deletedAt: null,
         },
         {
@@ -156,6 +158,26 @@ describe("people admin filters", () => {
         {
           currentProfile: "EMPLOYEE",
         },
+      ],
+    });
+  });
+
+  /**
+   * The state filter takes several values, and `locked` is the awkward one: it is a
+   * soft-delete marker rather than a member status, so it cannot join the same `in`.
+   */
+  it("matches any of several states", () => {
+    expect(buildPeopleWhere(normalizePeopleFilters({ state: ["active", "invited"] }))).toEqual({
+      status: { in: ["ACTIVE", "INVITED"] },
+      deletedAt: null,
+    });
+  });
+
+  it("reads locked picked alongside a real status as either", () => {
+    expect(buildPeopleWhere(normalizePeopleFilters({ state: ["locked", "active"] }))).toEqual({
+      OR: [
+        { OR: [{ status: "DELETED" }, { deletedAt: { not: null } }] },
+        { status: { in: ["ACTIVE"] }, deletedAt: null },
       ],
     });
   });

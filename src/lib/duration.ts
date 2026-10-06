@@ -18,8 +18,19 @@ export function formatDurationForInput(
   return Number((normalizedMinutes / 60).toFixed(2)).toString();
 }
 
+/**
+ * `2h30` → `2h 30m`: the hours-then-bare-minutes shorthand every time tracker's quick field accepts.
+ * The bare tail is minutes only when it directly follows an hours token and has at most two digits,
+ * so `2h300` stays unreadable rather than silently meaning five hours.
+ */
+const hoursThenMinutesShorthand = /^(\d+(?:[.,]\d+)?)\s*(h|hr|hrs|hour|hours)\s*(\d{1,2})$/;
+
 export function parseDurationToMinutes(value: string) {
-  const normalized = value.trim().toLowerCase().replace(/\s+/g, " ");
+  const normalized = value
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, " ")
+    .replace(hoursThenMinutesShorthand, "$1h $3m");
 
   if (!normalized) return 0;
 

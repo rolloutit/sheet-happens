@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/nextjs-vite";
-import { expect, fn, screen } from "storybook/test";
+import { expect, fn, screen, waitFor } from "storybook/test";
 
 import { NotificationButton } from ".";
 
@@ -39,9 +39,17 @@ type Story = StoryObj<typeof meta>;
 export const Unread: Story = {
   play: async ({ args, canvas, userEvent }) => {
     await userEvent.click(canvas.getByRole("button", { name: /notifications/i }));
-    await expect(screen.getByRole("menu")).toBeVisible();
-    await userEvent.click(screen.getByText(/friday is missing/i));
-    await expect(args.onNotificationSelect).toHaveBeenCalledWith("missing-friday");
+    // The menu is a Radix portal: it mounts a tick after the click, so a one-shot `getBy*` can
+    // read the DOM before it lands. Clicking the `menuitem` rather than the text inside it also
+    // keeps the locator on the element that actually owns `onSelect`.
+    await expect(await screen.findByRole("menu")).toBeVisible();
+    await userEvent.click(await screen.findByRole("menuitem", { name: /friday is missing/i }));
+
+    // Selecting an unread notification awaits a PATCH to /api/notifications before it calls back,
+    // and that request has no handler in Storybook — it has to fail first. How long that takes
+    // depends on how loaded the run is, so the assertion has to retry rather than read the spy
+    // once: this passed in isolation and failed in the full suite.
+    await waitFor(() => expect(args.onNotificationSelect).toHaveBeenCalledWith("missing-friday"));
   },
 };
 
@@ -52,6 +60,6 @@ export const Empty: Story = {
   },
   play: async ({ canvas, userEvent }) => {
     await userEvent.click(canvas.getByRole("button", { name: /notifications/i }));
-    await expect(screen.getByRole("status")).toHaveTextContent(/no notifications/i);
+    await expect(await screen.findByRole("status")).toHaveTextContent(/no notifications/i);
   },
 };

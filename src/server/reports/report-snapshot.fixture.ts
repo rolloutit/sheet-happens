@@ -6,6 +6,34 @@ import type { ReportCostFreeSnapshot, ReportInternalSnapshot, ReportSnapshot } f
  * Test and development use only — nothing in the request path imports this.
  */
 
+/**
+ * A fresh object each call, not a shared constant.
+ *
+ * The factories below spread `baseSnapshot`, which copies references — so one shared
+ * `filters` would hand every snapshot the same six arrays, and a test that pushed onto one
+ * would quietly change what the others see, order-dependently.
+ */
+function emptyFilters() {
+  return {
+    projectIds: [],
+    projectNames: [],
+    projectGroupIds: [],
+    projectGroupNames: [],
+    memberIds: [],
+    memberNames: [],
+  };
+}
+
+/** Nothing declared, so nothing was omitted — the default shape a disclosure-free report has. */
+function noExclusions() {
+  return {
+    declaredHours: {
+      memberCount: 0,
+      projectCount: 0,
+    },
+  };
+}
+
 const baseSnapshot = {
   schemaVersion: 1,
   generatedAt: "2026-07-31T12:00:00.000Z",
@@ -16,14 +44,8 @@ const baseSnapshot = {
     boundary: "member_timezone",
     timezones: ["Europe/Budapest"],
   },
-  filters: {
-    projectId: null,
-    projectName: null,
-    projectGroupId: null,
-    projectGroupName: null,
-    memberId: null,
-    memberName: null,
-  },
+  filters: emptyFilters(),
+  exclusions: noExclusions(),
   summary: {
     totalMinutes: 180,
     entryCount: 1,
@@ -73,6 +95,8 @@ const baseSnapshot = {
 export function createCostFreeReportSnapshot(): ReportCostFreeSnapshot {
   return {
     ...baseSnapshot,
+    filters: emptyFilters(),
+    exclusions: noExclusions(),
     mode: "COST_FREE",
     warnings: [],
   };
@@ -81,6 +105,8 @@ export function createCostFreeReportSnapshot(): ReportCostFreeSnapshot {
 export function createInternalReportSnapshot(): ReportInternalSnapshot {
   return {
     ...baseSnapshot,
+    filters: emptyFilters(),
+    exclusions: noExclusions(),
     mode: "INTERNAL",
     summary: {
       ...baseSnapshot.summary,

@@ -61,9 +61,9 @@ export async function POST(request: Request) {
     periodEnd: filters.periodEnd,
     view: filters.view,
     mode,
-    projectId: filters.projectId,
-    projectGroupId: filters.projectGroupId,
-    memberId: filters.memberId,
+    projectIds: filters.projectIds,
+    projectGroupIds: filters.projectGroupIds,
+    memberIds: filters.memberIds,
   });
   const snapshot = applyReportLineEdits(
     sourceSnapshot,
@@ -82,6 +82,9 @@ export async function POST(request: Request) {
       title: resolveReportExportTitle(formData.get("title"), snapshot.period),
       snapshot,
       locale,
+      // The same zone the download will use: `generateReportPdfExport` takes it from the admin
+      // too, so a preview cannot show a stamp the file then contradicts.
+      timezone: admin.timezone,
       generatedAt: new Date(),
       durationDisplayFormat,
       t,

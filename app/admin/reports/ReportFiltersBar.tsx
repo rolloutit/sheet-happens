@@ -24,9 +24,9 @@ export type ReportFiltersBarProps = {
   periodStart: string;
   periodEnd: string;
   periodSummary: string;
-  projectId: string;
-  groupId: string;
-  memberId: string;
+  projectIds: readonly string[];
+  groupIds: readonly string[];
+  memberIds: readonly string[];
   projects: readonly ReportFilterOption[];
   projectGroups: readonly ReportFilterOption[];
   members: readonly ReportFilterOption[];
@@ -68,9 +68,9 @@ export function ReportFiltersBar({
   periodStart,
   periodEnd,
   periodSummary,
-  projectId,
-  groupId,
-  memberId,
+  projectIds,
+  groupIds,
+  memberIds,
   projects,
   projectGroups,
   members,
@@ -84,21 +84,21 @@ export function ReportFiltersBar({
   const scopeFilters = [
     {
       name: "project",
-      value: projectId,
+      values: projectIds,
       options: projects,
       label: t("filters.project"),
       allLabel: t("filters.projectAll"),
     },
     {
       name: "group",
-      value: groupId,
+      values: groupIds,
       options: projectGroups,
       label: t("filters.group"),
       allLabel: t("filters.groupAll"),
     },
     {
       name: "member",
-      value: memberId,
+      values: memberIds,
       options: members,
       label: t("filters.member"),
       allLabel: t("filters.memberAll"),
@@ -106,7 +106,13 @@ export function ReportFiltersBar({
   ];
 
   return (
+    /*
+      Keyed on the applied scope so the uncontrolled pickers are rebuilt whenever it changes.
+      `Clear` is a `<Link>`, so without this it would reset the URL and the report while the
+      pickers still showed the cleared projects, and the next submit would bring them back.
+    */
     <form
+      key={[projectIds, groupIds, memberIds].join("|")}
       className="rounded-[var(--radius-lg)] border border-border bg-card px-4 py-4 shadow-soft"
       action="/admin/reports"
     >
@@ -144,15 +150,18 @@ export function ReportFiltersBar({
 
         {scopeFilters.map((filter) => (
           <Combobox
+            multiple
             key={filter.name}
             id={`report-${filter.name}`}
             name={filter.name}
             label={filter.label}
+            // No "all …" option to carry: an empty selection already is that state, so the
+            // label becomes the placeholder.
             placeholder={filter.allLabel}
-            defaultValue={filter.value}
+            defaultValue={filter.values}
             labels={pickerLabels.combobox}
             className="w-full sm:w-[15rem]"
-            options={[{ value: "", label: filter.allLabel }, ...toOptions(filter.options)]}
+            options={toOptions(filter.options)}
           />
         ))}
 

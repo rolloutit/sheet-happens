@@ -42,10 +42,31 @@ export const Default: Story = {
   play: async ({ args, canvas, userEvent }) => {
     // The search chip shows only the term, so its accessible name has to name the filter.
     await userEvent.click(canvas.getByRole("button", { name: "Remove filter: Search: atlas" }));
-    await expect(args.onRemove).toHaveBeenCalledWith("q");
+    // No `value`: a single-value filter is removed whole.
+    await expect(args.onRemove).toHaveBeenCalledWith("q", undefined);
 
     await userEvent.click(canvas.getByRole("button", { name: /^clear$/i }));
     await expect(args.onClear).toHaveBeenCalled();
+  },
+};
+
+/**
+ * A multi-select filter contributes one chip per value under one id, so removing one has to
+ * say which — the id alone would take the whole filter off.
+ */
+export const MultiValueFilter: Story = {
+  args: {
+    chips: [
+      { id: "status", value: "SUBMITTED", label: "Status: Submitted" },
+      { id: "status", value: "REJECTED", label: "Status: Rejected" },
+      { id: "project", value: "project-1", label: "Project: Apollo" },
+    ],
+    summary: "Showing 1-4 of 4 timesheets",
+  },
+  play: async ({ args, canvas, userEvent }) => {
+    await userEvent.click(canvas.getByRole("button", { name: "Remove filter: Status: Rejected" }));
+
+    await expect(args.onRemove).toHaveBeenCalledWith("status", "REJECTED");
   },
 };
 

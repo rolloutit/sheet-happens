@@ -34,6 +34,14 @@ export type FormatMonthNameOptions = {
 export type FormatTimeOptions = {
   /** Pin the rendering zone. Omit to use the host zone. */
   timeZone?: string;
+  /**
+   * Name the zone the value was rendered in, so the reader cannot mistake it for their own clock.
+   *
+   * `shortOffset` — `GMT+2` — is the form Intl renders identically in both catalogues. `short`
+   * says `CEST` in Hungarian and `GMT+2` in English for the very same zone, which makes the two
+   * language versions of one document look like two different documents.
+   */
+  timeZoneName?: Intl.DateTimeFormatOptions["timeZoneName"];
 };
 
 function dateOnlyToInstant(isoDate: string) {
@@ -99,6 +107,43 @@ export function formatPeriodRange(
   return `${formatDateLabel(start, locale, options)} - ${formatDateLabel(end, locale, options)}`;
 }
 
+/**
+ * `Aug 31 – Sep 6, 2026` (EN) or `2026. aug. 31. – szept. 6.` (HU) from two `YYYY-MM-DD` strings.
+ *
+ * `formatRange` rather than two `formatDateLabel`s joined by a dash: a range formatter drops the
+ * parts the two ends share, which is what makes the week header read as one period rather than two
+ * dates, and it puts the year where the locale puts it.
+ */
+export function formatDateRangeLabel(start: string, end: string, locale: string) {
+  return (
+    new Intl.DateTimeFormat(locale, {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+      timeZone: "UTC",
+    })
+      .formatRange(dateOnlyToInstant(start), dateOnlyToInstant(end))
+      /* Node's ICU sets the dash in U+2009 THIN SPACE, Chrome's in a plain space. The label is
+         rendered on the server and hydrated in the browser, so the two have to agree byte for byte
+         or every week that crosses a month reports a hydration mismatch. */
+      .replace(/[\u2009\u202f]/g, " ")
+  );
+}
+
+/**
+ * `Monday, Aug 31, 2026` (EN) or `2026. aug. 31., hétfő` (HU) — a day as the period header names
+ * it: weekday first in English, last in Hungarian, the locale deciding.
+ */
+export function formatDayHeading(isoDate: string, locale: string) {
+  return new Intl.DateTimeFormat(locale, {
+    weekday: "long",
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+    timeZone: "UTC",
+  }).format(dateOnlyToInstant(isoDate));
+}
+
 /** `July 2026` from a `YYYY-MM-DD` string. */
 export function formatMonthLabel(isoDate: string, locale: string) {
   return new Intl.DateTimeFormat(locale, {
@@ -108,7 +153,14 @@ export function formatMonthLabel(isoDate: string, locale: string) {
   }).format(dateOnlyToInstant(isoDate));
 }
 
-/** `Jul 31, 2026, 02:00 PM` — an instant with an explicit, zero-padded time. */
+/**
+ * `Jul 31, 2026, 02:00 PM` — an instant with an explicit, zero-padded time.
+ *
+ * Unlike the date-only helpers above, an instant has no single right zone to pin, so this renders
+ * in the host's unless `timeZone` says otherwise. That is correct in a Client Component, where the
+ * host is the reader's own browser, and wrong on the server, where it is whatever the deployment
+ * happens to run in — pass `timeZone` there, and `timeZoneName` so the output says which.
+ */
 export function formatDateTime(
   value: Date | string,
   locale: string,
@@ -121,6 +173,7 @@ export function formatDateTime(
     hour: "2-digit",
     minute: "2-digit",
     ...(options.timeZone ? { timeZone: options.timeZone } : {}),
+    ...(options.timeZoneName ? { timeZoneName: options.timeZoneName } : {}),
   }).format(typeof value === "string" ? new Date(value) : value);
 }
 
@@ -136,5 +189,6 @@ export function formatTimestamp(
     dateStyle: "medium",
     timeStyle: "short",
     ...(options.timeZone ? { timeZone: options.timeZone } : {}),
+    ...(options.timeZoneName ? { timeZoneName: options.timeZoneName } : {}),
   }).format(new Date(value));
 }

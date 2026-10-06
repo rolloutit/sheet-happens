@@ -180,11 +180,165 @@ const storyCases: StoryVisualCase[] = [
     projects: ["desktop", "mobile"],
   },
   {
-    id: "sheet-daydetailpanel--default",
-    slug: "day-detail-panel-dark",
+    id: "sheet-weekagenda--typical-week",
+    slug: "week-agenda-dark",
     theme: "dark",
     locale: "en",
     projects: ["desktop"],
+  },
+  {
+    id: "sheet-weekagenda--typical-week",
+    slug: "week-agenda-light",
+    theme: "light",
+    locale: "hu",
+    projects: ["desktop"],
+  },
+  {
+    id: "sheet-weekagenda--mobile-accordion",
+    slug: "week-agenda-mobile-dark",
+    theme: "dark",
+    locale: "en",
+    projects: ["mobile"],
+  },
+  /**
+   * The redesign's chrome and its new blocks (docs/time-view-redesign.md). The scope bar and the
+   * navigator are the two rows above every `/time` view, the heat navigator is the Month scope's
+   * new top half, and the composer is the popover the column `+` opens.
+   */
+  {
+    id: "sheet-timescopebar--week-scope",
+    slug: "time-scope-bar-dark",
+    theme: "dark",
+    locale: "en",
+    projects: ["desktop"],
+  },
+  {
+    id: "sheet-timescopebar--week-scope-light",
+    slug: "time-scope-bar-light",
+    theme: "light",
+    locale: "en",
+    projects: ["desktop"],
+  },
+  {
+    id: "sheet-periodnavigator--week",
+    slug: "period-navigator-dark",
+    theme: "dark",
+    locale: "en",
+    projects: ["desktop"],
+  },
+  {
+    id: "sheet-monthheatnavigator--september",
+    slug: "month-heat-navigator-dark",
+    theme: "dark",
+    locale: "en",
+    projects: ["desktop"],
+  },
+  {
+    id: "sheet-monthheatnavigator--september-light",
+    slug: "month-heat-navigator-light",
+    theme: "light",
+    locale: "en",
+    projects: ["desktop"],
+  },
+  {
+    id: "sheet-quickentrycomposer--default",
+    slug: "quick-entry-composer-dark",
+    theme: "dark",
+    locale: "en",
+    projects: ["desktop"],
+  },
+  {
+    id: "sheet-entrycard--compact",
+    slug: "entry-card-dark",
+    theme: "dark",
+    locale: "en",
+    projects: ["desktop"],
+  },
+  {
+    id: "sheet-dayribbon--week",
+    slug: "day-ribbon-dark",
+    theme: "dark",
+    locale: "en",
+  },
+  {
+    id: "sheet-dayagenda--default",
+    slug: "day-agenda-dark",
+    theme: "dark",
+    locale: "en",
+    projects: ["desktop"],
+  },
+  /**
+   * The month level. `ForgottenProject` rather than `TrackedBand` because it carries both row
+   * states — a project with hours and a live one with none — and because `TrackedBand` has a `play`
+   * function that Storybook runs on load, which would leave a focus ring inside the baseline.
+   */
+  {
+    id: "sheet-monthoverview--forgotten-project",
+    slug: "month-overview-dark",
+    theme: "dark",
+    locale: "en",
+    projects: ["desktop"],
+  },
+  {
+    id: "sheet-monthoverview--forgotten-project",
+    slug: "month-overview-light",
+    theme: "light",
+    locale: "hu",
+    projects: ["desktop"],
+  },
+  {
+    id: "sheet-monthoverview--empty-month",
+    slug: "month-overview-empty-dark",
+    theme: "dark",
+    locale: "en",
+    projects: ["desktop"],
+  },
+  {
+    id: "sheet-monthoverview--mobile-rows",
+    slug: "month-overview-mobile-dark",
+    theme: "dark",
+    locale: "en",
+    projects: ["mobile"],
+  },
+  /**
+   * The three L4 member shapes, which is what §16 asks the baselines to cover. Hybrid is both
+   * bands with their headings; declared-only is the one case that drops both headings and the
+   * tracked band entirely; locked is the read-only form a submitted month leaves behind.
+   */
+  {
+    id: "sheet-monthoverview--hybrid-month",
+    slug: "month-overview-hybrid-dark",
+    theme: "dark",
+    locale: "en",
+    projects: ["desktop"],
+  },
+  {
+    id: "sheet-monthoverview--hybrid-month-light",
+    slug: "month-overview-hybrid-light",
+    theme: "light",
+    locale: "hu",
+    projects: ["desktop"],
+  },
+  {
+    id: "sheet-monthoverview--declared-only",
+    slug: "month-overview-declared-only-dark",
+    theme: "dark",
+    locale: "en",
+    projects: ["desktop"],
+  },
+  {
+    id: "sheet-monthoverview--declared-locked",
+    slug: "month-overview-declared-locked-dark",
+    theme: "dark",
+    locale: "en",
+    projects: ["desktop"],
+  },
+  {
+    id: "sheet-monthoverview--hybrid-month-mobile",
+    slug: "month-overview-hybrid-mobile-dark",
+    theme: "dark",
+    locale: "en",
+    projects: ["mobile"],
   },
   {
     id: "sheet-timerstartdialog--open",
@@ -264,6 +418,31 @@ const storyCases: StoryVisualCase[] = [
     projects: ["desktop"],
     prepare: async (page) => {
       await expect(page.getByText(/no projects found/i)).toBeVisible();
+    },
+  },
+  /**
+   * The suggestion list is a new panel surface with its own emphasis colour on the matched slice
+   * and its own active row, so it earns a baseline on both sides of the theme. Both stories are
+   * left open by their own `play` function, like the two controls above.
+   */
+  {
+    id: "ui-suggestinput--filtered",
+    slug: "suggest-input-filtered-dark",
+    theme: "dark",
+    locale: "en",
+    projects: ["desktop"],
+    prepare: async (page) => {
+      await expect(page.getByRole("option", { name: /code review/i })).toBeVisible();
+    },
+  },
+  {
+    id: "ui-suggestinput--zero-keystroke-light",
+    slug: "suggest-input-zero-keystroke-light",
+    theme: "light",
+    locale: "en",
+    projects: ["desktop"],
+    prepare: async (page) => {
+      await expect(page.getByRole("listbox", { name: /recent descriptions/i })).toBeVisible();
     },
   },
   {

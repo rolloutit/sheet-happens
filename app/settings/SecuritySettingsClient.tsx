@@ -359,12 +359,16 @@ export function SecuritySettingsClient({ user, passkeys, twoFactor }: SecuritySe
 
     const result = await authClient.twoFactor.enable({
       issuer: "Sheet Happens",
+      // Better Auth 1.7 made this endpoint serve email/SMS OTP too, so the response is now a union
+      // discriminated on `method`. Pinning the request keeps the authenticator-app branch explicit
+      // instead of relying on the schema default.
+      method: "totp",
       ...(user.passwordEnabled ? { password: twoFactorPassword } : {}),
     });
 
     setPendingAction(null);
 
-    if (result.error || !result.data) {
+    if (result.error || !result.data || result.data.method !== "totp") {
       setNotice({
         tone: "error",
         message: getAuthErrorMessage(result.error, t("errors.totpSetupFailed"), t),

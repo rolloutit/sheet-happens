@@ -15,7 +15,7 @@ import { Button } from "../Button";
 import { useFormReset } from "../Combobox";
 import { Popover, PopoverContent, PopoverTrigger } from "../Popover";
 import { controlTriggerClassName } from "../controlSurface";
-import type { MonthPickerProps } from "./MonthPicker.types";
+import type { MonthPickerPanelProps, MonthPickerProps } from "./MonthPicker.types";
 
 const monthsInYear = 12;
 
@@ -82,12 +82,6 @@ export function MonthPicker({
     onValueChange?.(next);
   }
 
-  function isOutOfBounds(month: string) {
-    if (min && compareDateValues(month, min) < 0) return true;
-    if (max && compareDateValues(month, max) > 0) return true;
-    return false;
-  }
-
   return (
     <div className={cn("relative", className)} {...props}>
       <Popover
@@ -123,92 +117,126 @@ export function MonthPicker({
           </button>
         </PopoverTrigger>
         <PopoverContent align="start" className={cn("w-72 p-3", contentClassName)}>
-          <div className="mb-3 flex items-center justify-between">
-            <YearStepButton
-              label={labels?.previousYear ?? "Previous year"}
-              onClick={() => setYear((current) => current - 1)}
-            >
-              <ChevronLeft className="size-4" aria-hidden="true" />
-            </YearStepButton>
-            <span aria-live="polite" className="font-ui text-sm font-semibold text-foreground">
-              {year}
-            </span>
-            <YearStepButton
-              label={labels?.nextYear ?? "Next year"}
-              onClick={() => setYear((current) => current + 1)}
-            >
-              <ChevronRight className="size-4" aria-hidden="true" />
-            </YearStepButton>
-          </div>
-
-          <div
-            role="grid"
-            aria-label={labels?.monthGrid ?? "Select month"}
-            className="grid grid-cols-3 gap-1"
-          >
-            {Array.from({ length: monthsInYear }, (_, index) => {
-              const month = monthValue(year, index);
-              const isSelected = month === currentValue;
-              const outOfBounds = isOutOfBounds(month);
-
-              return (
-                <button
-                  key={month}
-                  type="button"
-                  role="gridcell"
-                  aria-selected={isSelected}
-                  aria-current={month === currentMonth ? "date" : undefined}
-                  disabled={outOfBounds}
-                  onClick={() => {
-                    commit(month);
-                    setOpen(false);
-                  }}
-                  className={cn(
-                    "rounded-[var(--radius-md)] px-2 py-2 font-ui text-sm capitalize transition hover:bg-secondary disabled:pointer-events-none disabled:opacity-30",
-                    month === currentMonth && "border border-primary/35 text-accent",
-                    isSelected && "bg-primary text-primary-foreground hover:bg-primary",
-                  )}
-                >
-                  {formatMonthName(monthValueToDateValue(month), locale)}
-                </button>
-              );
-            })}
-          </div>
-
-          <div className="mt-3 flex justify-between gap-2 border-t border-border pt-3">
-            {clearable && !required ? (
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                onClick={() => {
-                  commit(undefined);
-                  setOpen(false);
-                }}
-              >
-                {labels?.clear ?? "Clear"}
-              </Button>
-            ) : (
-              <span />
-            )}
-            <Button
-              type="button"
-              variant="soft"
-              size="sm"
-              disabled={isOutOfBounds(currentMonth)}
-              onClick={() => {
-                commit(currentMonth);
-                setOpen(false);
-              }}
-            >
-              {labels?.thisMonth ?? "This month"}
-            </Button>
-          </div>
+          <MonthPickerPanel
+            value={currentValue || undefined}
+            locale={locale}
+            min={min}
+            max={max}
+            labels={labels}
+            clearable={clearable && !required}
+            initialYear={year}
+            onSelect={(month) => {
+              commit(month);
+              setOpen(false);
+            }}
+          />
         </PopoverContent>
       </Popover>
 
       {name ? <input type="hidden" name={name} form={form} value={currentValue} readOnly /> : null}
     </div>
+  );
+}
+
+/**
+ * The month grid alone — the year stepper, twelve cells, and the clear / this-month footer —
+ * without the trigger. `MonthPicker` renders it inside its own popover; the `/time` period header
+ * renders it under a label that already names the period, where the picker's form-control trigger
+ * would say the same thing twice (the Notion Calendar rule: a date picker changes the date, never
+ * the view). `initialYear` is which year opens; a `value` outside it is still selectable by
+ * stepping.
+ */
+export function MonthPickerPanel({
+  value,
+  locale,
+  min,
+  max,
+  labels,
+  clearable = true,
+  initialYear,
+  onSelect,
+}: MonthPickerPanelProps) {
+  const currentMonth = todayDateValue().slice(0, 7);
+  const [year, setYear] = useState(
+    () => initialYear ?? yearOf(value, Number.parseInt(currentMonth.slice(0, 4), 10)),
+  );
+
+  function isOutOfBounds(month: string) {
+    if (min && compareDateValues(month, min) < 0) return true;
+    if (max && compareDateValues(month, max) > 0) return true;
+    return false;
+  }
+
+  return (
+    <>
+      <div className="mb-3 flex items-center justify-between">
+        <YearStepButton
+          label={labels?.previousYear ?? "Previous year"}
+          onClick={() => setYear((current) => current - 1)}
+        >
+          <ChevronLeft className="size-4" aria-hidden="true" />
+        </YearStepButton>
+        <span aria-live="polite" className="font-ui text-sm font-semibold text-foreground">
+          {year}
+        </span>
+        <YearStepButton
+          label={labels?.nextYear ?? "Next year"}
+          onClick={() => setYear((current) => current + 1)}
+        >
+          <ChevronRight className="size-4" aria-hidden="true" />
+        </YearStepButton>
+      </div>
+
+      <div
+        role="grid"
+        aria-label={labels?.monthGrid ?? "Select month"}
+        className="grid grid-cols-3 gap-1"
+      >
+        {Array.from({ length: monthsInYear }, (_, index) => {
+          const month = monthValue(year, index);
+          const isSelected = month === value;
+          const outOfBounds = isOutOfBounds(month);
+
+          return (
+            <button
+              key={month}
+              type="button"
+              role="gridcell"
+              aria-selected={isSelected}
+              aria-current={month === currentMonth ? "date" : undefined}
+              disabled={outOfBounds}
+              onClick={() => onSelect(month)}
+              className={cn(
+                "rounded-[var(--radius-md)] px-2 py-2 font-ui text-sm capitalize transition hover:bg-secondary disabled:pointer-events-none disabled:opacity-30",
+                month === currentMonth && "border border-primary/35 text-accent",
+                isSelected && "bg-primary text-primary-foreground hover:bg-primary",
+              )}
+            >
+              {formatMonthName(monthValueToDateValue(month), locale)}
+            </button>
+          );
+        })}
+      </div>
+
+      <div className="mt-3 flex justify-between gap-2 border-t border-border pt-3">
+        {clearable ? (
+          <Button type="button" variant="ghost" size="sm" onClick={() => onSelect(undefined)}>
+            {labels?.clear ?? "Clear"}
+          </Button>
+        ) : (
+          <span />
+        )}
+        <Button
+          type="button"
+          variant="soft"
+          size="sm"
+          disabled={isOutOfBounds(currentMonth)}
+          onClick={() => onSelect(currentMonth)}
+        >
+          {labels?.thisMonth ?? "This month"}
+        </Button>
+      </div>
+    </>
   );
 }
 

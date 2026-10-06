@@ -46,6 +46,7 @@ import { Input } from "@/src/components/ui/Input";
 import { Pager } from "@/src/components/ui/Pager";
 import type { MemberPreferenceOptions } from "@/src/lib/member-preferences";
 import { usePickerLabels } from "@/src/i18n/picker-labels";
+import { deleteSearchParamValue, setSearchParamList } from "@/src/lib/search-params";
 import { cn } from "@/src/lib/utils";
 import type { AdminPersonRow, PeopleListResult } from "@/src/server/users";
 import {
@@ -89,7 +90,7 @@ type FilterFormState = {
   profile: PeopleListResult["filters"]["profile"];
   query: string;
   role: PeopleListResult["filters"]["role"];
-  state: PeopleListResult["filters"]["state"];
+  states: PeopleListResult["filters"]["states"];
 };
 
 export function AdminPeopleTable({
@@ -148,7 +149,7 @@ export function AdminPeopleTable({
     const params = new URLSearchParams(searchParams.toString());
 
     setParam(params, "q", filters.query);
-    setParam(params, "state", filters.state);
+    setSearchParamList(params, "state", filters.states);
     setParam(params, "role", filters.role);
     setParam(params, "profile", filters.profile);
     params.delete("page");
@@ -166,10 +167,10 @@ export function AdminPeopleTable({
    * Takes one filter off, rather than re-applying the form. The form may hold edits the user
    * has not applied yet, and pulling a chip should not smuggle those into the URL with it.
    */
-  function removeFilter(key: PeopleFilterKey) {
+  function removeFilter(key: PeopleFilterKey, value?: string) {
     const params = new URLSearchParams(searchParams.toString());
 
-    params.delete(key);
+    deleteSearchParamValue(params, key, value);
     params.delete("page");
     setMessage(null);
 
@@ -177,7 +178,10 @@ export function AdminPeopleTable({
   }
 
   const isFiltered = Boolean(
-    result.filters.query || result.filters.state || result.filters.role || result.filters.profile,
+    result.filters.query ||
+    result.filters.states.length ||
+    result.filters.role ||
+    result.filters.profile,
   );
 
   const handleInvited = useCallback(
@@ -302,8 +306,8 @@ export function AdminPeopleTable({
           navigation: t("pager.navigation"),
           previous: t("pager.previous"),
           next: t("pager.next"),
-          previousPage: (page) => t("pager.previousPage", { page }),
-          nextPage: (page) => t("pager.nextPage", { page }),
+          previousPage: t("pager.previousPage"),
+          nextPage: t("pager.nextPage"),
           page: (page) => t("pager.page", { page }),
           currentPage: (page) => t("pager.currentPage", { page }),
           summary: (page, totalPages, totalItems) =>
@@ -363,13 +367,13 @@ function PeopleFiltersForm({
   result: PeopleListResult;
   onApply: (filters: FilterFormState) => void;
   onClear: () => void;
-  onRemove: (key: PeopleFilterKey) => void;
+  onRemove: (key: PeopleFilterKey, value?: string) => void;
 }) {
   const t = useTranslations("AdminPeople");
   const pickerLabels = usePickerLabels();
   const [filterForm, setFilterForm] = useState<FilterFormState>(() => ({
     query: result.filters.query,
-    state: result.filters.state,
+    states: result.filters.states,
     role: result.filters.role,
     profile: result.filters.profile,
   }));
@@ -382,7 +386,7 @@ function PeopleFiltersForm({
   function clearFilters() {
     setFilterForm({
       query: "",
-      state: "",
+      states: [],
       role: "",
       profile: "",
     });
@@ -403,10 +407,11 @@ function PeopleFiltersForm({
       leading: <Search className="size-3" aria-hidden="true" />,
     });
   }
-  if (result.filters.state) {
+  for (const state of result.filters.states) {
     activeFilters.push({
       id: "state",
-      label: `${t("filters.state")}: ${t(`states.${result.filters.state}`)}`,
+      value: state,
+      label: `${t("filters.state")}: ${t(`states.${state}`)}`,
     });
   }
   if (result.filters.role) {
@@ -447,20 +452,20 @@ function PeopleFiltersForm({
         </div>
         <div className="w-[calc(50%-0.25rem)] sm:w-auto sm:min-w-32 sm:max-w-64">
           <Select
+            multiple
             label={t("filters.state")}
+            // No "all states" option to carry: an empty selection already is that state, so
+            // the label becomes the placeholder.
             placeholder={t("filters.allStates")}
-            value={filterForm.state}
+            value={filterForm.states}
             labels={pickerLabels.combobox}
-            onValueChange={(value) => {
-              const state = value as FilterFormState["state"];
-
+            onValueChange={(states) => {
               setFilterForm((current) => ({
                 ...current,
-                state,
+                states: states as FilterFormState["states"],
               }));
             }}
             options={[
-              { value: "", label: t("filters.allStates") },
               { value: "active", label: t("states.active") },
               { value: "inactive", label: t("states.inactive") },
               { value: "invited", label: t("states.invited") },
@@ -537,7 +542,7 @@ function PeopleFiltersForm({
 function getFilterKey(filters: PeopleListResult["filters"]) {
   return [
     filters.query,
-    filters.state,
+    filters.states.join(","),
     filters.role,
     filters.profile,
     filters.page,

@@ -86,7 +86,7 @@ describe("payslip helpers", () => {
         pageSize: "500",
       }),
     ).toEqual({
-      employeeMemberId: "employee-1",
+      employeeMemberIds: ["employee-1"],
       month: "2026-08",
       query: "Ada",
       page: 3,
@@ -104,7 +104,7 @@ describe("payslip helpers", () => {
         pageSize: "nope",
       }),
     ).toEqual({
-      employeeMemberId: null,
+      employeeMemberIds: [],
       month: null,
       query: "",
       page: 1,

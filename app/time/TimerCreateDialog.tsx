@@ -11,10 +11,13 @@ import type { TimeGridAssignedProject } from "@/src/server/time-tracking";
 import { startRunningTimerAction } from "./actions";
 import type { TimeTrackingActionState } from "./actions.types";
 import { TIME_OVERLAY_PARAM, TIMER_OVERLAY_VALUE } from "./time-overlays";
+import type { DescriptionSuggestionsController } from "./use-description-suggestions";
 
 type TimerCreateDialogProps = {
   projects: TimeGridAssignedProject[];
   recentProjects: TimeGridAssignedProject[];
+  /** The member's own recent descriptions, scoped to whichever project the dialog has selected. */
+  suggestions: DescriptionSuggestionsController;
   onStarted: (result: TimeTrackingActionState) => void;
 };
 
@@ -26,12 +29,22 @@ type TimerCreateDialogProps = {
  * takes a plain object rather than `FormData`, so this is a `useTransition` call rather than the
  * `useActionState` template the admin create sheets use.
  */
-export function TimerCreateDialog({ projects, recentProjects, onStarted }: TimerCreateDialogProps) {
+export function TimerCreateDialog({
+  projects,
+  recentProjects,
+  suggestions,
+  onStarted,
+}: TimerCreateDialogProps) {
   const t = useTranslations("TimeTracking");
   const pickerLabels = usePickerLabels();
   const [open, setOpen] = useOverlayParam(TIME_OVERLAY_PARAM, TIMER_OVERLAY_VALUE);
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
+  /* The dialog picks a project of its own, so the suggestions follow that pick rather than the
+     page's. Recent first, matching the chips it shows above the picker. */
+  const [descriptionProjectId, setDescriptionProjectId] = useState("");
+  const selectedProjectId =
+    descriptionProjectId || recentProjects[0]?.projectId || projects[0]?.projectId || "";
 
   function handleOpenChange(next: boolean) {
     if (!next) setError(null);
@@ -51,6 +64,9 @@ export function TimerCreateDialog({ projects, recentProjects, onStarted }: Timer
 
       setError(null);
       setOpen(false);
+      // A timer's description becomes an entry's description when it stops, so it belongs in the
+      // session list straight away.
+      suggestions.remember(projectId, description);
       onStarted(result);
     });
   }
@@ -61,6 +77,8 @@ export function TimerCreateDialog({ projects, recentProjects, onStarted }: Timer
       onOpenChange={handleOpenChange}
       projects={projects}
       recentProjects={recentProjects}
+      suggestions={suggestions.optionsFor(selectedProjectId)}
+      onProjectChange={setDescriptionProjectId}
       pending={isPending}
       error={error}
       labels={{
@@ -74,6 +92,7 @@ export function TimerCreateDialog({ projects, recentProjects, onStarted }: Timer
         projectLabel: t("fields.project"),
         recent: t("labels.recent"),
         combobox: pickerLabels.combobox,
+        suggestions: suggestions.labels,
       }}
       onStart={handleStart}
     />

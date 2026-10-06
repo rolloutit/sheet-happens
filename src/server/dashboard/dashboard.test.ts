@@ -166,57 +166,68 @@ describe("dashboard helpers", () => {
     );
   });
 
+  /**
+   * The rows every flagged-user assertion below is built from.
+   *
+   * `trackingMode: null` inherits the member default, which is how a real assignment is stored
+   * unless an admin overrode it — so the default shape here exercises the same resolution the
+   * production rows do rather than a shortcut past it.
+   */
+  function flaggedAssignment(
+    memberId: string,
+    projectId: string,
+    overrides: Partial<Parameters<typeof deriveFlaggedUsers>[0]["assignments"][number]> = {},
+  ): Parameters<typeof deriveFlaggedUsers>[0]["assignments"][number] {
+    const names: Record<string, { display: string; first: string; last: string; email: string }> = {
+      "member-1": {
+        display: "Anna Toth",
+        first: "Anna",
+        last: "Toth",
+        email: "anna@example.com",
+      },
+      "member-2": {
+        display: "Bela Kiss",
+        first: "Bela",
+        last: "Kiss",
+        email: "bela@example.com",
+      },
+    };
+    const projects: Record<string, { name: string; colorToken: string }> = {
+      "project-1": { name: "Client Portal", colorToken: "violet" },
+      "project-2": { name: "Internal Tools", colorToken: "teal" },
+      "project-3": { name: "Nimbus", colorToken: "orchid" },
+    };
+    const person = names[memberId] ?? names["member-1"]!;
+    const project = projects[projectId] ?? projects["project-1"]!;
+
+    return {
+      memberId,
+      projectId,
+      trackingMode: null,
+      validFrom: dateOnly("2024-01-01"),
+      member: {
+        id: memberId,
+        displayName: person.display,
+        firstName: person.first,
+        lastName: person.last,
+        email: person.email,
+        defaultTrackingMode: "TRACKED",
+      },
+      project: {
+        id: projectId,
+        name: project.name,
+        colorToken: project.colorToken,
+      },
+      ...overrides,
+    };
+  }
+
   it("flags active member/project pairs only when no weekly entry or inactive marker exists", () => {
     const flagged = deriveFlaggedUsers({
       assignments: [
-        {
-          memberId: "member-1",
-          projectId: "project-1",
-          member: {
-            id: "member-1",
-            displayName: "Anna Toth",
-            firstName: "Anna",
-            lastName: "Toth",
-            email: "anna@example.com",
-          },
-          project: {
-            id: "project-1",
-            name: "Client Portal",
-            colorToken: "violet",
-          },
-        },
-        {
-          memberId: "member-1",
-          projectId: "project-2",
-          member: {
-            id: "member-1",
-            displayName: "Anna Toth",
-            firstName: "Anna",
-            lastName: "Toth",
-            email: "anna@example.com",
-          },
-          project: {
-            id: "project-2",
-            name: "Internal Tools",
-            colorToken: "teal",
-          },
-        },
-        {
-          memberId: "member-2",
-          projectId: "project-1",
-          member: {
-            id: "member-2",
-            displayName: "Bela Kiss",
-            firstName: "Bela",
-            lastName: "Kiss",
-            email: "bela@example.com",
-          },
-          project: {
-            id: "project-1",
-            name: "Client Portal",
-            colorToken: "violet",
-          },
-        },
+        flaggedAssignment("member-1", "project-1"),
+        flaggedAssignment("member-1", "project-2"),
+        flaggedAssignment("member-2", "project-1"),
       ],
       entries: [{ memberId: "member-1", projectId: "project-2" }],
       inactiveWeeks: [{ memberId: "member-2", projectId: "project-1" }],
@@ -237,6 +248,102 @@ describe("dashboard helpers", () => {
         lastLoggedDate: "2026-07-10",
       }),
     ]);
+  });
+
+  /**
+   * §4 item 4. A declared pair's materialized entry would satisfy the weekly check unchanged, but a
+   * declared project is *expected* to have nothing until the member declares near month end — so a
+   * weekly flag would nag for three weeks out of four and train people to ignore the panel.
+   */
+  it("flags a declared assignment on a monthly rhythm, not a weekly one", () => {
+    const declaredPair = flaggedAssignment("member-1", "project-3", {
+      trackingMode: "DECLARED",
+    });
+
+    // Nothing logged this week, but the last ended month was declared: not flagged.
+    expect(
+      deriveFlaggedUsers({
+        assignments: [declaredPair],
+        entries: [],
+        inactiveWeeks: [],
+        lastLoggedEntries: [],
+        declarations: [{ memberId: "member-1", projectId: "project-3" }],
+        declaredMonthEnd: "2026-08-31",
+      }),
+    ).toEqual([]);
+
+    // The last ended month holds no declaration: flagged, whatever this week looks like.
+    expect(
+      deriveFlaggedUsers({
+        assignments: [declaredPair],
+        entries: [],
+        inactiveWeeks: [],
+        lastLoggedEntries: [],
+        declarations: [],
+        declaredMonthEnd: "2026-08-31",
+      }),
+    ).toEqual([expect.objectContaining({ id: "member-1:project-3" })]);
+  });
+
+  /** An assignment that began after the last month closed had nothing to declare for it. */
+  it("does not flag a declared assignment that started after the last ended month", () => {
+    expect(
+      deriveFlaggedUsers({
+        assignments: [
+          flaggedAssignment("member-1", "project-3", {
+            trackingMode: "DECLARED",
+            validFrom: dateOnly("2026-09-01"),
+          }),
+        ],
+        entries: [],
+        inactiveWeeks: [],
+        lastLoggedEntries: [],
+        declarations: [],
+        declaredMonthEnd: "2026-08-31",
+      }),
+    ).toEqual([]);
+  });
+
+  /**
+   * `InactiveProjectWeek` says "nothing happened on this project this week", which is not a
+   * statement anyone can make about a monthly figure — so it must not excuse a missing declaration.
+   */
+  it("ignores an inactive-week marker for a declared assignment", () => {
+    expect(
+      deriveFlaggedUsers({
+        assignments: [flaggedAssignment("member-1", "project-3", { trackingMode: "DECLARED" })],
+        entries: [{ memberId: "member-1", projectId: "project-3" }],
+        inactiveWeeks: [{ memberId: "member-1", projectId: "project-3" }],
+        lastLoggedEntries: [],
+        declarations: [],
+        declaredMonthEnd: "2026-08-31",
+      }),
+    ).toEqual([expect.objectContaining({ id: "member-1:project-3" })]);
+  });
+
+  /** The mode is resolved, not read: a `null` override inherits a declared member default. */
+  it("reads a declared member default through an inheriting assignment", () => {
+    expect(
+      deriveFlaggedUsers({
+        assignments: [
+          flaggedAssignment("member-1", "project-3", {
+            member: {
+              id: "member-1",
+              displayName: "Anna Toth",
+              firstName: "Anna",
+              lastName: "Toth",
+              email: "anna@example.com",
+              defaultTrackingMode: "DECLARED",
+            },
+          }),
+        ],
+        entries: [],
+        inactiveWeeks: [],
+        lastLoggedEntries: [],
+        declarations: [{ memberId: "member-1", projectId: "project-3" }],
+        declaredMonthEnd: "2026-08-31",
+      }),
+    ).toEqual([]);
   });
 
   it("deduplicates contractors when deriving missing timesheets", () => {

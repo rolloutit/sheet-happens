@@ -1,4 +1,11 @@
 import { prisma } from "@/src/server/db/client";
+import {
+  assertTrackingModeSwitchAllowed,
+  resolveTrackingMode,
+  type TrackingMode,
+  type TrackingModeConflictClient,
+  type TrackingModeSource,
+} from "@/src/server/time-tracking/tracking-mode";
 
 import type { ProjectRequestMetadata } from "./projects";
 
@@ -10,6 +17,8 @@ export type ProjectAssignmentInput = {
   validFrom: Date;
   validTo?: Date | null;
   active?: boolean;
+  /** `null` inherits `Member.defaultTrackingMode`. */
+  trackingMode?: TrackingMode | null;
   notes?: string | null;
 };
 
@@ -51,6 +60,12 @@ export type AdminProjectAssignmentRow = {
   active: boolean;
   validFrom: string;
   validTo: string | null;
+  /** The override as stored: `null` means this assignment inherits the member default. */
+  trackingMode: TrackingMode | null;
+  memberDefaultTrackingMode: TrackingMode;
+  /** Resolved through `resolveTrackingMode`, so the table never re-implements the rule. */
+  effectiveTrackingMode: TrackingMode;
+  trackingModeSource: TrackingModeSource;
   notes: string | null;
 };
 
@@ -60,6 +75,8 @@ export type ProjectAssignableMemberRow = {
   email: string;
   status: Extract<ProjectAssignmentMemberStatus, "INVITED" | "ACTIVE">;
   profile: ProjectAssignmentMemberProfile;
+  /** Lets the assign form name the mode its inherit option would actually resolve to. */
+  defaultTrackingMode: TrackingMode;
 };
 
 export type BulkAssignMembersToProjectsResult = {
@@ -99,7 +116,7 @@ type ProjectAssignmentDb = {
   };
 };
 
-type ProjectAssignmentTransaction = {
+type ProjectAssignmentTransaction = TrackingModeConflictClient & {
   project: {
     findUnique(args: {
       where: {
@@ -137,6 +154,7 @@ type ProjectAssignmentTransaction = {
         active: boolean;
         validFrom: Date;
         validTo: Date | null;
+        trackingMode: TrackingMode | null;
         notes: string | null;
         createdByMemberId: string;
         updatedByMemberId: string;
@@ -153,6 +171,7 @@ type ProjectAssignmentTransaction = {
         active: boolean;
         validFrom: Date;
         validTo: Date | null;
+        trackingMode: TrackingMode | null;
         notes: string | null;
         updatedByMemberId: string;
       }>;
@@ -197,6 +216,7 @@ type MemberSelect = {
   displayName: true;
   status: true;
   currentProfile: true;
+  defaultTrackingMode: true;
   deletedAt: true;
 };
 
@@ -208,6 +228,7 @@ type MemberRecord = {
   displayName: string;
   status: ProjectAssignmentMemberStatus;
   currentProfile: ProjectAssignmentMemberProfile;
+  defaultTrackingMode: TrackingMode;
   deletedAt: Date | null;
 };
 
@@ -218,7 +239,13 @@ type ProjectAssignmentSelect = {
   active: true;
   validFrom: true;
   validTo: true;
+  trackingMode: true;
   notes: true;
+  member: {
+    select: {
+      defaultTrackingMode: true;
+    };
+  };
 };
 
 type ProjectAssignmentRecord = {
@@ -228,7 +255,11 @@ type ProjectAssignmentRecord = {
   active: boolean;
   validFrom: Date;
   validTo: Date | null;
+  trackingMode: TrackingMode | null;
   notes: string | null;
+  member: {
+    defaultTrackingMode: TrackingMode;
+  };
 };
 
 type ProjectAssignmentOverlapSelect = {
@@ -257,6 +288,7 @@ type NormalizedAssignmentInput = {
   validFrom: Date;
   validTo: Date | null;
   active: boolean;
+  trackingMode: TrackingMode | null;
   notes: string | null;
 };
 
@@ -280,6 +312,7 @@ const memberSelect = {
   displayName: true,
   status: true,
   currentProfile: true,
+  defaultTrackingMode: true,
   deletedAt: true,
 } satisfies MemberSelect;
 
@@ -290,7 +323,13 @@ const assignmentSelect = {
   active: true,
   validFrom: true,
   validTo: true,
+  trackingMode: true,
   notes: true,
+  member: {
+    select: {
+      defaultTrackingMode: true,
+    },
+  },
 } satisfies ProjectAssignmentSelect;
 
 const assignmentOverlapSelect = {
@@ -510,6 +549,8 @@ export async function updateProjectAssignment(
       };
     }
 
+    await assertTrackingModeSwitchIsSafe(tx, currentAssignment, nextAssignment);
+
     await tx.projectAssignment.update({
       where: {
         id: currentAssignment.id,
@@ -621,6 +662,7 @@ function normalizeAssignmentInput(input: ProjectAssignmentInput): NormalizedAssi
     validFrom,
     validTo,
     active: input.active ?? true,
+    trackingMode: input.trackingMode ?? null,
     notes,
   };
 }
@@ -714,6 +756,29 @@ async function assertNoAssignmentOverlap(
   }
 }
 
+/**
+ * A mode switch is refused when an open month already holds data of the other kind, naming what
+ * has to be removed first — silently orphaning a month's entries or a declaration is worse than
+ * refusing. Only the *effective* mode matters: re-stating the inherited mode as an explicit
+ * override, or the reverse, changes provenance and not what the member may record.
+ */
+async function assertTrackingModeSwitchIsSafe(
+  tx: ProjectAssignmentTransaction,
+  current: ProjectAssignmentRecord,
+  next: NormalizedAssignmentInput,
+) {
+  const before = resolveTrackingMode(current.member, current);
+  const after = resolveTrackingMode(current.member, next);
+
+  if (before.mode === after.mode) return;
+
+  await assertTrackingModeSwitchAllowed(tx, {
+    memberId: current.memberId,
+    assignmentIds: [current.id],
+    targetMode: after.mode,
+  });
+}
+
 function assignmentRangesOverlap(
   left: { validFrom: Date; validTo: Date | null },
   right: { validFrom: Date; validTo: Date | null },
@@ -772,12 +837,15 @@ function mapMemberToAssignableRow(member: MemberRecord): ProjectAssignableMember
     email: member.email,
     status: member.status as ProjectAssignableMemberRow["status"],
     profile: member.currentProfile,
+    defaultTrackingMode: member.defaultTrackingMode,
   };
 }
 
 function mapAssignmentToAdminRow(
   assignment: ProjectAssignmentListRecord,
 ): AdminProjectAssignmentRow {
+  const trackingMode = resolveTrackingMode(assignment.member, assignment);
+
   return {
     id: assignment.id,
     projectId: assignment.projectId,
@@ -789,6 +857,10 @@ function mapAssignmentToAdminRow(
     active: assignment.active,
     validFrom: formatDateOnly(assignment.validFrom),
     validTo: assignment.validTo ? formatDateOnly(assignment.validTo) : null,
+    trackingMode: assignment.trackingMode,
+    memberDefaultTrackingMode: assignment.member.defaultTrackingMode,
+    effectiveTrackingMode: trackingMode.mode,
+    trackingModeSource: trackingMode.source,
     notes: assignment.notes,
   };
 }

@@ -37,6 +37,11 @@ describe("parseDurationToMinutes", () => {
     [".5", 30],
     [",5", 30],
     ["3:20", 200],
+    // The quick composer's shorthand: hours, then bare minutes.
+    ["2h30", 150],
+    ["2h 30", 150],
+    ["1hr5", 65],
+    ["2h300", null],
     ["3:5", 185],
     ["03:05", 185],
     ["200m", 200],

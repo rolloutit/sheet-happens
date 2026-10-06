@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 
+import { TrackingModeSwitchError, type TrackingMode } from "@/src/server/time-tracking";
 import { MemberDetailsError, updateMemberDetails } from "./member-details";
 
 type TestMemberDetails = {
@@ -10,6 +11,7 @@ type TestMemberDetails = {
   defaultCurrencyCode: string;
   timezone: string;
   locale: string;
+  defaultTrackingMode: TrackingMode;
   status: string;
   deletedAt: Date | null;
 };
@@ -22,11 +24,20 @@ const baseMember: TestMemberDetails = {
   defaultCurrencyCode: "EUR",
   timezone: "Europe/Budapest",
   locale: "en",
+  defaultTrackingMode: "TRACKED",
   status: "ACTIVE",
   deletedAt: null,
 };
 
-function createUpdateMemberDetailsDb(member: TestMemberDetails | null = baseMember) {
+function createUpdateMemberDetailsDb(
+  member: TestMemberDetails | null = baseMember,
+  trackingModeData: {
+    inheritingAssignments?: Array<{ id: string }>;
+    entries?: Array<{ projectId: string; localDate: Date; project: { name: string } }>;
+    declarations?: Array<{ projectId: string; periodStart: Date; project: { name: string } }>;
+    locks?: Array<{ periodStart: Date }>;
+  } = {},
+) {
   const tx = {
     member: {
       findUnique: vi.fn().mockResolvedValue(member),
@@ -34,6 +45,18 @@ function createUpdateMemberDetailsDb(member: TestMemberDetails | null = baseMemb
     },
     auditLog: {
       create: vi.fn().mockResolvedValue({ id: "audit-1" }),
+    },
+    projectAssignment: {
+      findMany: vi.fn().mockResolvedValue(trackingModeData.inheritingAssignments ?? []),
+    },
+    timeEntry: {
+      findMany: vi.fn().mockResolvedValue(trackingModeData.entries ?? []),
+    },
+    monthlyHourDeclaration: {
+      findMany: vi.fn().mockResolvedValue(trackingModeData.declarations ?? []),
+    },
+    periodLock: {
+      findMany: vi.fn().mockResolvedValue(trackingModeData.locks ?? []),
     },
   };
 
@@ -59,6 +82,7 @@ describe("updateMemberDetails", () => {
         defaultCurrencyCode: "HUF",
         timezone: "Europe/Budapest",
         locale: "hu",
+        defaultTrackingMode: "TRACKED",
       },
       { db },
     );
@@ -117,6 +141,7 @@ describe("updateMemberDetails", () => {
           defaultCurrencyCode: "EUR",
           timezone: "Europe/Budapest",
           locale: "en",
+          defaultTrackingMode: "TRACKED",
         },
         { db },
       ),
@@ -146,10 +171,84 @@ describe("updateMemberDetails", () => {
           defaultCurrencyCode: "EUR",
           timezone: "Europe/Budapest",
           locale: "en",
+          defaultTrackingMode: "TRACKED",
         },
         { db },
       ),
     ).rejects.toBeInstanceOf(MemberDetailsError);
+  });
+
+  it("refuses a default switch while an inheriting assignment still holds tracked entries", async () => {
+    const { db, tx } = createUpdateMemberDetailsDb(baseMember, {
+      inheritingAssignments: [{ id: "assignment-1" }],
+      entries: [
+        {
+          projectId: "project-nimbus",
+          localDate: new Date("2026-09-03T00:00:00.000Z"),
+          project: { name: "Nimbus" },
+        },
+      ],
+    });
+
+    await expect(
+      updateMemberDetails(
+        {
+          memberId: "member-1",
+          actorMemberId: "admin-1",
+          firstName: "Alex",
+          lastName: "Taylor",
+          displayName: "Alex Taylor",
+          defaultCurrencyCode: "EUR",
+          timezone: "Europe/Budapest",
+          locale: "en",
+          defaultTrackingMode: "DECLARED",
+        },
+        { db },
+      ),
+    ).rejects.toBeInstanceOf(TrackingModeSwitchError);
+    expect(tx.member.update).not.toHaveBeenCalled();
+    expect(tx.auditLog.create).not.toHaveBeenCalled();
+  });
+
+  it("allows the switch when every assignment carries its own override", async () => {
+    const { db, tx } = createUpdateMemberDetailsDb(baseMember, {
+      inheritingAssignments: [],
+      entries: [
+        {
+          projectId: "project-nimbus",
+          localDate: new Date("2026-09-03T00:00:00.000Z"),
+          project: { name: "Nimbus" },
+        },
+      ],
+    });
+
+    await expect(
+      updateMemberDetails(
+        {
+          memberId: "member-1",
+          actorMemberId: "admin-1",
+          firstName: "Alex",
+          lastName: "Taylor",
+          displayName: "Alex Taylor",
+          defaultCurrencyCode: "EUR",
+          timezone: "Europe/Budapest",
+          locale: "en",
+          defaultTrackingMode: "DECLARED",
+        },
+        { db },
+      ),
+    ).resolves.toEqual({
+      memberId: "member-1",
+      changed: true,
+    });
+    expect(tx.timeEntry.findMany).not.toHaveBeenCalled();
+    expect(tx.member.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: {
+          defaultTrackingMode: "DECLARED",
+        },
+      }),
+    );
   });
 
   it("rejects unsupported member preference values", async () => {
@@ -166,6 +265,7 @@ describe("updateMemberDetails", () => {
           defaultCurrencyCode: "ZZZ",
           timezone: "Europe/Budapest",
           locale: "en",
+          defaultTrackingMode: "TRACKED",
         },
         { db },
       ),

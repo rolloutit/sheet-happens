@@ -41,3 +41,18 @@ export type MonthPickerProps = Omit<
   contentClassName?: string;
   "aria-describedby"?: string;
 };
+
+export type MonthPickerPanelProps = {
+  /** `YYYY-MM`, or `undefined` for no selection. */
+  value?: string;
+  locale: string;
+  /** Inclusive `YYYY-MM` bounds. */
+  min?: string;
+  max?: string;
+  labels?: MonthPickerLabels;
+  /** Whether the footer offers a clear action, which calls `onSelect(undefined)`. */
+  clearable?: boolean;
+  /** The year the grid opens on. Defaults to the selected month's year, else the current one. */
+  initialYear?: number;
+  onSelect: (month: string | undefined) => void;
+};

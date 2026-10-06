@@ -97,7 +97,8 @@ Recommended logical enums:
 - `member_profile_type`: `employee`, `contractor`
 - `invitation_status`: `pending`, `accepted`, `expired`, `revoked`
 - `project_status`: `active`, `inactive`, `archived`
-- `entry_source`: `grid`, `form`, `timer`
+- `entry_source`: `grid`, `form`, `timer`, `declared`
+- `tracking_mode`: `tracked`, `declared`
 - `timesheet_status`: `submitted`, `rejected`, `approved`, `invoiced`, `invoice_rejected`,
   `accepted`, `paid`
 - `timesheet_event_type`: `submitted`, `approved`, `rejected`, `unlocked`, `resubmitted`,
@@ -106,7 +107,7 @@ Recommended logical enums:
 - `timesheet_correction_status`: `open`, `cancellation_required`, `correction_in_progress`,
   `corrected_invoice_required`, `closed`, `cancelled`
 - `rate_source`: `member_default`, `project_override`
-- `document_type`: `contractor_invoice`, `report_export`, `payslip`
+- `document_type`: `contractor_invoice`, `report_export`, `payslip`, `hours_proof`
 - `document_status`: `pending`, `available`, `failed`, `deleted`
 - `invoice_role`: `original`, `replacement`, `cancellation`, `corrected`
 - `invoice_status`: `uploaded`, `accepted`, `rejected`, `replaced`, `cancelled`, `deleted`
@@ -142,6 +143,7 @@ Key columns:
 - `default_currency_code char(3) not null default 'EUR'`
 - `timezone text not null default 'Europe/Budapest'`
 - `locale text not null default 'hu'`
+- `default_tracking_mode tracking_mode not null default 'tracked'`
 - `activated_at timestamptz null`
 - `inactivated_at timestamptz null`
 - `deleted_at timestamptz null`
@@ -289,6 +291,7 @@ Key columns:
 - `active boolean not null default true`
 - `valid_from date not null`
 - `valid_to date null`
+- `tracking_mode tracking_mode null` (null inherits `members.default_tracking_mode`)
 - `notes text null`
 - `created_at timestamptz not null`
 - `updated_at timestamptz not null`
@@ -456,6 +459,46 @@ Key columns:
 Constraints/indexes:
 
 - unique `(member_id, draft_key)`
+
+### monthly_hour_declarations
+
+One declared figure per member, project and month for a `declared` assignment. The figure is also
+materialized as exactly one `time_entries` row (`source = declared`, `local_date = period_start`) so
+the timesheet, locking, rate and invoice chain keeps reading `time_entries` unchanged; this table
+carries what that entry cannot — the proof document, the one-number-per-month rule, and its own
+audit trail.
+
+Key columns:
+
+- `id uuid primary key`
+- `member_id uuid not null references members(id)`
+- `project_id uuid not null references projects(id)`
+- `project_assignment_id uuid not null references project_assignments(id)`
+- `period_start date not null`
+- `period_end date not null`
+- `minutes integer not null`
+- `note text not null` (required: submission rejects an entry with an empty description)
+- `timezone text not null`
+- `proof_document_id uuid null unique references documents(id)`
+- `time_entry_id uuid not null unique references time_entries(id)`
+- `created_at timestamptz not null`
+- `updated_at timestamptz not null`
+- `created_by_member_id uuid null`
+- `updated_by_member_id uuid null`
+- `admin_modified_at timestamptz null`
+- `admin_modified_by_member_id uuid null references members(id)`
+- `admin_modification_reason text null`
+
+Constraints/indexes:
+
+- unique `(member_id, project_id, period_start)` — the "one number per project per month" rule,
+  enforced by the database rather than by application code
+- `(member_id, period_start)`
+- `(project_id, period_start)`
+- `(project_assignment_id, period_start)`
+
+No `deleted_at`: the unique key has to be free again once a declaration is withdrawn, so a
+withdrawal deletes this row and soft-deletes its materialized entry.
 
 ### inactive_project_weeks
 

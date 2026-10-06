@@ -18,9 +18,9 @@ export type ReportPdfExportFilters = {
   anchor: string;
   periodStart: string;
   periodEnd: string;
-  projectId: string | null;
-  projectGroupId: string | null;
-  memberId: string | null;
+  projectIds: string[];
+  projectGroupIds: string[];
+  memberIds: string[];
   durationDisplayFormat: DurationDisplayFormat;
 };
 
@@ -71,6 +71,7 @@ export async function generateReportPdfExport(
     title,
     snapshot: input.snapshot,
     locale: input.locale,
+    timezone: input.timezone,
     generatedAt: now,
     durationDisplayFormat: input.durationDisplayFormat,
     t: input.t,

@@ -1,6 +1,9 @@
+import { appendFile, mkdir } from "node:fs/promises";
+import path from "node:path";
+
 import nodemailer from "nodemailer";
 
-export type EmailDeliveryMode = "console" | "smtp";
+export type EmailDeliveryMode = "console" | "file" | "smtp";
 
 export type EmailMessage = {
   to: string;
@@ -18,7 +21,19 @@ export function getEmailDeliveryMode(value = process.env.AUTH_EMAIL_DELIVERY_MOD
     return value;
   }
 
+  // `file` exists so an automated test can read a magic link, invitation or reset link that would
+  // otherwise only ever reach a developer's terminal. It writes plaintext links to disk, so it is
+  // refused outside development rather than trusted to be configured correctly.
+  if (value === "file" && process.env.NODE_ENV !== "production") {
+    return value;
+  }
+
   return "console";
+}
+
+/** Outbox path for `AUTH_EMAIL_DELIVERY_MODE=file`, one JSON object per line. */
+export function getEmailOutboxPath() {
+  return process.env.AUTH_EMAIL_FILE ?? ".mail/outbox.jsonl";
 }
 
 function getEmailFrom() {
@@ -37,6 +52,21 @@ function createConsoleMailer(): Mailer {
         ]
           .filter(Boolean)
           .join("\n"),
+      );
+    },
+  };
+}
+
+function createFileMailer(): Mailer {
+  const outbox = getEmailOutboxPath();
+
+  return {
+    async send(message) {
+      await mkdir(path.dirname(outbox), { recursive: true });
+      await appendFile(
+        outbox,
+        `${JSON.stringify({ sentAt: new Date().toISOString(), ...message })}\n`,
+        "utf8",
       );
     },
   };
@@ -76,6 +106,10 @@ function createSmtpMailer(): Mailer {
 export function createMailer(mode = getEmailDeliveryMode()): Mailer {
   if (mode === "smtp") {
     return createSmtpMailer();
+  }
+
+  if (mode === "file") {
+    return createFileMailer();
   }
 
   return createConsoleMailer();

@@ -1,6 +1,8 @@
 export {
   formatDateLabel,
+  formatDateRangeLabel,
   formatDateTime,
+  formatDayHeading,
   formatMonthLabel,
   formatMonthName,
   formatPeriodRange,
@@ -22,6 +24,7 @@ export {
   isDurationDisplayFormat,
 } from "./hours";
 export type { DurationDisplayFormat } from "./hours";
+export { formatList } from "./lists";
 export { formatMoney, formatRate } from "./money";
 export type { FormatMoneyOptions, MoneyDisplay } from "./money";
 export { formatCount } from "./numbers";

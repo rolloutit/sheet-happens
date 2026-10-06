@@ -4,8 +4,9 @@ import { getLocale, getMessages } from "next-intl/server";
 
 import "./globals.css";
 import { RunningTimerProvider } from "@/src/components/layout/RunningTimerProvider";
+import { SheetToaster } from "@/src/components/sheet/Toast";
 import { ThemeProvider } from "@/src/components/layout/ThemeProvider";
-import { getShellRunningTimer } from "@/src/server/time-tracking";
+import { getShellRunningTimer } from "@/src/server/time-tracking/shell-timer";
 
 import { stopRunningTimerAction } from "./time/actions";
 
@@ -70,6 +71,9 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
             <RunningTimerProvider timer={runningTimer} stopAction={stopRunningTimerAction}>
               {children}
             </RunningTimerProvider>
+            {/* One toaster for the app, here because this is the only node every route shares.
+                Renders nothing until a toast fires; `/time` uses it for the undoable delete. */}
+            <SheetToaster />
           </NextIntlClientProvider>
         </ThemeProvider>
       </body>

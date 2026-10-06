@@ -74,6 +74,7 @@ import {
   type ProjectColorToken,
 } from "@/src/lib/project-colors";
 import { usePickerLabels } from "@/src/i18n/picker-labels";
+import { deleteSearchParamValue, setSearchParamList } from "@/src/lib/search-params";
 import { formatTimestamp } from "@/src/lib/formatting/dates";
 import { useOverlayParam } from "@/src/lib/use-overlay-param";
 import { cn } from "@/src/lib/utils";
@@ -88,6 +89,7 @@ import type {
   ProjectListResult,
   ProjectLifecycleStatus,
 } from "@/src/server/projects";
+import type { TrackingMode } from "@/src/server/time-tracking";
 import type { AdminAssignmentRateRow } from "@/src/server/rates";
 import {
   archiveProjectAction,
@@ -106,6 +108,7 @@ import type {
   ProjectAssignmentFormField,
   ProjectActionState,
   ProjectBulkAssignmentActionState,
+  TrackingModeOverrideValue,
   UpdateProjectAssignmentActionInput,
   UpdateProjectActionInput,
 } from "./actions.types";
@@ -133,10 +136,10 @@ type ProjectFilterKey = "q" | "status" | "type" | "timeline" | "group" | "assign
 
 type ProjectFilterFormState = {
   assignment: ProjectListResult["filters"]["assignment"];
-  group: string;
+  groups: ProjectListResult["filters"]["groups"];
   query: string;
   status: ProjectListResult["filters"]["status"];
-  timeline: ProjectListResult["filters"]["timeline"];
+  timelines: ProjectListResult["filters"]["timelines"];
   type: ProjectListResult["filters"]["type"];
 };
 
@@ -151,6 +154,11 @@ const assignmentStatusTone: Record<ProjectAssignmentMemberStatus, BadgeProps["to
   ACTIVE: "success",
   INACTIVE: "neutral",
   DELETED: "warning",
+};
+
+const trackingModeTone: Record<TrackingMode, BadgeProps["tone"]> = {
+  TRACKED: "neutral",
+  DECLARED: "cta",
 };
 
 const assignmentProfileTone: Record<ProjectAssignmentMemberProfile, BadgeProps["tone"]> = {
@@ -236,8 +244,8 @@ export function AdminProjectsTable({
     setParam(params, "q", filters.query);
     setParam(params, "status", filters.status);
     setParam(params, "type", filters.type);
-    setParam(params, "timeline", filters.timeline);
-    setParam(params, "group", filters.group);
+    setSearchParamList(params, "timeline", filters.timelines);
+    setSearchParamList(params, "group", filters.groups);
     setParam(params, "assignment", filters.assignment);
     params.delete("page");
     setMessage(null);
@@ -249,8 +257,8 @@ export function AdminProjectsTable({
     result.filters.query ||
     result.filters.status ||
     result.filters.type ||
-    result.filters.timeline ||
-    result.filters.group ||
+    result.filters.timelines.length ||
+    result.filters.groups.length ||
     result.filters.assignment,
   );
 
@@ -266,10 +274,10 @@ export function AdminProjectsTable({
    * Takes one filter off, rather than re-applying the form. The form may hold edits the user
    * has not applied yet, and pulling a chip should not smuggle those into the URL with it.
    */
-  function removeFilter(key: ProjectFilterKey) {
+  function removeFilter(key: ProjectFilterKey, value?: string) {
     const params = new URLSearchParams(searchParams.toString());
 
-    params.delete(key);
+    deleteSearchParamValue(params, key, value);
     params.delete("page");
     setMessage(null);
 
@@ -462,8 +470,8 @@ export function AdminProjectsTable({
           navigation: t("pager.navigation"),
           previous: t("pager.previous"),
           next: t("pager.next"),
-          previousPage: (page) => t("pager.previousPage", { page }),
-          nextPage: (page) => t("pager.nextPage", { page }),
+          previousPage: t("pager.previousPage"),
+          nextPage: t("pager.nextPage"),
           page: (page) => t("pager.page", { page }),
           currentPage: (page) => t("pager.currentPage", { page }),
           summary: (page, totalPages, totalItems) =>
@@ -584,7 +592,7 @@ function ProjectDirectoryFilters({
   groups: AdminProjectGroupRow[];
   onApply: (filters: ProjectFilterFormState) => void;
   onClear: () => void;
-  onRemove: (key: ProjectFilterKey) => void;
+  onRemove: (key: ProjectFilterKey, value?: string) => void;
 }) {
   const t = useTranslations("AdminProjects");
   const pickerLabels = usePickerLabels();
@@ -592,8 +600,8 @@ function ProjectDirectoryFilters({
     query: result.filters.query,
     status: result.filters.status,
     type: result.filters.type,
-    timeline: result.filters.timeline,
-    group: result.filters.group,
+    timelines: result.filters.timelines,
+    groups: result.filters.groups,
     assignment: result.filters.assignment,
   }));
 
@@ -607,8 +615,8 @@ function ProjectDirectoryFilters({
       query: "",
       status: "",
       type: "",
-      timeline: "",
-      group: "",
+      timelines: [],
+      groups: [],
       assignment: "",
     });
     onClear();
@@ -640,19 +648,24 @@ function ProjectDirectoryFilters({
       label: `${t("filters.type")}: ${t(`states.${result.filters.type}`)}`,
     });
   }
-  if (result.filters.timeline) {
+  for (const timeline of result.filters.timelines) {
     activeFilters.push({
       id: "timeline",
-      label: `${t("filters.timeline")}: ${t(`filters.${result.filters.timeline}`)}`,
+      value: timeline,
+      label: `${t("filters.timeline")}: ${t(`filters.${timeline}`)}`,
     });
   }
-  if (result.filters.group) {
+  for (const group of result.filters.groups) {
     const groupName =
-      result.filters.group === "ungrouped"
+      group === "ungrouped"
         ? t("states.ungrouped")
-        : (groups.find((group) => group.id === result.filters.group)?.name ?? result.filters.group);
+        : (groups.find((entry) => entry.id === group)?.name ?? group);
 
-    activeFilters.push({ id: "group", label: `${t("filters.group")}: ${groupName}` });
+    activeFilters.push({
+      id: "group",
+      value: group,
+      label: `${t("filters.group")}: ${groupName}`,
+    });
   }
   if (result.filters.assignment) {
     activeFilters.push({
@@ -728,20 +741,20 @@ function ProjectDirectoryFilters({
         </div>
         <div className="w-[calc(50%-0.25rem)] sm:w-auto sm:min-w-32 sm:max-w-64">
           <Select
+            multiple
             label={t("filters.timeline")}
+            // No "all timelines" option to carry: an empty selection already is that state,
+            // so the label becomes the placeholder.
             placeholder={t("filters.allTimelines")}
-            value={filterForm.timeline}
+            value={filterForm.timelines}
             labels={pickerLabels.combobox}
-            onValueChange={(value) => {
-              const timeline = value as ProjectFilterFormState["timeline"];
-
+            onValueChange={(timelines) => {
               setFilterForm((current) => ({
                 ...current,
-                timeline,
+                timelines: timelines as ProjectFilterFormState["timelines"],
               }));
             }}
             options={[
-              { value: "", label: t("filters.allTimelines") },
               { value: "current", label: t("filters.current") },
               { value: "future", label: t("filters.future") },
               { value: "ended", label: t("filters.ended") },
@@ -750,18 +763,18 @@ function ProjectDirectoryFilters({
         </div>
         <div className="w-[calc(50%-0.25rem)] sm:w-auto sm:min-w-32 sm:max-w-64">
           <Select
+            multiple
             label={t("filters.group")}
             placeholder={t("filters.allGroups")}
-            value={filterForm.group}
+            value={filterForm.groups}
             labels={pickerLabels.combobox}
-            onValueChange={(group) => {
+            onValueChange={(nextGroups) => {
               setFilterForm((current) => ({
                 ...current,
-                group,
+                groups: nextGroups,
               }));
             }}
             options={[
-              { value: "", label: t("filters.allGroups") },
               { value: "ungrouped", label: t("states.ungrouped") },
               ...groups.map((group) => ({ value: group.id, label: group.name })),
             ]}
@@ -817,8 +830,8 @@ function getProjectFilterKey(filters: ProjectListResult["filters"]) {
     filters.query,
     filters.status,
     filters.type,
-    filters.timeline,
-    filters.group,
+    filters.timelines.join(","),
+    filters.groups.join(","),
     filters.assignment,
     filters.page,
     filters.pageSize,
@@ -927,6 +940,7 @@ function BulkAssignmentDialog({
   const [validFrom, setValidFrom] = useState(todayDate);
   const [validTo, setValidTo] = useState("");
   const [active, setActive] = useState(true);
+  const [trackingMode, setTrackingMode] = useState<TrackingModeOverrideValue>("");
   const [notes, setNotes] = useState("");
 
   const activeProjects = projects.filter((project) => project.status !== "ARCHIVED");
@@ -955,6 +969,7 @@ function BulkAssignmentDialog({
     setValidFrom(todayDate);
     setValidTo("");
     setActive(true);
+    setTrackingMode("");
     setNotes("");
   }
 
@@ -1144,6 +1159,28 @@ function BulkAssignmentDialog({
             </label>
             <div className="md:col-span-3">
               <Field
+                label={t("trackingMode.overrideLabel")}
+                reserveMessageSpace
+                hint={t("trackingMode.bulkHint")}
+                error={actionState?.fieldErrors?.trackingMode}
+              >
+                {({ id, describedBy, invalid }) => (
+                  <Select
+                    id={id}
+                    label={t("trackingMode.overrideLabel")}
+                    value={trackingMode}
+                    onValueChange={(value) => setTrackingMode(value as TrackingModeOverrideValue)}
+                    aria-describedby={describedBy}
+                    invalid={invalid}
+                    searchable={false}
+                    // Several members, several defaults: the inherit option cannot name one.
+                    options={getTrackingModeOverrideOptions(null, t)}
+                  />
+                )}
+              </Field>
+            </div>
+            <div className="md:col-span-3">
+              <Field
                 label={t("form.notes")}
                 reserveMessageSpace
                 error={actionState?.fieldErrors?.notes}
@@ -1195,6 +1232,7 @@ function BulkAssignmentDialog({
                 validFrom,
                 validTo,
                 active,
+                trackingMode,
                 notes,
               })
             }
@@ -1345,11 +1383,24 @@ function ProjectDetailDrawer({
   const locale = useLocale();
   const pickerLabels = usePickerLabels();
   const [editingAssignmentId, setEditingAssignmentId] = useState<string | null>(null);
+  // The member picker stays uncontrolled inside the form; this mirror exists only so the hours
+  // tracking option can name the default the chosen member would inherit.
+  const [assignMemberId, setAssignMemberId] = useState("");
   const assignPending = project ? pendingKey === `${project.id}:assign` : false;
   const nextActive = project?.status !== "ACTIVE";
+  const assignMemberDefaultTrackingMode =
+    assignableMembers.find((member) => member.id === assignMemberId)?.defaultTrackingMode ?? null;
 
   return (
-    <Drawer open={Boolean(project)} onOpenChange={onOpenChange}>
+    <Drawer
+      open={Boolean(project)}
+      onOpenChange={(open) => {
+        // The drawer body unmounts on close, so the form resets itself; the mirror has to follow
+        // or the next project opens naming the previous member's default.
+        if (!open) setAssignMemberId("");
+        onOpenChange(open);
+      }}
+    >
       {project ? (
         <DrawerContent className="w-[min(44rem,100vw)] gap-0 overflow-hidden p-0">
           <div className="border-b border-border px-5 py-5">
@@ -1453,6 +1504,7 @@ function ProjectDetailDrawer({
                   validFrom: getAssignmentFormString(formData, "validFrom"),
                   validTo: getAssignmentFormString(formData, "validTo"),
                   active: formData.get("active") === "true",
+                  trackingMode: getTrackingModeFormValue(formData),
                   notes: getAssignmentFormString(formData, "notes"),
                 });
               }}
@@ -1482,6 +1534,7 @@ function ProjectDetailDrawer({
                       invalid={invalid}
                       required={required}
                       labels={pickerLabels.combobox}
+                      onValueChange={setAssignMemberId}
                       options={assignableMembers.map((member) => ({
                         value: member.id,
                         label: member.name,
@@ -1530,6 +1583,26 @@ function ProjectDetailDrawer({
                   )}
                 </Field>
               </div>
+
+              <Field
+                label={t("trackingMode.overrideLabel")}
+                reserveMessageSpace
+                hint={t("trackingMode.overrideHint")}
+                error={actionState?.fieldErrors?.trackingMode}
+              >
+                {({ id, describedBy, invalid }) => (
+                  <Select
+                    id={id}
+                    name="trackingMode"
+                    label={t("trackingMode.overrideLabel")}
+                    defaultValue=""
+                    aria-describedby={describedBy}
+                    invalid={invalid}
+                    searchable={false}
+                    options={getTrackingModeOverrideOptions(assignMemberDefaultTrackingMode, t)}
+                  />
+                )}
+              </Field>
 
               <div className="grid gap-4 lg:grid-cols-[1fr_auto] lg:items-end">
                 <Field
@@ -1600,6 +1673,7 @@ function ProjectDetailDrawer({
                   const closePending = pendingKey === `${assignment.id}:close`;
                   const canEndToday = assignment.active && todayDate >= assignment.validFrom;
                   const rateSource = getAssignmentRateSource(assignment, assignmentRates, t);
+                  const trackingMode = getAssignmentTrackingMode(assignment, t);
 
                   return (
                     <div
@@ -1627,11 +1701,13 @@ function ProjectDetailDrawer({
                               {assignment.active ? t("states.active") : t("states.inactive")}
                             </Badge>
                             <Badge tone={rateSource.tone}>{rateSource.label}</Badge>
+                            <Badge tone={trackingMode.tone}>{trackingMode.label}</Badge>
                           </div>
                         </div>
                         <div className="grid gap-2 text-sm text-muted-foreground lg:text-right">
                           <span>{formatAssignmentTimeline(assignment)}</span>
                           <span>{rateSource.detail}</span>
+                          <span>{trackingMode.detail}</span>
                           {assignment.notes ? <span>{assignment.notes}</span> : null}
                           <div className="flex flex-wrap justify-start gap-2 lg:justify-end">
                             <Button
@@ -1727,6 +1803,7 @@ function ProjectAssignmentEditForm({
           validFrom: getAssignmentFormString(formData, "validFrom"),
           validTo: getAssignmentFormString(formData, "validTo"),
           active: formData.get("active") === "true",
+          trackingMode: getTrackingModeFormValue(formData),
           notes: getAssignmentFormString(formData, "notes"),
         });
       }}
@@ -1781,6 +1858,25 @@ function ProjectAssignmentEditForm({
           {t("states.active")}
         </label>
       </div>
+      <Field
+        label={t("trackingMode.overrideLabel")}
+        reserveMessageSpace
+        hint={t("trackingMode.overrideHint")}
+        error={actionState?.fieldErrors?.trackingMode}
+      >
+        {({ id, describedBy, invalid }) => (
+          <Select
+            id={id}
+            name="trackingMode"
+            label={t("trackingMode.overrideLabel")}
+            defaultValue={assignment.trackingMode ?? ""}
+            aria-describedby={describedBy}
+            invalid={invalid}
+            searchable={false}
+            options={getTrackingModeOverrideOptions(assignment.memberDefaultTrackingMode, t)}
+          />
+        )}
+      </Field>
       <Field label={t("form.notes")} reserveMessageSpace error={actionState?.fieldErrors?.notes}>
         {({ id, describedBy, invalid }) => (
           <Input
@@ -2202,6 +2298,59 @@ function formatProjectTimeline(
 function formatAssignmentTimeline(assignment: AdminProjectAssignmentRow) {
   if (assignment.validTo) return `${assignment.validFrom} to ${assignment.validTo}`;
   return `From ${assignment.validFrom}`;
+}
+
+function getAssignmentTrackingMode(
+  assignment: AdminProjectAssignmentRow,
+  t: AdminProjectsTranslator,
+): {
+  label: string;
+  detail: string;
+  tone: BadgeProps["tone"];
+} {
+  const label = getTrackingModeLabel(assignment.effectiveTrackingMode, t);
+
+  return {
+    label,
+    detail:
+      assignment.trackingModeSource === "ASSIGNMENT_OVERRIDE"
+        ? t("trackingMode.overriddenDetail", { mode: label })
+        : t("trackingMode.inheritedDetail", { mode: label }),
+    tone: trackingModeTone[assignment.effectiveTrackingMode],
+  };
+}
+
+function getTrackingModeLabel(mode: TrackingMode, t: AdminProjectsTranslator) {
+  return mode === "DECLARED" ? t("trackingMode.declared") : t("trackingMode.tracked");
+}
+
+/**
+ * `""` is the inherit state, kept as an explicit option rather than an empty placeholder so an
+ * admin can see which assignments are deliberately different from the member default. The option
+ * names that default whenever exactly one member is in scope; `null` covers the two cases where
+ * none is — the assign form before a member is chosen, and the bulk dialog, where several members
+ * may inherit different modes.
+ */
+function getTrackingModeOverrideOptions(
+  memberDefault: TrackingMode | null,
+  t: AdminProjectsTranslator,
+) {
+  return [
+    {
+      value: "",
+      label: memberDefault
+        ? t("trackingMode.inherit", { mode: getTrackingModeLabel(memberDefault, t) })
+        : t("trackingMode.inheritDefault"),
+    },
+    { value: "TRACKED", label: t("trackingMode.trackedOption") },
+    { value: "DECLARED", label: t("trackingMode.declaredOption") },
+  ];
+}
+
+function getTrackingModeFormValue(formData: FormData): TrackingModeOverrideValue {
+  const value = formData.get("trackingMode");
+
+  return value === "TRACKED" || value === "DECLARED" ? value : "";
 }
 
 function getAssignmentRateSource(

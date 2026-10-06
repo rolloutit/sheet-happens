@@ -21,6 +21,7 @@ import { Textarea } from "@/src/components/ui/Textarea";
 import { usePickerLabels } from "@/src/i18n/picker-labels";
 import type { MemberPreferenceOptions } from "@/src/lib/member-preferences";
 import type { AdminPersonRow } from "@/src/server/users";
+import type { TrackingMode } from "@/src/server/time-tracking";
 import { scheduleProfileTransitionAction, updateMemberDetailsAction } from "./actions";
 import type {
   AdminPeopleActionState,
@@ -114,6 +115,11 @@ function MemberEditForm({
       [field]: value,
     }));
   }
+
+  const trackingModeOptions: Array<{ value: TrackingMode; label: string }> = [
+    { value: "TRACKED", label: t("trackingMode.tracked") },
+    { value: "DECLARED", label: t("trackingMode.declared") },
+  ];
 
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -282,6 +288,32 @@ function MemberEditForm({
             )}
           </Field>
         </div>
+
+        {/* The default lives here, with the member's other timeline-free attributes, because it
+            applies across every project — setting it from inside one project's assignment table
+            would let an admin change one project and silently change the rest. The per-assignment
+            override is in Projects, beside the rate override. */}
+        <Field
+          label={t("form.defaultTrackingMode")}
+          required
+          reserveMessageSpace
+          hint={t("form.defaultTrackingModeHint")}
+          error={fieldErrors?.defaultTrackingMode}
+        >
+          {({ id, describedBy, invalid, required }) => (
+            <Select
+              id={id}
+              label={t("form.defaultTrackingMode")}
+              value={values.defaultTrackingMode}
+              aria-describedby={describedBy}
+              invalid={invalid}
+              required={required}
+              searchable={false}
+              options={trackingModeOptions}
+              onValueChange={(value) => updateField("defaultTrackingMode", value)}
+            />
+          )}
+        </Field>
 
         {status && status.status === "error" ? (
           <p
@@ -472,6 +504,7 @@ function getEditableValues(member: AdminPersonRow | null): EditableValues {
     defaultCurrencyCode: member?.defaultCurrencyCode ?? "EUR",
     timezone: member?.timezone ?? "Europe/Budapest",
     locale: member?.locale ?? "en",
+    defaultTrackingMode: member?.defaultTrackingMode ?? "TRACKED",
   };
 }
 

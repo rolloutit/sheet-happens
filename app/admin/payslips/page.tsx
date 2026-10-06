@@ -57,7 +57,7 @@ export default async function AdminPayslipsPage({ searchParams }: AdminPayslipsP
 
         <PayslipFilterBar
           query={result.filters.query ?? ""}
-          employeeMemberId={result.filters.employeeMemberId ?? ""}
+          employeeMemberIds={result.filters.employeeMemberIds}
           month={result.filters.month ?? ""}
           employeeOptions={result.employeeOptions}
           monthOptions={months}

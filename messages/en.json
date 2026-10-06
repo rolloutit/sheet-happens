@@ -7,6 +7,7 @@
     "search": "Search",
     "searchPlaceholder": "Search...",
     "noResults": "No results",
+    "selectedCount": "{count} selected",
     "clear": "Clear",
     "done": "Done",
     "today": "Today",
@@ -57,6 +58,7 @@
       "projects": "Projects",
       "people": "People",
       "rates": "Rates",
+      "declaredHours": "Declared hours",
       "audit": "Audit log",
       "system": "System",
       "info": "Information page",
@@ -83,7 +85,14 @@
       "label": "User menu",
       "myRates": "My rates",
       "profileAndSettings": "Profile and settings",
-      "signOut": "Sign out"
+      "signOut": "Sign out",
+      "signOutConfirm": {
+        "title": "Sign out?",
+        "description": "You will be signed out on this device and sent back to the login screen. Any time you have already saved stays exactly where it is.",
+        "confirm": "Sign out",
+        "cancel": "Stay signed in",
+        "close": "Close"
+      }
     },
     "timer": {
       "stop": "Stop timer",
@@ -313,6 +322,45 @@
       "signOut": "Sign out"
     }
   },
+  "Consent": {
+    "eyebrow": "Connect an app",
+    "title": "{client} wants to access your Sheet Happens account",
+    "description": "You are signed in as {name}. An app you allow acts as you, with exactly your own rights — it can never see or change anyone else's hours.",
+    "scopes": {
+      "timeRead": {
+        "title": "Read your time",
+        "description": "See your own time entries, your projects, your running timer and your day, week and month totals."
+      },
+      "timeWrite": {
+        "title": "Log and correct your time",
+        "description": "Add, change and delete your own time entries, and start or stop your timer. Deleted entries can be restored. Months with a submitted timesheet stay locked."
+      },
+      "identity": {
+        "title": "Know who you are and stay connected",
+        "description": "Read your name and email address, and keep the connection working without asking you to sign in again."
+      }
+    },
+    "unknownScopes": "This app is also asking for something Sheet Happens does not recognise: {scopes}. Deny unless you know why.",
+    "actions": {
+      "allow": "Allow",
+      "deny": "Deny"
+    },
+    "expired": {
+      "title": "This request has expired",
+      "message": "Connection requests are only valid for a few minutes. Start the connection again from the app you were using."
+    },
+    "invalid": {
+      "title": "Nothing to approve",
+      "message": "This page is part of connecting an app to Sheet Happens. Open it from the app you want to connect rather than directly."
+    }
+  },
+  "ConsentActions": {
+    "errors": {
+      "expired": "This request is no longer valid. Start the connection again from the app you were using.",
+      "notAllowed": "Your Sheet Happens account cannot connect apps right now.",
+      "generic": "The connection could not be completed."
+    }
+  },
   "Help": {
     "eyebrow": "Help",
     "title": "Help and manual",
@@ -320,7 +368,8 @@
     "tabs": {
       "label": "Help content",
       "welcome": "Welcome",
-      "manual": "Manual"
+      "manual": "Manual",
+      "connector": "Claude connector"
     },
     "actions": {
       "editWelcome": "Edit welcome content"
@@ -342,6 +391,37 @@
       "all": "Everyone",
       "contractor": "Contractors",
       "admin": "Admins"
+    },
+    "mcp": {
+      "badge": "Claude connector",
+      "title": "Let Claude work with your own hours",
+      "description": "The Sheet Happens connector lets Claude read your tracked time and log it for you — on the web, in the desktop app, in Cowork, on mobile, or in Claude Code. Every member connects it for themselves, and a connection only ever sees that member's own hours.",
+      "urlLabel": "Connector URL",
+      "urlHint": "Paste this address wherever Claude asks for a custom connector URL. Signing in uses your normal Sheet Happens login, and a consent page then lists exactly what the agent may do before anything is granted.",
+      "copyUrl": "Copy URL",
+      "urlCopied": "Connector URL copied to the clipboard.",
+      "copyFailed": "Copying failed — select the address above and copy it by hand.",
+      "app": {
+        "title": "Claude.ai, Claude Desktop, Cowork and mobile",
+        "description": "One setup covers all four surfaces.",
+        "teamTitle": "Team or Enterprise workspace",
+        "teamOwner": "An owner adds the connector once: Organization settings → Connectors → Add → Custom, name it “Sheet Happens”, paste the URL above, set authentication to “Always required” and keep Anthropic's hosted OAuth client metadata.",
+        "teamMember": "Everyone else then opens Customize → Connectors and clicks Connect.",
+        "personalTitle": "Pro, Max or Free account",
+        "personalStep": "Open Customize → Connectors → Add custom connector and paste the URL above. Claude reads the authentication settings from Sheet Happens itself and fills them in.",
+        "tools": "Tools are switched on per conversation from the “+” menu, and any single tool can be set to Blocked under the connector."
+      },
+      "code": {
+        "title": "Claude Code",
+        "description": "Add the connector once, then sign in — from the terminal, or with /mcp inside a session.",
+        "loginHint": "Add --no-browser when you are working over SSH. Tool permissions use names like mcp__sheet-happens__time_get_context."
+      },
+      "ownership": {
+        "title": "What the connector can reach",
+        "body": "An agent using your connection reaches exactly what you reach in Sheet Happens: your own time entries, your own projects and your own totals. It can never see or change anyone else's hours, and a month with a submitted timesheet stays locked for an agent too.",
+        "disconnect": "You decide how long it lasts. Until you disconnect it in Settings, the app can keep acting as you — including while you are not using it.",
+        "openConnectedApps": "Open connected apps"
+      }
     }
   },
   "AdminInfo": {
@@ -544,6 +624,7 @@
         "lastWeek": "Last week",
         "twoWeeksAgo": "2 weeks ago",
         "viewDrilldown": "View details",
+        "viewAll": "View all {count} flagged users",
         "remind": "Send reminder",
         "reminderSent": "Reminder sent",
         "reminderErrors": {
@@ -813,7 +894,8 @@
       "invoiceAmountInvalid": "Enter a positive invoice amount.",
       "invoiceCurrencyInvalid": "The invoice currency is not supported.",
       "invoiceStorageMissing": "Invoice storage is not configured for this environment.",
-      "invoiceFailed": "The invoice could not be uploaded."
+      "invoiceFailed": "The invoice could not be uploaded.",
+      "declaredProofMissing": "Upload the hours proof for every declared project before submitting: {projects}."
     }
   },
   "AdminTimesheets": {
@@ -847,6 +929,8 @@
       "allProjects": "All projects",
       "month": "Month",
       "allMonths": "All months",
+      "includePaid": "Show paid",
+      "includePaidChip": "Paid included",
       "apply": "Apply filters",
       "clear": "Clear",
       "active": "Active filters",
@@ -899,7 +983,12 @@
       "unlocked": "Unlocked",
       "empty": "This revision has no snapshot lines.",
       "projectSummary": "{hours} h, {entries} entries",
-      "lineCaption": "Timesheet snapshot source lines"
+      "lineCaption": "Timesheet snapshot source lines",
+      "declared": "Declared monthly",
+      "declaredSummary": "{hours} h declared for the month",
+      "declaredLineDate": "{month} · declared",
+      "openProof": "Open proof",
+      "proofMissing": "These declared hours have no proof document."
     },
     "lineTable": {
       "date": "Date",
@@ -1095,8 +1184,8 @@
       "navigation": "People pages",
       "previous": "Previous",
       "next": "Next",
-      "previousPage": "Go to page {page}",
-      "nextPage": "Go to page {page}",
+      "previousPage": "Previous page",
+      "nextPage": "Next page",
       "page": "Go to page {page}",
       "currentPage": "Current page, page {page}",
       "summary": "Page {page} of {totalPages}, {totalItems} members"
@@ -1112,7 +1201,9 @@
       "timezone": "Timezone",
       "locale": "Locale",
       "displayName": "Display name",
-      "displayNameHint": "Leave empty to use first and last name."
+      "displayNameHint": "Leave empty to use first and last name.",
+      "defaultTrackingMode": "Hours tracking default",
+      "defaultTrackingModeHint": "Applies to every project this member is assigned to. A single assignment can override it on the Projects page."
     },
     "profiles": {
       "contractor": "Contractor",
@@ -1191,6 +1282,10 @@
       "reason": "Reason",
       "reasonHint": "Add a reason for this profile change."
     },
+    "trackingMode": {
+      "tracked": "Tracked here",
+      "declared": "Declared monthly"
+    },
     "discardDialog": {
       "title": "Discard this invitation?",
       "description": "The details you filled in will not be saved.",
@@ -1232,7 +1327,11 @@
       "invitationFailed": "The invitation could not be sent. Try again later.",
       "memberUpdateFailed": "The member details could not be updated. Try again later.",
       "profileTransitionFailed": "The profile transition could not be scheduled. Try again later.",
-      "memberActionFailed": "The member action could not be completed. Try again later."
+      "memberActionFailed": "The member action could not be completed. Try again later.",
+      "trackingModeSwitchField": "One of this member's months still holds hours of the other kind.",
+      "trackingModeConflictItem": "{project} ({month})",
+      "trackingModeSwitchToDeclared": "The default cannot switch to declared monthly hours while {items} still hold time entries. Remove them first, or override the affected assignments on the Projects page.",
+      "trackingModeSwitchToTracked": "The default cannot switch to hours tracked here while {items} still hold a monthly declaration. Remove the declarations first, or override the affected assignments on the Projects page."
     },
     "validation": {
       "validEmail": "Enter a valid email address.",
@@ -1248,7 +1347,8 @@
       "memberIdMissing": "Member id is missing.",
       "displayNameMax": "Display name must be 120 characters or less.",
       "validEffectiveDate": "Choose a valid effective date.",
-      "reasonMax": "Reason must be 500 characters or less."
+      "reasonMax": "Reason must be 500 characters or less.",
+      "validTrackingMode": "Choose how this member records hours."
     }
   },
   "AdminProjects": {
@@ -1331,8 +1431,8 @@
       "navigation": "Project pages",
       "previous": "Previous",
       "next": "Next",
-      "previousPage": "Go to page {page}",
-      "nextPage": "Go to page {page}",
+      "previousPage": "Previous page",
+      "nextPage": "Next page",
       "page": "Go to page {page}",
       "currentPage": "Current page, page {page}",
       "summary": "Page {page} of {totalPages}, {totalItems} projects"
@@ -1503,6 +1603,19 @@
       "scheduledOverrideDetail": "{count, plural, one {# override period scheduled.} other {# override periods scheduled.}}",
       "contractorCentralRate": "Contractor assignment currently uses the member central rate."
     },
+    "trackingMode": {
+      "tracked": "Tracked here",
+      "declared": "Declared monthly",
+      "trackedOption": "Tracked here",
+      "declaredOption": "Declared monthly",
+      "inherit": "Inherit member default ({mode})",
+      "inheritDefault": "Inherit member default",
+      "inheritedDetail": "Hours are {mode} by the member default.",
+      "overriddenDetail": "Hours are {mode} for this assignment only.",
+      "overrideLabel": "Hours tracking",
+      "overrideHint": "Applies to this assignment only. The member default is set on the People page.",
+      "bulkHint": "Applies to every assignment created here. The member default is set on the People page."
+    },
     "discardDialog": {
       "title": "Discard this project?",
       "description": "The details you filled in will not be saved.",
@@ -1558,7 +1671,10 @@
       "projectSlugExists": "A project with this slug already exists.",
       "projectLinkFailed": "The project could not be linked to the current admin member. Refresh the page and try again.",
       "projectsUnavailable": "Projects are temporarily unavailable. Try again later or contact support.",
-      "projectMissing": "This project no longer exists or was already archived."
+      "projectMissing": "This project no longer exists or was already archived.",
+      "trackingModeSwitchField": "This month still holds hours of the other kind.",
+      "trackingModeSwitchToDeclared": "This assignment cannot switch to declared monthly hours while {months} still hold time entries here. Remove them first, or switch from the following month.",
+      "trackingModeSwitchToTracked": "This assignment cannot switch to hours tracked here while {months} still hold a monthly declaration. Remove the declaration first, or switch from the following month."
     },
     "validation": {
       "validDate": "Choose a valid date.",
@@ -1580,7 +1696,8 @@
       "groupNameRequired": "Group name is required.",
       "descriptionMax": "Description must be 1000 characters or less.",
       "projectGroupIdMissing": "Project group id is missing.",
-      "chooseProject": "Choose a project."
+      "chooseProject": "Choose a project.",
+      "trackingModeInvalid": "Choose how this assignment records hours."
     }
   },
   "AdminRates": {
@@ -1707,6 +1824,107 @@
       "rateEndAfterStart": "Rate end date must be after the start date."
     }
   },
+  "AdminDeclaredHours": {
+    "eyebrow": "Admin",
+    "title": "Declared hours",
+    "subtitle": "Monthly declared hours for everyone. Review what each person declared, and correct a figure on their behalf — with a reason.",
+    "months": {
+      "previous": "Previous month",
+      "next": "Next month",
+      "thisMonth": "This month"
+    },
+    "summary": {
+      "declared": "Declared",
+      "missing": "Not declared",
+      "missingProof": "Without proof"
+    },
+    "profile": {
+      "EMPLOYEE": "Employee",
+      "CONTRACTOR": "Contractor"
+    },
+    "modeSource": {
+      "memberDefault": "from the member default"
+    },
+    "labels": {
+      "nothingDeclared": "Nothing declared",
+      "proofMissing": "No proof",
+      "locked": "Month locked",
+      "ownDeclaration": "Your own declaration",
+      "assignmentEnded": "The assignment no longer covers this month",
+      "corrected": "Corrected by {name} · {when}",
+      "correctedByRemoved": "a removed admin"
+    },
+    "actions": {
+      "correct": "Correct",
+      "cancel": "Cancel",
+      "save": "Save correction"
+    },
+    "drawer": {
+      "title": "{project} — correct declared hours",
+      "description": "{name} · {month}. The member is notified about the correction.",
+      "openProof": "Open",
+      "noProof": "No hours proof has been uploaded for this month."
+    },
+    "fields": {
+      "hours": "Declared hours",
+      "hoursHint": "Hours for the whole month — 52, 52h or 52:30.",
+      "hoursPlaceholder": "52",
+      "note": "What the hours cover",
+      "noteHint": "Carried into the timesheet and the reports, so it is required. Prefilled with the member's own words.",
+      "notePlaceholder": "Platform migration support",
+      "reason": "Why you are correcting it",
+      "reasonHint": "The member reads this in their notification, and it is written to the audit log.",
+      "reasonPlaceholder": "The hours proof shows 52 hours, not 48.",
+      "sanityWarning": "That is more than {hours}, the hours in this whole month. You can still save it — check the figure."
+    },
+    "table": {
+      "caption": "Declared hours — {month}",
+      "empty": "No project is set to monthly declaration in this month.",
+      "proofNote": "The hours proof is uploaded by the member on their own Time tracking page, at the Month level. An admin can open it but not replace it.",
+      "columns": {
+        "member": "Member",
+        "project": "Project",
+        "hours": "Hours",
+        "proof": "Proof",
+        "actions": "Actions"
+      }
+    }
+  },
+  "AdminDeclaredHoursActions": {
+    "validation": {
+      "member": "Choose a member.",
+      "project": "Choose a project.",
+      "month": "Choose a valid month.",
+      "minutesPositive": "Declared hours must be greater than zero.",
+      "minutesTooLarge": "Declared hours are too large.",
+      "noteRequired": "Describe what the declared hours cover.",
+      "noteTooLong": "Description must be 1000 characters or less.",
+      "reasonRequired": "Give a reason for the correction.",
+      "reasonTooLong": "The reason must be 1000 characters or less."
+    },
+    "success": {
+      "corrected": "The declared hours were corrected and the member has been notified."
+    },
+    "errors": {
+      "fixFields": "Fix the highlighted fields.",
+      "ownDeclaration": "Correct your own declared hours on the Time tracking page, at the Month level — that way your reason is not lost.",
+      "correctFailed": "The declared hours could not be corrected."
+    },
+    "declarationErrors": {
+      "INVALID_PERIOD": "Choose a valid month.",
+      "INVALID_MINUTES": "Declared hours must be greater than zero.",
+      "NOTE_REQUIRED": "Describe what the declared hours cover.",
+      "PERIOD_LOCKED": "A submitted timesheet locks this month. Unlock it for correction before changing the figure.",
+      "ASSIGNMENT_NOT_FOUND": "No live assignment covers this month on that project, so no declaration can be written against it.",
+      "NOT_DECLARED": "This project tracks its hours in Sheet Happens, so they cannot be declared. Switch it to monthly declaration on the Projects page first.",
+      "TRACKED_ENTRIES_EXIST": "This month already holds tracked time entries for this project. Remove them first.",
+      "DECLARATION_NOT_FOUND": "No hours are declared for this month yet.",
+      "REASON_REQUIRED": "An administrator correction needs a reason.",
+      "PROOF_REQUIRED": "Choose a PDF to upload.",
+      "PROOF_TOO_LARGE": "The hours proof PDF is larger than 10 MB.",
+      "PROOF_NOT_PDF": "The hours proof must be a PDF."
+    }
+  },
   "AdminAudit": {
     "eyebrow": "Admin",
     "title": "Audit log",
@@ -1721,6 +1939,11 @@
     },
     "events": {
       "actions": {
+        "hours_declaration__created": "Declared",
+        "hours_declaration__deleted": "Declaration withdrawn",
+        "hours_declaration__proof_replaced": "Proof replaced",
+        "hours_declaration__proof_uploaded": "Proof uploaded",
+        "hours_declaration__updated": "Declaration corrected",
         "inactive_project_week__marked": "Marked inactive",
         "inactive_project_week__unmarked": "Inactive mark removed",
         "info_pages__publish": "Published",
@@ -1730,10 +1953,10 @@
         "member__activated": "Activated",
         "member__avatar_deleted": "Profile image deleted",
         "member__avatar_updated": "Profile image updated",
-        "member__duration_display_format_updated": "Time display updated",
         "member__bootstrap_invited": "Initial admin invited",
         "member__deactivated": "Deactivated",
         "member__deleted": "Archived",
+        "member__duration_display_format_updated": "Time display updated",
         "member__invitation_resent": "Invitation resent",
         "member__invitation_revoked": "Invitation revoked",
         "member__invited": "Invited",
@@ -1744,6 +1967,7 @@
         "member__restored": "Restored",
         "member__role_changed": "Role changed",
         "member__session_revoked": "Session revoked",
+        "member__mcp_access_revoked": "Connected apps revoked",
         "member__timezone_updated": "Time zone updated",
         "member__updated": "Updated",
         "notification__settings_updated": "Settings updated",
@@ -1791,10 +2015,11 @@
         "security__totp_reset": "2FA reset",
         "time_entries__copy_previous_day": "Previous day copied",
         "time_entries__duplicate_previous_week": "Previous week copied",
+        "time_entry__admin_updated": "Admin corrected",
         "time_entry__created": "Created",
         "time_entry__deleted": "Deleted",
+        "time_entry__restored": "Restored",
         "time_entry__updated": "Updated",
-        "time_entry__admin_updated": "Admin corrected",
         "timesheet__approved": "Approved",
         "timesheet__paid": "Marked paid",
         "timesheet__rejected": "Rejected",
@@ -1804,6 +2029,7 @@
       "targets": {
         "assignment_rate_period": "Project rate",
         "contractor_invoice": "Invoice",
+        "hours_declaration": "Declared hours",
         "inactive_project_week": "Inactive week",
         "info_page": "Information page",
         "member": "Member",
@@ -1937,24 +2163,32 @@
     "missingEnv": "Missing: {names}"
   },
   "TimeTracking": {
-    "view": {
-      "weeklyGrid": "Weekly grid",
-      "day": "Day"
+    "zoom": {
+      "dayStrip": "Days of this week",
+      "selectDay": "Select {day}",
+      "zoomToProject": "{project} · zoom in"
+    },
+    "week": {
+      "columnEmpty": "Nothing logged",
+      "expandDay": "Show {day}",
+      "addEntryOn": "Add entry on {day}",
+      "editEntryNamed": "Edit {entry}",
+      "deleteEntryNamed": "Delete {entry}",
+      "adminModified": "Changed by an administrator",
+      "capacity": "{logged} of {target}"
     },
     "labels": {
       "thisWeek": "This week",
+      "thisMonth": "This month",
       "weekTotal": "Week total",
+      "monthTotal": "Month total",
       "dayTotal": "Day total",
-      "assigned": "Assigned",
       "recent": "Recent",
       "archivedProject": "Archived project",
       "noDescription": "No description"
     },
     "actions": {
       "newEntry": "New entry",
-      "previousWeek": "Previous week",
-      "nextWeek": "Next week",
-      "sameAsYesterday": "Same as yesterday",
       "duplicateLastWeek": "Duplicate last week",
       "undo": "Undo",
       "discard": "Discard",
@@ -1966,7 +2200,8 @@
       "close": "Close",
       "cancel": "Cancel",
       "save": "Save",
-      "newTimer": "New timer"
+      "copyYesterdayInto": "Copy yesterday into {day}",
+      "more": "More actions"
     },
     "tooltips": {
       "copyPreviousDay": "Copy entries from the day before {date}.",
@@ -1992,7 +2227,9 @@
     "grid": {
       "projects": "Projects",
       "total": "Total",
-      "dailyTotal": "Daily total"
+      "dailyTotal": "Daily total",
+      "declaredMonthly": "Declared monthly",
+      "seeMonth": "See Month"
     },
     "inactive": {
       "title": "Inactive week",
@@ -2006,7 +2243,10 @@
     },
     "empty": {
       "title": "No active assigned projects",
-      "description": "Time can be logged after an admin assigns you to an active project for this week."
+      "description": "Time can be logged after an admin assigns you to an active project for this week.",
+      "copyYesterday": "Copy yesterday",
+      "weekTitle": "Nothing logged this week",
+      "weekDescription": "Add an entry, or bring last week's entries over."
     },
     "draft": {
       "title": "Unsaved time entry draft",
@@ -2017,14 +2257,31 @@
     },
     "day": {
       "emptyTitle": "No entries on this day",
-      "emptyDescription": "Start a timer or add an entry for the selected project and day."
+      "emptyDescription": "Start a timer or add an entry for the selected project and day.",
+      "target": "of {target} target",
+      "split": "By project",
+      "quickAdd": "Quick add",
+      "glance": "At a glance",
+      "noSplit": "Nothing logged yet"
+    },
+    "month": {
+      "trackedHeading": "Tracked in Sheet Happens",
+      "emptyTitle": "Nothing to close in this month",
+      "emptyDescription": "No hours were logged in this month, and no project is open in it to log any against.",
+      "declaredHeading": "Declared monthly",
+      "declaredElsewhere": "{project} is declared monthly — <link>see Month</link>",
+      "declaredElsewhereMany": "{count, plural, other {# projects are}} declared monthly — <link>see Month</link>"
     },
     "timer": {
       "trackedWithTimer": "Tracked with timer",
       "placeholder": "What are you working on?",
       "projectLabel": "Timer project",
       "start": "Start",
-      "stop": "Stop"
+      "stop": "Stop",
+      "startTimer": "Start timer",
+      "stopTimer": "Stop timer",
+      "running": "Timer running",
+      "elapsed": "{elapsed} elapsed"
     },
     "timerModal": {
       "title": "New timer",
@@ -2081,7 +2338,9 @@
       "form": "Form",
       "timer": "Timer",
       "timed": "Timed",
-      "hours": "Hours"
+      "hours": "Hours",
+      "declared": "Declared",
+      "mcp": "MCP"
     },
     "fieldErrors": {
       "durationPositive": "Duration must be greater than zero.",
@@ -2094,6 +2353,173 @@
     },
     "errors": {
       "invalidDurationFormat": "Use time like 3.5, 3:30, 3h 20m, or 200m."
+    },
+    "declared": {
+      "hoursLabel": "{project}, declared hours",
+      "hoursPlaceholder": "52",
+      "hoursHint": "Hours for the whole month — 52, 52h or 52:30.",
+      "noteLabel": "{project}, what the hours cover",
+      "notePlaceholder": "Platform migration support",
+      "noteRequired": "Describe what the declared hours cover.",
+      "proofLabel": "Hours proof PDF",
+      "proofUpload": "Upload proof",
+      "proofReplace": "Replace",
+      "proofView": "View",
+      "proofMissing": "No proof uploaded yet",
+      "proofNeedsHours": "Declare the hours first, then attach the proof.",
+      "proofUploading": "Uploading",
+      "save": "Save",
+      "saving": "Saving",
+      "saved": "Saved",
+      "locked": "A submitted timesheet locks this month, so these hours are read-only.",
+      "nothingDeclared": "Nothing declared",
+      "externalSystem": "external system",
+      "sanityWarning": "That is more than {hours}, the hours in this whole month. Saved anyway — check the figure."
+    },
+    "view": {
+      "label": "View",
+      "day": "Day",
+      "week": "Week",
+      "month": "Month",
+      "zoomIn": "Zoom in to {scope}",
+      "zoomOut": "Zoom out to {scope}",
+      "zoomInMost": "Already at the closest view",
+      "zoomOutMost": "Already at the widest view",
+      "shortcut": "Shortcut {key}",
+      "monthBadge": "Declared hours live in Month",
+      "announce": "{scope} · {period} · {total}"
+    },
+    "lens": {
+      "label": "Week layout",
+      "agenda": "Agenda",
+      "grid": "Grid"
+    },
+    "period": {
+      "week": "Week {week} · {range}",
+      "today": "Today",
+      "previous": "Previous {unit}",
+      "next": "Next {unit}",
+      "unitDay": "day",
+      "unitWeek": "week",
+      "unitMonth": "month",
+      "pick": "Jump to a month",
+      "atToday": "You are on today"
+    },
+    "total": {
+      "today": "today",
+      "week": "this week",
+      "month": "this month",
+      "overTarget": "over {target}",
+      "onTarget": "on target"
+    },
+    "header": {
+      "open": "Open {date}",
+      "locked": "Locked by a submitted timesheet",
+      "today": "Today",
+      "over": "Over {target}"
+    },
+    "heat": {
+      "label": "Days of {month}",
+      "cell": "{date}, {hours}",
+      "cellDetail": "{hours} · {count, plural, one {# entry} other {# entries}}",
+      "empty": "{date}, nothing logged",
+      "future": "{date}, in the future",
+      "workdays": "{logged} of {workdays} workdays",
+      "weekRow": "Week {week}",
+      "openWeek": "Open week {week}",
+      "locked": "This month is locked by a submitted timesheet",
+      "legendLogged": "Logged",
+      "legendEmpty": "Nothing logged",
+      "legendFuture": "Future",
+      "outside": "{date}, outside this month"
+    },
+    "composer": {
+      "title": "Add to {date}",
+      "description": "What did you do?",
+      "duration": "Duration",
+      "durationPlaceholder": "2h30",
+      "project": "Project",
+      "more": "More options",
+      "interval": "Interval instead",
+      "add": "Add",
+      "submitHint": "Enter adds",
+      "descriptionRequired": "Describe what you did.",
+      "noProject": "Pick a project first.",
+      "close": "Close"
+    },
+    "suggestions": {
+      "label": "Recent descriptions",
+      "otherProjects": "From other projects",
+      "meta": "{count, plural, one {# time} other {# times}} · last used {date}",
+      "justUsed": "Just used",
+      "count": "{count, plural, one {# suggestion} other {# suggestions}}",
+      "empty": "No matching description",
+      "hint": "↑↓ to choose · ↵ to insert"
+    },
+    "card": {
+      "continue": "Continue {description}",
+      "more": "More actions for {description}",
+      "timer": "Tracked with a timer",
+      "locked": "Locked by a submitted timesheet",
+      "live": "Running now"
+    },
+    "undo": {
+      "deleted": "Entry deleted",
+      "action": "Undo",
+      "restored": "Entry restored"
+    },
+    "shortcuts": {
+      "title": "Keyboard shortcuts",
+      "description": "Every move on this page has a key. None of them fire while you type.",
+      "open": "Keyboard shortcuts",
+      "keyHeader": "Key",
+      "actionHeader": "Action",
+      "groupView": "View",
+      "groupMove": "Move",
+      "groupAdd": "Add",
+      "groupTimer": "Timer",
+      "day": "Day",
+      "week": "Week",
+      "month": "Month",
+      "zoomOut": "Zoom out",
+      "zoomIn": "Zoom in",
+      "grid": "Grid layout of the week",
+      "previous": "Previous {unit}",
+      "next": "Next {unit}",
+      "today": "Today",
+      "escape": "Zoom out one step",
+      "newEntry": "New entry on the selected day",
+      "timer": "Start or stop the timer",
+      "help": "This sheet",
+      "palette": "Command palette"
+    },
+    "hint": {
+      "firstVisit": "Press ? for shortcuts, or click a day to open it",
+      "dismiss": "Got it"
+    },
+    "commands": {
+      "group": "Time tracking",
+      "title": "Command palette",
+      "description": "Every action on this page, searchable by name.",
+      "search": "Search commands",
+      "empty": "No commands match",
+      "trigger": "Open the command palette",
+      "goToToday": "Go to today",
+      "viewDay": "View: Day",
+      "viewWeek": "View: Week",
+      "viewMonth": "View: Month",
+      "lensAgenda": "Week layout: Agenda",
+      "lensGrid": "Week layout: Grid",
+      "newEntry": "New entry",
+      "startTimer": "Start timer",
+      "stopTimer": "Stop timer",
+      "duplicateLastWeek": "Duplicate last week",
+      "copyYesterday": "Copy yesterday",
+      "shortcuts": "Keyboard shortcuts"
+    },
+    "mobile": {
+      "addEntry": "Add entry",
+      "swipeHint": "Swipe to change the period"
     }
   },
   "TimeTrackingActions": {
@@ -2106,7 +2532,11 @@
       "draftSaved": "Draft saved.",
       "draftDiscarded": "Draft discarded.",
       "inactiveWeekSaved": "Project marked inactive for this week.",
-      "inactiveWeekRemoved": "Inactive week removed."
+      "inactiveWeekRemoved": "Inactive week removed.",
+      "declarationSaved": "Declared hours saved.",
+      "declarationWithdrawn": "Declared hours withdrawn.",
+      "proofUploaded": "Hours proof uploaded.",
+      "timeEntryRestored": "Time entry restored."
     },
     "errors": {
       "generic": "Something went wrong.",
@@ -2128,15 +2558,26 @@
       "entryLocked": "This entry is locked by a submitted timesheet.",
       "periodLocked": "This period is locked by a submitted timesheet.",
       "weekTouchesLockedPeriod": "This week touches a locked period.",
+      "inactiveWeekHasEntries": "Remove this week's entries before marking the project inactive.",
       "stopTimerFirst": "Stop the running timer before starting another one.",
       "noTimerRunning": "No timer is running.",
       "projectNotActiveForDate": "This project is not active for the selected date.",
       "projectNotAssignedForWeek": "This project is not assigned for the selected week.",
-      "dateTimezoneFormatFailed": "Could not format date in timezone."
+      "dateTimezoneFormatFailed": "Could not format date in timezone.",
+      "declarationSaveFailed": "The declared hours could not be saved.",
+      "declarationWithdrawFailed": "The declared hours could not be withdrawn.",
+      "proofUploadFailed": "The hours proof could not be uploaded.",
+      "proofRequired": "Choose a PDF to upload.",
+      "proofTooLarge": "The hours proof PDF is larger than 10 MB.",
+      "storageMissing": "Document storage is not configured.",
+      "projectDeclaresMonthly": "This project declares its hours monthly.",
+      "declaredCorrectedAtMonth": "Declared hours are corrected on the month level.",
+      "timeEntryRestoreFailed": "The time entry could not be restored."
     },
     "fields": {
       "chooseProject": "Choose a project.",
       "validDate": "Choose a valid date.",
+      "validTime": "Choose a valid time.",
       "validTargetDate": "Choose a valid target date.",
       "validWeek": "Choose a valid week.",
       "validStartTime": "Choose a valid start time.",
@@ -2168,6 +2609,20 @@
         "copied": "Copied {created, plural, one {# entry} other {# entries}} from the previous week.",
         "copiedWithSkipped": "Copied {created, plural, one {# entry} other {# entries}} from the previous week; {skipped} skipped."
       }
+    },
+    "declarationErrors": {
+      "INVALID_PERIOD": "Choose a valid month.",
+      "INVALID_MINUTES": "Declared hours must be greater than zero.",
+      "NOTE_REQUIRED": "Describe what the declared hours cover.",
+      "PERIOD_LOCKED": "A submitted timesheet locks this month.",
+      "ASSIGNMENT_NOT_FOUND": "This project is not assigned for the selected month.",
+      "NOT_DECLARED": "This project tracks its hours in Sheet Happens, so they cannot be declared.",
+      "TRACKED_ENTRIES_EXIST": "This month already holds tracked time entries for this project. Remove them before declaring hours.",
+      "DECLARATION_NOT_FOUND": "No hours are declared for this month yet.",
+      "REASON_REQUIRED": "An administrator correction needs a reason.",
+      "PROOF_REQUIRED": "Choose a PDF to upload.",
+      "PROOF_TOO_LARGE": "The hours proof PDF is larger than 10 MB.",
+      "PROOF_NOT_PDF": "The hours proof must be a PDF."
     }
   },
   "MyRates": {
@@ -2226,6 +2681,7 @@
       "label": "Profile settings sections",
       "profile": "Profile",
       "security": "Security and sign-in",
+      "connectedApps": "Connected apps",
       "preferences": "Preferences",
       "notifications": "Notifications"
     },
@@ -2245,6 +2701,26 @@
     "securitySection": {
       "title": "Security and sign-in",
       "description": "Manage sign-in methods, passkeys, and authenticator-app verification."
+    },
+    "connectedApps": {
+      "title": "Connected apps",
+      "description": "Apps you allowed to act as you in Sheet Happens, and what each of them may do.",
+      "connectedOn": "Connected {date}",
+      "scopesLabel": "Allowed",
+      "disconnect": "Disconnect",
+      "disconnectApp": "Disconnect {app}",
+      "keepsActingNote": "An allowed app keeps acting as you — with your rights, and only on your own hours — until you disconnect it here.",
+      "empty": {
+        "title": "No connected apps",
+        "body": "Connecting lets Claude read and log your own hours for you. It starts in Claude, not here: add the Sheet Happens connector there and approve the access it asks for. The Help page has the exact steps.",
+        "openHelp": "See the exact steps"
+      },
+      "dialog": {
+        "title": "Disconnect this app?",
+        "body": "{app} loses access immediately, including any conversation that is already open. Your time entries stay exactly as they are, and you can connect the app again whenever you want.",
+        "confirm": "Disconnect",
+        "cancel": "Cancel"
+      }
     },
     "preferences": {
       "title": "Preferences",
@@ -2546,6 +3022,7 @@
       "projectAll": "All projects",
       "groupAll": "All groups",
       "memberAll": "All members",
+      "moreValues": "+{count} more",
       "apply": "Apply filters",
       "clear": "Clear"
     },
@@ -2627,10 +3104,11 @@
     },
     "empty": {
       "title": "No tracked time matches these filters.",
-      "description": "Adjust the period or remove a filter."
+      "description": "Adjust the period or remove a filter.",
+      "declaredOnly": "Every hour in this scope was declared monthly for another company's system, so the report excludes it. Declared hours are reviewed with the timesheet, not here."
     },
     "pdf": {
-      "brand": "Sheet Happens",
+      "brand": "Sheet Happens - Rollout IT",
       "confidential": "Confidential",
       "page": "Page",
       "generatedAt": "Generated",
@@ -2650,7 +3128,11 @@
       "warnings": {
         "missingRates": "{count, plural, one {# entry is missing a rate.} other {# entries are missing rates.}}",
         "mixedCurrency": "The report contains multiple currencies: {currencies}."
-      }
+      },
+      "declaredHoursNote": "Excludes hours declared monthly for another company's system: {members, plural, one {# member} other {# members}}, {projects, plural, one {# project} other {# projects}}."
+    },
+    "exclusions": {
+      "declaredHours": "Excludes hours declared monthly for another company's system: {members, plural, one {# member} other {# members}}, {projects, plural, one {# project} other {# projects}}."
     }
   },
   "SettingsActions": {
@@ -2663,6 +3145,7 @@
       "passkeyRemoved": "Passkey removed.",
       "totpDisabledAudited": "Authenticator app disablement audited.",
       "backupCodesRegeneratedAudited": "Backup-code regeneration audited.",
+      "connectedAppDisconnected": "App disconnected.",
       "notificationSettingsUpdated": "Notification settings updated."
     },
     "errors": {
@@ -2683,6 +3166,9 @@
       "passkeyRemoveFailed": "Could not remove the passkey.",
       "totpDisableAuditFailed": "Authenticator app was disabled, but the audit event could not be recorded.",
       "backupCodesAuditFailed": "Backup codes were regenerated, but the audit event could not be recorded.",
+      "connectedAppIdMissing": "The app to disconnect is missing.",
+      "connectedAppAlreadyDisconnected": "That app is already disconnected.",
+      "connectedAppDisconnectFailed": "The app could not be disconnected.",
       "noAuthAccount": "No auth account is linked to this member.",
       "notificationSettingsUpdateFailed": "Notification settings could not be updated.",
       "notificationSettingsInvalid": "Check the notification schedule and delivery settings."

@@ -7,10 +7,10 @@ pnpm db:dev
 pnpm dev
 ```
 
-The script starts PostgreSQL, enables the required extensions, runs `prisma db push`, and seeds a
-working dataset — team members, projects, assignments, internal rates, and roughly four months of
-time entries. It deliberately stops there: no timesheets, contractor invoices, or payslips, so those
-flows start from a clean slate and are driven by hand.
+The script starts PostgreSQL and MinIO, enables the required extensions, runs `prisma db push`, and
+seeds a working dataset — team members, projects, assignments, internal rates, a year of time
+entries, and the contractor timesheet months built on top of them. It stops before payslips, so that
+flow starts from a clean slate and is driven by hand.
 
 **Members** (9). Three drive the onboarding flows:
 
@@ -26,14 +26,43 @@ partway through the seeded window, so rate history and effective dating have som
 one that started only last month, and two that ended inside the seeded window. Assignments include
 three project-level rate overrides and several that have already ended.
 
-**Time entries** cover the current month plus the three before it, weekdays only, 6–9 hours per
+**Time entries** cover the current month plus the twelve before it, weekdays only, 6–9 hours per
 day, split across a weekly project focus. The mix spans all three entry sources, a couple of
 admin-modified entries, and `inactive_project_weeks` markers for recent weeks a member had nothing
-to report on an assigned project.
+to report on an assigned project. A year of history is what gives the report period filters — the
+year and custom ranges especially — something to narrow down, across both currencies, all eight
+projects, both groups, and both member profiles.
+
+**Timesheets** cover the three closed months before the current one for the four contractors, which
+leaves the current month open for time tracking. Every persisted status is on the admin approval
+table at `/admin/timesheets`, and each row carries the revision, event, and lock history the real
+workflow would have left behind:
+
+| Month        | Marcus Weber             | Sara Klein | Levente Szabó | Contractor Example |
+| ------------ | ------------------------ | ---------- | ------------- | ------------------ |
+| 3 months ago | `paid`                   | `accepted` | `paid`        | `paid`             |
+| 2 months ago | `invoice_rejected`       | `invoiced` | `approved`    | `approved`         |
+| Last month   | `submitted` (revision 2) | `rejected` | `submitted`   | `submitted`        |
+
+Some things worth knowing about that table:
+
+- The two `submitted` rows from last month are there for bulk approval; the rejected one has its
+  period unlocked and its source entries editable again, which is the state a contractor corrects
+  a month from.
+- Marcus Weber's last month went through a rejection and a resubmission, so it has two revisions
+  with different totals — a corrected entry was added between them.
+- The `invoiced` and `invoice_rejected` months have real PDFs in the dev MinIO bucket, because the
+  admin invoice preview streams the stored object rather than the database row. The PDFs are
+  generated placeholders, not real invoices.
+- The `approved` months are the starting point for testing the contractor's own invoice upload, and
+  `contractor@example.com` has one so the invite-and-upload flow can be walked end to end.
 
 The randomised parts run through a fixed-seed PRNG, so a reset on the same day reproduces the same
-dataset. Every insert is idempotent — `pnpm db:dev:seed` against an already-seeded database adds
-nothing and touches no existing rows.
+dataset. Every insert is idempotent — `pnpm db:dev:seed` against an already-seeded database touches
+no existing rows, and running it twice in a row adds nothing the second time. What it does add is
+whatever the moving window opened up: days and months that have no entries yet, so a database seeded
+weeks ago catches up to today instead of staying frozen. Days that already have entries and months
+that already carry a timesheet are left exactly as they are.
 
 Open the first admin invite:
 
@@ -75,6 +104,17 @@ AUTH_GOOGLE_ALLOWED_DOMAINS="example.com"
 
 ## Changing the seed
 
-Seed content lives in `scripts/dev-seed.mjs` (members, projects, assignments, rates, time entries);
+Seed content lives in `scripts/dev-seed.mjs` (members, projects, assignments, rates, time entries)
+and `scripts/dev-seed-timesheets.mjs` (contractor timesheet months, invoices, events, audit trail);
 `scripts/dev-db.mjs` only orchestrates Docker, extensions, `prisma db push`, and the transaction.
-Adding a member or project means adding a row to the arrays at the top of `dev-seed.mjs`.
+Adding a member or project means adding a row to the arrays at the top of `dev-seed.mjs`; adding a
+timesheet state means adding a scenario to `SCENARIOS` in `dev-seed-timesheets.mjs`, where each one
+is a contractor, a month, and the list of workflow steps to replay over it.
+
+Because the seed only ever adds, a month that already has a timesheet is left alone. To get a
+scenario back after driving it forward by hand, delete that timesheet — the cascade takes its
+revisions, snapshot lines, and invoices with it — and seed again:
+
+```sql
+DELETE FROM timesheets WHERE id = '...';
+```

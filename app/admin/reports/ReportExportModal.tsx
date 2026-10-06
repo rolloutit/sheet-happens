@@ -258,8 +258,9 @@ export function ReportExportModal({
           className="flex min-h-0 min-w-0 flex-1 flex-col"
           onSubmit={handleExportSubmit}
         >
-          {Object.entries(exportFields).map(([name, value]) => (
-            <input key={name} type="hidden" name={name} value={value} />
+          {/* One input per pair: a scope filter with two values posts its name twice. */}
+          {exportFields.map(([name, value]) => (
+            <input key={`${name}:${value}`} type="hidden" name={name} value={value} />
           ))}
           <input type="hidden" name="mode" value={mode} />
           <input type="hidden" name="locale" value={exportLocale} />

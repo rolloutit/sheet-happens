@@ -12,6 +12,7 @@ import {
   CardTitle,
 } from "@/src/components/ui/Card";
 import { SectionHead } from "@/src/components/ui/SectionHead";
+import { firstSearchParam } from "@/src/lib/search-params";
 import {
   mapMemberToShellProfile,
   mapMemberToShellUser,
@@ -41,7 +42,7 @@ export default async function AdminTimesheetsPage({ searchParams }: AdminTimeshe
     listTimesheetsForAdmin(resolvedSearchParams),
     getTranslations("AdminTimesheets"),
   ]);
-  const actionResult = getSingleParam(resolvedSearchParams.result);
+  const actionResult = firstSearchParam(resolvedSearchParams.result);
   const actionResultMessage = getActionResultMessage(actionResult, t, {
     count: getPositiveIntegerParam(resolvedSearchParams.count),
   });
@@ -65,10 +66,11 @@ export default async function AdminTimesheetsPage({ searchParams }: AdminTimeshe
 
         <TimesheetFilterBar
           query={result.filters.query}
-          status={result.filters.status}
-          contractorMemberId={result.filters.contractorMemberId}
-          projectId={result.filters.projectId}
+          statuses={result.filters.statuses}
+          contractorMemberIds={result.filters.contractorMemberIds}
+          projectIds={result.filters.projectIds}
           month={result.filters.month}
+          includePaid={result.filters.includePaid}
           contractorOptions={result.contractorOptions}
           projectOptions={result.projectOptions}
         />
@@ -150,23 +152,23 @@ function buildPageHref(result: AdminTimesheetListResult, page: number) {
   const safePage = Math.min(Math.max(page, 1), result.totalPages);
 
   if (result.filters.query) params.set("q", result.filters.query);
-  if (result.filters.status) params.set("status", result.filters.status);
-  if (result.filters.contractorMemberId)
-    params.set("contractor", result.filters.contractorMemberId);
-  if (result.filters.projectId) params.set("project", result.filters.projectId);
+  // Multi-select filters travel as one repeated parameter per value, which is what both the
+  // hidden `<select multiple>` in the toolbar and `listSearchParam` on the way back expect.
+  for (const status of result.filters.statuses) params.append("status", status);
+  for (const contractorMemberId of result.filters.contractorMemberIds) {
+    params.append("contractor", contractorMemberId);
+  }
+  for (const projectId of result.filters.projectIds) params.append("project", projectId);
   if (result.filters.month) params.set("month", result.filters.month);
+  // Off is the default, so the flag only ever travels in its "on" form.
+  if (result.filters.includePaid) params.set("includePaid", "1");
   if (safePage > 1) params.set("page", String(safePage));
 
   const query = params.toString();
   return query ? `/admin/timesheets?${query}` : "/admin/timesheets";
 }
 
-function getSingleParam(value: string | string[] | undefined) {
-  if (Array.isArray(value)) return value.at(0) ?? "";
-  return value ?? "";
-}
-
 function getPositiveIntegerParam(value: string | string[] | undefined) {
-  const parsed = Number.parseInt(getSingleParam(value), 10);
+  const parsed = Number.parseInt(firstSearchParam(value), 10);
   return Number.isInteger(parsed) && parsed > 0 ? parsed : undefined;
 }

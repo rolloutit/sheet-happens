@@ -44,6 +44,8 @@ function createTimeTrackingDb(
           ({
             id: `assignment-${args.where.projectId}`,
             projectId: args.where.projectId,
+            trackingMode: null,
+            member: { defaultTrackingMode: "TRACKED" },
             project: {
               id: args.where.projectId,
             },

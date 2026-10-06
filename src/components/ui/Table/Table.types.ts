@@ -17,7 +17,12 @@ export type TableColumn<T extends Record<string, unknown>> = {
   width?: string;
   sortable?: boolean;
   sortLabel?: string;
-  mobileLabel?: ReactNode;
+  /**
+   * Label for this column in card mode. Defaults to `header`; pass `null` to drop the label and
+   * let the value use the card's full width — what an identity cell (avatar, name, email) wants,
+   * since a "Name" label beside a name is noise that costs the value a third of a phone screen.
+   */
+  mobileLabel?: ReactNode | null;
 };
 
 export type DataTableProps<T extends Record<string, unknown>> = {

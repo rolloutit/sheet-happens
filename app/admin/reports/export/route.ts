@@ -37,9 +37,9 @@ export async function POST(request: Request) {
     periodEnd: filters.periodEnd,
     view: filters.view,
     mode,
-    projectId: filters.projectId,
-    projectGroupId: filters.projectGroupId,
-    memberId: filters.memberId,
+    projectIds: filters.projectIds,
+    projectGroupIds: filters.projectGroupIds,
+    memberIds: filters.memberIds,
   });
   const snapshot = applyReportLineEdits(
     sourceSnapshot,
@@ -102,9 +102,9 @@ function buildExportFilters(
     anchor: filters.anchor,
     periodStart: formatDateOnly(filters.periodStart),
     periodEnd: formatDateOnly(filters.periodEnd),
-    projectId: filters.projectId,
-    projectGroupId: filters.projectGroupId,
-    memberId: filters.memberId,
+    projectIds: filters.projectIds,
+    projectGroupIds: filters.projectGroupIds,
+    memberIds: filters.memberIds,
     durationDisplayFormat,
   };
 }

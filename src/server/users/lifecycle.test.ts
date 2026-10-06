@@ -49,6 +49,9 @@ function createLifecycleDb(
     activeAdminCount?: number;
     deletedTotpCount?: number;
     revokedInvitationCount?: number;
+    revokedAccessTokenCount?: number;
+    revokedRefreshTokenCount?: number;
+    removedConsentCount?: number;
   } = {},
 ) {
   const tx = {
@@ -71,6 +74,15 @@ function createLifecycleDb(
     },
     twoFactor: {
       deleteMany: vi.fn().mockResolvedValue({ count: overrides.deletedTotpCount ?? 1 }),
+    },
+    oauthAccessToken: {
+      deleteMany: vi.fn().mockResolvedValue({ count: overrides.revokedAccessTokenCount ?? 1 }),
+    },
+    oauthRefreshToken: {
+      deleteMany: vi.fn().mockResolvedValue({ count: overrides.revokedRefreshTokenCount ?? 1 }),
+    },
+    oauthConsent: {
+      deleteMany: vi.fn().mockResolvedValue({ count: overrides.removedConsentCount ?? 1 }),
     },
     user: {
       findUnique: vi.fn().mockResolvedValue(
@@ -421,6 +433,7 @@ describe("member lifecycle services", () => {
       memberId: "member-1",
       revokedInvitationCount: 1,
       revokedSessionCount: 2,
+      revokedConnectionCount: 1,
     });
   });
 

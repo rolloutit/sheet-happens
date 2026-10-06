@@ -266,29 +266,179 @@ describe("report snapshots", () => {
     });
   });
 
+  /**
+   * The disclosure §4 asks for, and the reason it needs its own query.
+   *
+   * By the time the report is assembled the omitted rows are gone — `buildReportTimeEntryWhere`
+   * removed them — so the count cannot be derived from `entries`. Counted from declarations rather
+   * than from declared assignments, because an assignment nobody declared against omitted nothing.
+   */
+  it("counts the members and projects whose declared hours it left out", async () => {
+    const db = {
+      timeEntry: { findMany: vi.fn().mockResolvedValue([]) },
+      project: { findMany: vi.fn().mockResolvedValue([]) },
+      projectGroup: { findMany: vi.fn().mockResolvedValue([]) },
+      member: { findMany: vi.fn().mockResolvedValue([]) },
+      monthlyHourDeclaration: {
+        findMany: vi.fn().mockResolvedValue([
+          { memberId: "member-1", projectId: "project-nimbus" },
+          { memberId: "member-2", projectId: "project-nimbus" },
+          // The same member twice: two months of one project is still one member, one project.
+          { memberId: "member-1", projectId: "project-nimbus" },
+        ]),
+      },
+    };
+
+    const snapshot = await getTimeEntryReportSnapshot(
+      { periodStart: dateOnly("2026-09-01"), periodEnd: dateOnly("2026-09-30") },
+      { db, now: () => new Date("2026-10-01T12:00:00.000Z") },
+    );
+
+    expect(snapshot.exclusions.declaredHours).toEqual({ memberCount: 2, projectCount: 1 });
+  });
+
+  /** A declaration covers a whole month, so it is omitted from a report over any part of it. */
+  it("counts a declaration whose month merely overlaps the report period", async () => {
+    const db = {
+      timeEntry: { findMany: vi.fn().mockResolvedValue([]) },
+      project: { findMany: vi.fn().mockResolvedValue([]) },
+      projectGroup: { findMany: vi.fn().mockResolvedValue([]) },
+      member: { findMany: vi.fn().mockResolvedValue([]) },
+      monthlyHourDeclaration: { findMany: vi.fn().mockResolvedValue([]) },
+    };
+
+    await getTimeEntryReportSnapshot(
+      {
+        periodStart: dateOnly("2026-09-07"),
+        periodEnd: dateOnly("2026-09-13"),
+        memberIds: ["member-1"],
+      },
+      { db, now: () => new Date("2026-10-01T12:00:00.000Z") },
+    );
+
+    expect(db.monthlyHourDeclaration.findMany).toHaveBeenCalledWith({
+      where: {
+        periodStart: { lte: dateOnly("2026-09-13") },
+        periodEnd: { gte: dateOnly("2026-09-07") },
+        memberId: { in: ["member-1"] },
+      },
+      select: { memberId: true, projectId: true },
+    });
+  });
+
+  it("discloses nothing when nothing was declared", async () => {
+    const db = {
+      timeEntry: { findMany: vi.fn().mockResolvedValue([]) },
+      project: { findMany: vi.fn().mockResolvedValue([]) },
+      projectGroup: { findMany: vi.fn().mockResolvedValue([]) },
+      member: { findMany: vi.fn().mockResolvedValue([]) },
+      monthlyHourDeclaration: { findMany: vi.fn().mockResolvedValue([]) },
+    };
+
+    const snapshot = await getTimeEntryReportSnapshot(
+      { periodStart: dateOnly("2026-09-01"), periodEnd: dateOnly("2026-09-30") },
+      { db, now: () => new Date("2026-10-01T12:00:00.000Z") },
+    );
+
+    expect(snapshot.exclusions.declaredHours).toEqual({ memberCount: 0, projectCount: 0 });
+  });
+
   it("builds project group filters against project memberships", () => {
     const filters = normalizeReportFilters({
       periodStart: dateOnly("2026-07-01"),
       periodEnd: dateOnly("2026-07-31"),
-      projectGroupId: "group-1",
-      memberId: "member-1",
+      projectGroupIds: ["group-1"],
+      memberIds: ["member-1"],
     });
 
     expect(buildReportTimeEntryWhere(filters)).toEqual({
       deletedAt: null,
+      source: { not: "DECLARED" },
       localDate: {
         gte: dateOnly("2026-07-01"),
         lte: dateOnly("2026-07-31"),
       },
-      memberId: "member-1",
+      memberId: { in: ["member-1"] },
       project: {
         groupProjects: {
           some: {
-            projectGroupId: "group-1",
+            projectGroupId: { in: ["group-1"] },
           },
         },
       },
     });
+  });
+
+  /**
+   * The report scope takes several projects, groups and members. On a financial screen the
+   * failure would be quiet: a clause left as `equals` returns nothing for two selections,
+   * and a label list out of order would name the wrong project in the PDF header.
+   */
+  it("matches any of several projects, groups and members", () => {
+    const filters = normalizeReportFilters({
+      periodStart: dateOnly("2026-07-01"),
+      periodEnd: dateOnly("2026-07-31"),
+      projectIds: ["project-1", "project-2"],
+      projectGroupIds: ["group-1", "group-2"],
+      memberIds: ["member-1", "member-2"],
+    });
+
+    expect(buildReportTimeEntryWhere(filters)).toMatchObject({
+      memberId: { in: ["member-1", "member-2"] },
+      projectId: { in: ["project-1", "project-2"] },
+      project: {
+        groupProjects: { some: { projectGroupId: { in: ["group-1", "group-2"] } } },
+      },
+    });
+  });
+
+  it("names the chosen scope in the order the filter listed it", async () => {
+    const db = {
+      timeEntry: { findMany: vi.fn().mockResolvedValue([]) },
+      project: {
+        // Returned in the opposite order on purpose: the database decides its own ordering.
+        findMany: vi.fn().mockResolvedValue([
+          { id: "project-2", name: "Helix" },
+          { id: "project-1", name: "Apollo" },
+        ]),
+      },
+      projectGroup: { findMany: vi.fn().mockResolvedValue([]) },
+      member: { findMany: vi.fn().mockResolvedValue([]) },
+    };
+
+    const snapshot = await getTimeEntryReportSnapshot(
+      {
+        periodStart: dateOnly("2026-07-01"),
+        periodEnd: dateOnly("2026-07-01"),
+        projectIds: ["project-1", "project-2"],
+      },
+      { db, now: () => new Date("2026-07-31T12:00:00.000Z") },
+    );
+
+    expect(snapshot.filters.projectNames).toEqual(["Apollo", "Helix"]);
+  });
+
+  it("drops a scope id that no longer resolves rather than leaving a gap", async () => {
+    const db = {
+      timeEntry: { findMany: vi.fn().mockResolvedValue([]) },
+      project: {
+        findMany: vi.fn().mockResolvedValue([{ id: "project-1", name: "Apollo" }]),
+      },
+      projectGroup: { findMany: vi.fn().mockResolvedValue([]) },
+      member: { findMany: vi.fn().mockResolvedValue([]) },
+    };
+
+    const snapshot = await getTimeEntryReportSnapshot(
+      {
+        periodStart: dateOnly("2026-07-01"),
+        periodEnd: dateOnly("2026-07-01"),
+        projectIds: ["project-1", "deleted-project"],
+      },
+      { db, now: () => new Date("2026-07-31T12:00:00.000Z") },
+    );
+
+    expect(snapshot.filters.projectIds).toEqual(["project-1", "deleted-project"]);
+    expect(snapshot.filters.projectNames).toEqual(["Apollo"]);
   });
 
   it("queries entries by stored member-local dates and keeps involved timezones in the snapshot", async () => {
@@ -317,19 +467,23 @@ describe("report snapshots", () => {
       timeEntry: {
         findMany: vi.fn().mockResolvedValue(entries),
       },
+      // The scope filters take several values, so the labels are looked up by id list.
       project: {
-        findUnique: vi.fn().mockResolvedValue({ name: "Client Portal" }),
+        findMany: vi.fn().mockResolvedValue([{ id: "project-1", name: "Client Portal" }]),
       },
       projectGroup: {
-        findUnique: vi.fn().mockResolvedValue({ name: "Client Work" }),
+        findMany: vi.fn().mockResolvedValue([{ id: "group-1", name: "Client Work" }]),
       },
       member: {
-        findUnique: vi.fn().mockResolvedValue({
-          email: "contractor@example.com",
-          firstName: "Contractor",
-          lastName: "Example",
-          displayName: "Contractor Example",
-        }),
+        findMany: vi.fn().mockResolvedValue([
+          {
+            id: "member-1",
+            email: "contractor@example.com",
+            firstName: "Contractor",
+            lastName: "Example",
+            displayName: "Contractor Example",
+          },
+        ]),
       },
     };
 
@@ -337,9 +491,9 @@ describe("report snapshots", () => {
       {
         periodStart: dateOnly("2026-07-01"),
         periodEnd: dateOnly("2026-07-01"),
-        projectId: "project-1",
-        projectGroupId: "group-1",
-        memberId: "member-1",
+        projectIds: ["project-1"],
+        projectGroupIds: ["group-1"],
+        memberIds: ["member-1"],
       },
       {
         db,
@@ -351,16 +505,17 @@ describe("report snapshots", () => {
       expect.objectContaining({
         where: {
           deletedAt: null,
+          source: { not: "DECLARED" },
           localDate: {
             gte: dateOnly("2026-07-01"),
             lte: dateOnly("2026-07-01"),
           },
-          memberId: "member-1",
-          projectId: "project-1",
+          memberId: { in: ["member-1"] },
+          projectId: { in: ["project-1"] },
           project: {
             groupProjects: {
               some: {
-                projectGroupId: "group-1",
+                projectGroupId: { in: ["group-1"] },
               },
             },
           },
@@ -374,9 +529,9 @@ describe("report snapshots", () => {
       timezones: ["America/New_York", "Europe/Budapest"],
     });
     expect(snapshot.filters).toMatchObject({
-      projectName: "Client Portal",
-      projectGroupName: "Client Work",
-      memberName: "Contractor Example",
+      projectNames: ["Client Portal"],
+      projectGroupNames: ["Client Work"],
+      memberNames: ["Contractor Example"],
     });
   });
 });

@@ -56,9 +56,17 @@ function createSubmitDb(
     } | null;
     memberRates?: TimesheetPreviewRatePeriod[];
     entries?: ReturnType<typeof entry>[];
+    declarations?: Array<{
+      minutes: number;
+      proofDocumentId: string | null;
+      project: { name: string };
+    }>;
   } = {},
 ) {
   const tx = {
+    monthlyHourDeclaration: {
+      findMany: vi.fn().mockResolvedValue(overrides.declarations ?? []),
+    },
     member: {
       findUnique: vi.fn().mockResolvedValue(
         overrides.member ?? {

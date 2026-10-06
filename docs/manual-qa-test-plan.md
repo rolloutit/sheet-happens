@@ -15,6 +15,7 @@ Replace placeholder values before sharing a concrete test run:
 - `{SYSTEM_CHECK_VIEW}`: admin system-check path, default `https://{DOMAIN_NAME}/admin/system`.
 - `{AUDIT_LOG_VIEW}`: audit-log viewer path, default `https://{DOMAIN_NAME}/admin/audit`.
 - `{HELP_VIEW}`: Help page path, default `https://{DOMAIN_NAME}/help`.
+- `{MCP_URL}`: MCP connector URL, default `https://{DOMAIN_NAME}/api/mcp`.
 - `{ADMIN_INFO_VIEW}`: admin information-page editor path, default `https://{DOMAIN_NAME}/admin/info`.
 - `{INVITED_EMAIL}`: email address that owns the tested invitation.
 - `{INVITED_FIRST_NAME}`: first name used when creating a new invited member.
@@ -35,8 +36,14 @@ Replace placeholder values before sharing a concrete test run:
 - `{PASSKEY_DEVICE}`: passkey-capable test device or browser profile.
 - `{TIME_TRACKING_WEEK_START}`: Monday date of a test week, formatted as `YYYY-MM-DD`.
 - `{TIME_TRACKING_PREVIOUS_WEEK_START}`: Monday date one week before `{TIME_TRACKING_WEEK_START}`.
+- `{TIME_TRACKING_MONTH_SPANNING_WEEK_START}`: Monday date of a week that spans two calendar
+  months, formatted as `YYYY-MM-DD` — for example `2026-08-31`, the week Aug 31 - Sep 6.
 - `{TIME_TRACKING_PROJECT_A}`: active project assigned to the time-tracking test user.
 - `{TIME_TRACKING_PROJECT_B}`: second active project assigned to the time-tracking test user.
+- `{DECLARED_HOURS}`: monthly hour figure used for declared-hours testing, for example `52`.
+- `{DECLARED_NOTE}`: note text describing what the declared hours cover.
+- `{HOURS_PROOF_PDF_FILE}`: local PDF file used as the declared-hours proof document.
+- `{HOURS_PROOF_REPLACEMENT_PDF_FILE}`: second local PDF file, for replacing a proof.
 - `{TIME_ENTRY_DESCRIPTION}`: description text used for test time entries.
 - `{TIME_ENTRY_UPDATED_DESCRIPTION}`: edited description text used for test time entries.
 - `{TIMESHEET_MONTH}`: contractor timesheet month formatted as `YYYY-MM`.
@@ -400,10 +407,14 @@ Expected result:
 Run these tests as `{CONTRACTOR_EMAIL}` or `{EMPLOYEE_EMAIL}`. The user must be active and assigned
 to `{TIME_TRACKING_PROJECT_A}` and `{TIME_TRACKING_PROJECT_B}` for `{TIME_TRACKING_WEEK_START}`.
 
+`/time` opens on the `Week` stop of the detail-level control unless the URL carries `?zoom=` or the
+browser remembers another level, so any scenario below that works in the grid selects `Grid` first.
+Clearing site data for the domain resets the remembered level.
+
 ### Weekly Grid Loads Assigned Projects
 
 1. Open `https://{DOMAIN_NAME}/time?week={TIME_TRACKING_WEEK_START}`.
-2. Confirm the weekly grid is visible.
+2. Select `Grid` on the detail-level control and confirm the weekly grid is visible.
 3. Confirm `{TIME_TRACKING_PROJECT_A}` and `{TIME_TRACKING_PROJECT_B}` are listed.
 4. Use the previous-week and next-week controls.
 5. Return to `{TIME_TRACKING_WEEK_START}`.
@@ -416,7 +427,7 @@ Expected result:
 
 ### Create, Edit, And Delete Duration Entry
 
-1. Open `https://{DOMAIN_NAME}/time?week={TIME_TRACKING_WEEK_START}`.
+1. Open `https://{DOMAIN_NAME}/time?week={TIME_TRACKING_WEEK_START}&zoom=grid`.
 2. Click an empty cell for `{TIME_TRACKING_PROJECT_A}` on a non-future day.
 3. Enter `{TIME_ENTRY_DESCRIPTION}`.
 4. Enter duration `3h 20m`.
@@ -455,13 +466,13 @@ Expected result:
 
 ### Timer Start And Stop
 
-1. Open `https://{DOMAIN_NAME}/time?week={TIME_TRACKING_WEEK_START}` and stay in `Grid` view.
+1. Open `https://{DOMAIN_NAME}/time?week={TIME_TRACKING_WEEK_START}&zoom=grid`.
 2. Click `New timer`.
 3. Enter `{TIME_ENTRY_DESCRIPTION}` in the description field.
 4. Choose `{TIME_TRACKING_PROJECT_A}`.
 5. Click `Start`.
-6. Confirm the running timer appears on the page and in the app header, in `Grid` view as well as
-   in `Day` view.
+6. Confirm the running timer appears on the page and in the app header, at the `Grid` stop as well
+   as at the `Day` and `Week` stops.
 7. Confirm `New timer` is now disabled, and that hovering it explains that the running timer has to
    be stopped first.
 8. Stop the timer from the card on the page.
@@ -528,7 +539,7 @@ Expected result:
 
 ### Duplicate Last Week Does Not Duplicate Existing Cells
 
-1. Open `https://{DOMAIN_NAME}/time?week={TIME_TRACKING_PREVIOUS_WEEK_START}`.
+1. Open `https://{DOMAIN_NAME}/time?week={TIME_TRACKING_PREVIOUS_WEEK_START}&zoom=grid`.
 2. Create entries for `{TIME_TRACKING_PROJECT_A}` and `{TIME_TRACKING_PROJECT_B}`.
 3. Open `https://{DOMAIN_NAME}/time?week={TIME_TRACKING_WEEK_START}`.
 4. Click `Duplicate last week`.
@@ -569,7 +580,7 @@ Expected result:
 
 ### Inactive Project Week
 
-1. Open `https://{DOMAIN_NAME}/time?week={TIME_TRACKING_WEEK_START}`.
+1. Open `https://{DOMAIN_NAME}/time?week={TIME_TRACKING_WEEK_START}&zoom=grid`.
 2. Choose an assigned project row with no entries in the week.
 3. Mark the project as inactive for the week.
 4. Undo the inactive mark.
@@ -595,6 +606,458 @@ Expected result:
 - Keyboard focus stays inside the open dialog.
 - `Escape` closes the dialog.
 - Focus returns to the control that opened the dialog.
+
+### Detail Level Axis And Its URL State
+
+1. Open `https://{DOMAIN_NAME}/time?week={TIME_TRACKING_WEEK_START}`.
+2. Confirm the detail-level control shows `Day`, `Week`, `Grid` and `Month`, with `Week` selected.
+3. Select a day other than today on the day strip above the level, then select `Day`, then `Grid`,
+   then `Week` again.
+4. Copy the address bar, open it in a new tab, and confirm the same level and the same selected day.
+5. Select `Grid`, reload the page, then open `https://{DOMAIN_NAME}/time` with no query string.
+6. Use the browser Back button.
+
+Expected result:
+
+- The chosen day stays chosen through every level change, in both directions.
+- The address bar gains `zoom=` and `day=` as they change, and the page never reloads or flashes
+  while they do — only the week controls reload the page.
+- A copied address opens on the level and day it names.
+- With no `zoom=` in the address, the page opens on the level last used in this browser.
+- Back moves between weeks and pages, not between levels.
+
+### Detail Level Keyboard Shortcuts
+
+1. Open `https://{DOMAIN_NAME}/time?week={TIME_TRACKING_WEEK_START}`.
+2. Press `1`, `2`, `3` and `4` in turn.
+3. Press `-` and then `+` three times each.
+4. Press `[` and `]` at the `Week` level, then again at the `Month` level.
+5. Press `t`.
+6. Select `Grid`, click into a grid cell, and type `3.5` without saving.
+7. Open `New entry`, and with the dialog open type `1`, `3` and `t` into the description field.
+
+Expected result:
+
+- `1`, `2`, `3` and `4` jump to `Day`, `Week`, `Grid` and `Month`.
+- `-` moves one level out and `+` one level in, and neither wraps around at either end.
+- `[` and `]` move one **week** back and forward at `Day`, `Week` and `Grid`, keeping the current
+  level and the same weekday — and one **month** back and forward at `Month`, landing on the 1st of
+  that month.
+- The hint beside the control says which of the two `[` and `]` will do at the level you are on.
+- `t` returns to this week with today selected, from any level.
+- Typing in a grid cell or in the entry dialog changes no level: the digits land in the field.
+- The arrow keys are not claimed by the level control anywhere on the page.
+
+### Week Level On Desktop And Mobile
+
+1. Open `https://{DOMAIN_NAME}/time?week={TIME_TRACKING_WEEK_START}&zoom=week` on a desktop browser.
+2. Confirm seven day columns, each with its day, its total, its entry cards, and an add affordance.
+3. Scroll the page and confirm the day headers stay visible while the columns scroll together.
+4. Add, edit and delete an entry from a column.
+5. Click a day column's header.
+6. Repeat step 1 on a phone-width viewport.
+7. Tap a collapsed day, then tap the open day's header again.
+8. Repeat the whole scenario in Hungarian and in both light and dark themes.
+
+Expected result:
+
+- A day with no entries says so rather than showing an empty column.
+- Entry cards show the project, the description, the duration, and a marker for a warning or an
+  administrator's correction.
+- Clicking a day header opens that day at the `Day` level, with that day selected.
+- On a phone the level is an accordion: the selected day is open, the others collapse to one row
+  with the day and its total. Tapping a collapsed day opens it; tapping the open one zooms in.
+- Every label is translated in both languages, and the level is legible in both themes.
+
+### Week Columns Contain Their Cards, And Use A Wide Display
+
+1. Open `https://{DOMAIN_NAME}/time?week={TIME_TRACKING_WEEK_START}&zoom=week` on the widest
+   display available, and log entries so that at least one day holds an entry with a start and end
+   time (`09:00`–`18:00`, not a duration-only entry) and one holds an entry with a long
+   single-word description.
+2. Look along the seven columns at the right-hand edge of each one.
+3. Measure how much empty page there is left and right of the content, and compare it with
+   `https://{DOMAIN_NAME}/admin/projects` at the same window size.
+4. Narrow the browser window down through roughly 1500px, 1300px and 1100px, watching the entry
+   cards each time.
+5. Widen it back out, then repeat at a phone-width viewport.
+6. Repeat in Hungarian and in both light and dark themes.
+
+Expected result:
+
+- No entry card is wider than the column it sits in. Nothing hangs over the day to its right, and
+  no card is clipped by the next column — at any window width, and with any description.
+- A card's edit and delete buttons stay at the card's right edge at every width. They never sit
+  outside the card and never drift as the window changes.
+- On a wide display the page uses the same width as the admin screens rather than a narrower
+  reading column, so the seven day columns are visibly wider than they were.
+- Where a column is too narrow for the duration and the time range on one line, the time range
+  moves under the duration. The duration itself is never shortened or ellipsised, and the card
+  grows by one text line at most.
+- A long single-word description wraps or is clipped to two lines inside the card; it never widens
+  the card or the column.
+- The phone accordion is unchanged: one open day, the rest collapsed to a summary row.
+
+### Detail Level Focus And Scroll Continuity
+
+1. Open `https://{DOMAIN_NAME}/time?week={TIME_TRACKING_WEEK_START}&zoom=week`.
+2. Tab to a day chip on the day strip, then press `3` and `2`.
+3. Click a day column's header to zoom into that day.
+4. Scroll to the bottom of a dense week, then press `1`.
+5. Confirm the week total and the day total do not blank out or jump as levels change.
+
+Expected result:
+
+- Focus stays on the day chip across a level change, and never falls back to the top of the page.
+- Zooming in from a day header leaves focus on that day's chip rather than nowhere.
+- The selected day is scrolled into view rather than the page jumping to the top.
+- The day strip, the week total and the day total stay in place at every level.
+
+### Detail Level Motion And Capacity Bars
+
+1. Open `https://{DOMAIN_NAME}/time?week={TIME_TRACKING_WEEK_START}&zoom=week` on a desktop browser
+   and watch the page arrive.
+2. Press `3`, then `2`, then `1`, then `2`, watching what each column and card does in between.
+3. On the `Week` level, watch a dense day's column — one with eight or more entries — as it arrives.
+4. Look at the bar under each day chip on the day strip. Compare a day under 8 hours, a day at
+   roughly 8 hours, and a day over 8 hours, and hover each chip.
+5. Add an entry to a day so its total crosses 8 hours, and watch that day's bar.
+6. Repeat step 2 at a phone-width viewport.
+7. Turn on the operating system's reduce-motion setting — macOS _Settings → Accessibility → Display
+   → Reduce motion_, Windows _Settings → Accessibility → Visual effects → Animation effects_ — and
+   repeat steps 1-5. Use the real OS setting, not the browser devtools emulation.
+8. Turn the setting back off, and with a screen reader running (VoiceOver on macOS) press `1`, `2`
+   and `3` in turn and listen.
+9. Repeat the whole scenario in Hungarian and in both light and dark themes.
+
+Expected result:
+
+- **Nothing animates on the first paint.** The page arrives settled; no card flies in and no column
+  slides on load, at any level.
+- Changing level reads as one surface moving, not three screens swapping: a day's column visibly
+  becomes its grid column header and back, rather than one list fading out while another fades in.
+- The day strip itself never animates. It is the fixed point everything else moves against, and the
+  focus ring on a day chip stays exactly where it was through a level change.
+- Entry cards arriving after a level change fade up a few pixels, one shortly after the next.
+  A column with many entries finishes its cascade quickly — it must not drizzle in for the better
+  part of a second. Cards leaving fade out without moving.
+- **No number ever counts up or rolls.** The day total, a card's duration and a grid cell's value
+  change by swapping, never by tweening. Watch the day total specifically while pressing `1` and
+  `2` with different days selected.
+- The bar under each day chip fills in proportion to that day's hours against the 8-hour target.
+  Under target it is mint and partly filled; at or over target it is full and amber. It never
+  overflows its track, however many hours the day holds. Hovering a chip shows the two figures the
+  bar stands for, in the same format as the rest of the page.
+- A bar whose day crosses 8 hours animates from mint to amber rather than snapping.
+- On a phone the level change still works and nothing flies in from the corner of the screen — the
+  grid has no day headers at that width, so the week columns must simply appear rather than sliding
+  in from the top-left.
+- **With OS reduce-motion on, nothing moves.** Levels crossfade, cards appear and disappear without
+  sliding, and the capacity bars snap to their new width. This is the check most likely to be
+  missed: the app's global CSS reduce-motion rule does not reach this animation library, so a
+  failure here means the level transitions will fly for every user who has the setting on.
+- The screen reader announces the new level after each of `1`, `2` and `3` — the level's name, how
+  many days it covers, and the total for that span — in the language the page is in. After `4` it
+  names the month instead of a number of days.
+
+### Month Level And The Month It Shows
+
+Use a week that spans two months for this one — the month is taken from the selected day, not from
+the week, and a week inside a single month cannot tell the two apart.
+
+1. Open `https://{DOMAIN_NAME}/time?week={TIME_TRACKING_MONTH_SPANNING_WEEK_START}&zoom=month`.
+2. Read the period row above the day strip, and the band below it.
+3. On the day strip, select a day on the **earlier** month's side of the week, then a day on the
+   **later** month's side. Watch the period row, the total and the band each time.
+4. Confirm nothing spins, blanks out or reloads while you do — the address bar gains `day=` but the
+   page stays put.
+5. Press `[` and then `]`, then use the visible previous/next buttons beside the month name.
+6. Press `t`.
+7. Click a project row.
+8. Press `4` again, then `2`, and watch the day strip and the total across both changes.
+9. Repeat with a project you logged nothing against this month, and with a phone-width viewport.
+10. Repeat the whole scenario in Hungarian and in both light and dark themes.
+
+Expected result:
+
+- The period row names the month, steps by month, and its total reads `Month total`. It is the same
+  row that reads `Aug 31 - Sep 6, 2026` and `Week total` at the other three levels — one row, one
+  total, changing only its label and its number.
+- The month named is the month the **selected day** falls in. Moving the day strip across the month
+  boundary changes the month, its total and its rows, with no page load and no spinner.
+- The tracked band lists one row per project with the hours tracked against it in that month. A
+  project you logged nothing against this month is still listed, at `0 h`, and reads quieter than
+  the others.
+- If the member has any declared assignment, a second band follows it. A declared project with
+  nothing declared yet still gets a row, because that row is the form the figure is typed into.
+- The month total counts every hour the month holds, tracked **and** declared, so the rows across
+  both bands add up to it.
+- `[` and `]` and the visible previous/next buttons do exactly the same thing: one month back or
+  forward, landing on the 1st of that month with the week that contains it loaded. This is a real
+  page load, unlike moving within the visible week.
+- The `This month` pill appears only when the month shown is the current one; otherwise it is a
+  button that returns to today, and `t` does the same.
+- Clicking a project row returns to the `Grid` level on the week the day strip was already pointing
+  at — the whole week, not a view filtered to that project.
+- The day strip stays on screen at the month level, visibly quieter than at the other levels, and
+  stays clickable. The day total beside it stays in place and keeps reading the selected day.
+- Every label reads correctly in Hungarian and English, and the month name is in the page's own
+  language — `2026. szeptember`, not `September 2026`, in Hungarian.
+
+### Declare A Month's Hours On A Hybrid Project
+
+Set up: as an administrator, set **one** of a member's project assignments to declared hours and
+leave the rest tracked. Use `{TIME_TRACKING_PROJECT_B}` as the declared one. The month must hold no
+tracked time entries for that project — the write refuses one that does, which is the double-count
+guard and is checked separately below.
+
+Run this as the member.
+
+1. Open `https://{DOMAIN_NAME}/time` and read the line under the day strip.
+2. Follow the link in that line.
+3. Read the two bands and their headings.
+4. In the declared row, press Save without typing anything, then type `{DECLARED_HOURS}` into the
+   hours field and press Save again.
+5. Type `{DECLARED_NOTE}` into the note field and press Save.
+6. Read the month total in the period row, and add up the two bands yourself.
+7. Type `{DECLARED_HOURS}:30` into the hours field, then `{DECLARED_HOURS}h`, saving each time.
+8. Attach `{HOURS_PROOF_PDF_FILE}` in the proof slot, then open it with the view link.
+9. Replace it with `{HOURS_PROOF_REPLACEMENT_PDF_FILE}` and open it again.
+10. Press `1`, `2` and `3`, and look for the declared project in each level.
+11. Reload the page and confirm the figure, the note and the proof are still there.
+12. Repeat the whole scenario in Hungarian and in both light and dark themes, and at phone width.
+
+Expected result:
+
+- At Day, Week and Grid the declared project is **absent** from everything — the grid rows, the
+  "Assigned" chips, the recent chips, the entry form's project picker and the timer dialog — and one
+  line under the day strip explains why, naming the project and linking to the month. The line is
+  information, not a banner, and it disappears at the month level where the project is on screen.
+- The month has two bands: the tracked one first with a row per project, then the declared one.
+- Save is unavailable until **both** the hours and the note have a value. A figure with no note
+  cannot be saved at all, which is deliberate — the note becomes the entry's description, and a
+  timesheet cannot be submitted without one.
+- `52`, `52:30` and `52h` are all accepted and mean what they say, the same as everywhere else in
+  the app. What is stored is minutes; what is shown is your own duration format.
+- **The month total equals the tracked hours plus the declared hours**, and the rows add up to it.
+  Check this arithmetic explicitly — it is the number a month is closed against.
+- The proof shows its filename, size and upload time, opens as a PDF in a new tab, and can be
+  replaced while the month is unlocked. Replacing it leaves exactly one proof, not two.
+- Everything survives a reload, and every label reads correctly in both languages.
+
+### Declared Hours Refuse The Ways They Could Double-Count
+
+Run these as the member, on the declared project from the previous scenario.
+
+1. At the Grid level, try to type hours into a cell for the declared project.
+2. Press "New entry" and open the project picker.
+3. Press "New timer" and open its project picker.
+4. Press "Duplicate last week" in a week containing the 1st of a month that has a declared figure.
+5. As an administrator, try to switch the assignment back to tracked hours while the declaration
+   exists.
+6. As an administrator, set a **second** project to declared for a month that already holds ordinary
+   time entries for it, then have the member try to declare hours on it.
+
+Expected result:
+
+- The declared project is not offered anywhere at Day, Week or Grid, so steps 1-3 have nothing to
+  select. There is no cell to type into and no entry to create.
+- "Duplicate last week" copies the tracked entries and **not** the declared figure. The following
+  month does not gain a 52-hour entry.
+- The mode switch is refused with a message naming the month and what has to be removed first.
+- Declaring hours on a month that already holds tracked entries for that project is refused, with a
+  message saying to remove them first. This is the guard that keeps a month from counting the same
+  hours twice; it is the single most important refusal in this feature.
+
+### A Contractor Cannot Submit Declared Hours Without Their Proof
+
+Run this as `{CONTRACTOR_EMAIL}`, with one declared assignment in `{TIMESHEET_MONTH}`.
+
+1. Declare `{DECLARED_HOURS}` hours with a note, and do **not** attach a proof.
+2. Open `https://{DOMAIN_NAME}/timesheets?month={TIMESHEET_MONTH}` and submit the month.
+3. Attach `{HOURS_PROOF_PDF_FILE}` and submit again.
+4. Return to `https://{DOMAIN_NAME}/time` at the month level.
+5. Repeat with a declared assignment that has **no** hours declared against it at all.
+6. Repeat step 1 and 2 as an employee rather than a contractor.
+
+Expected result:
+
+- Submission is refused while a declared figure has no proof, and the message **names the projects**
+  whose proof is missing rather than saying only that something is wrong.
+- With the proof attached the month submits normally, and the declared figure is one line on the
+  timesheet with the right hours and the right amount.
+- After submission the declared row is read-only: the figure, the note and the proof are still
+  legible and the proof still opens, but nothing can be edited or replaced. That is the same
+  `PeriodLock` that freezes ordinary entries — no new mechanism.
+- A declared assignment with **no** hours does not block submission. That is a quiet month, not a
+  missing document.
+- An employee has no submission gate at all, so a missing proof stays a warning on their month and
+  never blocks anything. That asymmetry is deliberate.
+
+### An Administrator Reviews Declared Hours Against The Invoice
+
+Run this as `{ADMIN_EMAIL}`, on the submitted month from the previous scenario.
+
+1. Open `https://{DOMAIN_NAME}/admin/timesheets` and open that contractor's `{TIMESHEET_MONTH}`.
+2. Read the submitted snapshot, project by project.
+3. Read the date on the declared project's line.
+4. Open the proof from the review page.
+5. Compare the snapshot total with the uploaded invoice amount.
+
+Expected result:
+
+- The declared project is marked as declared monthly, so a reviewer is not left inferring it from
+  an entry count of one.
+- Its caption reads as hours declared for the month rather than as a count of entries.
+- **The line's date reads as the month and the word "declared", not `Sep 1`.** A reviewer must not
+  be able to take it for work done on the first of the month.
+- The proof opens as a PDF in a new tab from the review page, the same way the invoice does, and
+  the filename, size and upload time are shown beside it.
+- The declared hours are counted into the project total, the snapshot total and the figure the
+  invoice is checked against — exactly like tracked hours, because they are the same kind of record.
+
+### Reports Exclude Declared Hours And Say So
+
+Run this as `{ADMIN_EMAIL}`, with the hybrid project from the first scenario.
+
+1. Open `https://{DOMAIN_NAME}/admin/reports` for the month that holds the declared figure.
+2. Read the total hours and the line above the table.
+3. Filter to the declared project only.
+4. Filter to a member whose assignments are **all** declared.
+5. Export the report as a PDF, in both languages, and read the footnotes.
+6. Open the report row editor for a **tracked** entry dated the 1st of that month, change its
+   duration, and save.
+
+Expected result:
+
+- The report totals **only** the tracked hours. The declared figure is absent from the totals, the
+  charts, the table and the export.
+- A line above the report states that declared hours were excluded and how many members and
+  projects that covers. It gives **counts and never amounts**, and is worded so it can be read
+  outside the company.
+- A member with only declared assignments stays selectable in the filters, and the empty result says
+  _why_ it is empty rather than showing a blank table.
+- The exported PDF carries the same disclosure as a footnote, in the language the export was made
+  in.
+- **The tracked entry dated the 1st saves normally.** This is the one to watch: the declared figure
+  sits on that same date, and if it were counted into the day's total the edit would fail with a
+  24-hour message about hours nothing on the screen shows.
+
+### Declared Assignments Are Flagged Monthly, Not Weekly
+
+Run this as `{ADMIN_EMAIL}`.
+
+1. Open `https://{DOMAIN_NAME}/dashboard` mid-month, with a declared assignment that has nothing
+   declared for the **current** month but does for the previous one.
+2. Then remove the previous month's declaration and reload.
+3. Mark that project inactive for the current week, if the option is offered, and reload.
+4. Compare against a tracked assignment with nothing logged this week.
+
+Expected result:
+
+- A declared assignment with the **last ended month** declared is not flagged, whatever the current
+  week looks like. It must not nag for three weeks out of four while a member waits for month end.
+- A declared assignment with nothing declared for the last ended month **is** flagged.
+- An inactive-week marker is not offered for a declared assignment and does not excuse a missing
+  declaration if one exists — "nothing happened this week" says nothing about a monthly figure.
+- A tracked assignment keeps the weekly rhythm it has always had.
+
+### The Proof Upload Rejects What It Should
+
+Run this as the member with a declared assignment and hours already declared.
+
+1. Try to attach the proof **before** declaring any hours.
+2. Attach a PNG or a Word file.
+3. Rename a non-PDF file to end in `.pdf` and attach it.
+4. Attach a PDF larger than 10 MB.
+5. Attach a valid PDF and then open the proof link while signed in as a **different** member.
+
+Expected result:
+
+- The proof slot is not offered before hours are declared, and says so rather than being silently
+  absent.
+- A non-PDF is rejected by type, and a renamed non-PDF is rejected too — the check reads the file's
+  own bytes, not its name.
+- An oversized file gives a real message naming the size limit. It must not fail silently or with a
+  generic error, which is what would happen if it reached the 12 MB server-action limit instead.
+- Every rejection is reported on the row that asked for it, not on the whole month.
+- Another member's proof link is a 404, not a document.
+
+### A Declared-Only Member Sees Only The Month
+
+Set up: as an administrator, set every one of a member's project assignments to declared hours (or
+set the member default to declared and leave every assignment inheriting it).
+
+1. Sign in as that member and open `https://{DOMAIN_NAME}/time`.
+2. Then open `https://{DOMAIN_NAME}/time?zoom=week` and `?zoom=grid` directly.
+3. Press `1`, `2`, `3`, `-` and `+`.
+4. Press `[`, `]` and `t`.
+5. Read the bands and their headings.
+6. Declare `{DECLARED_HOURS}` hours with `{DECLARED_NOTE}` and attach `{HOURS_PROOF_PDF_FILE}`.
+7. Confirm with a hybrid member — some assignments tracked, some declared — that nothing changed
+   for them.
+
+Expected result:
+
+- There is **no** detail-level control at all: one stop is not a choice.
+- The page opens on the month, and a `zoom=` in the address naming any other level still opens on
+  the month.
+- No digit or step key reaches another level.
+- `[`, `]` and `t` still work, and the hint beside where the control would be lists only those.
+- **Both band headings are gone**, and so is the tracked band: with one kind of hours there is
+  nothing to distinguish, so this member sees one form and no labels above it. There is also no
+  handoff line, because there is nothing to hand off to.
+- The month total is the declared figure, and declaring, noting and proving work exactly as they do
+  for a hybrid member.
+- A hybrid member keeps all four stops, opens on the week as before, sees **both** bands with their
+  headings, and sees their tracked projects in the tracked band.
+
+### An Administrator Corrects A Declared Figure On A Member's Behalf
+
+Run this as `{ADMIN_EMAIL}`. Set up: one member with a declared assignment who has declared
+`{DECLARED_HOURS}` hours for the current month with `{HOURS_PROOF_PDF_FILE}` attached, one declared
+assignment that nobody has declared against yet, and — for step 8 — one contractor whose month is
+held by a submitted timesheet.
+
+1. Open `https://{DOMAIN_NAME}/admin/declared-hours` and read the three counters beside the month.
+2. Step to the previous month and back with the arrows, then use "This month". Watch the address bar,
+   and then press the browser's Back button twice.
+3. Open `https://{DOMAIN_NAME}/admin/declared-hours?month=1999-13-99` and then `?month=` with nothing
+   after it.
+4. Find the row that has nothing declared, and the one with a figure but no proof.
+5. On the row with a proof, open the proof from the table, then press Correct and open it again from
+   inside the drawer.
+6. In the drawer, clear the note and try to save. Put the note back, clear the reason and try again.
+7. Type `{DECLARED_HOURS}:30` into the hours field, give a reason, and save.
+8. Look at the locked contractor's row, at your own row if you have a declared assignment, and at a
+   row whose assignment has been ended so it no longer covers the month.
+9. Sign in as the corrected member: open their notifications, then `/time` at the month level.
+10. Sign in as a non-admin and open `https://{DOMAIN_NAME}/admin/declared-hours` directly.
+11. Repeat in Hungarian, in both light and dark themes, and at phone width.
+
+Expected result:
+
+- The page lists one row per member and declared project for the month — including rows with
+  **nothing declared yet**, which is the main thing it exists to make visible. The counters read
+  declared total, how many figures are missing, and how many figures have no proof.
+- The month lives in the address as `?month=YYYY-MM-01`, so a month is linkable and the browser's
+  Back button means "the previous month I was looking at". A nonsense or empty `month=` falls back to
+  the current month rather than erroring.
+- The proof opens as a PDF from both the table and the drawer. An admin can **open** a proof but
+  never upload or replace one — that stays with the member, and the note under the table says so.
+- Save is unavailable until the hours, the note **and** the reason all have a value. The reason is
+  mandatory: it is what the member reads in their notification.
+- Hours accept `52`, `52:30` and `52h`, the same grammar the member's own row takes. A figure above
+  24 h × the days in that month warns and still saves.
+- Three rows offer no correction, each saying **why** rather than showing a dead button: a locked
+  month, your own declaration (correct it on your own `/time`, so the reason is not lost), and an
+  assignment that no longer covers the month.
+- The corrected member gets a time-entry admin-modification notification carrying the reason, and
+  their own month level shows the new figure. The audit log has the correction with before/after
+  values.
+- A non-admin cannot reach the page at all.
+- Reports still exclude the corrected hours, and the contractor's timesheet still includes them —
+  a correction changes the figure, never which chain it belongs to.
 
 ## Contractor Timesheets
 
@@ -865,16 +1328,28 @@ Expected result:
 12. Accept the invoice.
 13. Confirm the invoice reconciliation section shows the paid action.
 14. Click `Mark as paid`.
-15. Reopen `https://{DOMAIN_NAME}/admin/timesheets`.
-16. Filter by paid status, `{CONTRACTOR_EMAIL}`, or `{TIMESHEET_MONTH}`.
-17. Open the paid timesheet review.
-18. Sign in again as `{CONTRACTOR_EMAIL}`.
-19. Open `https://{DOMAIN_NAME}/timesheets?month={TIMESHEET_MONTH}`.
+15. Reopen `https://{DOMAIN_NAME}/admin/timesheets` and read the list without touching a filter.
+16. Tick `Kifizetettek mutatása` / `Show paid` and apply.
+17. Take the `Kifizetettek is látszanak` / `Paid included` chip off again.
+18. Filter by paid status alone, leaving the checkbox unticked.
+19. Add `{CONTRACTOR_EMAIL}` or `{TIMESHEET_MONTH}` to that filter, then page to the second page if
+    there is one.
+20. Open the paid timesheet review.
+21. Sign in again as `{CONTRACTOR_EMAIL}`.
+22. Open `https://{DOMAIN_NAME}/timesheets?month={TIMESHEET_MONTH}`.
 
 Expected result:
 
 - The paid action is only visible after the invoice has been accepted.
 - Marking as paid changes the timesheet status to paid.
+- The unfiltered list leaves the paid timesheet out, and the `Showing x-y of z` count drops with it —
+  the queue shows what is still to do, not what is settled.
+- Ticking the checkbox brings it back, puts `includePaid=1` in the URL, and produces one chip;
+  taking that chip off hides paid rows again **and** unticks the box.
+- Filtering by paid status shows paid rows even with the box unticked: an explicit status filter is
+  itself the request. A list that comes back empty because two filters disagree is the failure here.
+- Paging carries `includePaid=1` along with the other filters.
+- `Törlés` / `Clear` returns to the default, paid rows hidden.
 - The contractor monthly preview shows the paid status.
 - Source time entries remain locked.
 - The same timesheet cannot be marked as paid again.
@@ -1987,15 +2462,28 @@ Expected result:
 2. Open `https://{DOMAIN_NAME}/admin/reports`.
 3. Switch between month, week, day, year, and custom period filters.
 4. Filter by project, project group, and member.
-5. Switch between user view and project view.
-6. Clear filters.
+5. Pick **two** projects and **two** members in the same report, then apply.
+6. Copy the URL, open it in a new tab, and confirm both values come back on each filter.
+7. Export the report to PDF with two projects chosen, and read the header.
+8. Export again with exactly one project chosen.
+9. Switch between user view and project view.
+10. Clear filters.
 
 Expected result:
 
 - The report updates for each period mode and filter.
 - User view groups by people.
 - Project view groups by projects.
-- The selected filters are reflected in the URL and survive browser refresh.
+- The selected filters are reflected in the URL and survive browser refresh. A filter holding
+  several values appears once per value (`?project=…&project=…`), and every value comes back when
+  the URL is reopened — none is silently dropped.
+- The report totals cover **all** chosen projects and members, not only the first one.
+- The exported PDF header names every chosen project, in the order the picker lists them, joined the
+  way the document's language joins a list (`Apollo, Helix és Belső` in Hungarian). With one project
+  chosen it names that project and shows its colour dot; with two it names both and shows no dot.
+- With two projects chosen the detail table keeps its project column — the header says what the
+  scope is, the column says which line is which. With exactly one it drops that column, as before.
+- The preview inside the export dialog and the downloaded file describe the same scope.
 - Clearing filters returns to the default monthly report.
 - The donut chart's center label shows exactly one hour unit (e.g. `3.38 h`), never a doubled or
   mismatched unit, in every display-preference and locale combination.
@@ -2318,14 +2806,21 @@ Expected result:
 2. Open `{AUDIT_LOG_VIEW}`.
 3. Search for a known event action, for example `member.updated` or `security.totp_reset`.
 4. Filter by event, target type, actor, and a date range.
-5. Clear the filters.
+5. Pick **two** events (for example a rate created and a rate updated), then apply.
+6. Pick `Rendszer` / `System` **and** a named person in the actor filter, then apply.
+7. Page to the second page of results.
+8. Clear the filters.
 
 Expected result:
 
-- Search and filters update the URL query string.
-- Rows match the selected criteria.
+- Search and filters update the URL query string. A filter holding several values appears once per
+  value, and every value comes back when the URL is reopened.
+- Rows match the selected criteria, and a multi-value filter matches **any** of them: two events
+  show both events' rows.
+- `Rendszer` / `System` picked alongside a person shows both the system rows and that person's —
+  system is not a member, so it cannot be folded in with real actors.
 - Clearing filters returns to the unfiltered first page.
-- Pagination keeps the selected filters.
+- Pagination keeps the selected filters, including every value of a multi-select one.
 
 ### Audit Details Redaction
 
@@ -2956,7 +3451,11 @@ Run this on all four admin lists: `/admin/timesheets`, `/admin/payslips`, `/admi
 4. Use `Törlés` / `Clear`.
 5. Type a search term, submit, and read the chip it produces.
 6. On `/admin/projects`, filter by a project group.
-7. Narrow the window to tablet and phone widths.
+7. Pick **two** values in one of the multi-select filters — status on `/admin/timesheets`, state on
+   `/admin/people`, group or timeline on `/admin/projects`, employee on `/admin/payslips` — and
+   submit.
+8. Remove **one** of the two chips that filter produced.
+9. Narrow the window to tablet and phone widths.
 
 Expected result:
 
@@ -2980,6 +3479,438 @@ Expected result:
   `Project directory` header on one line, and opening it puts `?new=assignments` in the URL.
 - The controls wrap onto further lines on narrow viewports with the submit staying on the right, and
   no page scrolls sideways.
+- A multi-select filter shows one chip **per chosen value**, and removing one leaves the others
+  applied — the list stays filtered by what the remaining chips say.
+- The list matches **any** of the chosen values, not all of them: two statuses on
+  `/admin/timesheets` show both statuses' rows, and `Aktív` + `Meghívott` on `/admin/people` shows
+  everyone who is not archived.
+- On `/admin/people`, `Zárolt` / `Locked` picked alongside a real state still shows both — it is a
+  soft-delete marker rather than a status, so it cannot be folded in with the others. The same holds
+  for `Csoport nélkül` / `Ungrouped` next to a real group on `/admin/projects`.
+- Paging keeps every value of a multi-select filter: go to page 2 and confirm the chips and the URL
+  still carry both.
+
+### Multi-Select Rate Filters
+
+1. Open `https://{DOMAIN_NAME}/admin/rates`.
+2. Open the `Projekt` / `Project` filter and read the trigger before choosing anything.
+3. Pick one project. Confirm the panel stays open.
+4. Pick a second project without reopening the panel, then close it with `Esc`.
+5. Reopen the panel and confirm both chosen rows are still ticked.
+6. Use the panel's `Törlés` / `Clear` action.
+7. Repeat steps 2-6 on the `Csoport` / `Group` filter, including its `Csoport nélkül` /
+   `Ungrouped` entry alongside a real group.
+8. Type into the panel's search field with two projects already chosen.
+9. Narrow the window to tablet and phone widths.
+
+Expected result:
+
+- With nothing chosen the trigger reads `Mind` / `All` as placeholder text, and the table shows
+  every row — an empty selection means "no filter", not "no results".
+- Choosing an option does not close the panel; each row carries a checkbox that fills in when
+  ticked, so it is visible up front that several can be picked.
+- One choice shows that option's own label. From the second onwards the trigger shows
+  `2 kiválasztva` / `2 selected`, and hovering it lists the chosen names in full.
+- The table lists members matching **any** of the chosen projects, not only the last one. The same
+  holds for groups, and `Csoport nélkül` matches members whose assigned projects have no group.
+- `Törlés` / `Clear` empties the filter and disappears with the last chosen value.
+- Searching filters the rows but never hides the `Törlés` / `Clear` action, and ticked rows that
+  fall outside the search term stay chosen.
+- Check this in **both** locales, and confirm the trigger keeps the control's height at every
+  width: a long count or label ellipsises, it never wraps out of its box.
+
+### One Colour Per Timesheet Status
+
+1. Open `https://{DOMAIN_NAME}/admin/timesheets` with `Kifizetettek mutatása` / `Show paid` ticked
+   and `Minden státusz` / `All statuses` selected, so as many states as possible are on one page.
+2. Read the `Státusz` / `Status` column top to bottom.
+3. Switch the theme to light and read it again.
+4. Open `https://{DOMAIN_NAME}/dashboard` as an admin and compare the status distribution bar and
+   its legend against the pills you just read.
+5. Open a contractor's own `https://{DOMAIN_NAME}/timesheets` month list and check
+   `Nincs létrehozva` / `Not created` and `Hiányzik` / `Missing`.
+
+Expected result:
+
+- `Számlázva` / `Invoiced` is **yellow** — not the mint that `Beküldve` / `Submitted` uses.
+- No two statuses share a colour. All nine are distinguishable side by side: grey for
+  `Nincs létrehozva`, amber `Hiányzik`, mint `Beküldve`, rose `Elutasítva`, green `Jóváhagyva`,
+  yellow `Számlázva`, magenta `Számla elutasítva`, blue `Elfogadva`, violet `Kifizetve`.
+- In particular the two rejections differ (rose vs magenta) and the three end states differ (green
+  vs blue vs violet); these were previously one colour each.
+- Every pill's label is comfortably readable on its own tint, and each pill has a border of its own
+  hue — check a row on a hovered table stripe and inside a dropdown/popover too, not just on a card.
+- The same nine colours appear in light, still all distinct. Yellow and amber must not both read as
+  brown; violet, blue and magenta must not collapse into one purple.
+- The dashboard's distribution bar, its legend swatches and the priority-metric tiles use the same
+  colour for a status as the table pill does, in **both** themes — the dashboard used to carry its
+  own hardcoded dark-theme colours.
+- Every colour is accompanied by its status name; nothing requires colour alone to be identified.
+
+## Page Heading Semantics And The Automated Accessibility Gate
+
+- Every page rendered through the app shell exposes its title as the page's only level-1 heading.
+  A screen reader announces it on arrival, and the title still looks exactly as before - same size,
+  weight and spacing - on desktop and mobile, in light and dark, in both locales.
+- No page has two level-1 headings, and no page body introduces a heading that skips a level below
+  the shell's.
+- The week view on Time tracking reads as a structure without looking at it: one level-1 heading,
+  the primary navigation, and one named region per weekday. Each entry inside a day offers an edit
+  and a delete control whose names carry the entry description, so two identical descriptions on
+  different days stay distinguishable by their day.
+- Selecting a different day in the week strip changes that button's pressed state, not only its
+  colour, and exactly one day is ever pressed.
+- Auth emails with `AUTH_EMAIL_DELIVERY_MODE=file`: the magic link, invitation and password-reset
+  messages land as one JSON line each in the outbox file and are not printed to the console. With
+  the variable unset they print to the console as before. A production build refuses file delivery
+  and falls back to the console, so plaintext links cannot be written to disk on a deploy.
+- `pnpm e2e` with nothing running on port 3000 starts its own server and finishes green. With
+  `pnpm dev:e2e` already running it reuses that one. With a plain `pnpm dev` running it fails on the
+  first authenticated spec and the message names the fix rather than timing out.
+
+## Role Boundaries Seen From A Non-Admin Member
+
+- Signed in as `{CONTRACTOR_EMAIL}`, the sidebar has no Admin group at all. Approvals, Reports,
+  Projects, People, Rates, Declared hours, Audit log, System and Information page are absent from
+  the navigation rather than shown disabled, and a screen reader walking the primary navigation
+  never announces them.
+- Opening an admin URL directly as that member - `/admin/people`, `/admin/timesheets`,
+  `/admin/system` - lands on the account status screen titled "Admin access required", never on the
+  admin page and never on a blank or error page.
+- That refusal keeps the route it refused in the address bar, so the screen states what was asked
+  for rather than silently dropping it.
+- The refusal reads correctly in Hungarian and English, and the same member can still reach their
+  own pages - Dashboard, Time tracking, Timesheets - immediately afterwards.
+- An admin opening the same URLs sees the admin page, so the refusal is about the role and not about
+  the route being broken.
+- Invitation resend from the People row menu: the action reports "Invitation resent to {email}" and
+  a fresh invitation email arrives. The link in the _previous_ email no longer activates the
+  account, because a resend replaces the stored token.
+- Resend is offered only for a member whose state is `invited`. For an active, inactive or archived
+  member the menu does not offer it.
+- Accepting an invitation while signed in with a different email leaves the activate button
+  disabled and says which address the invitation belongs to.
+- Re-opening an already accepted invitation link says the invitation has already been used instead
+  of activating anything a second time.
+- After activation the member's People row reads `active` and the member can sign in with a plain
+  magic link from then on.
+- A magic link is delivered to any active member, but redeeming one for a member who has never
+  accepted an invitation does not produce a working session - it ends on the account status screen.
+  Delivery is not proof of access.
+
+## Pagination Control Names
+
+- On People and Projects, walking the pager with a screen reader announces four distinct things:
+  "Previous page", "Next page", "Go to page N" for each numbered button, and "Current page, page N"
+  for the one you are on. No two controls in the pager announce the same name.
+- The visible labels are unchanged - the step buttons still read "Prev" and "Next" (HU: "Előző",
+  "Következő") - and the announced name contains that visible text, so voice control still works by
+  saying what is written on the button.
+- The step buttons no longer claim a page number. Previously both announced "Go to page N" for
+  their destination, which is what the numbered buttons are called, so the same name pointed at two
+  different controls.
+- Both names read correctly in Hungarian and English.
+- Keyboard tabbing through the pager reaches Prev, every numbered button, then Next, and the
+  current page button is the one marked as current.
+
+## Report Export Timestamp And Its Zone
+
+- The "Generated" line of an exported report PDF names the zone it is written in, as in
+  `Jul 31, 2026, 02:00 PM GMT+2`, so the time reads correctly without knowing where the server runs.
+- That zone is the exporting admin's own, the one set on their profile, not the server's. Change the
+  profile timezone, export again, and the stamp moves with it.
+- The preview in the export dialog carries the same stamp as the downloaded file. The two cannot
+  disagree: both take the zone from the same admin.
+- The Hungarian and English renderings of one export carry the same marker - `GMT+2` in both - so
+  the two language versions do not read as two different documents.
+- Only the stamp is affected. Every date in the table is a member-local calendar date and does not
+  move with the exporting admin's zone, and the footnote still names the member time zones the day
+  boundaries came from.
+
+## Time View Scope And Lens Redesign
+
+The `/time` chrome is two rows: row 1 answers _how close_ (a View control with `⊖ ⊕` caps, the
+week-only Agenda ⇄ Grid layout toggle, and the Start timer / New entry actions), row 2 answers
+_when_ (`‹ label ›`, Today, the `⋯` menu, and one period total). Everything below is the design
+record in `docs/time-view-redesign.md`; regenerate `e2e/__aria__/time-week.spec.ts/` only after
+reading its diff.
+
+### Scope, lens and the period header
+
+1. Open `/time` on a desktop signed in as a member with tracked assignments. Confirm row 1 shows a
+   `View` control with **three** stops — Day, Week, Month — each with a small key chip (`1 2 3`)
+   that brightens when the control is hovered, and `⊖` / `⊕` caps at its ends. There is no Grid stop
+   and no inline keyboard legend.
+2. Confirm the Week layout toggle (Agenda / Grid) sits beside the View control **only** in Week
+   scope, fading in with a short slide, and that switching it leaves the seven day headers exactly
+   where they are while the bodies crossfade.
+3. Read row 2: `Week 36 · Aug 31 – Sep 6, 2026` (Hungarian: `36. hét · 2026. aug. 31. – szept. 6.`),
+   arrows named Previous week / Next week, a Today button, and one total reading `36 h this week`.
+   Switch to Day: the label becomes `Monday, Aug 31, 2026`, the arrows step a **day**, the total
+   reads `8.5 h today`. Switch to Month: `September 2026`, the arrows step a month, the total reads
+   `112 h this month` with `14 of 22 workdays` under it.
+4. Press the period label. A month grid opens; picking a month jumps there **without changing the
+   scope**. Confirm Today is dimmed with a mint dot while today is in view and clickable otherwise.
+5. Confirm the total never counts up: change a figure (add an entry) and watch it settle in one step
+   in the direction of change. Over 8 h in Day scope the total carries `⚠ over 8 h` in words; a bare
+   orange number appears nowhere.
+6. Open an old link `/time?zoom=grid`. It lands on Week + Grid and the address bar drops `zoom` on
+   the first change of view. Reload: the remembered scope and layout survive in `localStorage`
+   (`time-scope`, `time-lens`); an explicit `?scope=` in a shared link outranks them.
+
+### Zooming and motion
+
+7. In Week · Agenda, hover a day header: a `›` appears and the header lifts by a pixel. Click it: the
+   view zooms in — the seven headers shrink into the Day ribbon's seven chips, the other columns'
+   cards fade out, the day's cards grow into full rows, the page scales in from slightly smaller, and
+   the rail (target ring, per-project split, quick add) arrives last. Zoom out with `⊖`, `−` or `Esc`
+   and the ribbon grows back into the headers with the page scaling in from slightly larger.
+8. In Month, click a heat cell: it grows into the selected chip as the Day scope opens. Click a
+   week number (`W36 ›`): the week opens in Agenda.
+9. Step a period with `‹ ›` or `J` / `K`: the content and the label slide 24 px / 8 px in the
+   direction of travel — next from the right, previous from the left. Jumping backwards with the
+   month grid or Today slides backwards.
+10. Turn on the operating system's reduce-motion setting. Every transition becomes a crossfade,
+    nothing scales or slides, the timer's pulse is not rendered, and the heat navigator's rows do
+    not draw in one by one.
+
+### The Week and Day content
+
+11. In Week · Agenda confirm there is **no day strip** above the columns and that a day's total,
+    name and number appear once, in its header. Today's column has a 2 px mint top rule; when both
+    weekend days are empty they are narrower than the working days.
+12. Cards: a 3 px project-colour rail, the description as the primary line, `project · 09:00 – 13:15`
+    as the muted line, the duration right-aligned in tabular numerals. Edit / Continue / Delete
+    appear on hover and on keyboard focus and are always reachable by Tab. A timer-sourced entry has
+    a small `▷` before its duration; a locked entry a lock glyph and a muted rail; an admin-changed
+    entry the shield.
+13. Press Continue on a card: a timer starts with that project and description, the Start timer
+    button morphs into a live pill (`● 0:00:05 · Project ■`), and a live card with a mint rail sits
+    at the top of today's column and in Day scope. Stop it from the pill or the card. Confirm
+    Continue is withheld while a timer runs.
+14. Delete a card: it leaves through its exit transition and a toast offers **Undo** for six seconds.
+    Undo brings it back through the enter transition and the audit log shows a `Restored` event.
+    Let the toast expire on another delete and confirm the entry stays deleted.
+15. Empty states: an empty column reads `Nothing logged` with a `Copy yesterday` link when the day
+    before holds entries; an empty week shows one centred state with `Add entry` and `Duplicate last
+week`, while every column still has its `+`. A locked day shows no `+` at all. A future day's
+    header and cards sit on the recessed `--muted` surface, not at reduced opacity, with the `+`
+    still enabled — its label, its `0 h` total and its `Nothing logged` line stay at full ink and
+    must remain as readable as a past day's. (Ancestor opacity is what put ~640 colour-contrast
+    failures into the `@a11y` run; check this on a weekday early enough in the week that the row
+    still has future days, because the automated gate cannot see them on a Sunday.) In the narrowed weekend
+    columns, in Hungarian and in English, both lines stay inside their own column — the
+    `Copy yesterday` link wraps onto a second line rather than running across the neighbouring day
+    — and it reads smaller than the `Nothing logged` line above it, not larger.
+16. The hybrid handoff: for a member with a declared project, a footnote under the Week columns
+    links into Month, the Grid lens shows a ghost row `declared monthly · See Month`, and the Month
+    segment wears a 4 px dot while another scope is open.
+
+### Quick composer and quick actions
+
+17. Press a column's `+`: a popover opens anchored to it — the date, project chips (recent first),
+    a duration field and a description field. Type `2h30`, a description, Enter. The popover closes,
+    the card enters with the stagger and its rail pulses once. Try `lots` as a duration: the composer
+    refuses and explains; nothing is sent.
+18. In Day scope the composer is open in the rail; `N` focuses its duration field. `More options`
+    opens the full dialog with the project, date, duration text and description carried over;
+    `Interval instead` opens it in interval mode. A half-typed description is autosaved as a draft.
+19. The `⋯` menu at the end of row 2 holds `Duplicate last week`, `Copy yesterday into <day>` and
+    `Keyboard shortcuts`; the toolbar no longer lists Assigned or Recent chips.
+20. On the Grid lens, hover a cell: its row and column tint by one surface step. The seven headers
+    are buttons that open the day, with capacity bars.
+
+### Keyboard, palette and hint
+
+21. Press `?`: a dialog lists every shortcut in four tables (View · Move · Add · Timer). Confirm
+    `J`/`K` step, `[`/`]` still work, `G` toggles the layout in Week and jumps to Week + Grid from
+    Day or Month, `N` opens the composer, `S` starts (opens the timer dialog) or stops the timer,
+    `−`/`+` and `1 2 3` move the scope, `T` goes to today, and nothing fires while typing in a
+    field. On a Hungarian layout confirm `J`/`K` work unmodified.
+22. Press `Esc` with a dialog open: the dialog closes and the view does not change. Press `Esc`
+    again within 300 ms: nothing happens. After that, `Esc` zooms out one step; at Month it does
+    nothing.
+23. Press `⌘K`: a command palette lists Go to today, View: Day / Week / Month, Week layout: Agenda /
+    Grid, New entry, Start/Stop timer, Duplicate last week, Copy yesterday and Keyboard shortcuts,
+    searchable in both locales.
+24. In a fresh browser profile the first visit shows one toast: `Press ? for shortcuts, or click a
+day to open it`. Reload: it does not return.
+
+### Mobile
+
+25. At a phone width the default scope is Day: the ribbon scrolls horizontally with the selected
+    chip snapping to centre, the rail stacks under the list as an `At a glance` collapsible, and a
+    peach `+` FAB above the bottom bar opens the composer as a bottom sheet. Row 1 is the full-width
+    View control with no caps; Start timer and New entry are gone from it (the header pill and the
+    FAB cover them).
+26. Week · Agenda is an accordion whose rows are the same day headers; the expanded row's header
+    opens the day. Week · Grid keeps the stacked project cards and the layout toggle. Swipe left or
+    right on the Day or Agenda content to step the period; the Grid does not claim the swipe.
+
+### Declared-only member
+
+27. Signed in as a member whose every assignment is declared monthly: Month only, no View control,
+    no ribbon, no heat navigator, the declared form as before.
+
+## MCP Server And Connected Apps
+
+An AI agent connects to Sheet Happens over MCP and then acts **as one member, with exactly that
+member's rights**. Everything below is the design record in `docs/mcp-server.md`. The whole point of
+this section is that an agent can never do something the member could not do in the browser, so
+every refusal below matters as much as every success.
+
+### Finding The Connector In The App
+
+1. Sign in as `{CONTRACTOR_EMAIL}` and open `{HELP_VIEW}`, then the `Claude connector` tab.
+2. Confirm the Connector URL on the page is `{MCP_URL}` for the environment you are actually on —
+   the development deployment has to print its own host, not the production one.
+3. Click `Copy URL`, then paste into any text field. Confirm the clipboard holds that URL with no
+   trailing slash, that a confirmation line appears beside the button, and that the line clears
+   itself a few seconds later without the page jumping.
+4. Switch to Hungarian and repeat. Confirm the button, the confirmation line and the whole recipe
+   are translated.
+5. Open `https://{DOMAIN_NAME}/settings` → Connected apps as a member who has connected nothing,
+   and click the link in the empty state.
+
+Expected result:
+
+- The Claude Code command block quotes the same URL as the Connector URL field above it.
+- The empty state's link opens the Help page **on the connector tab**, not on Welcome.
+- Every member sees the connector tab, not only admins.
+
+### Connecting
+
+1. Sign in to Claude as a person who is **not** signed in to Sheet Happens in that browser. Add a
+   custom connector with the URL `{MCP_URL}` exactly, no trailing slash. Claude should detect the
+   authentication settings by itself from the refusal — you should not have to paste a client id or
+   secret anywhere.
+2. Click Connect. Confirm you land on the Sheet Happens login page and that the address bar still
+   carries the pending request (a long query string), not a bare `/login`.
+3. Sign in with a **magic link**. Confirm that after clicking the link you are taken to the consent
+   screen, not to the dashboard. Repeat with a **passkey** and with **password + TOTP**: all three
+   must arrive at consent, and the TOTP hop must not lose the request either.
+4. Confirm the consent screen names the app as `claude.ai` — the host that vouches for it — rather
+   than a name the app chose for itself.
+5. Confirm it lists, in plain language, that the app may read your time, log and correct your time,
+   and know who you are and stay connected. Confirm it says the app acts as you and can never see
+   anyone else's hours.
+6. Read the whole screen in Hungarian and in English. Both must be complete: no English sentence on
+   the Hungarian page.
+7. Click Deny. Confirm you are returned to Claude and it reports the connection was refused, and
+   that `{MCP_URL}` still refuses to answer afterwards.
+8. Connect again and click Allow. Confirm Claude reports the connector is connected and lists the
+   Sheet Happens tools.
+
+### Consent edge cases
+
+- Start a connection, leave the consent screen open for more than ten minutes, then click Allow.
+  Confirm the screen or the result says the request has expired and tells you to start again from
+  Claude — never a silent failure and never a stuck spinner.
+- Open `{MCP_URL}`'s consent path directly in the browser with no query (just `/consent`). Confirm
+  it explains that this page is part of connecting an app and does not offer an Allow button.
+- Connect a second time after already having connected once. Confirm you are **not** asked to
+  consent again: the grant is remembered, and a reconnect or a token refresh must not re-prompt.
+- Sign in as an **invited** member who has not accepted yet, or as a **deactivated** member, and try
+  to reach the consent screen. Confirm you are bounced exactly as you would be from `/time` — to the
+  account-status page — so connecting an app is not a way around the account gate.
+- Sign in as a member who has neither a passkey nor TOTP set up, and try to connect. Confirm you are
+  sent to finish security setup first.
+
+### What the agent can do
+
+Ask Claude to do each of these and confirm the result in the Sheet Happens UI afterwards.
+
+- "What am I tracking today?" — confirm it reports your timezone's today, your projects, and no
+  timer if none is running. Confirm the date it uses is **your** today, not the server's: test from a
+  profile timezone far from the server's, near midnight.
+- "Log two hours on {a tracked project} today, working on X." Confirm the entry appears on `/time`
+  on the right day, with the right project and description, and that its source reads **MCP** rather
+  than Grid or Form.
+- Confirm the figure Claude quotes back matches the format on your profile: a member on decimal
+  hours must hear "2" or "2.5", a member on hours and minutes must hear "2:30".
+- "Change that to two and a half hours" — confirm the entry updates and the day total moves with it.
+- "How much did I work this week, by project?" — confirm the totals match the `/time` week total
+  exactly, and that a declared-hours project is reported separately rather than mixed in.
+- "Delete that entry." Confirm Claude asks you to approve the action before it happens, every time,
+  even if you have allowed the other tools to run unattended.
+- After the delete, confirm `/time` no longer shows the entry, then ask Claude to put it back and
+  confirm it reappears unchanged.
+- "Start a timer on {a tracked project}." Confirm the header timer pill appears in the browser.
+  Ask "what am I tracking?" and confirm the elapsed figure is plausible. Then "stop the timer" and
+  confirm an entry is saved for the day the timer **started**.
+- Ask Claude to start a second timer while one is running. Confirm it is refused and that Claude can
+  tell you what is currently running, so it can offer to stop it.
+
+### What the agent must be refused
+
+- Ask Claude to log time in a month whose timesheet is already submitted. Confirm it is refused and
+  that Claude explains the month is locked rather than reporting success.
+- Ask it to log time against a project that declares its hours monthly. Confirm it is refused and
+  that Claude explains that project is declared on the month level.
+- Ask it to log 30 hours on one day. Confirm it is refused for exceeding 24 hours, and that the
+  day's existing entries are untouched.
+- Ask it about, or to change, **another member's** hours by name. Confirm it cannot: there is no tool
+  that takes another member, and it should say so rather than reporting someone else's figures.
+- Ask it to submit a timesheet, approve one, or change a rate. Confirm no such tool exists.
+- Have an admin deactivate the member while Claude is connected, then ask Claude to log time.
+  Confirm it fails and that reconnecting fails at login too.
+
+### Connected apps in settings
+
+- Open `/settings` as the connected member. Confirm a Connected apps section lists the app by the
+  host that vouches for it, the date it was connected, and what it was allowed to do — in the same
+  wording the consent screen used, not a second set of sentences.
+- Confirm the section reads correctly in Hungarian and English, including the empty state for a
+  member who has connected nothing.
+- Click Disconnect. Confirm a confirmation step names the app, and that cancelling changes nothing.
+- Confirm the app then disappears from the list, and that Claude can no longer read or write your
+  hours — not even for the hour an access token would otherwise still have been valid.
+- Reconnect from Claude and confirm you are asked to consent again, because the grant was removed.
+
+### Audit trail
+
+- Open `{AUDIT_LOG_VIEW}` as an admin. Confirm an entry the agent created is audited under the same
+  action name as a browser-created one, and that the row records it arrived over MCP and which app
+  it came from.
+- Confirm no audit row contains a token, an argument dump, or the text of a time entry's
+  description.
+
+## Dashboard Width And Responsive Tables
+
+The dashboard content area now widens to `92rem` from `xl` up, matching `/time` and the admin
+surfaces, and every table on it goes through `DataTable` in responsive mode — a real table from
+`md` up, stacked cards below.
+
+- On a display wider than 1500px the dashboard fills the same width as `/admin/people`, rather than
+  leaving a third of the window empty beside a `73.75rem` column.
+- The flagged users table never scrolls sideways, at any window width: check 1024, 1280 and 1920,
+  and check the same at 1024 with the sidebar collapsed. Nothing in the page scrolls horizontally
+  either — only a scrollbar the table owns would be acceptable, and there should not be one.
+- Long values shorten rather than widening the table: a member with a long address shows it
+  ellipsised from `md` up, and a project named "Internal Ops & Tooling" wraps to two lines instead
+  of holding its column open.
+- Below `md` every row becomes a card. The member's name and address head the card without a "Name"
+  label, the project and last-logged lines are labelled, and the reminder button sits on its own
+  line at the end.
+- Time and billing tracking is one full-width strip — a total, one bar and a legend that wraps —
+  not a tall column beside the table. The bar shows a band only for states that hold something: a
+  month with nothing but missing timesheets shows one band, not six slivers.
+- A state with a count of zero is still listed, in the dimmest text tier with a dimmed dot, so the
+  legend reports the zero without competing with the states that matter.
+- The panel lists eight flagged rows at most. With more than eight, the footer link reads "View all
+  N flagged users" and opens the drilldown, which lists every one; with eight or fewer it reads
+  "View details".
+- The five priority metric cards sit two-up on a phone, three-up from `md` and five-up from `xl`,
+  and the last card takes the empty cell rather than leaving a half-width gap.
+- Open each drilldown (`?drilldown=submitted`, `approved`, `invoiced`, `accepted`, `missing`,
+  `flagged`) and confirm the same: table above `md`, cards below, no sideways scroll on the page,
+  and the "Showing N of M" footer still appears on a truncated timesheet queue.
+- The employee dashboard's project breakdown behaves the same way — table above `md`, cards below —
+  and its rate, cost and missing-rate warnings all survive the switch.
+- A screen reader reaches each of these as a real table with a caption naming it ("Flagged users",
+  or the drilldown's own heading), column headers and rows. The old markup was a `div` grid with no
+  table semantics at all.
+- All of the above reads correctly in Hungarian and English, in both themes.
 
 ## Regression Checklist For Every Release
 
@@ -3007,9 +3938,13 @@ Expected result:
   every screen readable in both themes.
 - Body copy renders in Lexend and `.font-ui` labels in Poppins, served from this origin with no
   request to Google, and Hungarian ő/ű match the typeface of the letters beside them.
+- Buttons honour their own type size rather than the size they inherit: a small label inside a
+  button reads smaller than the body text around it, and no button label is larger than the text it
+  sits beside.
 - No native `<select>` or date input remains on any screen; dropdowns above eight options offer
   search, and searching ignores accents.
 - The timesheet month filter submits `YYYY-MM` and actually narrows the list.
+- The timesheet list hides paid months until `Kifizetettek mutatása` / `Show paid` is ticked.
 - The reports period pills each render their own control shape and submit `anchor` or `start`+`end`,
   never both.
 - Currency, timezone, project and member pickers save correctly, and a form reset clears their
@@ -3065,3 +4000,85 @@ Expected result:
 - Admin list filters read as a single toolbar row with removable chips for whatever is applied.
 - A running timer sits in the app header on every signed-in page and at every width, and can be
   stopped from there; starting one happens in an overlay opened from the time-tracking toolbar.
+- `/time` has one View control with three scopes (Day · Week · Month) and `⊖ ⊕` caps, a week-only
+  Agenda ⇄ Grid layout toggle, and the scope, layout and selected day live in the address bar; the
+  selected day survives every change of view in both directions and an old `?zoom=` link still lands.
+- The period label carries the unit — a day, `Week 36 · range`, or the month — and the arrows,
+  `J`/`K` and `[`/`]` step exactly that unit; Today is dimmed with a dot while today is in view.
+- The month shown follows the selected day rather than the week, so stepping a day across a month
+  boundary changes the month with no page load.
+- A member whose every assignment is declared monthly gets the month and no View control at all.
+- Zooming is spatial: a day header becomes its ribbon chip and a heat cell becomes the selected
+  chip; steps slide in the direction of travel; nothing animates on first paint; no figure ever
+  rolls; with the operating system's reduce-motion setting on everything crossfades and nothing moves.
+- The desktop Week shows no day strip, each day's total appears once, cards reveal Edit / Continue /
+  Delete on hover and focus, a delete can be undone for six seconds, and the `+` opens the quick
+  composer rather than the dialog.
+- Each assignment in a project's drawer shows its hours-tracking mode beside its rate source, and
+  says whether the mode is inherited from the member default or set for that assignment only.
+- The per-assignment mode control offers an explicit inherit option that names the member default,
+  so an admin can tell a deliberate override from an inherited setting.
+- The same three choices are on the form that creates an assignment, so an admin sets the mode while
+  assigning the member rather than saving and then editing the assignment straight afterwards.
+- That control names the chosen member's default in its inherit option and follows the member picker
+  when the choice changes; before any member is picked it reads as the plain inherit option.
+- The bulk assign dialog carries the control too. Its inherit option names no mode - several members
+  may inherit different ones - and its hint says the choice applies to every assignment created
+  there.
+- An assignment created on inherit shows as inherited in the list afterwards, and one created on an
+  explicit mode shows as set for that assignment only.
+- The member-level default is set on the People page, not from inside one project, and both controls
+  state their scope: the member default applies to every project, the override to one assignment.
+- Changing the member default leaves any assignment carrying its own override exactly as it was.
+- Switching a mode is refused while an unlocked month still holds hours of the other kind, and the
+  message names the months - for the member default, the projects too - that have to be cleared
+  first. A month already locked by a submitted timesheet revision does not block the switch.
+- Every one of those labels, hints and refusal messages reads correctly in Hungarian and English.
+- A declared project is absent from Day, Week and Grid entirely, and one line under the day strip
+  names it and links to the month rather than leaving the absence unexplained.
+- A month's declared figure needs both a number and a note before it can be saved, and the month
+  total equals the tracked hours plus the declared ones.
+- Declaring hours is refused for a month that already holds tracked entries for that project, and
+  ordinary time entry is refused for a declared project — the double count is blocked from both
+  sides.
+- A contractor cannot submit a month while a declared figure has no proof, and the refusal names
+  the projects. An employee is never blocked, only warned.
+- The admin review marks a declared project as declared, dates its line as the month rather than the
+  1st, and opens its proof beside the invoice.
+- Reports and exports total only the tracked hours, and state how many members and projects of
+  declared hours they left out — counts, never amounts.
+- Editing a tracked report line dated the 1st of a month that holds a declared figure still saves.
+- The MCP connector connects from Claude with the URL alone, and the consent screen is complete in
+  both languages.
+- An agent can read and write only its own member's hours, and is refused on a locked month, a
+  declared project and a day over 24 hours.
+- Agent-written entries show as MCP on `/time` and record the channel and app in the audit log.
+- Disconnecting an app from `/settings` stops it acting immediately, not when its token expires.
+- The account menu puts Sign out in its own group, one divider and a clear gap below Profile and
+  settings, so it is no longer flush against the two navigational entries.
+- Choosing Sign out asks first: the session survives Escape, the close affordance and Stay signed
+  in, and ends only on the dialog's own Sign out button.
+- The confirmation opens with Stay signed in focused, so a stray Enter after the menu keeps the
+  session, and it reads correctly in Hungarian and English in both themes.
+- Focusing an empty description on `/time` — in the quick composer, the entry dialog or the New
+  timer dialog — offers this member's own recent descriptions for the selected project, most useful
+  first, with how often and when each was last used; nothing is filled in until one is chosen.
+- Typing filters that list, an accented Hungarian description is found from an unaccented query
+  (`arajanlat` finds `Árajánlat`), the matched letters are emphasized in place, and a query that
+  matches nothing says so rather than showing an unfiltered list.
+- Choosing a suggestion with Enter inserts it and nothing else: the entry is logged only by the
+  next Enter or by Save. Escape closes the list and leaves the dialog open; a second Escape closes
+  the dialog.
+- Changing the project chip re-scopes the list and leaves half-typed text alone. A project with
+  almost no history of its own borrows a few descriptions from the others, always under a heading
+  that says so.
+- A description logged minutes ago is offered for the next entry in the same session, and the list
+  never contains another member's wording, a declared month's note, or a description from a deleted
+  entry — deleting an entry removes it and Undo brings it back.
+- Typing a duration into an empty grid cell opens the dialog with the description focused and its
+  list already open, and the same happens when editing an entry whose description is empty — the
+  one-gesture fix for a `Description needed` warning.
+- The list is complete in Hungarian and English, in both themes, and on a phone it appears below
+  the field rather than floating over the keyboard.
+- An agent connected over MCP sees the same recent descriptions per project in `time_get_context`
+  and reuses that wording instead of inventing its own.

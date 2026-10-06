@@ -2,7 +2,7 @@ import type { Meta, StoryObj } from "@storybook/nextjs-vite";
 import { expect, screen, waitFor } from "storybook/test";
 
 import { Field } from "../Field";
-import { defaultSearchThreshold, Select } from ".";
+import { defaultSearchThreshold, Select, type SelectMultipleProps } from ".";
 
 const statuses = [
   { value: "submitted", label: "Submitted" },
@@ -152,5 +152,40 @@ export const ForcedPlainMenu: Story = {
     await userEvent.click(canvas.getByRole("combobox", { name: /option/i }));
 
     await expect(screen.queryByRole("combobox", { name: /search/i })).not.toBeInTheDocument();
+  },
+};
+
+/**
+ * `multiple` overrides the threshold in the other direction to `searchable`. Three options
+ * would be a plain Radix menu in single mode, but Radix's Select cannot express a multiple
+ * selection, so this has to land on the searchable `Combobox` path — and stay open while
+ * picking, which the Radix menu would not.
+ */
+export const MultipleForcesSearchablePath: StoryObj<SelectMultipleProps> = {
+  render: () => (
+    <div className="w-80">
+      <Select
+        multiple
+        label="Status"
+        placeholder="All statuses"
+        options={statuses}
+        labels={{ selected: (count) => `${count} selected` }}
+      />
+    </div>
+  ),
+  play: async ({ canvas, userEvent }) => {
+    await userEvent.click(canvas.getByRole("combobox", { name: /status/i }));
+    await waitFor(() =>
+      expect(screen.getByRole("combobox", { name: /search/i })).toBeInTheDocument(),
+    );
+
+    await userEvent.click(screen.getByRole("option", { name: /submitted/i }));
+    // The Radix menu path closes on every pick; this one must not.
+    await userEvent.click(screen.getByRole("option", { name: /approved/i }));
+
+    await userEvent.keyboard("{Escape}");
+    await expect(canvas.getByRole("combobox", { name: /status/i })).toHaveTextContent(
+      /2 selected/i,
+    );
   },
 };

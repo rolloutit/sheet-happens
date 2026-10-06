@@ -73,7 +73,7 @@ export function Pager({
           variant="soft"
           size="sm"
           icon={ChevronLeft}
-          aria-label={labels?.previousPage?.(previousPage) ?? `Go to page ${previousPage}`}
+          aria-label={labels?.previousPage ?? "Previous page"}
           disabled={!canGoPrevious}
           onClick={() => {
             if (canGoPrevious) onPageChange?.(previousPage);
@@ -129,7 +129,7 @@ export function Pager({
           variant="soft"
           size="sm"
           icon={ChevronRight}
-          aria-label={labels?.nextPage?.(nextPage) ?? `Go to page ${nextPage}`}
+          aria-label={labels?.nextPage ?? "Next page"}
           disabled={!canGoNext}
           onClick={() => {
             if (canGoNext) onPageChange?.(nextPage);

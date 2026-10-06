@@ -14,6 +14,15 @@ import {
 } from "./report-snapshot.fixture";
 
 const generatedAt = new Date("2026-07-31T12:00:00.000Z");
+/**
+ * The zone the payload renders `generatedAt` in.
+ *
+ * Pinned rather than left to the host, which is what this file used to do: the stamp followed
+ * whichever zone the machine ran in, so the expectation below described a laptop in Budapest and
+ * failed on any runner in UTC. A payload that states its own zone is what makes a fixed
+ * expectation honest rather than lucky.
+ */
+const timezone = "Europe/Budapest";
 
 function translator(locale: "en" | "hu"): ReportPdfTranslator {
   return createTranslator({
@@ -33,6 +42,7 @@ function buildPayload(
     title,
     snapshot,
     locale,
+    timezone,
     generatedAt,
     durationDisplayFormat,
     t: translator(locale),
@@ -140,7 +150,31 @@ describe("report PDF payload", () => {
       { label: "Project", value: "All projects", color: null },
       { label: "Member", value: "All members", color: null },
     ]);
-    expect(payload.header.generatedAt).toBe("Jul 31, 2026, 02:00 PM");
+    expect(payload.header.generatedAt).toBe("Jul 31, 2026, 02:00 PM GMT+2");
+  });
+
+  it("stamps the report with the zone it was generated in, in both catalogues", () => {
+    const snapshot = createCostFreeReportSnapshot();
+    const stampIn = (zone: string, locale: "en" | "hu" = "en") =>
+      buildReportPdfPayload({
+        title: "Client July report",
+        snapshot,
+        locale,
+        timezone: zone,
+        generatedAt,
+        durationDisplayFormat: "DECIMAL_HOURS",
+        t: translator(locale),
+      }).header.generatedAt;
+
+    // One instant, two zones: the number moves, and the marker says why. Without the marker these
+    // two are indistinguishable to a reader, which is how a UTC production deploy printed a
+    // Hungarian admin's report two hours off with nothing to reveal it.
+    expect(stampIn("Europe/Budapest")).toBe("Jul 31, 2026, 02:00 PM GMT+2");
+    expect(stampIn("UTC")).toBe("Jul 31, 2026, 12:00 PM GMT+0");
+
+    // The same marker in both languages. `timeZoneName: "short"` would say CEST here and GMT+2 in
+    // English for the one zone, making two renderings of one document look like two documents.
+    expect(stampIn("Europe/Budapest", "hu")).toBe("2026. júl. 31. 14:00 GMT+2");
   });
 
   it("names the applied filters and adds the group facet only when one is set", () => {
@@ -149,9 +183,9 @@ describe("report PDF payload", () => {
       ...snapshot,
       filters: {
         ...snapshot.filters,
-        projectName: "Client Portal",
-        projectGroupName: "Key accounts",
-        memberName: "Contractor Example",
+        projectNames: ["Client Portal"],
+        projectGroupNames: ["Key accounts"],
+        memberNames: ["Contractor Example"],
       },
     });
 
@@ -162,6 +196,44 @@ describe("report PDF payload", () => {
       "Key accounts",
       "Contractor Example",
     ]);
+  });
+
+  /**
+   * `report.typ` gives each facet an equal fraction of the page width, so a facet is about
+   * one narrow column. Eight spelled-out project names would wrap to several lines and grow
+   * the header on every page of a financial document.
+   */
+  it("caps how many scope values a header facet spells out", () => {
+    const snapshot = createCostFreeReportSnapshot();
+    const payload = buildPayload({
+      ...snapshot,
+      filters: {
+        ...snapshot.filters,
+        projectIds: ["p1", "p2", "p3", "p4", "p5"],
+        projectNames: ["Apollo", "Helix", "Atlas", "Orion", "Vega"],
+      },
+    });
+    const projectFacet = payload.header.facets.find((facet) => facet.label === "Project");
+
+    expect(projectFacet?.value).toBe("Apollo, Helix, Atlas, and +2 more");
+  });
+
+  it("names every scope value while they still fit", () => {
+    const snapshot = createCostFreeReportSnapshot();
+    const payload = buildPayload({
+      ...snapshot,
+      filters: {
+        ...snapshot.filters,
+        projectIds: ["p1", "p2"],
+        projectNames: ["Apollo", "Helix"],
+      },
+    });
+    const projectFacet = payload.header.facets.find((facet) => facet.label === "Project");
+
+    // Two projects: named in full, and no colour dot — one line's colour would speak for
+    // the other as well.
+    expect(projectFacet?.value).toBe("Apollo and Helix");
+    expect(projectFacet?.color).toBeNull();
   });
 
   it("shows the dimension a cost-free report is not grouped by", () => {
@@ -183,12 +255,16 @@ describe("report PDF payload", () => {
     const snapshot = createCostFreeReportSnapshot();
     const singleProject = buildPayload({
       ...snapshot,
-      filters: { ...snapshot.filters, projectId: "project-1", projectName: "Client Portal" },
+      filters: { ...snapshot.filters, projectIds: ["project-1"], projectNames: ["Client Portal"] },
     });
     const singleMember = buildPayload({
       ...snapshot,
       view: "PROJECT",
-      filters: { ...snapshot.filters, memberId: "member-1", memberName: "Contractor Example" },
+      filters: {
+        ...snapshot.filters,
+        memberIds: ["member-1"],
+        memberNames: ["Contractor Example"],
+      },
     });
 
     // A user-view report normally lists projects. With one project selected it lists members
@@ -203,10 +279,10 @@ describe("report PDF payload", () => {
       ...snapshot,
       filters: {
         ...snapshot.filters,
-        projectId: "project-1",
-        projectName: "Client Portal",
-        memberId: "member-1",
-        memberName: "Contractor Example",
+        projectIds: ["project-1"],
+        projectNames: ["Client Portal"],
+        memberIds: ["member-1"],
+        memberNames: ["Contractor Example"],
       },
     });
 
@@ -220,7 +296,11 @@ describe("report PDF payload", () => {
     expect(
       buildPayload({
         ...snapshot,
-        filters: { ...snapshot.filters, projectId: "project-1", projectName: "Client Portal" },
+        filters: {
+          ...snapshot.filters,
+          projectIds: ["project-1"],
+          projectNames: ["Client Portal"],
+        },
       }).detailColumns,
     ).toEqual({ member: true, project: false });
   });
@@ -229,7 +309,11 @@ describe("report PDF payload", () => {
     const snapshot = createCostFreeReportSnapshot();
     const payload = buildPayload({
       ...snapshot,
-      filters: { ...snapshot.filters, projectGroupId: "group-1", projectGroupName: "Key accounts" },
+      filters: {
+        ...snapshot.filters,
+        projectGroupIds: ["group-1"],
+        projectGroupNames: ["Key accounts"],
+      },
     });
 
     // A group still spans several projects, so the column is doing work.
@@ -240,7 +324,7 @@ describe("report PDF payload", () => {
     const snapshot = createCostFreeReportSnapshot();
     const payload = buildPayload({
       ...snapshot,
-      filters: { ...snapshot.filters, projectId: "project-1", projectName: "Client Portal" },
+      filters: { ...snapshot.filters, projectIds: ["project-1"], projectNames: ["Client Portal"] },
     });
 
     expect(payload.summary.metrics.map((metric) => metric.label)).toEqual(["Entries", "People"]);
@@ -255,7 +339,11 @@ describe("report PDF payload", () => {
     const snapshot = createCostFreeReportSnapshot();
     const payload = buildPayload({
       ...snapshot,
-      filters: { ...snapshot.filters, memberId: "member-1", memberName: "Contractor Example" },
+      filters: {
+        ...snapshot.filters,
+        memberIds: ["member-1"],
+        memberNames: ["Contractor Example"],
+      },
     });
 
     expect(payload.summary.metrics.map((metric) => metric.label)).toEqual(["Entries", "Projects"]);
@@ -312,7 +400,7 @@ describe("report PDF payload", () => {
     const payload = buildPayload(createInternalReportSnapshot());
 
     expect(payload.labels).toEqual({
-      brand: "Sheet Happens",
+      brand: "Sheet Happens - Rollout IT",
       confidential: "Confidential",
       page: "Page",
       generatedAt: "Generated",
@@ -389,6 +477,31 @@ describe("report PDF payload", () => {
     ]);
   });
 
+  /**
+   * §4's disclosure has to reach the document, not just the screen it was exported from — a PDF
+   * leaves the building. Counts only, no amounts, and worded so it survives being read outside the
+   * company. A footnote rather than a warning: nothing went wrong, this is a statement of scope.
+   */
+  it("discloses the declared hours it excluded, in both locales", () => {
+    const snapshot = {
+      ...createCostFreeReportSnapshot(),
+      exclusions: { declaredHours: { memberCount: 2, projectCount: 1 } },
+    };
+
+    expect(buildPayload(snapshot).footnotes).toContain(
+      "Excludes hours declared monthly for another company's system: 2 members, 1 project.",
+    );
+    expect(buildPayload(snapshot, "hu").footnotes).toContain(
+      "Nem tartalmazza a másik cég rendszerében havonta bevallott órákat: 2 munkatárs, 1 projekt.",
+    );
+  });
+
+  it("says nothing about declared hours when none were excluded", () => {
+    expect(buildPayload(createCostFreeReportSnapshot()).footnotes).toEqual([
+      "Member-local date boundaries. Time zones: Europe/Budapest",
+    ]);
+  });
+
   it("falls back to a placeholder when no time zone is present", () => {
     const snapshot = createCostFreeReportSnapshot();
     const payload = buildPayload({ ...snapshot, period: { ...snapshot.period, timezones: [] } });
@@ -414,10 +527,10 @@ describe("report PDF payload", () => {
             ...costFree,
             filters: {
               ...costFree.filters,
-              projectId: "project-1",
-              projectName: "Client Portal",
-              memberId: "member-1",
-              memberName: "Contractor Example",
+              projectIds: ["project-1"],
+              projectNames: ["Client Portal"],
+              memberIds: ["member-1"],
+              memberNames: ["Contractor Example"],
             },
           },
         ],

@@ -1,7 +1,13 @@
 import { isProjectColorToken, projectColorValues } from "@/src/lib/project-colors";
+import { firstSearchParam, listSearchParam, uniqueValues } from "@/src/lib/search-params";
 import { prisma } from "@/src/server/db/client";
 import type { Prisma } from "@/src/server/db/generated/client";
-import { formatDateOnly, normalizeDateOnly, parseDateOnly } from "@/src/server/time-tracking";
+import {
+  formatDateOnly,
+  normalizeDateOnly,
+  parseDateOnly,
+  type TrackingMode,
+} from "@/src/server/time-tracking";
 
 type TimesheetStatusRecord =
   "SUBMITTED" | "REJECTED" | "APPROVED" | "INVOICED" | "INVOICE_REJECTED" | "ACCEPTED" | "PAID";
@@ -13,6 +19,7 @@ const DEFAULT_PAGE = 1;
 const DEFAULT_PAGE_SIZE = 20;
 const MAX_PAGE_SIZE = 100;
 const MONTH_INPUT_PATTERN = /^\d{4}-\d{2}$/;
+const FLAG_INPUT_VALUES = new Set(["1", "true", "on", "yes"]);
 const STATUS_FILTERS = new Set<TimesheetStatusRecord>([
   "SUBMITTED",
   "REJECTED",
@@ -27,10 +34,16 @@ export type AdminTimesheetSearchParams = Record<string, string | string[] | unde
 
 export type AdminTimesheetFilters = {
   query: string;
-  status: TimesheetStatusRecord | "";
-  contractorMemberId: string;
-  projectId: string;
+  /** Empty means every status, the same way no filter at all does. */
+  statuses: TimesheetStatusRecord[];
+  contractorMemberIds: string[];
+  projectIds: string[];
   month: string;
+  /**
+   * Whether `PAID` timesheets are listed. `false` by default — a paid month is closed
+   * business, so it would otherwise pile up in front of the queue an admin came to review.
+   */
+  includePaid: boolean;
   page: number;
   pageSize: number;
 };
@@ -84,6 +97,16 @@ export type AdminTimesheetReviewLine = {
   lineAmount: string;
 };
 
+/** The proof PDF behind a declared project's month, viewed like an invoice. */
+export type AdminTimesheetReviewProof = {
+  declarationId: string;
+  documentId: string;
+  originalFilename: string;
+  contentType: string;
+  byteSize: number;
+  uploadedAt: string;
+};
+
 export type AdminTimesheetReviewProject = {
   projectId: string;
   projectName: string;
@@ -92,6 +115,19 @@ export type AdminTimesheetReviewProject = {
   totalAmount: string;
   currencyCode: string;
   entryCount: number;
+  /**
+   * How this project's hours reached the timesheet.
+   *
+   * Read from whether the month holds a declaration rather than from the assignment's mode today:
+   * the mode is deliberately not time-versioned (§3), so re-resolving it would let a switch made in
+   * November change what a September revision appears to say. The declaration is the record.
+   *
+   * A reviewer needs it because a declared project's `entryCount` is 1, which otherwise reads as
+   * "this person logged one entry all month".
+   */
+  trackingMode: TrackingMode;
+  /** The declared month's proof, or `null` — including for a declared project still missing one. */
+  declaredProof: AdminTimesheetReviewProof | null;
   lines: AdminTimesheetReviewLine[];
 };
 
@@ -418,8 +454,33 @@ export async function getTimesheetReviewForAdmin(
 
   if (!timesheet) return null;
 
+  /* §4 item 6. The declared figure reaches the review for free — it is a snapshot line like any
+     other — but the proof does not, because `AdminTimesheetReview` carries invoices and nothing
+     else document-shaped. One query keyed on the contractor and the period, which is exactly the
+     scope the review already is. */
+  const declarations = await prisma.monthlyHourDeclaration.findMany({
+    where: {
+      memberId: timesheet.contractorMemberId,
+      periodStart: timesheet.periodStart,
+    },
+    select: {
+      id: true,
+      projectId: true,
+      proofDocument: {
+        select: {
+          id: true,
+          originalFilename: true,
+          contentType: true,
+          byteSize: true,
+          createdAt: true,
+          deletedAt: true,
+          status: true,
+        },
+      },
+    },
+  });
   const revision = timesheet.currentRevision;
-  const projects = groupSnapshotLinesByProject(revision?.snapshotLines ?? []);
+  const projects = groupSnapshotLinesByProject(revision?.snapshotLines ?? [], declarations);
   const invoices = timesheet.invoices.map((invoice) => ({
     id: invoice.id,
     invoiceNumber: invoice.invoiceNumber,
@@ -1232,28 +1293,35 @@ function getRequiredCancellationInvoiceIds(input: {
   );
 }
 
-function normalizeAdminTimesheetFilters(
+/** Exported for tests, like the audit log's equivalents. */
+export function normalizeAdminTimesheetFilters(
   searchParams: AdminTimesheetSearchParams,
 ): AdminTimesheetFilters {
-  const rawStatus = firstString(searchParams.status).trim().toUpperCase();
-
   return {
-    query: firstString(searchParams.q).trim().slice(0, 120),
-    status: STATUS_FILTERS.has(rawStatus as TimesheetStatusRecord)
-      ? (rawStatus as TimesheetStatusRecord)
-      : "",
-    contractorMemberId: firstString(searchParams.contractor).trim(),
-    projectId: firstString(searchParams.project).trim(),
-    month: normalizeMonthInput(firstString(searchParams.month)),
-    page: parsePositiveInteger(firstString(searchParams.page), DEFAULT_PAGE),
+    query: firstSearchParam(searchParams.q).trim().slice(0, 120),
+    // Unknown statuses drop out rather than emptying the filter: a stale link naming one
+    // real and one retired status should still narrow the list to the real one.
+    // Deduped after upper-casing: `?status=submitted&status=SUBMITTED` reads as two
+    // distinct URL values but is one status.
+    statuses: uniqueValues(
+      listSearchParam(searchParams.status).map((status) => status.toUpperCase()),
+    ).filter((status): status is TimesheetStatusRecord =>
+      STATUS_FILTERS.has(status as TimesheetStatusRecord),
+    ),
+    contractorMemberIds: listSearchParam(searchParams.contractor),
+    projectIds: listSearchParam(searchParams.project),
+    month: normalizeMonthInput(firstSearchParam(searchParams.month)),
+    includePaid: parseFlagInput(firstSearchParam(searchParams.includePaid)),
+    page: parsePositiveInteger(firstSearchParam(searchParams.page), DEFAULT_PAGE),
     pageSize: Math.min(
-      parsePositiveInteger(firstString(searchParams.pageSize), DEFAULT_PAGE_SIZE),
+      parsePositiveInteger(firstSearchParam(searchParams.pageSize), DEFAULT_PAGE_SIZE),
       MAX_PAGE_SIZE,
     ),
   };
 }
 
-function buildTimesheetWhere(filters: AdminTimesheetFilters): Prisma.TimesheetWhereInput {
+/** Exported for tests, like the audit log's equivalents. */
+export function buildTimesheetWhere(filters: AdminTimesheetFilters): Prisma.TimesheetWhereInput {
   const and: Prisma.TimesheetWhereInput[] = [];
 
   if (filters.query) {
@@ -1276,25 +1344,26 @@ function buildTimesheetWhere(filters: AdminTimesheetFilters): Prisma.TimesheetWh
     });
   }
 
-  if (filters.status) {
+  if (filters.statuses.length > 0) {
     and.push({
-      status: filters.status,
+      status: { in: filters.statuses },
     });
   }
 
-  if (filters.contractorMemberId) {
+  if (filters.contractorMemberIds.length > 0) {
     and.push({
-      contractorMemberId: filters.contractorMemberId,
+      contractorMemberId: { in: filters.contractorMemberIds },
     });
   }
 
-  if (filters.projectId) {
+  if (filters.projectIds.length > 0) {
     and.push({
       currentRevision: {
         is: {
+          // A timesheet matches when any of its lines is on any of the chosen projects.
           snapshotLines: {
             some: {
-              projectId: filters.projectId,
+              projectId: { in: filters.projectIds },
             },
           },
         },
@@ -1305,6 +1374,15 @@ function buildTimesheetWhere(filters: AdminTimesheetFilters): Prisma.TimesheetWh
   if (filters.month) {
     and.push({
       periodStart: parseDateOnly(`${filters.month}-01`),
+    });
+  }
+
+  // Paid timesheets are hidden unless asked for. Naming `PAID` in the status filter counts
+  // as asking — otherwise `?status=PAID` would return an empty list, which reads as data
+  // loss rather than as a default.
+  if (!filters.includePaid && !filters.statuses.includes("PAID")) {
+    and.push({
+      status: { not: "PAID" },
     });
   }
 
@@ -1328,10 +1406,15 @@ function groupSnapshotLinesByProject(
       colorToken: string | null;
     };
   }>,
+  declarations: ReviewDeclarationRecord[] = [],
 ): AdminTimesheetReviewProject[] {
+  const declarationsByProject = new Map(
+    declarations.map((declaration) => [declaration.projectId, declaration]),
+  );
   const projects = new Map<string, AdminTimesheetReviewProject & { totalAmountCents: number }>();
 
   for (const line of lines) {
+    const declaration = declarationsByProject.get(line.projectId);
     const project =
       projects.get(line.projectId) ??
       ({
@@ -1343,6 +1426,19 @@ function groupSnapshotLinesByProject(
         totalAmountCents: 0,
         currencyCode: line.currencyCode,
         entryCount: 0,
+        trackingMode: declaration ? "DECLARED" : "TRACKED",
+        // `null` for a declared project whose proof is missing or was removed — which is a state a
+        // reviewer has to be able to see, not one to hide behind an absent field.
+        declaredProof: isLiveProofDocument(declaration?.proofDocument)
+          ? {
+              declarationId: declaration.id,
+              documentId: declaration.proofDocument.id,
+              originalFilename: declaration.proofDocument.originalFilename,
+              contentType: declaration.proofDocument.contentType,
+              byteSize: Number(declaration.proofDocument.byteSize),
+              uploadedAt: declaration.proofDocument.createdAt.toISOString(),
+            }
+          : null,
         lines: [],
       } satisfies AdminTimesheetReviewProject & { totalAmountCents: number });
 
@@ -1373,8 +1469,31 @@ function groupSnapshotLinesByProject(
     totalAmount: project.totalAmount,
     currencyCode: project.currencyCode,
     entryCount: project.entryCount,
+    trackingMode: project.trackingMode,
+    declaredProof: project.declaredProof,
     lines: project.lines.sort((left, right) => left.localDate.localeCompare(right.localDate)),
   }));
+}
+
+type ReviewDeclarationRecord = {
+  id: string;
+  projectId: string;
+  proofDocument: {
+    id: string;
+    originalFilename: string;
+    contentType: string;
+    byteSize: bigint | number;
+    createdAt: Date;
+    deletedAt: Date | null;
+    status: string;
+  } | null;
+};
+
+/** A replaced or removed proof reads as missing, not as a link to a document that is gone. */
+function isLiveProofDocument<T extends { deletedAt: Date | null; status: string }>(
+  document: T | null | undefined,
+): document is T {
+  return Boolean(document && !document.deletedAt && document.status === "AVAILABLE");
 }
 
 function buildReviewMetadata(input: {
@@ -1502,9 +1621,13 @@ export function normalizeMonthInput(value: string) {
   return MONTH_INPUT_PATTERN.test(trimmed) ? trimmed : "";
 }
 
-function firstString(value: string | string[] | undefined) {
-  if (Array.isArray(value)) return value.at(0) ?? "";
-  return value ?? "";
+/**
+ * Reads a checkbox-shaped search param. The toolbar submits `1`, but a hand-written or
+ * bookmarked URL is as likely to carry `true` or the browser default `on`, and all three
+ * mean the box is ticked.
+ */
+function parseFlagInput(value: string) {
+  return FLAG_INPUT_VALUES.has(value.trim().toLowerCase());
 }
 
 function parsePositiveInteger(value: string, fallback: number) {

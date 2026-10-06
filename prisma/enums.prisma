@@ -46,11 +46,20 @@ enum ProjectStatus {
 }
 
 enum EntrySource {
-  GRID  @map("grid")
-  FORM  @map("form")
-  TIMER @map("timer")
+  GRID     @map("grid")
+  FORM     @map("form")
+  TIMER    @map("timer")
+  DECLARED @map("declared")
+  MCP      @map("mcp")
 
   @@map("entry_source")
+}
+
+enum TrackingMode {
+  TRACKED  @map("tracked")
+  DECLARED @map("declared")
+
+  @@map("tracking_mode")
 }
 
 enum TimesheetStatus {
@@ -105,6 +114,7 @@ enum DocumentType {
   CONTRACTOR_INVOICE @map("contractor_invoice")
   REPORT_EXPORT      @map("report_export")
   PAYSLIP            @map("payslip")
+  HOURS_PROOF        @map("hours_proof")
 
   @@map("document_type")
 }

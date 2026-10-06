@@ -23,7 +23,7 @@ export type {
   CardTextProps,
   CardVariant,
 } from "./Card";
-export { Checkbox } from "./Checkbox";
+export { Checkbox, checkboxBoxClassName } from "./Checkbox";
 export type { CheckboxProps } from "./Checkbox";
 export { ChipButton, chipButtonVariants } from "./ChipButton";
 export type { ChipButtonProps } from "./ChipButton";
@@ -38,7 +38,13 @@ export type {
 export { CodeInput } from "./CodeInput";
 export type { CodeInputProps } from "./CodeInput";
 export { Combobox, useFormReset } from "./Combobox";
-export type { ComboboxLabels, ComboboxOption, ComboboxProps } from "./Combobox";
+export type {
+  ComboboxLabels,
+  ComboboxMultipleProps,
+  ComboboxOption,
+  ComboboxProps,
+  ComboboxSingleProps,
+} from "./Combobox";
 export {
   Command,
   CommandEmpty,
@@ -157,8 +163,8 @@ export { ListRow } from "./ListRow";
 export type { ListRowProps } from "./ListRow";
 export { LockedState } from "./LockedState";
 export type { LockedStateProps } from "./LockedState";
-export { MonthPicker } from "./MonthPicker";
-export type { MonthPickerLabels, MonthPickerProps } from "./MonthPicker";
+export { MonthPicker, MonthPickerPanel } from "./MonthPicker";
+export type { MonthPickerLabels, MonthPickerPanelProps, MonthPickerProps } from "./MonthPicker";
 export { Pager } from "./Pager";
 export type { PagerLabels, PagerProps } from "./Pager";
 export { PasswordInput } from "./PasswordInput";
@@ -172,9 +178,19 @@ export type { ResultBannerProps, ResultBannerTone } from "./ResultBanner";
 export { SectionHead } from "./SectionHead";
 export type { SectionHeadProps } from "./SectionHead";
 export { SegmentedControl } from "./SegmentedControl";
-export type { SegmentItem, SegmentedControlProps } from "./SegmentedControl";
+export type {
+  SegmentItem,
+  SegmentedControlIndicator,
+  SegmentedControlProps,
+} from "./SegmentedControl";
 export { defaultSearchThreshold, Select, SelectMenu } from "./Select";
-export type { SelectMenuProps, SelectOption, SelectProps } from "./Select";
+export type {
+  SelectMenuProps,
+  SelectMultipleProps,
+  SelectOption,
+  SelectProps,
+  SelectSingleProps,
+} from "./Select";
 export { Skeleton } from "./Skeleton";
 export type { SkeletonProps, SkeletonVariant } from "./Skeleton";
 export { StrengthMeter, evaluatePasswordStrength } from "./StrengthMeter";
@@ -185,6 +201,13 @@ export type {
   StrengthMeterScore,
   StrengthRequirement,
 } from "./StrengthMeter";
+export { SuggestInput } from "./SuggestInput";
+export type {
+  SuggestInputLabels,
+  SuggestInputLayout,
+  SuggestInputProps,
+  SuggestOption,
+} from "./SuggestInput";
 export { Switch } from "./Switch";
 export type { SwitchProps } from "./Switch";
 export { Tabs, TabsContent, TabsList, TabsTrigger } from "./Tabs";

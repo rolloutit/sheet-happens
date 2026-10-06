@@ -7,6 +7,7 @@
     "search": "Keresés",
     "searchPlaceholder": "Keresés...",
     "noResults": "Nincs találat",
+    "selectedCount": "{count} kiválasztva",
     "clear": "Törlés",
     "done": "Kész",
     "today": "Ma",
@@ -57,6 +58,7 @@
       "projects": "Projektek",
       "people": "Emberek",
       "rates": "Óradíjak",
+      "declaredHours": "Bevallott órák",
       "audit": "Napló",
       "system": "Rendszer",
       "info": "Információs oldal",
@@ -83,7 +85,14 @@
       "label": "Felhasználói menü",
       "myRates": "Saját óradíjaim",
       "profileAndSettings": "Profil és beállítások",
-      "signOut": "Kijelentkezés"
+      "signOut": "Kijelentkezés",
+      "signOutConfirm": {
+        "title": "Kijelentkezel?",
+        "description": "Kijelentkeztetünk ezen az eszközön, és visszakerülsz a bejelentkezési képernyőre. A már mentett időbejegyzéseid érintetlenül maradnak.",
+        "confirm": "Kijelentkezés",
+        "cancel": "Bejelentkezve maradok",
+        "close": "Bezárás"
+      }
     },
     "timer": {
       "stop": "Időmérő leállítása",
@@ -313,6 +322,45 @@
       "signOut": "Kijelentkezés"
     }
   },
+  "Consent": {
+    "eyebrow": "Alkalmazás összekötése",
+    "title": "A {client} hozzáférést kér a Sheet Happens fiókodhoz",
+    "description": "{name} néven vagy bejelentkezve. Az engedélyezett alkalmazás a te nevedben, pontosan a te jogaiddal jár el — más munkaóráit soha nem látja és nem módosítja.",
+    "scopes": {
+      "timeRead": {
+        "title": "Munkaóráid olvasása",
+        "description": "Láthatja a saját időbejegyzéseidet, a projektjeidet, a futó időmérőt, valamint a napi, heti és havi összesítéseidet."
+      },
+      "timeWrite": {
+        "title": "Munkaóráid rögzítése és javítása",
+        "description": "Létrehozhatja, módosíthatja és törölheti a saját időbejegyzéseidet, és indíthatja vagy leállíthatja az időmérőt. A törölt bejegyzések visszaállíthatók. A beküldött timesheettel zárolt hónapok zárolva maradnak."
+      },
+      "identity": {
+        "title": "Azonosításod és a kapcsolat fenntartása",
+        "description": "Elolvashatja a nevedet és az e-mail-címedet, és fenntarthatja a kapcsolatot anélkül, hogy újra be kellene jelentkezned."
+      }
+    },
+    "unknownScopes": "Ez az alkalmazás olyan hozzáférést is kér, amelyet a Sheet Happens nem ismer: {scopes}. Ha nem tudod, miért, tagadd meg.",
+    "actions": {
+      "allow": "Engedélyezés",
+      "deny": "Megtagadás"
+    },
+    "expired": {
+      "title": "A kérés lejárt",
+      "message": "Az összekötési kérések csak néhány percig érvényesek. Indítsd újra az összekötést abban az alkalmazásban, amelyet használtál."
+    },
+    "invalid": {
+      "title": "Nincs mit jóváhagyni",
+      "message": "Ez az oldal egy alkalmazás Sheet Happenshez kötésének része. Ne közvetlenül nyisd meg, hanem abból az alkalmazásból, amelyet össze szeretnél kötni."
+    }
+  },
+  "ConsentActions": {
+    "errors": {
+      "expired": "Ez a kérés már nem érvényes. Indítsd újra az összekötést abban az alkalmazásban, amelyet használtál.",
+      "notAllowed": "A Sheet Happens fiókod jelenleg nem tud alkalmazásokat összekötni.",
+      "generic": "Az összekötést nem sikerült befejezni."
+    }
+  },
   "Help": {
     "eyebrow": "Súgó",
     "title": "Súgó és kézikönyv",
@@ -320,7 +368,8 @@
     "tabs": {
       "label": "Súgó tartalom",
       "welcome": "Üdvözlő",
-      "manual": "Kézikönyv"
+      "manual": "Kézikönyv",
+      "connector": "Claude connector"
     },
     "actions": {
       "editWelcome": "Üdvözlő tartalom szerkesztése"
@@ -342,6 +391,37 @@
       "all": "Mindenki",
       "contractor": "Kontraktorok",
       "admin": "Adminok"
+    },
+    "mcp": {
+      "badge": "Claude connector",
+      "title": "Engedd a Claude-ot a saját munkaóráidhoz",
+      "description": "A Sheet Happens connectorral a Claude elolvassa a rögzített munkaóráidat, és rögzíti is helyetted — a weben, az asztali appban, a Coworkben, mobilon vagy a Claude Code-ban. Mindenki magának köti össze, és egy kapcsolat mindig csak az adott tag saját óráit látja.",
+      "urlLabel": "Connector URL",
+      "urlHint": "Ezt a címet illeszd be oda, ahol a Claude egyéni connector URL-t kér. A belépés a szokásos Sheet Happens bejelentkezéssel történik, utána pedig egy jóváhagyó oldal pontosan felsorolja, mit tehet az agent — addig semmit nem kap meg.",
+      "copyUrl": "URL másolása",
+      "urlCopied": "A connector URL a vágólapra került.",
+      "copyFailed": "A másolás nem sikerült — jelöld ki a fenti címet, és másold ki kézzel.",
+      "app": {
+        "title": "Claude.ai, Claude Desktop, Cowork és mobil",
+        "description": "Egyetlen beállítás mind a négy felületre érvényes.",
+        "teamTitle": "Team vagy Enterprise munkaterület",
+        "teamOwner": "A connectort egy owner adja hozzá egyszer: Organization settings → Connectors → Add → Custom, a neve „Sheet Happens”, az URL a fenti, az authentication „Always required”, az OAuth-kliens pedig az Anthropic által hosztolt client metadata.",
+        "teamMember": "Ezután mindenki más a Customize → Connectors alatt a Connect gombra kattint.",
+        "personalTitle": "Pro, Max vagy Free fiók",
+        "personalStep": "Nyisd meg a Customize → Connectors → Add custom connector pontot, és illeszd be a fenti URL-t. A Claude a hitelesítési beállításokat magától a Sheet Happenstől olvassa ki és tölti ki.",
+        "tools": "Az eszközöket beszélgetésenként a „+” menüből kapcsolod be, és a connector alatt bármelyik eszköz külön Blocked állapotra állítható."
+      },
+      "code": {
+        "title": "Claude Code",
+        "description": "Add hozzá egyszer a connectort, majd jelentkezz be — a terminálból, vagy egy session-ben az /mcp paranccsal.",
+        "loginHint": "SSH-n dolgozva add hozzá a --no-browser opciót. Az eszközengedélyek neve mcp__sheet-happens__time_get_context alakú."
+      },
+      "ownership": {
+        "title": "Mit ér el a connector",
+        "body": "A kapcsolatodat használó agent pontosan azt éri el, amit te a Sheet Happensben: a saját időbejegyzéseidet, a saját projektjeidet és a saját összesítéseidet. Más munkaóráit soha nem látja és nem módosítja, a beküldött timesheettel zárolt hónap pedig az agent számára is zárolva marad.",
+        "disconnect": "Azt te döntöd el, meddig tart. Amíg a Beállításokban le nem választod, az alkalmazás a nevedben járhat el — akkor is, amikor épp nem használod.",
+        "openConnectedApps": "Összekötött alkalmazások megnyitása"
+      }
     }
   },
   "AdminInfo": {
@@ -544,6 +624,7 @@
         "lastWeek": "A múlt héten",
         "twoWeeksAgo": "2 hete",
         "viewDrilldown": "Részletek",
+        "viewAll": "Mind a {count} flagged felhasználó",
         "remind": "Emlékeztető küldése",
         "reminderSent": "Emlékeztető elküldve",
         "reminderErrors": {
@@ -813,7 +894,8 @@
       "invoiceAmountInvalid": "Adj meg pozitív számlaösszeget.",
       "invoiceCurrencyInvalid": "A számla pénzneme nem támogatott.",
       "invoiceStorageMissing": "Ebben a környezetben nincs beállítva a számlatárolás.",
-      "invoiceFailed": "A számlát nem sikerült feltölteni."
+      "invoiceFailed": "A számlát nem sikerült feltölteni.",
+      "declaredProofMissing": "Beküldés előtt töltsd fel az óraigazolást minden bevallott projekthez: {projects}."
     }
   },
   "AdminTimesheets": {
@@ -847,6 +929,8 @@
       "allProjects": "Minden projekt",
       "month": "Hónap",
       "allMonths": "Összes hónap",
+      "includePaid": "Kifizetettek mutatása",
+      "includePaidChip": "Kifizetettek is látszanak",
       "apply": "Szűrők alkalmazása",
       "clear": "Törlés",
       "active": "Aktív szűrők",
@@ -899,7 +983,12 @@
       "unlocked": "Feloldva",
       "empty": "Ehhez a revízióhoz nincs snapshot sor.",
       "projectSummary": "{hours} óra, {entries} bejegyzés",
-      "lineCaption": "Timesheet snapshot forrássorok"
+      "lineCaption": "Timesheet snapshot forrássorok",
+      "declared": "Havonta bevallott",
+      "declaredSummary": "{hours} óra a hónapra bevallva",
+      "declaredLineDate": "{month} · bevallott",
+      "openProof": "Igazolás megnyitása",
+      "proofMissing": "Ezekhez a bevallott órákhoz nincs igazoló dokumentum."
     },
     "lineTable": {
       "date": "Dátum",
@@ -1095,8 +1184,8 @@
       "navigation": "Taglista oldalak",
       "previous": "Előző",
       "next": "Következő",
-      "previousPage": "Ugrás a(z) {page}. oldalra",
-      "nextPage": "Ugrás a(z) {page}. oldalra",
+      "previousPage": "Előző oldal",
+      "nextPage": "Következő oldal",
       "page": "Ugrás a(z) {page}. oldalra",
       "currentPage": "Aktuális oldal: {page}. oldal",
       "summary": "{page}. oldal / {totalPages}, összesen {totalItems} tag"
@@ -1112,7 +1201,9 @@
       "timezone": "Időzóna",
       "locale": "Nyelv",
       "displayName": "Megjelenített név",
-      "displayNameHint": "Hagyd üresen a vezetéknév és keresztnév használatához."
+      "displayNameHint": "Hagyd üresen a vezetéknév és keresztnév használatához.",
+      "defaultTrackingMode": "Óranyilvántartás alapértelmezése",
+      "defaultTrackingModeHint": "A tag minden projektjére érvényes. Egy-egy hozzárendelés a Projektek oldalon felülírhatja."
     },
     "profiles": {
       "contractor": "Kontraktor",
@@ -1191,6 +1282,10 @@
       "reason": "Indoklás",
       "reasonHint": "Adj meg indoklást ehhez a profilváltáshoz."
     },
+    "trackingMode": {
+      "tracked": "Itt rögzített",
+      "declared": "Havi bevallás"
+    },
     "discardDialog": {
       "title": "Elveted ezt a meghívót?",
       "description": "A kitöltött adatok nem lesznek elmentve.",
@@ -1232,7 +1327,11 @@
       "invitationFailed": "A meghívót nem sikerült elküldeni. Próbáld újra később.",
       "memberUpdateFailed": "A tag adatait nem sikerült frissíteni. Próbáld újra később.",
       "profileTransitionFailed": "A profilváltást nem sikerült ütemezni. Próbáld újra később.",
-      "memberActionFailed": "A tagműveletet nem sikerült végrehajtani. Próbáld újra később."
+      "memberActionFailed": "A tagműveletet nem sikerült végrehajtani. Próbáld újra később.",
+      "trackingModeSwitchField": "A tag egyik hónapjában még más típusú órák szerepelnek.",
+      "trackingModeConflictItem": "{project} ({month})",
+      "trackingModeSwitchToDeclared": "Az alapértelmezés nem állítható havi bevallásra, amíg {items} még időbejegyzéseket tartalmaz. Először töröld ezeket, vagy írd felül az érintett hozzárendeléseket a Projektek oldalon.",
+      "trackingModeSwitchToTracked": "Az alapértelmezés nem állítható itt rögzített órákra, amíg {items} még havi bevallást tartalmaz. Először töröld a bevallásokat, vagy írd felül az érintett hozzárendeléseket a Projektek oldalon."
     },
     "validation": {
       "validEmail": "Adj meg érvényes email címet.",
@@ -1248,7 +1347,8 @@
       "memberIdMissing": "Hiányzik a tag azonosítója.",
       "displayNameMax": "A megjelenített név legfeljebb 120 karakter lehet.",
       "validEffectiveDate": "Válassz érvényes hatálybalépési dátumot.",
-      "reasonMax": "Az indoklás legfeljebb 500 karakter lehet."
+      "reasonMax": "Az indoklás legfeljebb 500 karakter lehet.",
+      "validTrackingMode": "Válaszd ki, hogyan rögzíti az órákat ez a tag."
     }
   },
   "AdminProjects": {
@@ -1331,8 +1431,8 @@
       "navigation": "Projektlista oldalak",
       "previous": "Előző",
       "next": "Következő",
-      "previousPage": "Ugrás a(z) {page}. oldalra",
-      "nextPage": "Ugrás a(z) {page}. oldalra",
+      "previousPage": "Előző oldal",
+      "nextPage": "Következő oldal",
       "page": "Ugrás a(z) {page}. oldalra",
       "currentPage": "Aktuális oldal: {page}. oldal",
       "summary": "{page}. oldal / {totalPages}, összesen {totalItems} projekt"
@@ -1503,6 +1603,19 @@
       "scheduledOverrideDetail": "{count, plural, one {# felülírási időszak ütemezve.} other {# felülírási időszak ütemezve.}}",
       "contractorCentralRate": "A kontraktor-hozzárendelés jelenleg a tag központi óradíját használja."
     },
+    "trackingMode": {
+      "tracked": "Itt rögzített",
+      "declared": "Havi bevallás",
+      "trackedOption": "Itt rögzített",
+      "declaredOption": "Havi bevallás",
+      "inherit": "Tag alapértelmezése ({mode})",
+      "inheritDefault": "Tag alapértelmezése",
+      "inheritedDetail": "Az órák módja a tag alapértelmezése szerint: {mode}.",
+      "overriddenDetail": "Az órák módja csak ennél a hozzárendelésnél: {mode}.",
+      "overrideLabel": "Óranyilvántartás",
+      "overrideHint": "Csak erre a hozzárendelésre érvényes. A tag alapértelmezését a Tagok oldalon lehet beállítani.",
+      "bulkHint": "Az itt létrehozott összes hozzárendelésre érvényes. A tag alapértelmezését a Tagok oldalon lehet beállítani."
+    },
     "discardDialog": {
       "title": "Elveted ezt a projektet?",
       "description": "A kitöltött adatok nem lesznek elmentve.",
@@ -1558,7 +1671,10 @@
       "projectSlugExists": "Már létezik projekt ezzel a sluggal.",
       "projectLinkFailed": "A projektet nem sikerült a jelenlegi admin taghoz kapcsolni. Frissítsd az oldalt és próbáld újra.",
       "projectsUnavailable": "A projektek átmenetileg nem érhetők el. Próbáld újra később, vagy keresd a supportot.",
-      "projectMissing": "Ez a projekt már nem létezik, vagy már archiválták."
+      "projectMissing": "Ez a projekt már nem létezik, vagy már archiválták.",
+      "trackingModeSwitchField": "Ebben a hónapban még más típusú órák szerepelnek.",
+      "trackingModeSwitchToDeclared": "Ez a hozzárendelés nem állítható havi bevallásra, amíg {months} még itt rögzített időbejegyzéseket tartalmaz. Először töröld ezeket, vagy a következő hónaptól válts.",
+      "trackingModeSwitchToTracked": "Ez a hozzárendelés nem állítható itt rögzített órákra, amíg {months} még havi bevallást tartalmaz. Először töröld a bevallást, vagy a következő hónaptól válts."
     },
     "validation": {
       "validDate": "Válassz érvényes dátumot.",
@@ -1580,7 +1696,8 @@
       "groupNameRequired": "A csoport nevének megadása kötelező.",
       "descriptionMax": "A leírás legfeljebb 1000 karakter lehet.",
       "projectGroupIdMissing": "Hiányzik a projektcsoport azonosítója.",
-      "chooseProject": "Válassz projektet."
+      "chooseProject": "Válassz projektet.",
+      "trackingModeInvalid": "Válaszd ki, hogyan rögzíti az órákat ez a hozzárendelés."
     }
   },
   "AdminRates": {
@@ -1707,6 +1824,107 @@
       "rateEndAfterStart": "Az óradíj befejezési dátuma későbbi kell legyen a kezdési dátumnál."
     }
   },
+  "AdminDeclaredHours": {
+    "eyebrow": "Admin",
+    "title": "Bevallott órák",
+    "subtitle": "Havonta bevallott órák minden munkatársra. Itt nézhető át, ki mit vallott be, és innen javítható egy szám a munkatárs helyett — indoklással.",
+    "months": {
+      "previous": "Előző hónap",
+      "next": "Következő hónap",
+      "thisMonth": "Ez a hónap"
+    },
+    "summary": {
+      "declared": "Bevallva",
+      "missing": "Hiányzó bevallás",
+      "missingProof": "Igazolás nélkül"
+    },
+    "profile": {
+      "EMPLOYEE": "Alkalmazott",
+      "CONTRACTOR": "Kontraktor"
+    },
+    "modeSource": {
+      "memberDefault": "a munkatárs alapértelmezéséből"
+    },
+    "labels": {
+      "nothingDeclared": "Nincs bevallva",
+      "proofMissing": "Nincs igazolás",
+      "locked": "Zárolt hónap",
+      "ownDeclaration": "A saját bevallásod",
+      "assignmentEnded": "A hozzárendelés már nem fedi ezt a hónapot",
+      "corrected": "Javította: {name} · {when}",
+      "correctedByRemoved": "törölt admin"
+    },
+    "actions": {
+      "correct": "Javítás",
+      "cancel": "Mégsem",
+      "save": "Javítás mentése"
+    },
+    "drawer": {
+      "title": "{project} — bevallott órák javítása",
+      "description": "{name} · {month}. A munkatárs értesítést kap a javításról.",
+      "openProof": "Megnyitás",
+      "noProof": "Ehhez a hónaphoz nincs feltöltött óraigazolás."
+    },
+    "fields": {
+      "hours": "Bevallott órák",
+      "hoursHint": "A teljes hónap órái — 52, 52h vagy 52:30.",
+      "hoursPlaceholder": "52",
+      "note": "Mit fedeznek az órák",
+      "noteHint": "Bekerül az időelszámolásba és a riportokba, ezért kötelező. A munkatárs saját szövegével van előtöltve.",
+      "notePlaceholder": "Platformmigráció támogatása",
+      "reason": "A javítás indoklása",
+      "reasonHint": "A munkatárs ezt olvassa az értesítésben, és a naplóba is bekerül.",
+      "reasonPlaceholder": "Az óraigazolás 52 órát mutat, nem 48-at.",
+      "sanityWarning": "Ez több mint {hours}, ennyi óra van az egész hónapban. Mentheted — ellenőrizd a számot."
+    },
+    "table": {
+      "caption": "Bevallott órák — {month}",
+      "empty": "Ebben a hónapban egyetlen projekt sincs havi bevallásra állítva.",
+      "proofNote": "Az óraigazolást a munkatárs tölti fel a saját Időkövetés oldalán, a Hónap nézetben. Az admin megnyithatja, de nem cserélheti.",
+      "columns": {
+        "member": "Munkatárs",
+        "project": "Projekt",
+        "hours": "Órák",
+        "proof": "Igazolás",
+        "actions": "Műveletek"
+      }
+    }
+  },
+  "AdminDeclaredHoursActions": {
+    "validation": {
+      "member": "Válassz munkatársat.",
+      "project": "Válassz projektet.",
+      "month": "Válassz érvényes hónapot.",
+      "minutesPositive": "A bevallott óraszámnak nullánál nagyobbnak kell lennie.",
+      "minutesTooLarge": "A bevallott óraszám túl nagy.",
+      "noteRequired": "Írd le, mit fedeznek a bevallott órák.",
+      "noteTooLong": "A leírás legfeljebb 1000 karakter lehet.",
+      "reasonRequired": "Add meg a javítás indoklását.",
+      "reasonTooLong": "Az indoklás legfeljebb 1000 karakter lehet."
+    },
+    "success": {
+      "corrected": "A bevallott órákat javítottuk, és a munkatárs értesítést kapott."
+    },
+    "errors": {
+      "fixFields": "Javítsd a jelölt mezőket.",
+      "ownDeclaration": "A saját bevallott óráidat az Időkövetés oldalon, a Hónap nézetben javítsd — így az indoklás nem veszik el.",
+      "correctFailed": "A bevallott órák javítása nem sikerült."
+    },
+    "declarationErrors": {
+      "INVALID_PERIOD": "Válassz érvényes hónapot.",
+      "INVALID_MINUTES": "A bevallott óraszámnak nullánál nagyobbnak kell lennie.",
+      "NOTE_REQUIRED": "Írd le, mit fedeznek a bevallott órák.",
+      "PERIOD_LOCKED": "Beküldött időelszámolás zárolja ezt a hónapot. Előbb nyisd fel javításra, utána javítható a szám.",
+      "ASSIGNMENT_NOT_FOUND": "Ehhez a hónaphoz nincs élő hozzárendelés a projekten, ezért nem írható rá bevallás.",
+      "NOT_DECLARED": "Ez a projekt a Sheet Happensben rögzíti az óráit, ezért nem vallhatók be. Előbb a Projektek oldalon állítsd havi bevallásra.",
+      "TRACKED_ENTRIES_EXIST": "Ez a hónap már tartalmaz itt rögzített időbejegyzéseket erre a projektre. Előbb töröld ezeket.",
+      "DECLARATION_NOT_FOUND": "Ehhez a hónaphoz még nincs bevallás.",
+      "REASON_REQUIRED": "Az admin javításhoz indoklás kell.",
+      "PROOF_REQUIRED": "Válassz egy PDF-et a feltöltéshez.",
+      "PROOF_TOO_LARGE": "Az óraigazolás PDF nagyobb, mint 10 MB.",
+      "PROOF_NOT_PDF": "Az óraigazolásnak PDF-nek kell lennie."
+    }
+  },
   "AdminAudit": {
     "eyebrow": "Admin",
     "title": "Napló",
@@ -1721,6 +1939,11 @@
     },
     "events": {
       "actions": {
+        "hours_declaration__created": "Bevallva",
+        "hours_declaration__deleted": "Bevallás visszavonva",
+        "hours_declaration__proof_replaced": "Igazolás cserélve",
+        "hours_declaration__proof_uploaded": "Igazolás feltöltve",
+        "hours_declaration__updated": "Bevallás javítva",
         "inactive_project_week__marked": "Inaktívnak jelölve",
         "inactive_project_week__unmarked": "Inaktív jelölés törölve",
         "info_pages__publish": "Közzétéve",
@@ -1730,10 +1953,10 @@
         "member__activated": "Aktiválva",
         "member__avatar_deleted": "Profilkép törölve",
         "member__avatar_updated": "Profilkép frissítve",
-        "member__duration_display_format_updated": "Időtartam-megjelenítés frissítve",
         "member__bootstrap_invited": "Kezdeti admin meghívva",
         "member__deactivated": "Deaktiválva",
         "member__deleted": "Archiválva",
+        "member__duration_display_format_updated": "Időtartam-megjelenítés frissítve",
         "member__invitation_resent": "Meghívó újraküldve",
         "member__invitation_revoked": "Meghívó visszavonva",
         "member__invited": "Meghívva",
@@ -1744,6 +1967,7 @@
         "member__restored": "Visszaállítva",
         "member__role_changed": "Szerepkör módosítva",
         "member__session_revoked": "Munkamenet visszavonva",
+        "member__mcp_access_revoked": "Összekötött alkalmazások visszavonva",
         "member__timezone_updated": "Időzóna frissítve",
         "member__updated": "Módosítva",
         "notification__settings_updated": "Beállítások frissítve",
@@ -1791,10 +2015,11 @@
         "security__totp_reset": "2FA visszaállítva",
         "time_entries__copy_previous_day": "Előző nap másolva",
         "time_entries__duplicate_previous_week": "Előző hét másolva",
+        "time_entry__admin_updated": "Admin által javítva",
         "time_entry__created": "Létrehozva",
         "time_entry__deleted": "Törölve",
+        "time_entry__restored": "Visszaállítva",
         "time_entry__updated": "Módosítva",
-        "time_entry__admin_updated": "Admin által javítva",
         "timesheet__approved": "Jóváhagyva",
         "timesheet__paid": "Kifizetettnek jelölve",
         "timesheet__rejected": "Elutasítva",
@@ -1804,6 +2029,7 @@
       "targets": {
         "assignment_rate_period": "Projektóradíj",
         "contractor_invoice": "Számla",
+        "hours_declaration": "Bevallott órák",
         "inactive_project_week": "Inaktív hét",
         "info_page": "Információs oldal",
         "member": "Munkatárs",
@@ -1937,24 +2163,32 @@
     "missingEnv": "Hiányzik: {names}"
   },
   "TimeTracking": {
-    "view": {
-      "weeklyGrid": "Heti rács",
-      "day": "Nap"
+    "zoom": {
+      "dayStrip": "A hét napjai",
+      "selectDay": "{day} kiválasztása",
+      "zoomToProject": "{project} · nagyítás"
+    },
+    "week": {
+      "columnEmpty": "Nincs rögzítve",
+      "expandDay": "{day} mutatása",
+      "addEntryOn": "Bejegyzés hozzáadása – {day}",
+      "editEntryNamed": "{entry} szerkesztése",
+      "deleteEntryNamed": "{entry} törlése",
+      "adminModified": "Adminisztrátor módosította",
+      "capacity": "{logged} / {target}"
     },
     "labels": {
       "thisWeek": "Ez a hét",
+      "thisMonth": "Ez a hónap",
       "weekTotal": "Heti összesen",
+      "monthTotal": "Havi összesen",
       "dayTotal": "Napi összesen",
-      "assigned": "Hozzárendelve",
       "recent": "Legutóbbi",
       "archivedProject": "Archivált projekt",
       "noDescription": "Nincs leírás"
     },
     "actions": {
       "newEntry": "Új bejegyzés",
-      "previousWeek": "Előző hét",
-      "nextWeek": "Következő hét",
-      "sameAsYesterday": "Ugyanaz, mint tegnap",
       "duplicateLastWeek": "Előző hét másolása",
       "undo": "Visszavonás",
       "discard": "Eldobás",
@@ -1966,7 +2200,8 @@
       "close": "Bezárás",
       "cancel": "Mégse",
       "save": "Mentés",
-      "newTimer": "Új időmérő"
+      "copyYesterdayInto": "Tegnapi másolása ide: {day}",
+      "more": "További műveletek"
     },
     "tooltips": {
       "copyPreviousDay": "Bejegyzések másolása a(z) {date} előtti napról.",
@@ -1992,7 +2227,9 @@
     "grid": {
       "projects": "Projektek",
       "total": "Összesen",
-      "dailyTotal": "Napi összesen"
+      "dailyTotal": "Napi összesen",
+      "declaredMonthly": "Havonta bevallott",
+      "seeMonth": "Hónap nézet"
     },
     "inactive": {
       "title": "Inaktív hét",
@@ -2006,7 +2243,10 @@
     },
     "empty": {
       "title": "Nincs aktív hozzárendelt projekt",
-      "description": "Időt akkor tudsz rögzíteni, ha egy admin aktív projekthez rendel ezen a héten."
+      "description": "Időt akkor tudsz rögzíteni, ha egy admin aktív projekthez rendel ezen a héten.",
+      "copyYesterday": "Tegnapi másolása",
+      "weekTitle": "Ezen a héten nincs rögzítve semmi",
+      "weekDescription": "Adj hozzá egy bejegyzést, vagy hozd át az előző hét bejegyzéseit."
     },
     "draft": {
       "title": "Mentetlen időbejegyzés-piszkozat",
@@ -2017,14 +2257,31 @@
     },
     "day": {
       "emptyTitle": "Nincs bejegyzés ezen a napon",
-      "emptyDescription": "Indíts időmérőt vagy adj hozzá bejegyzést a kiválasztott projekthez és naphoz."
+      "emptyDescription": "Indíts időmérőt vagy adj hozzá bejegyzést a kiválasztott projekthez és naphoz.",
+      "target": "a {target} célból",
+      "split": "Projektenként",
+      "quickAdd": "Gyors hozzáadás",
+      "glance": "Röviden",
+      "noSplit": "Még nincs rögzítve semmi"
+    },
+    "month": {
+      "trackedHeading": "Sheet Happensben rögzítve",
+      "emptyTitle": "Ebben a hónapban nincs mit zárni",
+      "emptyDescription": "Ebben a hónapban nem rögzítettél időt, és nincs benne nyitott projekt, amelyre rögzíthetnél.",
+      "declaredHeading": "Havonta bevallott",
+      "declaredElsewhere": "A(z) {project} órái havonta kerülnek bevallásra — <link>nézd meg a Hónap nézetben</link>",
+      "declaredElsewhereMany": "{count, plural, other {# projekt}} órái havonta kerülnek bevallásra — <link>nézd meg a Hónap nézetben</link>"
     },
     "timer": {
       "trackedWithTimer": "Időmérővel rögzítve",
       "placeholder": "Min dolgozol?",
       "projectLabel": "Időmérő projekt",
       "start": "Indítás",
-      "stop": "Leállítás"
+      "stop": "Leállítás",
+      "startTimer": "Időmérő indítása",
+      "stopTimer": "Időmérő leállítása",
+      "running": "Időmérő fut",
+      "elapsed": "{elapsed} eltelt"
     },
     "timerModal": {
       "title": "Új időmérő",
@@ -2081,7 +2338,9 @@
       "form": "Űrlap",
       "timer": "Időmérő",
       "timed": "Időzített",
-      "hours": "Órák"
+      "hours": "Órák",
+      "declared": "Bevallott",
+      "mcp": "MCP"
     },
     "fieldErrors": {
       "durationPositive": "Az időtartamnak nullánál nagyobbnak kell lennie.",
@@ -2094,6 +2353,173 @@
     },
     "errors": {
       "invalidDurationFormat": "Adj meg időt például így: 3.5, 3:30, 3h 20m vagy 200m."
+    },
+    "declared": {
+      "hoursLabel": "{project}, bevallott órák",
+      "hoursPlaceholder": "52",
+      "hoursHint": "A teljes hónap órái — 52, 52h vagy 52:30.",
+      "noteLabel": "{project}, mit fedeznek az órák",
+      "notePlaceholder": "Platformmigráció támogatása",
+      "noteRequired": "Írd le, mit fedeznek a bevallott órák.",
+      "proofLabel": "Óraigazolás PDF",
+      "proofUpload": "Igazolás feltöltése",
+      "proofReplace": "Csere",
+      "proofView": "Megnyitás",
+      "proofMissing": "Még nincs feltöltött igazolás",
+      "proofNeedsHours": "Előbb valld be az órákat, utána csatold az igazolást.",
+      "proofUploading": "Feltöltés",
+      "save": "Mentés",
+      "saving": "Mentés",
+      "saved": "Mentve",
+      "locked": "Beküldött időelszámolás zárolja ezt a hónapot, ezért az órák csak olvashatók.",
+      "nothingDeclared": "Nincs bevallva",
+      "externalSystem": "külső rendszer",
+      "sanityWarning": "Ez több mint {hours}, ennyi óra van az egész hónapban. Mentettük — ellenőrizd a számot."
+    },
+    "view": {
+      "label": "Nézet",
+      "day": "Nap",
+      "week": "Hét",
+      "month": "Hónap",
+      "zoomIn": "Közelítés: {scope}",
+      "zoomOut": "Távolítás: {scope}",
+      "zoomInMost": "Ez a legközelebbi nézet",
+      "zoomOutMost": "Ez a legtágabb nézet",
+      "shortcut": "Billentyű: {key}",
+      "monthBadge": "A bevallott órák a Hónap nézetben vannak",
+      "announce": "{scope} · {period} · {total}"
+    },
+    "lens": {
+      "label": "Heti elrendezés",
+      "agenda": "Napló",
+      "grid": "Rács"
+    },
+    "period": {
+      "week": "{week}. hét · {range}",
+      "today": "Ma",
+      "previous": "Előző {unit}",
+      "next": "Következő {unit}",
+      "unitDay": "nap",
+      "unitWeek": "hét",
+      "unitMonth": "hónap",
+      "pick": "Ugrás egy hónapra",
+      "atToday": "A mai napon vagy"
+    },
+    "total": {
+      "today": "ma",
+      "week": "ezen a héten",
+      "month": "ebben a hónapban",
+      "overTarget": "több mint {target}",
+      "onTarget": "cél teljesítve"
+    },
+    "header": {
+      "open": "{date} megnyitása",
+      "locked": "Beküldött munkaidő-nyilvántartás zárolja",
+      "today": "Ma",
+      "over": "Több mint {target}"
+    },
+    "heat": {
+      "label": "{month} napjai",
+      "cell": "{date}, {hours}",
+      "cellDetail": "{hours} · {count} bejegyzés",
+      "empty": "{date}, nincs rögzítve",
+      "future": "{date}, jövőbeli",
+      "workdays": "{logged} / {workdays} munkanap",
+      "weekRow": "{week}. hét",
+      "openWeek": "{week}. hét megnyitása",
+      "locked": "Ezt a hónapot beküldött munkaidő-nyilvántartás zárolja",
+      "legendLogged": "Rögzítve",
+      "legendEmpty": "Nincs rögzítve",
+      "legendFuture": "Jövőbeli",
+      "outside": "{date}, nem ebben a hónapban"
+    },
+    "composer": {
+      "title": "Hozzáadás: {date}",
+      "description": "Min dolgoztál?",
+      "duration": "Időtartam",
+      "durationPlaceholder": "2ó30",
+      "project": "Projekt",
+      "more": "További beállítások",
+      "interval": "Inkább időszak",
+      "add": "Hozzáadás",
+      "submitHint": "Az Enter hozzáadja",
+      "descriptionRequired": "Írd le, min dolgoztál.",
+      "noProject": "Először válassz projektet.",
+      "close": "Bezárás"
+    },
+    "suggestions": {
+      "label": "Legutóbbi leírások",
+      "otherProjects": "Más projektekből",
+      "meta": "{count, plural, one {# alkalommal} other {# alkalommal}} · utoljára: {date}",
+      "justUsed": "Most használtad",
+      "count": "{count, plural, one {# javaslat} other {# javaslat}}",
+      "empty": "Nincs egyező leírás",
+      "hint": "↑↓ választás · ↵ beszúrás"
+    },
+    "card": {
+      "continue": "{description} folytatása",
+      "more": "További műveletek: {description}",
+      "timer": "Időmérővel rögzítve",
+      "locked": "Beküldött munkaidő-nyilvántartás zárolja",
+      "live": "Most fut"
+    },
+    "undo": {
+      "deleted": "Bejegyzés törölve",
+      "action": "Visszavonás",
+      "restored": "Bejegyzés visszaállítva"
+    },
+    "shortcuts": {
+      "title": "Billentyűparancsok",
+      "description": "Ezen az oldalon minden lépésnek van billentyűje. Gépelés közben egyik sem aktív.",
+      "open": "Billentyűparancsok",
+      "keyHeader": "Billentyű",
+      "actionHeader": "Művelet",
+      "groupView": "Nézet",
+      "groupMove": "Mozgás",
+      "groupAdd": "Hozzáadás",
+      "groupTimer": "Időmérő",
+      "day": "Nap",
+      "week": "Hét",
+      "month": "Hónap",
+      "zoomOut": "Távolítás",
+      "zoomIn": "Közelítés",
+      "grid": "A hét rács elrendezése",
+      "previous": "Előző {unit}",
+      "next": "Következő {unit}",
+      "today": "Ma",
+      "escape": "Egy lépés távolítás",
+      "newEntry": "Új bejegyzés a kiválasztott napra",
+      "timer": "Időmérő indítása vagy leállítása",
+      "help": "Ez a lap",
+      "palette": "Parancspaletta"
+    },
+    "hint": {
+      "firstVisit": "A ? gomb mutatja a parancsokat, egy napra kattintva megnyílik",
+      "dismiss": "Értem"
+    },
+    "commands": {
+      "group": "Időkövetés",
+      "title": "Parancspaletta",
+      "description": "Az oldal minden művelete, név szerint kereshető.",
+      "search": "Parancsok keresése",
+      "empty": "Nincs találat",
+      "trigger": "Parancspaletta megnyitása",
+      "goToToday": "Ugrás a mai napra",
+      "viewDay": "Nézet: Nap",
+      "viewWeek": "Nézet: Hét",
+      "viewMonth": "Nézet: Hónap",
+      "lensAgenda": "Heti elrendezés: Napló",
+      "lensGrid": "Heti elrendezés: Rács",
+      "newEntry": "Új bejegyzés",
+      "startTimer": "Időmérő indítása",
+      "stopTimer": "Időmérő leállítása",
+      "duplicateLastWeek": "Előző hét másolása",
+      "copyYesterday": "Tegnapi másolása",
+      "shortcuts": "Billentyűparancsok"
+    },
+    "mobile": {
+      "addEntry": "Bejegyzés hozzáadása",
+      "swipeHint": "Húzd oldalra az időszak váltásához"
     }
   },
   "TimeTrackingActions": {
@@ -2106,7 +2532,11 @@
       "draftSaved": "Piszkozat mentve.",
       "draftDiscarded": "Piszkozat eldobva.",
       "inactiveWeekSaved": "A projekt erre a hétre inaktívként jelölve.",
-      "inactiveWeekRemoved": "Inaktív hét eltávolítva."
+      "inactiveWeekRemoved": "Inaktív hét eltávolítva.",
+      "declarationSaved": "Bevallott órák mentve.",
+      "declarationWithdrawn": "Bevallott órák visszavonva.",
+      "proofUploaded": "Óraigazolás feltöltve.",
+      "timeEntryRestored": "Időbejegyzés visszaállítva."
     },
     "errors": {
       "generic": "Valami hiba történt.",
@@ -2128,15 +2558,26 @@
       "entryLocked": "Ez a bejegyzés beküldött timesheet miatt zárolt.",
       "periodLocked": "Ez az időszak beküldött timesheet miatt zárolt.",
       "weekTouchesLockedPeriod": "Ez a hét zárolt időszakot érint.",
+      "inactiveWeekHasEntries": "Töröld a hét bejegyzéseit, mielőtt inaktívnak jelölöd a projektet.",
       "stopTimerFirst": "Új időmérő indítása előtt állítsd le a futó időmérőt.",
       "noTimerRunning": "Nincs futó időmérő.",
       "projectNotActiveForDate": "Ez a projekt nem aktív a kiválasztott dátumon.",
       "projectNotAssignedForWeek": "Ez a projekt nincs hozzárendelve a kiválasztott héten.",
-      "dateTimezoneFormatFailed": "A dátumot nem sikerült formázni az időzónában."
+      "dateTimezoneFormatFailed": "A dátumot nem sikerült formázni az időzónában.",
+      "declarationSaveFailed": "A bevallott órákat nem sikerült menteni.",
+      "declarationWithdrawFailed": "A bevallott órákat nem sikerült visszavonni.",
+      "proofUploadFailed": "Az óraigazolást nem sikerült feltölteni.",
+      "proofRequired": "Válassz ki egy PDF-et a feltöltéshez.",
+      "proofTooLarge": "Az óraigazolás PDF nagyobb mint 10 MB.",
+      "storageMissing": "A dokumentumtár nincs beállítva.",
+      "projectDeclaresMonthly": "Ez a projekt havonta vallja be az óráit.",
+      "declaredCorrectedAtMonth": "A bevallott órákat a Hónap nézetben lehet javítani.",
+      "timeEntryRestoreFailed": "Az időbejegyzést nem sikerült visszaállítani."
     },
     "fields": {
       "chooseProject": "Válassz projektet.",
       "validDate": "Válassz érvényes dátumot.",
+      "validTime": "Válassz érvényes időpontot.",
       "validTargetDate": "Válassz érvényes céldátumot.",
       "validWeek": "Válassz érvényes hetet.",
       "validStartTime": "Válassz érvényes kezdési időt.",
@@ -2168,6 +2609,20 @@
         "copied": "{created} bejegyzés másolva az előző hétről.",
         "copiedWithSkipped": "{created} bejegyzés másolva az előző hétről; {skipped} kihagyva."
       }
+    },
+    "declarationErrors": {
+      "INVALID_PERIOD": "Válassz érvényes hónapot.",
+      "INVALID_MINUTES": "A bevallott óraszámnak nullánál nagyobbnak kell lennie.",
+      "NOTE_REQUIRED": "Írd le, mit fedeznek a bevallott órák.",
+      "PERIOD_LOCKED": "Beküldött időelszámolás zárolja ezt a hónapot.",
+      "ASSIGNMENT_NOT_FOUND": "Ez a projekt nincs hozzád rendelve a kiválasztott hónapban.",
+      "NOT_DECLARED": "Ez a projekt a Sheet Happensben rögzíti az óráit, ezért nem vallhatók be.",
+      "TRACKED_ENTRIES_EXIST": "Ebben a hónapban már vannak rögzített időbejegyzések ehhez a projekthez. Töröld őket a bevallás előtt.",
+      "DECLARATION_NOT_FOUND": "Ebben a hónapban még nincs bevallott óraszám.",
+      "REASON_REQUIRED": "Az adminisztrátori javításhoz indoklás szükséges.",
+      "PROOF_REQUIRED": "Válassz ki egy PDF-et a feltöltéshez.",
+      "PROOF_TOO_LARGE": "Az óraigazolás PDF nagyobb mint 10 MB.",
+      "PROOF_NOT_PDF": "Az óraigazolásnak PDF-nek kell lennie."
     }
   },
   "MyRates": {
@@ -2226,6 +2681,7 @@
       "label": "Profilbeállítások szakaszai",
       "profile": "Profil",
       "security": "Biztonság és belépés",
+      "connectedApps": "Összekötött alkalmazások",
       "preferences": "Beállítások",
       "notifications": "Értesítések"
     },
@@ -2245,6 +2701,26 @@
     "securitySection": {
       "title": "Biztonság és belépés",
       "description": "Kezeld a bejelentkezési módokat, passkey-ket és az authenticator alkalmazást."
+    },
+    "connectedApps": {
+      "title": "Összekötött alkalmazások",
+      "description": "Azok az alkalmazások, amelyek a te nevedben járhatnak el a Sheet Happensben, és amit mindegyik tehet.",
+      "connectedOn": "Összekötve: {date}",
+      "scopesLabel": "Engedélyezve",
+      "disconnect": "Leválasztás",
+      "disconnectApp": "Leválasztás: {app}",
+      "keepsActingNote": "Az engedélyezett alkalmazás addig jár el a nevedben — a te jogaiddal, és csak a saját munkaóráidon —, amíg itt le nem választod.",
+      "empty": {
+        "title": "Nincs összekötött alkalmazás",
+        "body": "Az összekötéssel a Claude elolvassa és rögzíti helyetted a saját munkaóráidat. Az összekötés a Claude-ban indul, nem itt: add hozzá ott a Sheet Happens connectort, majd hagyd jóvá a kért hozzáférést. A pontos lépések a Súgó oldalon vannak.",
+        "openHelp": "Pontos lépések megnyitása"
+      },
+      "dialog": {
+        "title": "Leválasztod ezt az alkalmazást?",
+        "body": "A(z) {app} azonnal elveszíti a hozzáférést, a már megnyitott beszélgetésekben is. Az időbejegyzéseid változatlanul megmaradnak, és az alkalmazást bármikor újra összekötheted.",
+        "confirm": "Leválasztás",
+        "cancel": "Mégse"
+      }
     },
     "preferences": {
       "title": "Beállítások",
@@ -2546,6 +3022,7 @@
       "projectAll": "Minden projekt",
       "groupAll": "Minden csoport",
       "memberAll": "Minden tag",
+      "moreValues": "+{count} további",
       "apply": "Szűrés",
       "clear": "Törlés"
     },
@@ -2627,10 +3104,11 @@
     },
     "empty": {
       "title": "Nincs rögzített idő ezekkel a szűrőkkel.",
-      "description": "Módosítsd az időszakot vagy törölj egy szűrőt."
+      "description": "Módosítsd az időszakot vagy törölj egy szűrőt.",
+      "declaredOnly": "Ebben a szűrésben minden órát havonta vallottak be egy másik cég rendszerében, ezért a riport nem tartalmazza. A bevallott órák az időelszámolásnál nézhetők át, nem itt."
     },
     "pdf": {
-      "brand": "Sheet Happens",
+      "brand": "Sheet Happens - Rollout IT",
       "confidential": "Bizalmas",
       "page": "Oldal",
       "generatedAt": "Generálva",
@@ -2650,7 +3128,11 @@
       "warnings": {
         "missingRates": "{count, plural, one {# bejegyzéshez hiányzik az óradíj.} other {# bejegyzéshez hiányzik az óradíj.}}",
         "mixedCurrency": "A riport több pénznemet tartalmaz: {currencies}."
-      }
+      },
+      "declaredHoursNote": "Nem tartalmazza a másik cég rendszerében havonta bevallott órákat: {members, plural, other {# munkatárs}}, {projects, plural, other {# projekt}}."
+    },
+    "exclusions": {
+      "declaredHours": "Nem tartalmazza a másik cég rendszerében havonta bevallott órákat: {members, plural, other {# munkatárs}}, {projects, plural, other {# projekt}}."
     }
   },
   "SettingsActions": {
@@ -2663,6 +3145,7 @@
       "passkeyRemoved": "Passkey eltávolítva.",
       "totpDisabledAudited": "Authenticator kikapcsolás naplózva.",
       "backupCodesRegeneratedAudited": "Tartalék kód generálás naplózva.",
+      "connectedAppDisconnected": "Alkalmazás leválasztva.",
       "notificationSettingsUpdated": "Értesítési beállítások frissítve."
     },
     "errors": {
@@ -2683,6 +3166,9 @@
       "passkeyRemoveFailed": "Nem sikerült eltávolítani a passkey-t.",
       "totpDisableAuditFailed": "Az authenticator alkalmazás kikapcsolt, de a naplóeseményt nem sikerült rögzíteni.",
       "backupCodesAuditFailed": "A tartalék kódok újragenerálva, de a naplóeseményt nem sikerült rögzíteni.",
+      "connectedAppIdMissing": "Hiányzik a leválasztandó alkalmazás.",
+      "connectedAppAlreadyDisconnected": "Ez az alkalmazás már le van választva.",
+      "connectedAppDisconnectFailed": "Nem sikerült leválasztani az alkalmazást.",
       "noAuthAccount": "Ehhez a taghoz nincs kapcsolt auth fiók.",
       "notificationSettingsUpdateFailed": "Nem sikerült frissíteni az értesítési beállításokat.",
       "notificationSettingsInvalid": "Ellenőrizd az értesítési ütemezést és a kézbesítési beállításokat."

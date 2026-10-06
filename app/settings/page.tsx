@@ -25,7 +25,11 @@ import {
 } from "@/src/server/auth/app-access";
 import { getGoogleAuthSettings } from "@/src/server/auth/sign-in-methods";
 import { prisma } from "@/src/server/db/client";
+import { listMcpConnections, type McpConnection } from "@/src/server/mcp/connections";
+import { groupConsentScopes } from "@/src/server/mcp/consent";
+import { MCP_SCOPES } from "@/src/server/mcp/scopes";
 import { getNotificationConfiguration } from "@/src/server/notifications";
+import type { ConnectedAppView } from "./ConnectedAppsClient";
 import { SettingsWorkspace } from "./SettingsWorkspace";
 
 export const dynamic = "force-dynamic";
@@ -49,6 +53,7 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
   const t = await getTranslations("Settings");
   const { member, authUser } = access;
   const securityState = await getSecurityState(authUser.id);
+  const connectedApps = await listMcpConnections({ authUserId: authUser.id });
   const googleAuthSettings = getGoogleAuthSettings();
   const notificationConfiguration =
     member.role === "ADMIN" ? await getNotificationConfiguration() : undefined;
@@ -66,6 +71,7 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
     ? "security"
     : requestedSection === "security" ||
         requestedSection === "preferences" ||
+        requestedSection === "connectedApps" ||
         (requestedSection === "notifications" && member.role === "ADMIN")
       ? requestedSection
       : "profile";
@@ -137,6 +143,7 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
                   ?.failedVerificationCount ?? 0,
             },
           }}
+          connectedApps={toConnectedAppViews(connectedApps)}
           notificationConfiguration={notificationConfiguration}
         />
       </section>
@@ -196,6 +203,25 @@ function SecuritySetupBanner({
       )}
     </Card>
   );
+}
+
+/**
+ * Shapes a grant for the client component.
+ *
+ * The scopes are re-ordered through `MCP_SCOPES` and grouped by `groupConsentScopes` — the very
+ * functions `/consent` uses — so a row lists the same access, in the same order, in the same words
+ * the member approved. A scope stored on the grant that the app no longer recognises drops out
+ * here rather than rendering as a raw `some:scope` string.
+ */
+function toConnectedAppViews(connections: readonly McpConnection[]): ConnectedAppView[] {
+  return connections.map((connection) => ({
+    clientId: connection.clientId,
+    displayName: connection.displayName,
+    connectedAt: connection.connectedAt.toISOString(),
+    scopeGroupIds: groupConsentScopes(
+      MCP_SCOPES.filter((scope) => connection.scopes.includes(scope)),
+    ).map((group) => group.id),
+  }));
 }
 
 async function getSecurityState(userId: string) {

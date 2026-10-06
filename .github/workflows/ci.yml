@@ -1,0 +1,163 @@
+name: CI
+
+on:
+  push:
+    branches: [develop, main]
+  pull_request:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  # The static, unit and Storybook jobs never open a connection — Prisma only dials on the first
+  # query — but the client is constructed at import time, so it needs a syntactically valid URL.
+  # The e2e job overrides this with its service database.
+  DATABASE_URL: postgresql://sheet_happens:sheet_happens@localhost:5432/sheet_happens
+
+# Every job installs the same dependencies, so all four share the same three setup steps — and
+# their order is the whole point:
+#
+#   1. `pnpm/setup` with `install: false`. It defaults to running `pnpm install` itself, and it
+#      runs *before* the store cache below is restored — so the cache never applied and every job
+#      paid for a cold install of all 957 packages, then re-ran the install step as a no-op.
+#   2. `actions/setup-node` with `cache: pnpm`. Pins Node from .nvmrc and restores the pnpm store,
+#      which needs pnpm already on PATH — hence step 1 first.
+#   3. `pnpm install --frozen-lockfile`. Now links out of a warm store instead of the registry.
+#
+# Keep the three together, in this order, when adding a job.
+
+jobs:
+  # Cheapest gates first: a formatting slip should not wait for a browser to boot.
+  static:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/setup@v2
+        with:
+          install: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm typecheck
+      - run: pnpm lint
+      - run: pnpm format
+
+  unit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/setup@v2
+        with:
+          install: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm test
+
+  storybook:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/setup@v2
+        with:
+          install: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      # Chromium and its headless shell are ~300 MB, and this job and e2e each download their own
+      # copy on every run. The prefix fallback matters more than the exact key: after a dependency
+      # bump it restores the previous browsers, and `playwright install` then skips whatever is
+      # already there rather than re-fetching the set.
+      - uses: actions/cache@v6
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
+          restore-keys: playwright-${{ runner.os }}-
+      - run: pnpm exec playwright install --with-deps chromium
+      - run: pnpm build-storybook
+      - run: pnpm test-storybook
+      # `pnpm test:visual` is deliberately absent: the checked-in baselines are platform-suffixed
+      # `-darwin`, so they can only be compared on a developer's macOS machine.
+
+  e2e:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: sheet_happens
+          POSTGRES_PASSWORD: sheet_happens
+          POSTGRES_DB: sheet_happens
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      # Ephemeral, throwaway values for a database and an object store that are destroyed with the
+      # runner. Not secrets.
+      BETTER_AUTH_SECRET: ci-only-auth-secret-not-used-anywhere-else
+      AUTH_LOGIN_ATTEMPT_SECRET: ci-only-login-attempt-secret-value
+      # The app's own URLs come from playwright.config.ts's webServer.env, which knows the port.
+      # The object storage below is real and has to be: the seed uploads a contractor invoice PDF
+      # for every invoiced month and writes a `documents` row pointing at it, so a job without one
+      # cannot get as far as running a single spec.
+      OBJECT_STORAGE_PROVIDER: s3
+      S3_ENDPOINT: http://localhost:9000
+      S3_REGION: us-east-1
+      S3_BUCKET: sheet-happens
+      S3_ACCESS_KEY_ID: ci-access-key
+      S3_SECRET_ACCESS_KEY: ci-secret-key
+      S3_FORCE_PATH_STYLE: "true"
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/setup@v2
+        with:
+          install: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      # Shares the Storybook job's browser cache — same key, same runner OS, same lockfile.
+      - uses: actions/cache@v6
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
+          restore-keys: playwright-${{ runner.os }}-
+      - run: pnpm exec playwright install --with-deps chromium
+      # The image the dev compose uses, started as a step rather than a service container because
+      # `services:` cannot pass the `server /data` command MinIO needs. Credentials are the S3_*
+      # values above, so the seed and the app under test both authenticate against it, and
+      # `pnpm db:test:reset` waits for it and creates the bucket — hence no readiness step here.
+      # `pgsty/minio` because MinIO withdrew its own images: `minio/minio` no longer exists on
+      # Docker Hub or quay.io. Pinned to a release, like every other dependency.
+      - name: Start MinIO
+        run: |
+          docker run -d --name minio -p 9000:9000 \
+            -e MINIO_ROOT_USER="$S3_ACCESS_KEY_ID" \
+            -e MINIO_ROOT_PASSWORD="$S3_SECRET_ACCESS_KEY" \
+            pgsty/minio:RELEASE.2026-08-04T00-00-00Z server /data
+      # Creates, migrates and seeds the suite's own database — `sheet_happens_e2e`, derived from
+      # DATABASE_URL above — on the service container. It touches Docker not at all, so this is the
+      # same code path a developer runs locally, and `migrate deploy` keeps the release path
+      # exercised here: its init migration is what creates the citext and pgcrypto extensions.
+      - run: pnpm db:test:reset
+      - run: pnpm e2e
+      - if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: playwright-report
+          path: |
+            playwright-report/
+            test-results/
+          retention-days: 7

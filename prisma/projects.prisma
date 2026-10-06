@@ -15,12 +15,13 @@ model Project {
   updatedByMemberId String        @map("updated_by_member_id") @db.Uuid
 
   assignments          ProjectAssignment[]
-  createdBy            Member                  @relation("ProjectCreatedBy", fields: [createdByMemberId], references: [id], onDelete: Restrict)
+  createdBy            Member                   @relation("ProjectCreatedBy", fields: [createdByMemberId], references: [id], onDelete: Restrict)
   groupProjects        ProjectGroupProject[]
+  hourDeclarations     MonthlyHourDeclaration[]
   inactiveProjectWeeks InactiveProjectWeek[]
   snapshotLines        TimesheetSnapshotLine[]
   timeEntries          TimeEntry[]
-  updatedBy            Member                  @relation("ProjectUpdatedBy", fields: [updatedByMemberId], references: [id], onDelete: Restrict)
+  updatedBy            Member                   @relation("ProjectUpdatedBy", fields: [updatedByMemberId], references: [id], onDelete: Restrict)
 
   @@index([status])
   @@index([createdByMemberId])
@@ -58,24 +59,26 @@ model ProjectGroupProject {
 }
 
 model ProjectAssignment {
-  id                String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  memberId          String    @map("member_id") @db.Uuid
-  projectId         String    @map("project_id") @db.Uuid
-  active            Boolean   @default(true)
-  validFrom         DateTime  @map("valid_from") @db.Date
-  validTo           DateTime? @map("valid_to") @db.Date
+  id                String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  memberId          String        @map("member_id") @db.Uuid
+  projectId         String        @map("project_id") @db.Uuid
+  active            Boolean       @default(true)
+  validFrom         DateTime      @map("valid_from") @db.Date
+  validTo           DateTime?     @map("valid_to") @db.Date
+  trackingMode      TrackingMode? @map("tracking_mode")
   notes             String?
-  createdAt         DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt         DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
-  createdByMemberId String?   @map("created_by_member_id") @db.Uuid
-  updatedByMemberId String?   @map("updated_by_member_id") @db.Uuid
+  createdAt         DateTime      @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt         DateTime      @updatedAt @map("updated_at") @db.Timestamptz(6)
+  createdByMemberId String?       @map("created_by_member_id") @db.Uuid
+  updatedByMemberId String?       @map("updated_by_member_id") @db.Uuid
 
-  member        Member                  @relation(fields: [memberId], references: [id], onDelete: Restrict)
-  project       Project                 @relation(fields: [projectId], references: [id], onDelete: Restrict)
-  overrideRates AssignmentRatePeriod[]
-  runningTimers RunningTimer[]
-  snapshotLines TimesheetSnapshotLine[]
-  timeEntries   TimeEntry[]
+  member           Member                   @relation(fields: [memberId], references: [id], onDelete: Restrict)
+  project          Project                  @relation(fields: [projectId], references: [id], onDelete: Restrict)
+  overrideRates    AssignmentRatePeriod[]
+  hourDeclarations MonthlyHourDeclaration[]
+  runningTimers    RunningTimer[]
+  snapshotLines    TimesheetSnapshotLine[]
+  timeEntries      TimeEntry[]
 
   @@index([memberId, active])
   @@index([projectId, active])

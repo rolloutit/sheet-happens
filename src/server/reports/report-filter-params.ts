@@ -1,4 +1,5 @@
 import { defaultLocale, resolveLocale } from "@/src/i18n/locales";
+import { firstSearchParam, formDataStrings, listSearchParam } from "@/src/lib/search-params";
 import {
   addDays,
   formatDateOnly,
@@ -29,9 +30,10 @@ export type ParsedReportSearchParams = {
   periodStart: Date;
   periodEnd: Date;
   view: ReportView;
-  projectId: string | null;
-  projectGroupId: string | null;
-  memberId: string | null;
+  /** Empty means every project, the same way no filter at all does. */
+  projectIds: string[];
+  projectGroupIds: string[];
+  memberIds: string[];
   timezone: string;
 };
 
@@ -40,15 +42,20 @@ export function parseReportSearchParams(
   timezone: string,
 ): ParsedReportSearchParams {
   const today = parseDateOnly(getTodayIsoInTimezone(timezone));
-  const period = parsePeriodMode(getSingleParam(searchParams.period));
-  const rawAnchor = getSingleParam(searchParams.anchor);
+  const period = parsePeriodMode(firstSearchParam(searchParams.period));
+  const rawAnchor = firstSearchParam(searchParams.anchor);
+  const scope = {
+    projectIds: listSearchParam(searchParams.project),
+    projectGroupIds: listSearchParam(searchParams.group),
+    memberIds: listSearchParam(searchParams.member),
+  };
   const fallbackAnchor = parseAnchorDate(rawAnchor, "month", today);
 
   if (period === "custom") {
     const fallbackStart = getMonthStart(fallbackAnchor);
     const fallbackEnd = getMonthEnd(fallbackStart);
-    const rawStart = parseDateParam(getSingleParam(searchParams.start), fallbackStart);
-    const rawEnd = parseDateParam(getSingleParam(searchParams.end), fallbackEnd);
+    const rawStart = parseDateParam(firstSearchParam(searchParams.start), fallbackStart);
+    const rawEnd = parseDateParam(firstSearchParam(searchParams.end), fallbackEnd);
     const [periodStart, periodEnd] =
       rawStart.getTime() <= rawEnd.getTime() ? [rawStart, rawEnd] : [rawEnd, rawStart];
 
@@ -57,10 +64,8 @@ export function parseReportSearchParams(
       anchor: formatDateOnly(periodStart),
       periodStart,
       periodEnd,
-      view: parseReportView(getSingleParam(searchParams.view)),
-      projectId: getSingleParam(searchParams.project) || null,
-      projectGroupId: getSingleParam(searchParams.group) || null,
-      memberId: getSingleParam(searchParams.member) || null,
+      view: parseReportView(firstSearchParam(searchParams.view)),
+      ...scope,
       timezone,
     };
   }
@@ -73,10 +78,8 @@ export function parseReportSearchParams(
     anchor: range.anchor,
     periodStart: range.periodStart,
     periodEnd: range.periodEnd,
-    view: parseReportView(getSingleParam(searchParams.view)),
-    projectId: getSingleParam(searchParams.project) || null,
-    projectGroupId: getSingleParam(searchParams.group) || null,
-    memberId: getSingleParam(searchParams.member) || null,
+    view: parseReportView(firstSearchParam(searchParams.view)),
+    ...scope,
     timezone,
   };
 }
@@ -87,9 +90,10 @@ export function reportSearchParamsFromFormData(formData: FormData): ReportSearch
     end: formString(formData, "end"),
     period: formString(formData, "period"),
     anchor: formString(formData, "anchor"),
-    project: formString(formData, "project"),
-    group: formString(formData, "group"),
-    member: formString(formData, "member"),
+    // The scope filters are multi-selects, so each arrives as one entry per chosen value.
+    project: formDataStrings(formData, "project"),
+    group: formDataStrings(formData, "group"),
+    member: formDataStrings(formData, "member"),
     view: formString(formData, "view"),
   };
 }
@@ -99,29 +103,33 @@ export function reportSearchParamsFromFormData(formData: FormData): ReportSearch
  * fields) and the export preview (sent as a query string), so a preview can never describe a
  * different slice of time than the file the same dialog downloads.
  *
+ * Name/value pairs rather than an object, because the scope filters take several values each
+ * and a repeated name is exactly what both consumers need: `URLSearchParams` accepts pairs
+ * directly, and one hidden input per pair is what a form posts back.
+ *
  * Filters only: the export options chosen in the dialog itself — language, mode and title — are
  * fields the dialog owns, so they must not be duplicated here.
  */
-export type ReportExportFields = Record<string, string>;
+export type ReportExportFields = [name: string, value: string][];
 
 export function reportExportFieldsFromFilters(
   filters: ParsedReportSearchParams,
 ): ReportExportFields {
-  const fields: ReportExportFields = {
-    period: filters.period,
-    view: filters.view,
-  };
+  const fields: ReportExportFields = [
+    ["period", filters.period],
+    ["view", filters.view],
+  ];
 
   if (filters.period === "custom") {
-    fields.start = formatDateOnly(filters.periodStart);
-    fields.end = formatDateOnly(filters.periodEnd);
+    fields.push(["start", formatDateOnly(filters.periodStart)]);
+    fields.push(["end", formatDateOnly(filters.periodEnd)]);
   } else {
-    fields.anchor = filters.anchor;
+    fields.push(["anchor", filters.anchor]);
   }
 
-  if (filters.projectId) fields.project = filters.projectId;
-  if (filters.projectGroupId) fields.group = filters.projectGroupId;
-  if (filters.memberId) fields.member = filters.memberId;
+  for (const projectId of filters.projectIds) fields.push(["project", projectId]);
+  for (const projectGroupId of filters.projectGroupIds) fields.push(["group", projectGroupId]);
+  for (const memberId of filters.memberIds) fields.push(["member", memberId]);
 
   return fields;
 }
@@ -237,10 +245,6 @@ function parseDateParam(value: string | undefined, fallback: Date) {
 
 function parseReportView(value: string | undefined): ReportView {
   return value === "PROJECT" ? "PROJECT" : "USER";
-}
-
-function getSingleParam(value: string | string[] | undefined) {
-  return Array.isArray(value) ? value[0] : value;
 }
 
 function formString(formData: FormData, key: string) {

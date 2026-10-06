@@ -1,8 +1,13 @@
+import { cimd } from "@better-auth/cimd";
+import { fetchClientMetadataResource } from "@better-auth/cimd/node";
+import { mcp } from "@better-auth/mcp";
 import { passkey } from "@better-auth/passkey";
 import { prismaAdapter } from "@better-auth/prisma-adapter";
 import { APIError, betterAuth } from "better-auth";
+import { createAuthMiddleware } from "better-auth/api";
 import { nextCookies } from "better-auth/next-js";
-import { magicLink, twoFactor } from "better-auth/plugins";
+import { jwt, magicLink, twoFactor } from "better-auth/plugins";
+import type { GoogleProfile } from "better-auth/social-providers";
 
 import {
   canCreateAuthUser,
@@ -17,29 +22,28 @@ import {
   isAllowedGoogleWorkspaceProfile,
 } from "@/src/server/auth/sign-in-methods";
 import { createPasskeySecondFactorSessionMarker } from "@/src/server/auth/passkey-second-factor";
+import { authHost, authHostname, authOrigin, authUrls } from "@/src/server/auth/auth-urls";
 import { prisma } from "@/src/server/db/client";
+import { isDynamicClientRegistrationEnabled } from "@/src/server/mcp/config";
+import { MCP_SCOPES } from "@/src/server/mcp/scopes";
 
 const appName = "Sheet Happens";
 const developmentFallbackSecret =
   "sheet-happens-local-dev-only-auth-secret-please-set-better-auth-secret";
 export const authSecret = getAuthSecret();
-const authBaseUrl =
-  process.env.BETTER_AUTH_URL ?? process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
-const authUrl = new URL(authBaseUrl);
-const authOrigin = authUrl.origin;
 const localDevelopmentOrigins = ["http://localhost:3000", "http://127.0.0.1:3000"];
 const authBaseURLConfig =
   process.env.NODE_ENV === "production"
     ? authOrigin
     : {
-        allowedHosts: Array.from(new Set([authUrl.host, "localhost:3000", "127.0.0.1:3000"])),
+        allowedHosts: Array.from(new Set([authHost, "localhost:3000", "127.0.0.1:3000"])),
         fallback: authOrigin,
       };
 const passkeyOrigins =
   process.env.NODE_ENV === "production"
     ? authOrigin
     : Array.from(new Set([authOrigin, ...localDevelopmentOrigins]));
-const passkeyRpID = process.env.NODE_ENV === "production" ? authUrl.hostname : undefined;
+const passkeyRpID = process.env.NODE_ENV === "production" ? authHostname : undefined;
 export const googleAuthSettings = getGoogleAuthSettings();
 
 const trustedOrigins = [
@@ -107,13 +111,6 @@ export const auth = betterAuth({
         },
       },
     },
-    passkey: {
-      create: {
-        after: async (passkey: PasskeyAuditRecord) => {
-          await auditPasskeyAdded(passkey);
-        },
-      },
-    },
     session: {
       create: {
         before: async (session: AuthSessionRecord) => {
@@ -142,6 +139,20 @@ export const auth = betterAuth({
         },
       },
     },
+  },
+  /**
+   * Passkey rows are created with the raw adapter, so `databaseHooks` never sees them — Better Auth
+   * 1.7 also narrowed that option to user/session/account/verification. This endpoint hook is the
+   * only place the created row's `id` is still reachable, which is what the audit entry records.
+   */
+  hooks: {
+    after: createAuthMiddleware(async (ctx) => {
+      if (ctx.path !== "/passkey/verify-registration") {
+        return;
+      }
+
+      await auditPasskeyAdded(ctx.context.returned as PasskeyAuditRecord);
+    }),
   },
   ...(googleAuthSettings.enabled
     ? {
@@ -178,7 +189,12 @@ export const auth = betterAuth({
 
               return {
                 user,
-                data: profile,
+                /**
+                 * 1.7 types `data` as the declared raw profile because the account-key resolver
+                 * reads `sub` off it after this hook returns. `decodeJwtPayload` can only promise
+                 * `Record<string, unknown>`; `mapGoogleProfile` has already asserted `sub`.
+                 */
+                data: profile as unknown as GoogleProfile,
               };
             },
           },
@@ -237,8 +253,66 @@ export const auth = betterAuth({
       allowPasswordless: true,
       issuer: appName,
     }),
+    /**
+     * The OAuth provider signs access tokens with these keys, so `jwt()` has to be registered
+     * alongside `mcp()` — the provider throws `jwt_config` at context creation without it.
+     *
+     * `issuer` is pinned rather than left to default to `ctx.baseURL`: that is empty outside
+     * production (the dynamic `baseURL` config above), which would leave discovery advertising an
+     * empty issuer and every `iss` claim unverifiable in dev and e2e.
+     */
+    jwt({
+      disableSettingJwtHeader: true,
+      jwt: {
+        issuer: authUrls.issuer,
+      },
+    }),
+    /**
+     * `mcp()` *is* `@better-auth/oauth-provider` with the RFC 9728 protected-resource document
+     * bolted on, so `oauthProvider()` must never be registered next to it. It force-appends
+     * `resource` to both `resources` and `clientRegistrationDefaultResources`, which is what makes
+     * issued access tokens JWTs (an audience-less token would be opaque) and what links every
+     * newly registered client — CIMD ones included — to this resource.
+     */
+    mcp({
+      loginPage: "/login",
+      consentPage: "/consent",
+      resource: authUrls.mcpResource,
+      scopes: [...MCP_SCOPES],
+      allowDynamicClientRegistration: isDynamicClientRegistrationEnabled(),
+      // A tool registering itself (the Inspector, the e2e client) has no session and no initial
+      // access token, so DCR is useless without this. Both flags move together and are off in
+      // production, where CIMD is the only way in.
+      allowUnauthenticatedClientRegistration: isDynamicClientRegistrationEnabled(),
+    }),
+    /**
+     * Client ID Metadata Documents. Adds `client_id_metadata_document_supported` and, as a side
+     * effect, `"none"` to `token_endpoint_auth_methods_supported` — the pair Claude looks for before
+     * it will identify itself with Anthropic's hosted client metadata instead of registering.
+     */
+    cimd({
+      fetchClientMetadataResource,
+      metadataProfile: "mcp-2026-07-28",
+    }),
     nextCookies(),
   ],
+});
+
+/**
+ * `betterAuth()` builds its context eagerly at module load and stores it as a bare promise, so
+ * every plugin `init` runs the moment this file is imported. Since `mcp()` was added that init
+ * touches the database — `@better-auth/oauth-provider` seeds the `oauthResource` row for
+ * `authUrls.mcpResource` — and with no database reachable the promise rejects with nobody
+ * awaiting it yet. Node reports that as an unhandled rejection, which is enough to fail a whole
+ * `vitest run` (the unit job has no Postgres, and any test that transitively imports
+ * `auth/session` imports this file).
+ *
+ * Attaching a handler only stops the *unhandled* report: `handler` and `api` still await
+ * `$context` on every request, so a genuinely broken boot surfaces there as it always did. This
+ * mirrors what better-auth already does with its own schema check.
+ */
+void auth.$context.catch((error: unknown) => {
+  console.error("[auth] Failed to initialise the Better Auth context.", error);
 });
 
 export type Auth = typeof auth;
@@ -351,14 +425,16 @@ async function auditPasswordReset(authUserId: string, request?: Request) {
 
 function mapGoogleProfile(profile: Record<string, unknown>) {
   const email = readOptionalString(profile.email);
-  const id = readOptionalString(profile.sub);
+  const subject = readOptionalString(profile.sub);
 
-  if (!email || !id) {
+  // `sub` is no longer returned as `user.id` (1.7 types it `id?: never`) — Better Auth derives
+  // `account.accountId` from the provider's own `accountSubject`, which for Google is `profile.sub`.
+  // The guard stays so a profile without a subject is still rejected before any account is linked.
+  if (!email || !subject) {
     return null;
   }
 
   return {
-    id,
     name: readOptionalString(profile.name) ?? email,
     email,
     image: readOptionalString(profile.picture),

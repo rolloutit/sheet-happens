@@ -1,3 +1,5 @@
+import type { TrackingMode } from "@/src/server/time-tracking";
+
 export type InviteMemberField =
   | "email"
   | "firstName"
@@ -9,7 +11,13 @@ export type InviteMemberField =
   | "locale";
 
 export type UpdateMemberDetailsField =
-  "firstName" | "lastName" | "displayName" | "defaultCurrencyCode" | "timezone" | "locale";
+  | "firstName"
+  | "lastName"
+  | "displayName"
+  | "defaultCurrencyCode"
+  | "timezone"
+  | "locale"
+  | "defaultTrackingMode";
 
 export type ScheduleProfileTransitionField = "profile" | "validFrom" | "reason";
 
@@ -21,6 +29,7 @@ export type UpdateMemberDetailsActionInput = {
   defaultCurrencyCode: string;
   timezone: string;
   locale: string;
+  defaultTrackingMode: TrackingMode;
 };
 
 export type ScheduleProfileTransitionActionInput = {

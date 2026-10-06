@@ -23,10 +23,11 @@ import type { LucideIcon } from "lucide-react";
 import type { HTMLAttributes } from "react";
 
 import { AppShell } from "@/src/components/layout/AppShell";
-import { StatusPill } from "@/src/components/sheet/StatusPill";
+import { StatusPill, statusTone, statusToneVar } from "@/src/components/sheet/StatusPill";
 import { TimesheetStepper } from "@/src/components/sheet/TimesheetStepper";
 import { Badge } from "@/src/components/ui/Badge";
 import { Button } from "@/src/components/ui/Button";
+import { DataTable } from "@/src/components/ui/Table";
 import { formatHoursWithUnit, formatMoney, type DurationDisplayFormat } from "@/src/lib/formatting";
 import { cn } from "@/src/lib/utils";
 import {
@@ -70,23 +71,38 @@ const priorityIcons: Record<AdminPriorityMetric["id"], LucideIcon> = {
   missing: AlertTriangle,
 };
 
+// Both maps used to be hand-picked hex literals and they disagreed with the pill and with
+// themselves: `accepted` and `paid` were one green, `rejected` and `missing` one rose, `submitted`
+// was amber here and mint in the table. They were also dark-theme values hardcoded into inline
+// styles, so light mode got dark mode's palette. Reading `statusTone` gives one colour per status,
+// the same one the pill uses, and `var()` follows the theme.
 const priorityAccent: Record<AdminPriorityMetric["id"], string> = {
-  submitted: "#FAAB59",
-  approved: "#2FD4D4",
-  invoiced: "#66D6A8",
-  accepted: "#4FC79B",
-  missing: "#F08A82",
+  submitted: statusToneVar[statusTone.submitted],
+  approved: statusToneVar[statusTone.approved],
+  invoiced: statusToneVar[statusTone.invoiced],
+  accepted: statusToneVar[statusTone.accepted],
+  missing: statusToneVar[statusTone.missing],
 };
 
+// The dashboard panel is a summary, not the list: `getFlaggedUsers` returns every flagged
+// member/project pair, which grows with the org and once pushed the rest of the page below the
+// fold. The `?drilldown=flagged` view already renders all of them.
+const flaggedPreviewLimit = 8;
+
+// `DataTable` brings its own card chrome. Inside a `DashboardPanel` that would double the border
+// and the corner radius, so it renders flush and the panel keeps the outline. The header above it
+// already draws the separating hairline.
+const flushPanelTableClassName = "rounded-none border-0 bg-transparent";
+
 const statusColor: Record<AdminStatusSegment["id"], string> = {
-  submitted: "#FAAB59",
-  rejected: "#F08A82",
-  approved: "#2FD4D4",
-  invoiced: "#9AA5A6",
-  invoice_rejected: "#D8A03D",
-  accepted: "#4FC79B",
-  paid: "#4FC79B",
-  missing: "#F08A82",
+  submitted: statusToneVar[statusTone.submitted],
+  rejected: statusToneVar[statusTone.rejected],
+  approved: statusToneVar[statusTone.approved],
+  invoiced: statusToneVar[statusTone.invoiced],
+  invoice_rejected: statusToneVar[statusTone.invoice_rejected],
+  accepted: statusToneVar[statusTone.accepted],
+  paid: statusToneVar[statusTone.paid],
+  missing: statusToneVar[statusTone.missing],
 };
 
 export default async function DashboardPage({ searchParams }: DashboardPageProps) {
@@ -105,7 +121,14 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
 
   return (
     <AppShell current="dashboard" role={shellRole} profile={shellProfile} user={shellUser}>
-      <section className="mx-auto grid w-full max-w-[73.75rem] gap-4 px-4 py-8 sm:px-6 lg:px-8">
+      {/*
+       * Wider than the reading-width default from `xl` up, matching `/time` and the admin
+       * surfaces (`max-w-[92rem]`). This is a table-and-metric surface, not prose: at 73.75rem
+       * the flagged-users table cannot lay out its four columns without scrolling sideways while
+       * a third of a large display sits empty. The cap stays, so a 4K panel does not stretch a
+       * row into an unreadable sweep.
+       */}
+      <section className="mx-auto grid w-full max-w-[73.75rem] gap-4 px-4 py-8 sm:px-6 lg:px-8 xl:max-w-[92rem]">
         {dashboard.kind === "admin" ? (
           <AdminDashboard
             dashboard={dashboard}
@@ -241,7 +264,10 @@ function AdminDashboard({
         })}
         t={t}
       />
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
+      {/* Five metrics divide evenly at no breakpoint below `xl`, so two columns is the mobile
+          shape: it keeps the counts legible without turning the row into five full-width blocks
+          that push everything else off the first screen. */}
+      <div className="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-3 xl:grid-cols-5">
         {dashboard.priorityMetrics.map((metric) => (
           <PriorityMetricCard
             key={metric.id}
@@ -260,15 +286,17 @@ function AdminDashboard({
           t={t}
         />
       ) : null}
-      <div className="grid gap-4 lg:grid-cols-[1.5fr_1fr]">
-        <FlaggedUsersPanel
-          users={dashboard.flaggedUsers}
-          period={dashboard.period}
-          locale={locale}
-          t={t}
-        />
-        <StatusDistribution segments={dashboard.statusSegments} t={t} />
-      </div>
+      {/* Stacked rather than sharing a row. The status breakdown is one bar plus a wrapping
+          legend, so it reads fine as a short full-width strip, and the flagged table gets the
+          width its four columns need — in the old 1.5fr/1fr split it scrolled sideways at every
+          viewport size, including a 2000px one. */}
+      <StatusDistribution segments={dashboard.statusSegments} t={t} />
+      <FlaggedUsersPanel
+        users={dashboard.flaggedUsers}
+        period={dashboard.period}
+        locale={locale}
+        t={t}
+      />
     </>
   );
 }
@@ -395,6 +423,8 @@ function EmployeeProjectBreakdown({
   durationDisplayFormat: DurationDisplayFormat;
   t: DashboardTranslator;
 }) {
+  const caption = t("member.projectBreakdown.heading");
+
   return (
     <DashboardPanel className="overflow-hidden p-0">
       <div className="flex flex-col gap-4 border-b border-border p-5 sm:flex-row sm:items-start sm:justify-between">
@@ -402,9 +432,7 @@ function EmployeeProjectBreakdown({
           <p className="mb-3 font-ui text-[11px] font-bold uppercase tracking-[0.16em] text-accent">
             {t("member.projectBreakdown.title")}
           </p>
-          <h2 className="font-display text-lg font-medium text-foreground">
-            {t("member.projectBreakdown.heading")}
-          </h2>
+          <h2 className="font-display text-lg font-medium text-foreground">{caption}</h2>
           <p className="mt-2 text-sm text-muted-foreground">
             {t("member.projectBreakdown.description")}
           </p>
@@ -420,63 +448,66 @@ function EmployeeProjectBreakdown({
       {dashboard.projectBreakdown.length === 0 ? (
         <DashboardEmptyState>{t("member.projectBreakdown.empty")}</DashboardEmptyState>
       ) : (
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-[44rem] border-collapse">
-            <thead>
-              <tr className="border-b border-border bg-background/35">
-                <DrilldownHeadCell>{t("member.projectBreakdown.table.project")}</DrilldownHeadCell>
-                <DrilldownHeadCell>{t("member.projectBreakdown.table.hours")}</DrilldownHeadCell>
-                <DrilldownHeadCell>{t("member.projectBreakdown.table.rate")}</DrilldownHeadCell>
-                <DrilldownHeadCell>{t("member.projectBreakdown.table.cost")}</DrilldownHeadCell>
-                <DrilldownHeadCell align="right">
-                  {t("member.projectBreakdown.table.entries")}
-                </DrilldownHeadCell>
-              </tr>
-            </thead>
-            <tbody>
-              {dashboard.projectBreakdown.map((project) => (
-                <tr key={project.projectId} className="border-b border-border last:border-b-0">
-                  <td className="px-5 py-4">
-                    <span className="flex min-w-0 items-center gap-3">
-                      <span
-                        className="size-2.5 shrink-0 rounded-full"
-                        style={{ backgroundColor: project.projectColor }}
-                      />
-                      <span className="truncate text-sm font-semibold text-foreground">
-                        {project.projectName}
-                      </span>
+        <DataTable
+          className={flushPanelTableClassName}
+          displayMode="responsive"
+          caption={caption}
+          aria-label={caption}
+          rows={dashboard.projectBreakdown}
+          getRowKey={(row) => row.projectId}
+          columns={[
+            {
+              id: "project",
+              header: t("member.projectBreakdown.table.project"),
+              mobileLabel: null,
+              cell: (row) => <ProjectLabel color={row.projectColor} name={row.projectName} />,
+            },
+            {
+              id: "hours",
+              header: t("member.projectBreakdown.table.hours"),
+              cell: (row) => (
+                <span className="text-sm font-semibold text-foreground">
+                  {formatHoursWithUnit(row.totalMinutes, locale, durationDisplayFormat)}
+                </span>
+              ),
+            },
+            {
+              id: "rate",
+              header: t("member.projectBreakdown.table.rate"),
+              cell: (row) => (
+                <EmployeeRateLabel
+                  singleRate={row.singleRate}
+                  mixedRates={row.mixedRates}
+                  missingRateLineCount={row.missingRateLineCount}
+                  locale={locale}
+                  t={t}
+                />
+              ),
+            },
+            {
+              id: "cost",
+              header: t("member.projectBreakdown.table.cost"),
+              cell: (row) => (
+                <span className="text-sm font-semibold text-foreground">
+                  {formatEmployeeCostTotals(row.costTotals, locale, t)}
+                  {row.missingRateLineCount > 0 ? (
+                    <span className="mt-1 block text-xs font-medium text-warning">
+                      {t("member.projectBreakdown.missingRates", {
+                        count: row.missingRateLineCount,
+                      })}
                     </span>
-                  </td>
-                  <td className="px-5 py-4 text-sm font-semibold text-foreground">
-                    {formatHoursWithUnit(project.totalMinutes, locale, durationDisplayFormat)}
-                  </td>
-                  <td className="px-5 py-4">
-                    <EmployeeRateLabel
-                      singleRate={project.singleRate}
-                      mixedRates={project.mixedRates}
-                      missingRateLineCount={project.missingRateLineCount}
-                      locale={locale}
-                      t={t}
-                    />
-                  </td>
-                  <td className="px-5 py-4 text-sm font-semibold text-foreground">
-                    {formatEmployeeCostTotals(project.costTotals, locale, t)}
-                    {project.missingRateLineCount > 0 ? (
-                      <span className="mt-1 block text-xs font-medium text-warning">
-                        {t("member.projectBreakdown.missingRates", {
-                          count: project.missingRateLineCount,
-                        })}
-                      </span>
-                    ) : null}
-                  </td>
-                  <td className="px-5 py-4 text-right text-sm text-muted-foreground">
-                    {project.entryCount}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+                  ) : null}
+                </span>
+              ),
+            },
+            {
+              id: "entries",
+              header: t("member.projectBreakdown.table.entries"),
+              align: "right",
+              cell: (row) => row.entryCount,
+            },
+          ]}
+        />
       )}
     </DashboardPanel>
   );
@@ -808,27 +839,32 @@ function PriorityMetricCard({
   const accent = priorityAccent[metric.id];
 
   return (
-    <Link href={metric.href as Route} className="block min-w-0">
+    // Five cards never divide evenly into two or three columns, so the last one takes the empty
+    // cell rather than leaving a half-width gap. At `xl` all five sit in one row and it resets.
+    <Link href={metric.href as Route} className="block min-w-0 last:col-span-2 xl:last:col-span-1">
       <DashboardPanel
         className={cn(
-          "grid h-full gap-4 p-5 transition hover:-translate-y-0.5 hover:border-border-strong hover:shadow-pop",
+          "grid h-full content-between gap-3 p-4 transition hover:-translate-y-0.5 hover:border-border-strong hover:shadow-pop sm:gap-4 sm:p-5",
           active && "border-accent bg-accent-soft/40",
         )}
       >
         <div className="flex items-center justify-between gap-4">
           <span
             className="flex size-9 items-center justify-center rounded-[var(--radius-md)]"
-            style={{ backgroundColor: `${accent}22`, color: accent }}
+            style={{
+              backgroundColor: `color-mix(in srgb, ${accent} 13%, transparent)`,
+              color: accent,
+            }}
           >
             <Icon className="size-5" aria-hidden="true" />
           </span>
           <ArrowUpRight className="size-4 text-muted-foreground" aria-hidden="true" />
         </div>
         <div>
-          <p className="font-display text-3xl font-semibold leading-none tracking-[-0.02em] text-foreground">
+          <p className="font-display text-[28px] font-semibold leading-none tracking-[-0.02em] text-foreground sm:text-3xl">
             {metric.count}
           </p>
-          <p className="mt-2 text-sm font-medium leading-snug text-muted-foreground">
+          <p className="mt-2 text-[13px] font-medium leading-snug text-muted-foreground sm:text-sm">
             {t(`admin.priority.${metric.id}`)}
           </p>
         </div>
@@ -850,6 +886,12 @@ function AdminDrilldownPanel({
   durationDisplayFormat: DurationDisplayFormat;
   t: DashboardTranslator;
 }) {
+  // Doubles as the table's accessible name, so the caption says which queue is on screen instead
+  // of a generic "drilldown table".
+  const caption = t(`admin.drilldown.${drilldown.id}.title`, {
+    count: drilldown.totalItems,
+  });
+
   return (
     <DashboardPanel className="overflow-hidden p-0">
       <div className="flex flex-col gap-4 border-b border-border p-5 lg:flex-row lg:items-start lg:justify-between">
@@ -858,9 +900,7 @@ function AdminDrilldownPanel({
             {t("admin.drilldown.eyebrow")}
           </p>
           <h2 className="font-display text-2xl font-semibold leading-tight text-foreground">
-            {t(`admin.drilldown.${drilldown.id}.title`, {
-              count: drilldown.totalItems,
-            })}
+            {caption}
           </h2>
           <p className="mt-2 max-w-[44rem] text-sm leading-6 text-muted-foreground">
             {t(`admin.drilldown.${drilldown.id}.description`, {
@@ -890,6 +930,7 @@ function AdminDrilldownPanel({
       {drilldown.kind === "timesheets" ? (
         <TimesheetDrilldownTable
           drilldown={drilldown}
+          caption={caption}
           locale={locale}
           durationDisplayFormat={durationDisplayFormat}
           t={t}
@@ -897,13 +938,20 @@ function AdminDrilldownPanel({
       ) : drilldown.kind === "missing" ? (
         <MissingTimesheetDrilldownTable
           rows={drilldown.rows}
+          caption={caption}
           period={period}
           locale={locale}
           durationDisplayFormat={durationDisplayFormat}
           t={t}
         />
       ) : (
-        <FlaggedUsersDrilldownTable users={drilldown.rows} period={period} locale={locale} t={t} />
+        <FlaggedUsersDrilldownTable
+          users={drilldown.rows}
+          caption={caption}
+          period={period}
+          locale={locale}
+          t={t}
+        />
       )}
     </DashboardPanel>
   );
@@ -911,11 +959,13 @@ function AdminDrilldownPanel({
 
 function TimesheetDrilldownTable({
   drilldown,
+  caption,
   locale,
   durationDisplayFormat,
   t,
 }: {
   drilldown: Extract<AdminDashboardDrilldown, { kind: "timesheets" }>;
+  caption: string;
   locale: string;
   durationDisplayFormat: DurationDisplayFormat;
   t: DashboardTranslator;
@@ -925,75 +975,105 @@ function TimesheetDrilldownTable({
   }
 
   return (
-    <div className="overflow-x-auto">
-      <table className="w-full min-w-[58rem] border-collapse">
-        <thead>
-          <tr className="border-b border-border bg-background/35">
-            <DrilldownHeadCell>{t("admin.drilldown.table.contractor")}</DrilldownHeadCell>
-            <DrilldownHeadCell>{t("admin.drilldown.table.month")}</DrilldownHeadCell>
-            <DrilldownHeadCell>{t("admin.drilldown.table.status")}</DrilldownHeadCell>
-            <DrilldownHeadCell>{t("admin.drilldown.table.hours")}</DrilldownHeadCell>
-            <DrilldownHeadCell>{t("admin.drilldown.table.amount")}</DrilldownHeadCell>
-            <DrilldownHeadCell>{t("admin.drilldown.table.updated")}</DrilldownHeadCell>
-            <DrilldownHeadCell align="right">{t("admin.drilldown.table.action")}</DrilldownHeadCell>
-          </tr>
-        </thead>
-        <tbody>
-          {drilldown.rows.map((row) => (
-            <tr key={row.id} className="border-b border-border last:border-b-0">
-              <td className="px-5 py-4">
-                <MemberIdentity
-                  initials={getInitials(row.contractorName)}
-                  name={row.contractorName}
-                  email={row.contractorEmail}
+    <>
+      <DataTable
+        className={flushPanelTableClassName}
+        displayMode="responsive"
+        caption={caption}
+        aria-label={caption}
+        rows={drilldown.rows}
+        getRowKey={(row) => row.id}
+        columns={[
+          {
+            id: "contractor",
+            header: t("admin.drilldown.table.contractor"),
+            mobileLabel: null,
+            cell: (row) => (
+              <MemberIdentity
+                initials={getInitials(row.contractorName)}
+                name={row.contractorName}
+                email={row.contractorEmail}
+              />
+            ),
+          },
+          {
+            id: "month",
+            header: t("admin.drilldown.table.month"),
+            cell: (row) => (
+              <span className="flex items-start gap-2">
+                <CalendarDays
+                  className="mt-0.5 size-4 shrink-0 text-muted-foreground"
+                  aria-hidden
                 />
-              </td>
-              <td className="px-5 py-4">
-                <div className="flex items-start gap-2">
-                  <CalendarDays className="mt-0.5 size-4 text-muted-foreground" aria-hidden />
-                  <div>
-                    <p className="text-sm font-semibold text-foreground">
-                      {formatMonth(row.periodStart, locale)}
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      {formatDateRange(row.periodStart, row.periodEnd, locale)}
-                    </p>
-                  </div>
-                </div>
-              </td>
-              <td className="px-5 py-4">
-                <StatusPill
-                  status={toTimesheetPreviewStatus(row.status)}
-                  label={t(`timesheetStatus.${toTimesheetStatusKey(row.status)}`)}
-                />
-              </td>
-              <td className="px-5 py-4 text-sm font-semibold text-foreground">
+                <span>
+                  <span className="block text-sm font-semibold text-foreground">
+                    {formatMonth(row.periodStart, locale)}
+                  </span>
+                  <span className="block text-xs text-muted-foreground">
+                    {formatDateRange(row.periodStart, row.periodEnd, locale)}
+                  </span>
+                </span>
+              </span>
+            ),
+          },
+          {
+            id: "status",
+            header: t("admin.drilldown.table.status"),
+            cell: (row) => (
+              <StatusPill
+                status={toTimesheetPreviewStatus(row.status)}
+                label={t(`timesheetStatus.${toTimesheetStatusKey(row.status)}`)}
+              />
+            ),
+          },
+          {
+            id: "hours",
+            header: t("admin.drilldown.table.hours"),
+            cell: (row) => (
+              <span className="text-sm font-semibold text-foreground">
                 {formatHoursWithUnit(row.totalMinutes, locale, durationDisplayFormat)}
-              </td>
-              <td className="px-5 py-4 text-sm font-semibold text-foreground">
+              </span>
+            ),
+          },
+          {
+            id: "amount",
+            header: t("admin.drilldown.table.amount"),
+            cell: (row) => (
+              <span className="text-sm font-semibold text-foreground">
                 {formatMoney(row.totalAmount, row.currencyCode, locale, {
                   display: "code",
                 })}
-              </td>
-              <td className="px-5 py-4 text-sm text-muted-foreground">
-                {formatNullableTimestamp(
-                  row.submittedAt ?? row.approvedAt ?? row.rejectedAt,
-                  locale,
-                  t,
-                )}
-              </td>
-              <td className="px-5 py-4 text-right">
+              </span>
+            ),
+          },
+          {
+            id: "updated",
+            header: t("admin.drilldown.table.updated"),
+            cell: (row) =>
+              formatNullableTimestamp(
+                row.submittedAt ?? row.approvedAt ?? row.rejectedAt,
+                locale,
+                t,
+              ),
+          },
+          {
+            id: "action",
+            header: t("admin.drilldown.table.action"),
+            mobileLabel: null,
+            align: "right",
+            cell: (row) => (
+              <span className="flex justify-end">
                 <Button asChild variant="soft" size="sm">
                   <Link href={`/admin/timesheets/${row.id}` as Route}>
                     <Eye className="size-4" aria-hidden="true" />
                     {t("admin.drilldown.review")}
                   </Link>
                 </Button>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+              </span>
+            ),
+          },
+        ]}
+      />
       {drilldown.totalItems > drilldown.rows.length ? (
         <p className="border-t border-border px-5 py-3 text-sm text-muted-foreground">
           {t("admin.drilldown.limited", {
@@ -1002,18 +1082,20 @@ function TimesheetDrilldownTable({
           })}
         </p>
       ) : null}
-    </div>
+    </>
   );
 }
 
 function MissingTimesheetDrilldownTable({
   rows,
+  caption,
   period,
   locale,
   durationDisplayFormat,
   t,
 }: {
   rows: AdminDashboardMissingTimesheetRow[];
+  caption: string;
   period: DashboardPeriod;
   locale: string;
   durationDisplayFormat: DurationDisplayFormat;
@@ -1024,63 +1106,76 @@ function MissingTimesheetDrilldownTable({
   }
 
   return (
-    <div className="overflow-x-auto">
-      <table className="w-full min-w-[52rem] border-collapse">
-        <thead>
-          <tr className="border-b border-border bg-background/35">
-            <DrilldownHeadCell>{t("admin.drilldown.table.contractor")}</DrilldownHeadCell>
-            <DrilldownHeadCell>{t("admin.drilldown.table.activeProjects")}</DrilldownHeadCell>
-            <DrilldownHeadCell>{t("admin.drilldown.table.hours")}</DrilldownHeadCell>
-            <DrilldownHeadCell>{t("admin.drilldown.table.lastLogged")}</DrilldownHeadCell>
-            <DrilldownHeadCell align="right">{t("admin.drilldown.table.action")}</DrilldownHeadCell>
-          </tr>
-        </thead>
-        <tbody>
-          {rows.map((row) => (
-            <tr key={row.memberId} className="border-b border-border last:border-b-0">
-              <td className="px-5 py-4">
-                <MemberIdentity
-                  initials={row.initials}
-                  name={row.memberName}
-                  email={row.memberEmail}
-                />
-              </td>
-              <td className="px-5 py-4 text-sm font-semibold text-foreground">
-                {t("admin.drilldown.activeProjectCount", {
-                  count: row.activeProjectCount,
-                })}
-              </td>
-              <td className="px-5 py-4 text-sm font-semibold text-foreground">
-                {formatHoursWithUnit(row.monthMinutes, locale, durationDisplayFormat)}
-              </td>
-              <td className="px-5 py-4 text-sm text-muted-foreground">
-                {row.lastLoggedDate
-                  ? formatDate(row.lastLoggedDate, locale)
-                  : t("admin.flagged.never")}
-              </td>
-              <td className="px-5 py-4 text-right">
-                <Button asChild variant="soft" size="sm">
-                  <Link href={buildMemberMonthReportHref(row.memberId, period) as Route}>
-                    <ArrowUpRight className="size-4" aria-hidden="true" />
-                    {t("admin.drilldown.openReport")}
-                  </Link>
-                </Button>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
+    <DataTable
+      className={flushPanelTableClassName}
+      displayMode="responsive"
+      caption={caption}
+      aria-label={caption}
+      rows={rows}
+      getRowKey={(row) => row.memberId}
+      columns={[
+        {
+          id: "contractor",
+          header: t("admin.drilldown.table.contractor"),
+          mobileLabel: null,
+          cell: (row) => (
+            <MemberIdentity initials={row.initials} name={row.memberName} email={row.memberEmail} />
+          ),
+        },
+        {
+          id: "activeProjects",
+          header: t("admin.drilldown.table.activeProjects"),
+          cell: (row) => (
+            <span className="text-sm font-semibold text-foreground">
+              {t("admin.drilldown.activeProjectCount", { count: row.activeProjectCount })}
+            </span>
+          ),
+        },
+        {
+          id: "hours",
+          header: t("admin.drilldown.table.hours"),
+          cell: (row) => (
+            <span className="text-sm font-semibold text-foreground">
+              {formatHoursWithUnit(row.monthMinutes, locale, durationDisplayFormat)}
+            </span>
+          ),
+        },
+        {
+          id: "lastLogged",
+          header: t("admin.drilldown.table.lastLogged"),
+          cell: (row) =>
+            row.lastLoggedDate ? formatDate(row.lastLoggedDate, locale) : t("admin.flagged.never"),
+        },
+        {
+          id: "action",
+          header: t("admin.drilldown.table.action"),
+          mobileLabel: null,
+          align: "right",
+          cell: (row) => (
+            <span className="flex justify-end">
+              <Button asChild variant="soft" size="sm">
+                <Link href={buildMemberMonthReportHref(row.memberId, period) as Route}>
+                  <ArrowUpRight className="size-4" aria-hidden="true" />
+                  {t("admin.drilldown.openReport")}
+                </Link>
+              </Button>
+            </span>
+          ),
+        },
+      ]}
+    />
   );
 }
 
 function FlaggedUsersDrilldownTable({
   users,
+  caption,
   period,
   locale,
   t,
 }: {
   users: DashboardFlaggedUser[];
+  caption: string;
   period: DashboardPeriod;
   locale: string;
   t: DashboardTranslator;
@@ -1090,56 +1185,58 @@ function FlaggedUsersDrilldownTable({
   }
 
   return (
-    <div className="overflow-x-auto">
-      <table className="w-full min-w-[56rem] border-collapse">
-        <thead>
-          <tr className="border-b border-border bg-background/35">
-            <DrilldownHeadCell>{t("admin.flagged.name")}</DrilldownHeadCell>
-            <DrilldownHeadCell>{t("admin.flagged.project")}</DrilldownHeadCell>
-            <DrilldownHeadCell>{t("admin.flagged.lastLogged")}</DrilldownHeadCell>
-            <DrilldownHeadCell align="right">{t("admin.drilldown.table.action")}</DrilldownHeadCell>
-          </tr>
-        </thead>
-        <tbody>
-          {users.map((user) => (
-            <tr key={user.id} className="border-b border-border last:border-b-0">
-              <td className="px-5 py-4">
-                <MemberIdentity
-                  initials={user.initials}
-                  name={user.memberName}
-                  email={user.memberEmail}
-                />
-              </td>
-              <td className="px-5 py-4">
-                <span className="flex min-w-0 items-center gap-2 text-sm font-semibold text-foreground">
-                  <span
-                    className="size-2.5 shrink-0 rounded-full"
-                    style={{ backgroundColor: user.projectColor }}
-                  />
-                  <span className="truncate">{user.projectName}</span>
-                </span>
-              </td>
-              <td className="px-5 py-4 text-sm text-muted-foreground">
-                {user.lastLoggedDate
-                  ? formatRelativeLoggedDate(user.lastLoggedDate, period.weekStart, locale, t)
-                  : t("admin.flagged.never")}
-              </td>
-              <td className="px-5 py-4">
-                <div className="flex justify-end gap-2">
-                  <FlaggedReminderButton memberId={user.memberId} weekStart={period.weekStart} />
-                  <Button asChild variant="soft" size="sm">
-                    <Link href={buildMemberProjectWeekReportHref(user, period) as Route}>
-                      <ArrowUpRight className="size-4" aria-hidden="true" />
-                      {t("admin.drilldown.openReport")}
-                    </Link>
-                  </Button>
-                </div>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
+    <DataTable
+      className={flushPanelTableClassName}
+      displayMode="responsive"
+      caption={caption}
+      aria-label={caption}
+      rows={users}
+      getRowKey={(row) => row.id}
+      columns={[
+        {
+          id: "member",
+          header: t("admin.flagged.name"),
+          mobileLabel: null,
+          cell: (row) => (
+            <MemberIdentity initials={row.initials} name={row.memberName} email={row.memberEmail} />
+          ),
+        },
+        {
+          id: "project",
+          header: t("admin.flagged.project"),
+          cell: (row) => <ProjectLabel color={row.projectColor} name={row.projectName} />,
+        },
+        {
+          id: "lastLogged",
+          header: t("admin.flagged.lastLogged"),
+          cell: (row) => (
+            <LastLoggedLabel
+              lastLoggedDate={row.lastLoggedDate}
+              weekStart={period.weekStart}
+              locale={locale}
+              t={t}
+            />
+          ),
+        },
+        {
+          id: "action",
+          header: t("admin.drilldown.table.action"),
+          mobileLabel: null,
+          align: "right",
+          cell: (row) => (
+            <span className="flex flex-wrap justify-end gap-2">
+              <FlaggedReminderButton memberId={row.memberId} weekStart={period.weekStart} />
+              <Button asChild variant="soft" size="sm">
+                <Link href={buildMemberProjectWeekReportHref(row, period) as Route}>
+                  <ArrowUpRight className="size-4" aria-hidden="true" />
+                  {t("admin.drilldown.openReport")}
+                </Link>
+              </Button>
+            </span>
+          ),
+        },
+      ]}
+    />
   );
 }
 
@@ -1153,34 +1250,58 @@ function MemberIdentity({
   email: string;
 }) {
   return (
-    <div className="flex min-w-0 items-center gap-3">
+    <span className="flex min-w-0 items-center gap-3">
       <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-accent text-primary-foreground font-ui text-xs font-bold">
         {initials}
       </span>
-      <span className="min-w-0">
+      {/* The `md` cap is what makes the ellipsis work, and it is not decoration. An auto-layout
+          table takes its minimum width from cell content, and `truncate` implies `nowrap`, so
+          `contractor@example.com` set this column's floor and forced the whole table to scroll
+          sideways — the ellipsis never appeared. Capping the box caps that floor. It starts at
+          `md` because that is where `DataTable` switches from cards to a table; in a card the row
+          has the full width and nothing needs shortening. */}
+      <span className="min-w-0 md:max-w-[11rem]">
         <span className="block truncate text-sm font-semibold text-foreground">{name}</span>
         <span className="block truncate text-xs text-muted-foreground">{email}</span>
       </span>
-    </div>
+    </span>
   );
 }
 
-function DrilldownHeadCell({
-  children,
-  align = "left",
-}: {
-  children: string;
-  align?: "left" | "right";
-}) {
+function ProjectLabel({ color, name }: { color: string; name: string }) {
   return (
-    <th
-      className={cn(
-        "px-5 py-3 font-ui text-[10px] font-bold uppercase tracking-[0.12em] text-muted-foreground",
-        align === "right" ? "text-right" : "text-left",
-      )}
-    >
-      {children}
-    </th>
+    <span className="flex min-w-0 items-center gap-2 text-sm font-semibold text-foreground">
+      <span className="size-2.5 shrink-0 rounded-full" style={{ backgroundColor: color }} />
+      {/* Wraps rather than truncates, for the same reason as the address above: a name like
+          "Internal Ops & Tooling" held the column open at its full nowrap width. */}
+      <span className="min-w-0 break-words">{name}</span>
+    </span>
+  );
+}
+
+function LastLoggedLabel({
+  lastLoggedDate,
+  weekStart,
+  locale,
+  t,
+}: {
+  lastLoggedDate: string | null;
+  weekStart: string;
+  locale: string;
+  t: DashboardTranslator;
+}) {
+  if (!lastLoggedDate) {
+    return (
+      <span className="text-sm font-semibold text-destructive">{t("admin.flagged.never")}</span>
+    );
+  }
+
+  // Nowrap so "Last week" does not break across two lines at the `md` boundary, where the table
+  // first appears and the columns are at their tightest.
+  return (
+    <span className="whitespace-nowrap text-sm text-muted-foreground">
+      {formatRelativeLoggedDate(lastLoggedDate, weekStart, locale, t)}
+    </span>
   );
 }
 
@@ -1205,79 +1326,85 @@ function FlaggedUsersPanel({
   locale: string;
   t: DashboardTranslator;
 }) {
+  const visible = users.slice(0, flaggedPreviewLimit);
+  const truncated = users.length > visible.length;
+
   return (
     <DashboardPanel className="overflow-hidden p-0">
       <div className="border-b border-border p-5">
         <p className="mb-3 font-ui text-[11px] font-bold uppercase tracking-[0.16em] text-accent">
           {t("admin.flagged.title")}
         </p>
-        <p className="max-w-[28rem] text-sm leading-6 text-muted-foreground">
+        <p className="max-w-[44rem] text-sm leading-6 text-muted-foreground">
           {t("admin.flagged.description")}
         </p>
       </div>
       {users.length === 0 ? (
         <div className="p-5 text-sm text-muted-foreground">{t("admin.flagged.empty")}</div>
       ) : (
-        <div className="min-w-0 overflow-x-auto">
-          <div className="grid min-w-[48rem] grid-cols-[1.35fr_1.1fr_auto_auto] gap-4 border-b border-border px-5 py-3 font-ui text-[10px] font-bold uppercase tracking-[0.12em] text-muted-foreground">
-            <span>{t("admin.flagged.name")}</span>
-            <span>{t("admin.flagged.project")}</span>
-            <span className="text-right">{t("admin.flagged.lastLogged")}</span>
-            <span className="text-right">{t("admin.drilldown.table.action")}</span>
-          </div>
-          {users.map((user, index) => (
-            <div
-              key={user.id}
-              className={cn(
-                "grid min-w-[48rem] grid-cols-[1.35fr_1.1fr_auto_auto] items-center gap-4 px-5 py-3",
-                index < users.length - 1 && "border-b border-border",
-              )}
-            >
-              <span className="flex min-w-0 items-center gap-3">
-                <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-accent text-primary-foreground font-ui text-xs font-bold">
-                  {user.initials}
-                </span>
-                <span className="min-w-0">
-                  <span className="block truncate text-sm font-semibold text-foreground">
-                    {user.memberName}
+        <>
+          <DataTable
+            className={flushPanelTableClassName}
+            displayMode="responsive"
+            caption={t("admin.flagged.title")}
+            aria-label={t("admin.flagged.title")}
+            rows={visible}
+            getRowKey={(row) => row.id}
+            columns={[
+              {
+                id: "member",
+                header: t("admin.flagged.name"),
+                mobileLabel: null,
+                cell: (row) => (
+                  <MemberIdentity
+                    initials={row.initials}
+                    name={row.memberName}
+                    email={row.memberEmail}
+                  />
+                ),
+              },
+              {
+                id: "project",
+                header: t("admin.flagged.project"),
+                cell: (row) => <ProjectLabel color={row.projectColor} name={row.projectName} />,
+              },
+              {
+                id: "lastLogged",
+                header: t("admin.flagged.lastLogged"),
+                cell: (row) => (
+                  <LastLoggedLabel
+                    lastLoggedDate={row.lastLoggedDate}
+                    weekStart={period.weekStart}
+                    locale={locale}
+                    t={t}
+                  />
+                ),
+              },
+              {
+                id: "action",
+                header: t("admin.drilldown.table.action"),
+                mobileLabel: null,
+                align: "right",
+                cell: (row) => (
+                  <span className="flex justify-end">
+                    <FlaggedReminderButton memberId={row.memberId} weekStart={period.weekStart} />
                   </span>
-                  <span className="block truncate text-xs text-muted-foreground">
-                    {user.memberEmail}
-                  </span>
-                </span>
-              </span>
-              <span className="flex min-w-0 items-center gap-2 text-sm text-muted-foreground">
-                <span
-                  className="size-2 shrink-0 rounded-full"
-                  style={{ backgroundColor: user.projectColor }}
-                />
-                <span className="truncate">{user.projectName}</span>
-              </span>
-              <span
-                className={cn(
-                  "text-right text-sm",
-                  user.lastLoggedDate ? "text-muted-foreground" : "font-semibold text-destructive",
-                )}
-              >
-                {user.lastLoggedDate
-                  ? formatRelativeLoggedDate(user.lastLoggedDate, period.weekStart, locale, t)
-                  : t("admin.flagged.never")}
-              </span>
-              <span className="flex justify-end">
-                <FlaggedReminderButton memberId={user.memberId} weekStart={period.weekStart} />
-              </span>
-            </div>
-          ))}
+                ),
+              },
+            ]}
+          />
           <div className="border-t border-border px-5 py-3">
             <Link
               href={"/dashboard?drilldown=flagged" as Route}
               className="inline-flex items-center gap-2 text-sm font-semibold text-accent hover:text-accent-strong"
             >
-              {t("admin.flagged.viewDrilldown")}
+              {truncated
+                ? t("admin.flagged.viewAll", { count: users.length })
+                : t("admin.flagged.viewDrilldown")}
               <ArrowUpRight className="size-4" aria-hidden="true" />
             </Link>
           </div>
-        </div>
+        </>
       )}
     </DashboardPanel>
   );
@@ -1291,48 +1418,68 @@ function StatusDistribution({
   t: DashboardTranslator;
 }) {
   const total = segments.reduce((sum, segment) => sum + segment.count, 0);
+  // Zero-count segments used to be drawn at `Math.max(2, …)%`, so an all-missing month showed
+  // five coloured slivers for states that held nothing. A segment with no timesheets in it has no
+  // width; the legend below is what reports the zero.
+  const filled = segments.filter((segment) => segment.count > 0);
 
   return (
-    <DashboardPanel className="p-6">
-      <p className="mb-4 font-ui text-[11px] font-bold uppercase tracking-[0.16em] text-accent">
-        {t("admin.status.title")}
-      </p>
-      <div className="mb-5 flex items-baseline gap-2">
-        <span className="font-display text-3xl font-semibold leading-none text-foreground">
-          {total}
-        </span>
-        <span className="text-sm text-muted-foreground">{t("admin.status.caption")}</span>
+    <DashboardPanel className="p-5">
+      <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-2">
+        <p className="font-ui text-[11px] font-bold uppercase tracking-[0.16em] text-accent">
+          {t("admin.status.title")}
+        </p>
+        <p className="flex items-baseline gap-2">
+          <span className="font-display text-2xl font-semibold leading-none text-foreground">
+            {total}
+          </span>
+          <span className="text-sm text-muted-foreground">{t("admin.status.caption")}</span>
+        </p>
       </div>
-      <div className="mb-5 flex h-3.5 overflow-hidden rounded-full bg-secondary">
-        {total > 0
-          ? segments.map((segment) => (
-              <span
-                key={segment.id}
-                style={{
-                  width: `${Math.max(2, (segment.count / total) * 100)}%`,
-                  backgroundColor: statusColor[segment.id],
-                }}
-                title={`${t(`admin.status.segment.${segment.id}`)}: ${segment.count}`}
-              />
-            ))
-          : null}
-      </div>
-      <div className="grid gap-3">
-        {segments.map((segment) => (
-          <div key={segment.id} className="flex items-center gap-3">
-            <span
-              className="size-2.5 shrink-0 rounded-[3px]"
-              style={{ backgroundColor: statusColor[segment.id] }}
-            />
-            <span className="min-w-0 flex-1 truncate text-sm text-muted-foreground">
-              {t(`admin.status.segment.${segment.id}`)}
-            </span>
-            <span className="font-display text-sm font-semibold text-foreground">
-              {segment.count}
-            </span>
-          </div>
+      <div className="mt-4 flex h-2.5 overflow-hidden rounded-full bg-secondary">
+        {filled.map((segment) => (
+          <span
+            key={segment.id}
+            style={{
+              width: `${(segment.count / total) * 100}%`,
+              backgroundColor: statusColor[segment.id],
+            }}
+            title={`${t(`admin.status.segment.${segment.id}`)}: ${segment.count}`}
+          />
         ))}
       </div>
+      {/* The legend was a stacked column of eight rows, which made a strip of information as tall
+          as the table beside it. Two columns on a phone, one wrapping row from `sm` up. */}
+      <ul className="mt-4 grid grid-cols-2 gap-x-5 gap-y-2 sm:flex sm:flex-wrap sm:gap-x-6">
+        {segments.map((segment) => {
+          const empty = segment.count === 0;
+
+          return (
+            <li key={segment.id} className="flex min-w-0 items-center gap-2 text-sm">
+              <span
+                className={cn("size-2 shrink-0 rounded-full", empty && "opacity-40")}
+                style={{ backgroundColor: statusColor[segment.id] }}
+              />
+              <span
+                className={cn(
+                  "min-w-0 leading-tight",
+                  empty ? "text-subtle-foreground" : "text-muted-foreground",
+                )}
+              >
+                {t(`admin.status.segment.${segment.id}`)}
+              </span>
+              <span
+                className={cn(
+                  "shrink-0 font-display text-sm font-semibold",
+                  empty ? "text-subtle-foreground" : "text-foreground",
+                )}
+              >
+                {segment.count}
+              </span>
+            </li>
+          );
+        })}
+      </ul>
     </DashboardPanel>
   );
 }

@@ -256,6 +256,20 @@ async function assertDailyTotals(
   const dayEntries = await tx.timeEntry.findMany({
     where: {
       deletedAt: null,
+      /*
+       * §4 item 1, and it is **separate** from the report filter, not covered by it.
+       *
+       * `buildReportTimeEntryWhere` keeps declared lines out of the report editor, so nobody can
+       * edit one here. The collision survives in a narrower form: an admin editing a *tracked*
+       * line dated the 1st of the month still has the declared figure — 52 h is 3 120 minutes —
+       * summed into that day by this query, and the edit fails with `DAILY_LIMIT_EXCEEDED`, a
+       * message that explains nothing about a figure nothing on screen shows.
+       *
+       * A declared aggregate is not a day of work and does not belong in a daily total.
+       */
+      source: {
+        not: "DECLARED",
+      },
       OR: [...days.values()],
     },
     select: {

@@ -1,7 +1,10 @@
+import { firstSearchParam, listSearchParam } from "@/src/lib/search-params";
+import { anyOf } from "@/src/server/db/any-of";
 import { prisma } from "@/src/server/db/client";
 import { requireAdminAppMemberForAction } from "@/src/server/auth/app-access";
 import type { Prisma } from "@/src/server/db/generated/client";
 import type { PersonRowState, PersonTableRow } from "@/src/components/sheet/PeopleTable";
+import type { TrackingMode } from "@/src/server/time-tracking";
 
 const DEFAULT_PAGE = 1;
 const DEFAULT_PAGE_SIZE = 20;
@@ -15,7 +18,8 @@ export type PeopleStateFilter = PersonRowState | "";
 
 export type PeopleFilters = {
   query: string;
-  state: PeopleStateFilter;
+  /** Empty means every state, the same way no filter at all does. */
+  states: PersonRowState[];
   role: PeopleMemberRole | "";
   profile: PeopleMemberProfile | "";
   page: number;
@@ -35,6 +39,7 @@ export type PeopleMemberRow = {
   defaultCurrencyCode: string;
   timezone: string;
   locale: string;
+  defaultTrackingMode: TrackingMode;
   deletedAt: Date | null;
   profilePeriods?: Array<{
     profile: PeopleMemberProfile;
@@ -53,6 +58,7 @@ export type AdminPersonRow = PersonTableRow & {
   defaultCurrencyCode: string;
   timezone: string;
   locale: string;
+  defaultTrackingMode: TrackingMode;
 };
 
 export type PeopleStats = {
@@ -110,6 +116,7 @@ export async function listPeopleForAdmin(
       defaultCurrencyCode: true,
       timezone: true,
       locale: true,
+      defaultTrackingMode: true,
       deletedAt: true,
       profilePeriods: {
         where: {
@@ -148,13 +155,15 @@ export async function listPeopleForAdmin(
 
 export function normalizePeopleFilters(searchParams: PeopleListSearchParams = {}): PeopleFilters {
   return {
-    query: firstString(searchParams.q).trim().slice(0, 120),
-    state: normalizeStateFilter(firstString(searchParams.state)),
-    role: normalizeRoleFilter(firstString(searchParams.role)),
-    profile: normalizeProfileFilter(firstString(searchParams.profile)),
-    page: parsePositiveInteger(firstString(searchParams.page), DEFAULT_PAGE),
+    query: firstSearchParam(searchParams.q).trim().slice(0, 120),
+    states: listSearchParam(searchParams.state)
+      .map(normalizeStateFilter)
+      .filter((state): state is PersonRowState => state !== ""),
+    role: normalizeRoleFilter(firstSearchParam(searchParams.role)),
+    profile: normalizeProfileFilter(firstSearchParam(searchParams.profile)),
+    page: parsePositiveInteger(firstSearchParam(searchParams.page), DEFAULT_PAGE),
     pageSize: Math.min(
-      parsePositiveInteger(firstString(searchParams.pageSize), DEFAULT_PAGE_SIZE),
+      parsePositiveInteger(firstSearchParam(searchParams.pageSize), DEFAULT_PAGE_SIZE),
       MAX_PAGE_SIZE,
     ),
   };
@@ -179,27 +188,9 @@ export function buildPeopleWhere(filters: PeopleFilters): Prisma.MemberWhereInpu
     });
   }
 
-  if (filters.state) {
-    if (filters.state === "locked") {
-      and.push({
-        OR: [
-          {
-            status: "DELETED",
-          },
-          {
-            deletedAt: {
-              not: null,
-            },
-          },
-        ],
-      });
-    } else {
-      and.push({
-        status: mapStateFilterToStatus(filters.state),
-        deletedAt: null,
-      });
-    }
-  }
+  const stateClause = buildStateClause(filters.states);
+
+  if (stateClause) and.push(stateClause);
 
   if (filters.role) {
     and.push({
@@ -244,6 +235,7 @@ export function mapMemberToPersonRow(member: PeopleMemberRow): AdminPersonRow {
     defaultCurrencyCode: member.defaultCurrencyCode,
     timezone: member.timezone,
     locale: member.locale,
+    defaultTrackingMode: member.defaultTrackingMode,
     hasAuthUser: Boolean(member.authUserId),
   };
 }
@@ -289,11 +281,6 @@ function mapMemberState(member: PeopleMemberRow): PersonRowState {
   return "inactive";
 }
 
-function firstString(value: string | string[] | undefined) {
-  if (Array.isArray(value)) return value[0] ?? "";
-  return value ?? "";
-}
-
 function parsePositiveInteger(value: string, fallback: number) {
   const parsed = Number.parseInt(value, 10);
   return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
@@ -315,6 +302,27 @@ function normalizeRoleFilter(value: string): PeopleMemberRole | "" {
 function normalizeProfileFilter(value: string): PeopleMemberProfile | "" {
   if (value === "EMPLOYEE" || value === "CONTRACTOR") return value;
   return "";
+}
+
+/**
+ * `locked` is not a member status but a soft-delete marker, so it cannot join the same `in`
+ * as the real statuses — picking it alongside another state means "either".
+ */
+function buildStateClause(states: PersonRowState[]) {
+  const statuses = states
+    .filter((state): state is Exclude<PersonRowState, "locked"> => state !== "locked")
+    .map(mapStateFilterToStatus);
+  const clauses: Prisma.MemberWhereInput[] = [];
+
+  if (statuses.length < states.length) {
+    clauses.push({ OR: [{ status: "DELETED" }, { deletedAt: { not: null } }] });
+  }
+
+  if (statuses.length > 0) {
+    clauses.push({ status: { in: statuses }, deletedAt: null });
+  }
+
+  return anyOf(clauses);
 }
 
 function mapStateFilterToStatus(state: Exclude<PeopleStateFilter, "" | "locked">) {

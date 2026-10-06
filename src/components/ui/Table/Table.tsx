@@ -172,14 +172,21 @@ export function DataTable<T extends Record<string, unknown>>({
                           selected && "bg-accent-soft",
                           onRowClick && "cursor-pointer hover:bg-secondary/60",
                         )}
-                        onClick={() => onRowClick?.(row)}
-                        onKeyDown={(event) => {
-                          if (!interactive) return;
-                          if (event.key === "Enter" || event.key === " ") {
-                            event.preventDefault();
-                            onRowClick?.(row);
-                          }
-                        }}
+                        // Every handler below is attached only when a callback was actually
+                        // passed. A function prop on a host element cannot cross the Flight
+                        // boundary, so an unconditional `onClick` would make the whole table
+                        // client-only — the dashboard renders it from a Server Component.
+                        onClick={onRowClick ? () => onRowClick(row) : undefined}
+                        onKeyDown={
+                          interactive
+                            ? (event) => {
+                                if (event.key === "Enter" || event.key === " ") {
+                                  event.preventDefault();
+                                  onRowClick?.(row);
+                                }
+                              }
+                            : undefined
+                        }
                       >
                         {columns.map((column) => (
                           <td
@@ -198,8 +205,10 @@ export function DataTable<T extends Record<string, unknown>>({
                           <td className={cn(cellPadding, "text-right")}>
                             <div
                               className="inline-flex items-center justify-end gap-2"
-                              onClick={(event) => event.stopPropagation()}
-                              onKeyDown={(event) => event.stopPropagation()}
+                              onClick={onRowClick ? (event) => event.stopPropagation() : undefined}
+                              onKeyDown={
+                                onRowClick ? (event) => event.stopPropagation() : undefined
+                              }
                             >
                               {rowActions(row, index)}
                             </div>
@@ -231,27 +240,39 @@ export function DataTable<T extends Record<string, unknown>>({
                 const interactive = Boolean(onRowClick && !rowActions);
                 const content = (
                   <>
-                    {columns.map((column) => (
-                      <span key={column.id} className="grid grid-cols-[7rem_1fr] gap-3 text-sm">
-                        <span className="font-ui text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                          {column.mobileLabel ?? column.header}
-                        </span>
+                    {columns.map((column) => {
+                      const labelled = column.mobileLabel !== null;
+
+                      return (
                         <span
+                          key={column.id}
                           className={cn(
-                            "min-w-0 text-foreground",
-                            column.align === "right" && "text-right",
-                            column.align === "center" && "text-center",
+                            "grid gap-3 text-sm",
+                            labelled ? "grid-cols-[7rem_1fr]" : "grid-cols-1",
                           )}
                         >
-                          {getCellValue(row, column)}
+                          {labelled ? (
+                            <span className="font-ui text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                              {column.mobileLabel ?? column.header}
+                            </span>
+                          ) : null}
+                          <span
+                            className={cn(
+                              "min-w-0 text-foreground",
+                              column.align === "right" && "text-right",
+                              column.align === "center" && "text-center",
+                            )}
+                          >
+                            {getCellValue(row, column)}
+                          </span>
                         </span>
-                      </span>
-                    ))}
+                      );
+                    })}
                     {rowActions ? (
                       <span
                         className="flex justify-end gap-2 border-t border-border pt-3"
-                        onClick={(event) => event.stopPropagation()}
-                        onKeyDown={(event) => event.stopPropagation()}
+                        onClick={onRowClick ? (event) => event.stopPropagation() : undefined}
+                        onKeyDown={onRowClick ? (event) => event.stopPropagation() : undefined}
                       >
                         {rowActions(row, index)}
                       </span>

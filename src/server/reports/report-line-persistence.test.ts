@@ -131,4 +131,35 @@ describe("saveAdminReportLineEdits", () => {
     } satisfies Partial<ReportLinePersistenceError>);
     expect(tx.timeEntry.update).not.toHaveBeenCalled();
   });
+
+  /**
+   * §4 item 1, in the narrow form that survives the report filter.
+   *
+   * The declared line itself is unreachable here — `buildReportTimeEntryWhere` keeps it out of the
+   * report entirely — but a **tracked** line dated the 1st of the month is not, and the declared
+   * 52 h sitting beside it on that same date would be summed into the day by this query alone. The
+   * edit would then fail with `DAILY_LIMIT_EXCEEDED`, about a figure nothing on the screen shows.
+   */
+  it("ignores declared entries while a tracked line on the same date is edited", async () => {
+    const firstOfMonth = new Date("2026-09-01T00:00:00.000Z");
+    const tracked = createEntry({ localDate: firstOfMonth, durationMinutes: 120 });
+    const { db, tx } = createDb(tracked, [tracked]);
+
+    await saveAdminReportLineEdits(
+      {
+        actorMemberId: ADMIN_ID,
+        edits: [{ id: ENTRY_ID, durationMinutes: 480 }],
+        reason: "Correction",
+      },
+      { db: db as never },
+    );
+
+    // The day query, not the entry lookup: the second `findMany` is `assertDailyTotals`.
+    const dayQuery = tx.timeEntry.findMany.mock.calls[1]?.[0] as {
+      where: { source?: { not?: string } };
+    };
+
+    expect(dayQuery.where.source).toEqual({ not: "DECLARED" });
+    expect(tx.timeEntry.update).toHaveBeenCalledTimes(1);
+  });
 });

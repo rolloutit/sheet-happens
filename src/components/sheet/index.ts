@@ -30,8 +30,48 @@ export type {
   DocumentPreviewProps,
   DocumentPreviewRow,
 } from "./DocumentPreview";
-export { DayDetailPanel } from "./DayDetailPanel";
-export type { DayDetailEntry, DayDetailPanelLabels, DayDetailPanelProps } from "./DayDetailPanel";
+export { DayAgenda } from "./DayAgenda";
+export type {
+  DayAgendaAdminNotice,
+  DayAgendaDayState,
+  DayAgendaEntry,
+  DayAgendaLabels,
+  DayAgendaProps,
+  DayAgendaRunningTimer,
+  DayAgendaSplit,
+} from "./DayAgenda";
+export { CapacityBar, DayColumnHeader, dayColumnHeaderVariants } from "./DayColumnHeader";
+export type {
+  CapacityBarProps,
+  DayColumnHeaderDay,
+  DayColumnHeaderDayState,
+  DayColumnHeaderLabels,
+  DayColumnHeaderProps,
+  DayColumnHeaderVariant,
+} from "./DayColumnHeader";
+export { DayRibbon } from "./DayRibbon";
+export type { DayRibbonLabels, DayRibbonOrientation, DayRibbonProps } from "./DayRibbon";
+export { EntryCard, entryCardVariants, RunningEntryCard } from "./EntryCard";
+export type {
+  EntryCardDensity,
+  EntryCardEntry,
+  EntryCardLabels,
+  EntryCardProps,
+  EntryHighlight,
+  RunningEntryCardLabels,
+  RunningEntryCardProps,
+} from "./EntryCard";
+export {
+  DeclaredHoursRow,
+  declaredHoursRowVariants,
+  declaredProofSlotVariants,
+} from "./DeclaredHoursRow";
+export type {
+  DeclaredHoursProject,
+  DeclaredHoursProof,
+  DeclaredHoursRowLabels,
+  DeclaredHoursRowProps,
+} from "./DeclaredHoursRow";
 export { EmptyState, emptyStateVariants } from "./EmptyState";
 export type { EmptyStateProps } from "./EmptyState";
 export { FilterChips } from "./FilterChips";
@@ -63,6 +103,28 @@ export { ManagementViews } from "./ManagementViews";
 export type { ManagementView, ManagementViewsProps } from "./ManagementViews";
 export { MarkdownArticle } from "./MarkdownArticle";
 export type { MarkdownArticleProps } from "./MarkdownArticle";
+export {
+  buildHeatWeeks,
+  countWorkdays,
+  heatCellVariants,
+  heatStep,
+  MonthHeatNavigator,
+} from "./MonthHeatNavigator";
+export type {
+  HeatDay,
+  HeatDayState,
+  HeatDayTotal,
+  HeatWeek,
+  MonthHeatNavigatorLabels,
+  MonthHeatNavigatorProps,
+} from "./MonthHeatNavigator";
+export { MonthOverview, monthOverviewRowVariants } from "./MonthOverview";
+export type {
+  MonthOverviewDeclaredProject,
+  MonthOverviewLabels,
+  MonthOverviewProject,
+  MonthOverviewProps,
+} from "./MonthOverview";
 export { MonthRow } from "./MonthRow";
 export type { MonthRowProps } from "./MonthRow";
 export { NotificationPreferences } from "./NotificationPreferences";
@@ -166,7 +228,13 @@ export type {
   StatCardTrend,
   StatTrendDirection,
 } from "./StatCard";
-export { StatusPill, statusPillVariants, statusTone, timesheetStatuses } from "./StatusPill";
+export {
+  StatusPill,
+  statusPillVariants,
+  statusTone,
+  statusToneVar,
+  timesheetStatuses,
+} from "./StatusPill";
 export type {
   StatusPillDensity,
   StatusPillProps,
@@ -215,6 +283,45 @@ export { TotpSetupDialog } from "./TotpSetupDialog";
 export type { TotpSetupDialogProps } from "./TotpSetupDialog";
 export { TweaksPanel } from "./TweaksPanel";
 export type { TweaksPanelProps } from "./TweaksPanel";
+export { PeriodNavigator } from "./PeriodNavigator";
+export type {
+  PeriodNavigatorLabels,
+  PeriodNavigatorProps,
+  PeriodNavigatorShortcuts,
+} from "./PeriodNavigator";
+export { PeriodTotal } from "./PeriodTotal";
+export type { PeriodTotalProps, PeriodTotalStatus, PeriodTotalStatusTone } from "./PeriodTotal";
+export { QuickEntryComposer } from "./QuickEntryComposer";
+export type {
+  QuickEntryComposerLabels,
+  QuickEntryComposerProject,
+  QuickEntryComposerProps,
+  QuickEntryComposerValue,
+} from "./QuickEntryComposer";
+export { ShortcutSheet } from "./ShortcutSheet";
+export type {
+  ShortcutGroup,
+  ShortcutRow,
+  ShortcutSheetLabels,
+  ShortcutSheetProps,
+} from "./ShortcutSheet";
+export { ShortcutChip, TimeScopeBar } from "./TimeScopeBar";
+export type {
+  TimeScopeBarLabels,
+  TimeScopeBarOption,
+  TimeScopeBarProps,
+  TimeScopeBarShortcuts,
+} from "./TimeScopeBar";
+export { WeekAgenda, weekAgendaColumnVariants } from "./WeekAgenda";
+export type {
+  WeekAgendaDay,
+  WeekAgendaDayState,
+  WeekAgendaEntry,
+  WeekAgendaLabels,
+  WeekAgendaLayout,
+  WeekAgendaProps,
+  WeekAgendaRunningTimer,
+} from "./WeekAgenda";
 export { WeeklyTimeGrid } from "./WeeklyTimeGrid";
 export type {
   TimeGridCellContext,

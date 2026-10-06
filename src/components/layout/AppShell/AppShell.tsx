@@ -5,6 +5,7 @@ import {
   BarChart3,
   BadgeDollarSign,
   BookOpen,
+  CalendarClock,
   CalendarDays,
   Clock3,
   FolderKanban,
@@ -103,6 +104,13 @@ const navItems = [
   { id: "people", labelKey: "nav.people", icon: Users, group: "admin", href: "/admin/people" },
   { id: "rates", labelKey: "nav.rates", icon: WalletCards, group: "admin", href: "/admin/rates" },
   {
+    id: "declared-hours",
+    labelKey: "nav.declaredHours",
+    icon: CalendarClock,
+    group: "admin",
+    href: "/admin/declared-hours",
+  },
+  {
     id: "payslips-admin",
     labelKey: "nav.payslips",
     icon: ReceiptText,
@@ -199,7 +207,20 @@ export function AppShell({
     ([
       { id: "my-rates", label: t("userMenu.myRates"), icon: BadgeDollarSign },
       { id: "settings", label: t("userMenu.profileAndSettings"), icon: Settings },
-      { id: "sign-out", label: t("userMenu.signOut"), icon: LogOut, tone: "danger" as const },
+      {
+        id: "sign-out",
+        label: t("userMenu.signOut"),
+        icon: LogOut,
+        tone: "danger" as const,
+        separated: true,
+        confirm: {
+          title: t("userMenu.signOutConfirm.title"),
+          description: t("userMenu.signOutConfirm.description"),
+          confirmLabel: t("userMenu.signOutConfirm.confirm"),
+          cancelLabel: t("userMenu.signOutConfirm.cancel"),
+          closeLabel: t("userMenu.signOutConfirm.close"),
+        },
+      },
     ] satisfies NonNullable<AppShellProps["userActions"]>);
 
   function handleLanguageChange(nextLanguage: string) {
@@ -431,9 +452,13 @@ export function AppShell({
                 >
                   {pageScope(current, role, t)}
                 </p>
-                <p className="truncate text-lg font-semibold leading-tight">
+                {/* The shell owns the page's only `h1`: every route renders through here, so a
+                    heading in the page body would either duplicate it or skip a level. Tailwind's
+                    preflight strips heading margins and font sizing, so this is a semantic change
+                    with no visual one. */}
+                <h1 className="truncate text-lg font-semibold leading-tight">
                   {pageTitle(current, t)}
-                </p>
+                </h1>
               </div>
             </div>
             <div className="flex items-center gap-3">

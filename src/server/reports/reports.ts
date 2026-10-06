@@ -5,7 +5,8 @@ import { formatDateOnly, normalizeDateOnly } from "@/src/server/time-tracking";
 export type ReportMode = "COST_FREE" | "INTERNAL";
 export type ReportView = "USER" | "PROJECT";
 export type ReportMemberProfile = "EMPLOYEE" | "CONTRACTOR";
-export type ReportTimeEntrySource = "GRID" | "FORM" | "TIMER";
+/** Every source a report can contain: `buildReportTimeEntryWhere` excludes only `DECLARED`. */
+export type ReportTimeEntrySource = "GRID" | "FORM" | "TIMER" | "MCP";
 export type ReportRateSource = "MEMBER_DEFAULT" | "PROJECT_OVERRIDE";
 
 export type ReportFiltersInput = {
@@ -13,9 +14,9 @@ export type ReportFiltersInput = {
   periodEnd: Date;
   mode?: ReportMode;
   view?: ReportView;
-  projectId?: string | null;
-  projectGroupId?: string | null;
-  memberId?: string | null;
+  projectIds?: readonly string[];
+  projectGroupIds?: readonly string[];
+  memberIds?: readonly string[];
 };
 
 export type NormalizedReportFilters = {
@@ -23,24 +24,30 @@ export type NormalizedReportFilters = {
   periodEnd: Date;
   mode: ReportMode;
   view: ReportView;
-  projectId: string | null;
-  projectGroupId: string | null;
-  memberId: string | null;
+  /** Empty means every project, the same way no filter at all does. */
+  projectIds: string[];
+  projectGroupIds: string[];
+  memberIds: string[];
 };
 
 export type ReportFilterLabels = {
-  projectName: string | null;
-  projectGroupName: string | null;
-  memberName: string | null;
+  /** In the order the ids were given, so a name lines up with the id beside it. */
+  projectNames: string[];
+  projectGroupNames: string[];
+  memberNames: string[];
 };
 
+/**
+ * Readonly because a snapshot is a finished record: it gets serialized to JSON for the Typst
+ * template and read back for the PDF payload, never edited in place.
+ */
 export type ReportSnapshotFilters = {
-  projectId: string | null;
-  projectName: string | null;
-  projectGroupId: string | null;
-  projectGroupName: string | null;
-  memberId: string | null;
-  memberName: string | null;
+  projectIds: readonly string[];
+  projectNames: readonly string[];
+  projectGroupIds: readonly string[];
+  projectGroupNames: readonly string[];
+  memberIds: readonly string[];
+  memberNames: readonly string[];
 };
 
 export type ReportSnapshotPeriod = {
@@ -141,6 +148,21 @@ export type ReportWarning =
       currencyCodes: string[];
     };
 
+/**
+ * What the report left out, stated as counts and never as amounts.
+ *
+ * §4 is explicit that excluding declared hours is the decision and hiding the exclusion is not part
+ * of it: a project with both tracked and declared members now reports *part* of its hours, and an
+ * admin reading "Atlas Platform — 94 h in September" has no way to know the number is incomplete.
+ * Counts rather than amounts so the line survives being read outside the company.
+ */
+export type ReportExclusions = {
+  declaredHours: {
+    memberCount: number;
+    projectCount: number;
+  };
+};
+
 export type ReportSnapshotBase = {
   schemaVersion: 1;
   generatedAt: string;
@@ -148,6 +170,7 @@ export type ReportSnapshotBase = {
   view: ReportView;
   period: ReportSnapshotPeriod;
   filters: ReportSnapshotFilters;
+  exclusions: ReportExclusions;
 };
 
 export type ReportCostFreeSnapshot = ReportSnapshotBase & {
@@ -231,11 +254,23 @@ type ReportDb = {
   timeEntry: {
     findMany(args: ReportTimeEntryFindManyArgs): Promise<ReportTimeEntryRecord[]>;
   };
+  /** Optional so an existing test stub keeps type-checking; see `countDeclaredExclusions`. */
+  monthlyHourDeclaration?: {
+    findMany(args: {
+      where: Record<string, unknown>;
+      select: { memberId: true; projectId: true };
+    }): Promise<Array<{ memberId: string; projectId: string }>>;
+  };
+  /**
+   * Two reads per model: the filter's own labels, now looked up by id list because the scope
+   * filters take several values, and the full option list the toolbar renders. Declared as
+   * overloads so each keeps its exact select and return shape.
+   */
   project: {
-    findUnique(args: {
-      where: { id: string };
-      select: { name: true };
-    }): Promise<{ name: string } | null>;
+    findMany(args: {
+      where: { id: { in: string[] } };
+      select: { id: true; name: true };
+    }): Promise<Array<{ id: string; name: string }>>;
     findMany(args: {
       where: { deletedAt: null };
       orderBy: Array<Record<string, "asc" | "desc">>;
@@ -243,10 +278,10 @@ type ReportDb = {
     }): Promise<Array<{ id: string; name: string; status: string }>>;
   };
   projectGroup: {
-    findUnique(args: {
-      where: { id: string };
-      select: { name: true };
-    }): Promise<{ name: string } | null>;
+    findMany(args: {
+      where: { id: { in: string[] } };
+      select: { id: true; name: true };
+    }): Promise<Array<{ id: string; name: string }>>;
     findMany(args: {
       where: { deletedAt: null };
       orderBy: Array<Record<string, "asc" | "desc">>;
@@ -254,10 +289,10 @@ type ReportDb = {
     }): Promise<Array<{ id: string; name: string; active: boolean }>>;
   };
   member: {
-    findUnique(args: {
-      where: { id: string };
-      select: MemberLabelSelect;
-    }): Promise<MemberLabelRecord | null>;
+    findMany(args: {
+      where: { id: { in: string[] } };
+      select: MemberLabelSelect & { id: true };
+    }): Promise<Array<MemberLabelRecord & { id: string }>>;
     findMany(args: {
       where: { deletedAt: null };
       orderBy: Array<Record<string, "asc" | "desc">>;
@@ -290,6 +325,8 @@ export type BuildReportSnapshotInput = {
   filters: NormalizedReportFilters;
   generatedAt: Date;
   filterLabels?: Partial<ReportFilterLabels>;
+  /** Omitted by a caller that has not counted; the snapshot then discloses nothing. */
+  exclusions?: ReportExclusions;
 };
 
 export class ReportSnapshotError extends Error {
@@ -309,13 +346,14 @@ export async function getTimeEntryReportSnapshot(
   const ratePeriodWhere = buildRatePeriodOverlapWhere(filters.periodStart, filters.periodEnd);
   const select = buildReportTimeEntrySelect(ratePeriodWhere);
 
-  const [entries, filterLabels] = await Promise.all([
+  const [entries, filterLabels, exclusions] = await Promise.all([
     db.timeEntry.findMany({
       where,
       orderBy: [{ localDate: "asc" }, { createdAt: "asc" }, { id: "asc" }],
       select,
     }),
     loadReportFilterLabels(db, filters),
+    countDeclaredExclusions(db, filters),
   ]);
 
   return buildReportSnapshot({
@@ -323,7 +361,63 @@ export async function getTimeEntryReportSnapshot(
     filters,
     generatedAt: deps.now?.() ?? new Date(),
     filterLabels,
+    exclusions,
   });
+}
+
+/**
+ * How many members and projects the report left out, for the disclosure line.
+ *
+ * It needs its own query because the exclusion has already happened by the time the report is
+ * assembled: `buildReportTimeEntryWhere` removes those rows, so the omitted set is simply gone from
+ * `entries`. Counted from `MonthlyHourDeclaration` rather than from declared *assignments*, because
+ * a declared assignment nobody declared against omitted nothing and saying otherwise would overstate
+ * what is missing.
+ *
+ * It runs inside the same `Promise.all` as the report's own read, so it costs a round-trip but no
+ * wall-clock — and it has to run unconditionally, since there is no way to know the set is empty
+ * without looking. The select is two id columns over an indexed period range.
+ *
+ * A caller passing a `db` stub without this model gets a disclosure of zero rather than a crash:
+ * the counts are additional information about a report, and a report is still a report without
+ * them.
+ */
+async function countDeclaredExclusions(
+  db: ReportDb,
+  filters: NormalizedReportFilters,
+): Promise<ReportExclusions> {
+  if (!db.monthlyHourDeclaration) return emptyReportExclusions;
+
+  const where: Record<string, unknown> = {
+    // A declaration covers a whole month, so it counts whenever its month overlaps the report
+    // period at all — a report over one week of September still omits September's declared hours.
+    periodStart: { lte: filters.periodEnd },
+    periodEnd: { gte: filters.periodStart },
+  };
+
+  if (filters.memberIds.length > 0) where.memberId = { in: filters.memberIds };
+  if (filters.projectIds.length > 0) where.projectId = { in: filters.projectIds };
+  if (filters.projectGroupIds.length > 0) {
+    where.project = {
+      groupProjects: {
+        some: {
+          projectGroupId: { in: filters.projectGroupIds },
+        },
+      },
+    };
+  }
+
+  const declarations = await db.monthlyHourDeclaration.findMany({
+    where,
+    select: { memberId: true, projectId: true },
+  });
+
+  return {
+    declaredHours: {
+      memberCount: new Set(declarations.map((row) => row.memberId)).size,
+      projectCount: new Set(declarations.map((row) => row.projectId)).size,
+    },
+  };
 }
 
 export async function listReportFilterOptions(
@@ -387,35 +481,51 @@ export function normalizeReportFilters(input: ReportFiltersInput): NormalizedRep
     periodEnd,
     mode: input.mode ?? "COST_FREE",
     view: input.view ?? "USER",
-    projectId: input.projectId ?? null,
-    projectGroupId: input.projectGroupId ?? null,
-    memberId: input.memberId ?? null,
+    projectIds: [...(input.projectIds ?? [])],
+    projectGroupIds: [...(input.projectGroupIds ?? [])],
+    memberIds: [...(input.memberIds ?? [])],
   };
 }
 
+/**
+ * The reporting chain's half of §4's boundary rule: declared hours belong to the timesheet and
+ * invoice chain, and not to reports.
+ *
+ * One `where`, one call site, so every report consumer inherits the exclusion at once — the admin
+ * report UI, the Typst export, and the read-only MCP endpoint when it is built, provided it uses
+ * this builder rather than a query of its own. Two consequences fall out for free: a declared
+ * figure can never be edited through the report line editor, which is correct because it is
+ * corrected at L4; and past exports are unaffected, because `ReportExport.renderSnapshot` freezes
+ * its own JSON.
+ *
+ * What this does **not** do is hide the exclusion. See {@link countDeclaredExclusions}.
+ */
 export function buildReportTimeEntryWhere(filters: NormalizedReportFilters) {
   const where: Record<string, unknown> = {
     deletedAt: null,
+    source: {
+      not: "DECLARED",
+    },
     localDate: {
       gte: filters.periodStart,
       lte: filters.periodEnd,
     },
   };
 
-  if (filters.memberId) {
-    where.memberId = filters.memberId;
+  if (filters.memberIds.length > 0) {
+    where.memberId = { in: filters.memberIds };
   }
 
   const projectFilter: Record<string, unknown> = {};
 
-  if (filters.projectId) {
-    where.projectId = filters.projectId;
+  if (filters.projectIds.length > 0) {
+    where.projectId = { in: filters.projectIds };
   }
 
-  if (filters.projectGroupId) {
+  if (filters.projectGroupIds.length > 0) {
     projectFilter.groupProjects = {
       some: {
-        projectGroupId: filters.projectGroupId,
+        projectGroupId: { in: filters.projectGroupIds },
       },
     };
   }
@@ -509,15 +619,24 @@ function buildSnapshotBase(input: BuildReportSnapshotInput): ReportSnapshotBase 
         .sort(),
     },
     filters: {
-      projectId: input.filters.projectId,
-      projectName: input.filterLabels?.projectName ?? null,
-      projectGroupId: input.filters.projectGroupId,
-      projectGroupName: input.filterLabels?.projectGroupName ?? null,
-      memberId: input.filters.memberId,
-      memberName: input.filterLabels?.memberName ?? null,
+      projectIds: input.filters.projectIds,
+      projectNames: input.filterLabels?.projectNames ?? [],
+      projectGroupIds: input.filters.projectGroupIds,
+      projectGroupNames: input.filterLabels?.projectGroupNames ?? [],
+      memberIds: input.filters.memberIds,
+      memberNames: input.filterLabels?.memberNames ?? [],
     },
+    exclusions: input.exclusions ?? emptyReportExclusions,
   };
 }
+
+/** No declared hours were excluded, which is the truth for every report before this feature. */
+const emptyReportExclusions: ReportExclusions = {
+  declaredHours: {
+    memberCount: 0,
+    projectCount: 0,
+  },
+};
 
 function mapCostFreeLine(entry: ReportTimeEntryRecord): ReportCostFreeLine {
   return mapBaseLine(entry);
@@ -724,37 +843,57 @@ async function loadReportFilterLabels(
   db: ReportDb,
   filters: NormalizedReportFilters,
 ): Promise<ReportFilterLabels> {
-  const [project, projectGroup, member] = await Promise.all([
-    filters.projectId
-      ? db.project.findUnique({
-          where: { id: filters.projectId },
-          select: { name: true },
+  const [projects, projectGroups, members] = await Promise.all([
+    filters.projectIds.length > 0
+      ? db.project.findMany({
+          where: { id: { in: filters.projectIds } },
+          select: { id: true, name: true },
         })
-      : Promise.resolve(null),
-    filters.projectGroupId
-      ? db.projectGroup.findUnique({
-          where: { id: filters.projectGroupId },
-          select: { name: true },
+      : Promise.resolve([]),
+    filters.projectGroupIds.length > 0
+      ? db.projectGroup.findMany({
+          where: { id: { in: filters.projectGroupIds } },
+          select: { id: true, name: true },
         })
-      : Promise.resolve(null),
-    filters.memberId
-      ? db.member.findUnique({
-          where: { id: filters.memberId },
+      : Promise.resolve([]),
+    filters.memberIds.length > 0
+      ? db.member.findMany({
+          where: { id: { in: filters.memberIds } },
           select: {
+            id: true,
             email: true,
             firstName: true,
             lastName: true,
             displayName: true,
           },
         })
-      : Promise.resolve(null),
+      : Promise.resolve([]),
   ]);
 
   return {
-    projectName: project?.name ?? null,
-    projectGroupName: projectGroup?.name ?? null,
-    memberName: member ? getMemberName(member) : null,
+    projectNames: orderedNames(filters.projectIds, projects, (project) => project.name),
+    projectGroupNames: orderedNames(filters.projectGroupIds, projectGroups, (group) => group.name),
+    memberNames: orderedNames(filters.memberIds, members, getMemberName),
   };
+}
+
+/**
+ * Names in the order the filter listed the ids rather than in whatever order the database
+ * returned them, so a report header reads the same as the toolbar above it. An id with no
+ * row — a project deleted since the link was made — contributes no name rather than a gap.
+ */
+function orderedNames<Row extends { id: string }>(
+  ids: string[],
+  rows: Row[],
+  toName: (row: Row) => string,
+) {
+  const byId = new Map(rows.map((row) => [row.id, row]));
+
+  return ids.flatMap((id) => {
+    const row = byId.get(id);
+
+    return row ? [toName(row)] : [];
+  });
 }
 
 function buildReportTimeEntrySelect(where: ReturnType<typeof buildRatePeriodOverlapWhere>) {

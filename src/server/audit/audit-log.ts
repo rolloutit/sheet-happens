@@ -1,3 +1,5 @@
+import { firstSearchParam, listSearchParam, uniqueValues } from "@/src/lib/search-params";
+import { anyOf } from "@/src/server/db/any-of";
 import type { Prisma } from "@/src/server/db/generated/client";
 import { prisma } from "@/src/server/db/client";
 
@@ -13,9 +15,11 @@ export type AuditLogSearchParams = Record<string, string | string[] | undefined>
 
 export type AuditLogFilters = {
   query: string;
-  action: string;
-  targetType: string;
-  actorMemberId: string;
+  /** Empty means every event, the same way no filter at all does. */
+  actions: string[];
+  targetTypes: string[];
+  /** May contain the `system` pseudo-actor alongside real member ids. */
+  actorMemberIds: string[];
   fromDate: string;
   toDate: string;
   page: number;
@@ -204,15 +208,16 @@ export async function listAuditLogsForAdmin(
 
 export function normalizeAuditLogFilters(searchParams: AuditLogSearchParams = {}): AuditLogFilters {
   return {
-    query: firstString(searchParams.q).trim().slice(0, 120),
-    action: firstString(searchParams.action).trim().slice(0, 120),
-    targetType: firstString(searchParams.targetType).trim().slice(0, 120),
-    actorMemberId: firstString(searchParams.actor).trim().slice(0, 120),
-    fromDate: normalizeDateInput(firstString(searchParams.from)),
-    toDate: normalizeDateInput(firstString(searchParams.to)),
-    page: parsePositiveInteger(firstString(searchParams.page), DEFAULT_PAGE),
+    query: firstSearchParam(searchParams.q).trim().slice(0, 120),
+    // Deduped after capping: two over-long values can cap to the same one.
+    actions: uniqueValues(listSearchParam(searchParams.action).map(capValueLength)),
+    targetTypes: uniqueValues(listSearchParam(searchParams.targetType).map(capValueLength)),
+    actorMemberIds: uniqueValues(listSearchParam(searchParams.actor).map(capValueLength)),
+    fromDate: normalizeDateInput(firstSearchParam(searchParams.from)),
+    toDate: normalizeDateInput(firstSearchParam(searchParams.to)),
+    page: parsePositiveInteger(firstSearchParam(searchParams.page), DEFAULT_PAGE),
     pageSize: Math.min(
-      parsePositiveInteger(firstString(searchParams.pageSize), DEFAULT_PAGE_SIZE),
+      parsePositiveInteger(firstSearchParam(searchParams.pageSize), DEFAULT_PAGE_SIZE),
       MAX_PAGE_SIZE,
     ),
   };
@@ -250,27 +255,21 @@ export function buildAuditLogWhere(filters: AuditLogFilters): Prisma.AuditLogWhe
     });
   }
 
-  if (filters.action) {
+  if (filters.actions.length > 0) {
     and.push({
-      action: filters.action,
+      action: { in: filters.actions },
     });
   }
 
-  if (filters.targetType) {
+  if (filters.targetTypes.length > 0) {
     and.push({
-      targetType: filters.targetType,
+      targetType: { in: filters.targetTypes },
     });
   }
 
-  if (filters.actorMemberId === SYSTEM_ACTOR_VALUE) {
-    and.push({
-      actorMemberId: null,
-    });
-  } else if (filters.actorMemberId) {
-    and.push({
-      actorMemberId: filters.actorMemberId,
-    });
-  }
+  const actorClause = buildActorClause(filters.actorMemberIds);
+
+  if (actorClause) and.push(actorClause);
 
   const createdAt: Prisma.DateTimeFilter<"AuditLog"> = {};
   const fromDate = parseDateBoundary(filters.fromDate, "start");
@@ -288,6 +287,24 @@ export function buildAuditLogWhere(filters: AuditLogFilters): Prisma.AuditLogWhe
   if (and.length === 0) return {};
   if (and.length === 1) return and[0];
   return { AND: and };
+}
+
+/**
+ * `system` is a pseudo-actor standing for rows no member owns, so it cannot ride along in
+ * the same `in` as real member ids — picking it together with a person means "either".
+ */
+function buildActorClause(actorMemberIds: string[]) {
+  const memberIds = actorMemberIds.filter((actorMemberId) => actorMemberId !== SYSTEM_ACTOR_VALUE);
+  const clauses: Prisma.AuditLogWhereInput[] = [];
+
+  if (memberIds.length < actorMemberIds.length) clauses.push({ actorMemberId: null });
+  if (memberIds.length > 0) clauses.push({ actorMemberId: { in: memberIds } });
+
+  return anyOf(clauses);
+}
+
+function capValueLength(value: string) {
+  return value.slice(0, 120);
 }
 
 export function redactAuditPayload(value: Prisma.JsonValue | null): unknown {
@@ -341,11 +358,6 @@ function formatAuditDate(date: Date, timeZone?: string) {
     timeStyle: "medium",
     timeZone,
   }).format(date);
-}
-
-function firstString(value: string | string[] | undefined) {
-  if (Array.isArray(value)) return value[0] ?? "";
-  return value ?? "";
 }
 
 function normalizeDateInput(value: string) {

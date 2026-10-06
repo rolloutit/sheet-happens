@@ -12,7 +12,16 @@ export const timesheetStatuses = [
 
 export type TimesheetStatus = (typeof timesheetStatuses)[number];
 
-export type StatusPillTone = "muted" | "info" | "success" | "warning" | "danger";
+export type StatusPillTone =
+  | "muted"
+  | "info"
+  | "success"
+  | "warning"
+  | "danger"
+  | "pending"
+  | "verified"
+  | "settled"
+  | "blocked";
 
 export type StatusPillDensity = "compact" | "comfortable";
 

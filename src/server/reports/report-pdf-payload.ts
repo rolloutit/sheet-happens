@@ -6,6 +6,7 @@ import {
   formatDateTime,
   formatDecimalHours,
   formatHoursWithUnit,
+  formatList,
   formatMoney,
   formatPeriodRange,
   formatRate,
@@ -190,6 +191,12 @@ export type BuildReportPdfPayloadInput = {
   title: string;
   snapshot: ReportSnapshot;
   locale: string;
+  /**
+   * The zone `generatedAt` is rendered in — the admin's own, and already what `reportExport`
+   * records for the export. Required rather than optional: without it the stamp silently followed
+   * the server's zone, which in production is UTC and on a developer's machine is not.
+   */
+  timezone: string;
   generatedAt: Date;
   durationDisplayFormat: DurationDisplayFormat;
   t: ReportPdfTranslator;
@@ -213,10 +220,11 @@ export function buildReportPdfPayload(input: BuildReportPdfPayloadInput): Report
       : (minutes: number) => formatHoursWithUnit(minutes, locale, input.durationDisplayFormat);
 
   // A single-project or single-member export states that dimension once in the header instead of
-  // repeating it down a column and counting it as "1" in the summary band.
+  // repeating it down a column and counting it as "1" in the summary band. Two chosen projects
+  // still need the column: the header names the scope, the column says which line is which.
   const scope = {
-    singleProject: snapshot.filters.projectId !== null,
-    singleMember: snapshot.filters.memberId !== null,
+    singleProject: snapshot.filters.projectIds.length === 1,
+    singleMember: snapshot.filters.memberIds.length === 1,
   };
 
   const base = {
@@ -225,8 +233,14 @@ export function buildReportPdfPayload(input: BuildReportPdfPayloadInput): Report
     title,
     labels,
     header: {
-      generatedAt: formatDateTime(input.generatedAt, locale),
-      facets: buildHeaderFacets(snapshot, periodLabel, t),
+      // The only instant in the whole document — every other date it prints is a calendar date
+      // that was already decided in the member's own zone. It carries its zone so a reader cannot
+      // take it for their own clock.
+      generatedAt: formatDateTime(input.generatedAt, locale, {
+        timeZone: input.timezone,
+        timeZoneName: "shortOffset",
+      }),
+      facets: buildHeaderFacets(snapshot, periodLabel, locale, t),
     },
     summary: buildSummary(snapshot, locale, formatHours, scope, t),
     detailColumns: buildDetailColumns(snapshot, scope),
@@ -293,6 +307,7 @@ function resolveReportPdfLabels(t: ReportPdfTranslator): ReportPdfLabels {
 function buildHeaderFacets(
   snapshot: ReportSnapshot,
   periodLabel: string,
+  locale: string,
   t: ReportPdfTranslator,
 ): ReportPdfFacet[] {
   const facets = [
@@ -304,24 +319,24 @@ function buildHeaderFacets(
     { label: t("stats.period"), value: periodLabel, color: null },
     {
       label: t("filters.project"),
-      value: snapshot.filters.projectName ?? t("filters.projectAll"),
+      value: formatScope(snapshot.filters.projectNames, locale, t) ?? t("filters.projectAll"),
       // Only the project facet is dotted: colour is how the app identifies a project everywhere
       // else, whereas a member's initials next to their own name would say nothing new.
       color: resolveFilteredProjectColor(snapshot),
     },
   ];
 
-  if (snapshot.filters.projectGroupName) {
+  if (snapshot.filters.projectGroupNames.length > 0) {
     facets.push({
       label: t("filters.group"),
-      value: snapshot.filters.projectGroupName,
+      value: formatScope(snapshot.filters.projectGroupNames, locale, t) ?? "",
       color: null,
     });
   }
 
   facets.push({
     label: t("filters.member"),
-    value: snapshot.filters.memberName ?? t("filters.memberAll"),
+    value: formatScope(snapshot.filters.memberNames, locale, t) ?? t("filters.memberAll"),
     color: null,
   });
 
@@ -329,11 +344,34 @@ function buildHeaderFacets(
 }
 
 /**
- * The snapshot filters name the project but not its colour, so it comes off a line. Every line
- * belongs to that one project once the filter is set, so any of them will do.
+ * The most names a facet spells out before the rest become a count.
+ *
+ * `report.typ` lays the header facets out as equal fractions of the page width, so a facet
+ * is roughly one narrow column. Three names fit; eight would wrap to several lines and grow
+ * the header block on every page of a financial document.
+ */
+const maxNamedScopeValues = 3;
+
+/** One facet's worth of chosen filter values, or `null` when nothing is filtered. */
+function formatScope(names: readonly string[], locale: string, t: ReportPdfTranslator) {
+  if (names.length === 0) return null;
+  if (names.length <= maxNamedScopeValues) return formatList(names, locale);
+
+  return formatList(
+    [
+      ...names.slice(0, maxNamedScopeValues),
+      t("filters.moreValues", { count: names.length - maxNamedScopeValues }),
+    ],
+    locale,
+  );
+}
+
+/**
+ * The snapshot filters name the project but not its colour, so it comes off a line. Only one
+ * chosen project earns a dot: with two, any line's colour would speak for the other as well.
  */
 function resolveFilteredProjectColor(snapshot: ReportSnapshot) {
-  if (snapshot.filters.projectId === null) return null;
+  if (snapshot.filters.projectIds.length !== 1) return null;
 
   return sanitizeColor(snapshot.lines[0]?.project.color ?? null);
 }
@@ -399,6 +437,24 @@ function buildFootnotes(snapshot: ReportSnapshot, t: ReportPdfTranslator) {
       timezones: snapshot.period.timezones.join(", ") || t("warnings.noTimezone"),
     }),
   ];
+
+  /*
+   * §4's disclosure, in the document rather than only on the screen it was exported from.
+   *
+   * A footnote and not a warning: nothing went wrong, and a reader outside the company has to be
+   * able to read it as a statement of scope. Counts only, never amounts. The sentence is built here
+   * because the Typst template reads a display-ready payload and contains no locale logic at all.
+   */
+  const declared = snapshot.exclusions?.declaredHours;
+
+  if (declared && (declared.memberCount > 0 || declared.projectCount > 0)) {
+    footnotes.push(
+      t("pdf.declaredHoursNote", {
+        members: declared.memberCount,
+        projects: declared.projectCount,
+      }),
+    );
+  }
 
   if (snapshot.mode === "INTERNAL" && snapshot.summary.missingRateLineCount > 0) {
     footnotes.push(t("pdf.missingRateNote", { marker: MISSING_VALUE }));
