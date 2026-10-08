@@ -61,8 +61,12 @@ export async function seedLeave(client, { memberIds, objectStorage, today = new 
 
   for (const leave of RELATIVE_LEAVES) {
     const memberId = memberIds.get(leave.memberEmail);
-    const startDate = toDateOnly(addDays(monthStart, leave.from));
-    const endDate = toDateOnly(addDays(monthStart, leave.to));
+    // Offsets that land on a weekend move to the following Monday: the app refuses a leave with
+    // no workday in it, and the seed should not hold anything the app could not have stored.
+    const start = nextWorkday(addDays(monthStart, leave.from));
+    const end = nextWorkday(addDays(monthStart, leave.to));
+    const startDate = toDateOnly(start);
+    const endDate = toDateOnly(end < start ? start : end);
     const created = await ensureLeave(client, {
       memberId,
       type: leave.type,
@@ -226,6 +230,11 @@ function easterSunday(year) {
 
 function addDays(date, days) {
   return new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate() + days));
+}
+
+function nextWorkday(date) {
+  const weekday = date.getUTCDay();
+  return weekday === 6 ? addDays(date, 2) : weekday === 0 ? addDays(date, 1) : date;
 }
 
 function toDateOnly(date) {
