@@ -1,0 +1,16 @@
+- region /Leave calendar, March \d+/:
+  - list:
+    - listitem "Week 9": /Monday, Feb \d+, \d+ Tuesday, Feb \d+, \d+ Wednesday, Feb \d+, \d+ Thursday, Feb \d+, \d+ Friday, Feb \d+, \d+ Saturday, Mar 1, \d+ Sunday, Mar 2, \d+/
+    - listitem /Week \d+/: /Monday, Mar 3, \d+ Tuesday, Mar 4, \d+ Wednesday, Mar 5, \d+ Thursday, Mar 6, \d+ Friday, Mar 7, \d+ Saturday, Mar 8, \d+ Sunday, Mar 9, \d+/
+    - listitem /Week \d+/:
+      - text: "/Monday, Mar \\d+, \\d+ Tuesday, Mar \\d+, \\d+ Wednesday, Mar \\d+, \\d+ Thursday, Mar \\d+, \\d+ Friday, Mar \\d+, \\d+ Saturday, Mar \\d+, \\d+ Public holiday: \\d+ Revolution Memorial Day Sunday, Mar \\d+, \\d+/"
+      - button /You, Vacation, Mar \d+ – \d+, \d+, 3 workdays/: "You: Vacation"
+      - button /Dóra Kovács, Away, Mar \d+, \d+, Morning, 0\.5 workdays/
+    - listitem /Week \d+/: /Monday, Mar \d+, \d+ Tuesday, Mar \d+, \d+ Wednesday, Mar \d+, \d+ Thursday, Mar \d+, \d+ Friday, Mar \d+, \d+ Saturday, Mar \d+, \d+ Sunday, Mar \d+, \d+/
+    - listitem /Week \d+/: /Monday, Mar \d+, \d+ Tuesday, Mar \d+, \d+ Wednesday, Mar \d+, \d+ Thursday, Mar \d+, \d+ Friday, Mar \d+, \d+ Saturday, Mar \d+, \d+ Sunday, Mar \d+, \d+/
+    - listitem /Week \d+/: /Monday, Mar \d+, \d+ Tuesday, Apr 1, \d+ Wednesday, Apr 2, \d+ Thursday, Apr 3, \d+ Friday, Apr 4, \d+ Saturday, Apr 5, \d+ Sunday, Apr 6, \d+/
+  - list:
+    - listitem: Vacation
+    - listitem: Away
+    - listitem: Public holiday
+    - listitem: Morning Afternoon
