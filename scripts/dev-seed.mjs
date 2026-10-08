@@ -14,6 +14,7 @@
 import { createHash } from "node:crypto";
 
 import { seedTimesheetWorkflows } from "./dev-seed-timesheets.mjs";
+import { seedLeave } from "./dev-seed-leave.mjs";
 
 const RATE_HISTORY_START = "2024-01-01";
 const ASSIGNMENT_HISTORY_START = "2024-01-01";
@@ -492,6 +493,7 @@ const NOTIFICATION_RULE_TYPES = [
   "timesheet_paid",
   "payslip_available",
   "time_entry_admin_modified",
+  "leave_month_end_reminder",
 ];
 
 export async function seedDevDatabase(client, { objectStorage }) {
@@ -606,6 +608,8 @@ export async function seedDevDatabase(client, { objectStorage }) {
     objectStorage,
   });
 
+  const leave = await seedLeave(client, { memberIds, objectStorage });
+
   return {
     members: MEMBERS.length,
     projects: PROJECTS.length,
@@ -618,6 +622,8 @@ export async function seedDevDatabase(client, { objectStorage }) {
     inactiveWeeks: inactiveWeekCount,
     timesheets,
     timesheetStatuses: await countTimesheetStatuses(client),
+    leaves: leave.leaves,
+    publicHolidays: leave.holidays,
   };
 }
 
