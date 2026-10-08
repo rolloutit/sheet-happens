@@ -35,12 +35,14 @@ type Story = StoryObj<typeof meta>;
  */
 export const EmployeeView: Story = {
   play: async ({ args, canvas, userEvent }) => {
-    const own = canvas.getByRole("button", { name: /^You, vacation, 2026-10-14/ });
-    await userEvent.click(own);
+    // The leave crosses a weekend, so it is two ribbons with one name; either one selects it.
+    const [own] = canvas.getAllByRole("button", { name: /^You, vacation, 2026-10-14/ });
+    await userEvent.click(own!);
     await expect(args.onSelectLeave).toHaveBeenCalledWith(
       expect.objectContaining({ id: "own-vacation" }),
     );
-    await expect(canvas.getByText("National Day")).toBeVisible();
+    // The grid comes before the narrow-screen agenda, which repeats the holiday name.
+    await expect(canvas.getAllByText("National Day")[0]).toBeVisible();
   },
 };
 
