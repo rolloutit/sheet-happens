@@ -467,7 +467,7 @@ const manualTopics: Record<HelpLocale, ManualTopic[]> = {
         - Open **Payslips** in the Admin navigation.
         - Select an employee profile and the payroll month.
         - Upload a PDF no larger than 10 MB.
-        - The month overview lists active employees still missing a document; click a name to prefill an upload.
+        - The month overview lists active employees still missing a document, by default for the previous (payroll) month; click a name to prefill an upload.
         - One current payslip exists for each employee and month.
 
         ### Replace or delete
@@ -1150,7 +1150,7 @@ const manualTopics: Record<HelpLocale, ManualTopic[]> = {
         - Nyisd meg az Admin navigáció **Bérjegyzékek** oldalát.
         - Válassz alkalmazotti profilt és payroll hónapot.
         - Legfeljebb 10 MB méretű PDF-et tölts fel.
-        - A havi áttekintés azokat az aktív alkalmazottakat mutatja, akiknek még hiányzik a dokumentum; a névre kattintva előre kitöltődik a feltöltés.
+        - A havi áttekintés azokat az aktív alkalmazottakat mutatja, akiknek még hiányzik a dokumentum, alapértelmezetten az előző (bérszámfejtési) hónapra; a névre kattintva előre kitöltődik a feltöltés.
         - Egy alkalmazotthoz és hónaphoz egy aktuális bérjegyzék tartozik.
 
         ### Csere és törlés
