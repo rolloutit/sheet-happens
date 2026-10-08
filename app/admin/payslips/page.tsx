@@ -2,7 +2,7 @@ import { getLocale, getTranslations } from "next-intl/server";
 
 import { AppShell } from "@/src/components/layout/AppShell";
 import { SectionHead } from "@/src/components/ui/SectionHead";
-import { getPayslipMonthOptions } from "@/src/lib/payslip-month-options";
+import { getDefaultPayslipMonth, getPayslipMonthOptions } from "@/src/lib/payslip-month-options";
 import {
   mapMemberToShellProfile,
   mapMemberToShellUser,
@@ -29,9 +29,10 @@ export default async function AdminPayslipsPage({ searchParams }: AdminPayslipsP
     getLocale(),
     searchParams ?? Promise.resolve({}),
   ]);
-  const months = getPayslipMonthOptions(locale);
+  const now = new Date();
+  const months = getPayslipMonthOptions(locale, now, admin.timezone);
   const result = await listPayslipsForAdmin(filters);
-  const overviewMonth = result.filters.month ?? months[0].value;
+  const overviewMonth = result.filters.month ?? getDefaultPayslipMonth(now, admin.timezone);
   const overview = await getPayslipMonthOverview(new Date(`${overviewMonth}-01T00:00:00.000Z`));
   const monthFormatter = new Intl.DateTimeFormat(locale, { month: "long", year: "numeric" });
   const timestampFormatter = new Intl.DateTimeFormat(locale, {

@@ -1,12 +1,15 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  getDefaultPayslipMonth,
   getPayslipMonthOptions,
   getPayslipYearPage,
   getPayslipMonthWindow,
 } from "./payslip-month-options";
 
 const NOW = new Date("2026-08-23T12:00:00.000Z");
+// 00:30 on October 1 in Budapest, still September 30 in UTC.
+const BUDAPEST_NEW_MONTH = new Date("2026-09-30T22:30:00.000Z");
 
 describe("getPayslipMonthOptions", () => {
   it.each([
@@ -29,6 +32,15 @@ describe("getPayslipMonthOptions", () => {
     expect(months).toHaveLength(24);
     expect(months[7]).toMatchObject({ value: "2026-01", yearLabel: "2026" });
     expect(months[8]).toMatchObject({ value: "2025-12", yearLabel: "2025" });
+  });
+
+  it("starts from the current month in the given time zone", () => {
+    expect(getPayslipMonthOptions("en", BUDAPEST_NEW_MONTH, "Europe/Budapest")[0]).toMatchObject({
+      value: "2026-10",
+    });
+    expect(getPayslipMonthOptions("en", BUDAPEST_NEW_MONTH)[0]).toMatchObject({
+      value: "2026-09",
+    });
   });
 
   it("returns the full current calendar year", () => {
@@ -57,5 +69,20 @@ describe("getPayslipMonthOptions", () => {
     ["2027-01", -1],
   ])("places %s on page %i", (targetMonth, expectedPage) => {
     expect(getPayslipYearPage("2026-08", targetMonth)).toBe(expectedPage);
+  });
+});
+
+describe("getDefaultPayslipMonth", () => {
+  it.each([
+    { now: "2026-10-07T10:00:00.000Z", expected: "2026-09" },
+    { now: "2026-10-31T10:00:00.000Z", expected: "2026-09" },
+    { now: "2027-01-15T10:00:00.000Z", expected: "2026-12" },
+  ])("defaults to the month before $now", ({ now, expected }) => {
+    expect(getDefaultPayslipMonth(new Date(now))).toBe(expected);
+  });
+
+  it("reads the current month in the given time zone", () => {
+    expect(getDefaultPayslipMonth(BUDAPEST_NEW_MONTH, "Europe/Budapest")).toBe("2026-09");
+    expect(getDefaultPayslipMonth(BUDAPEST_NEW_MONTH)).toBe("2026-08");
   });
 });

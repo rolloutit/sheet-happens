@@ -3232,7 +3232,7 @@
       "overview": {
         "title": "Havi áttekintés",
         "posted": "{posted} / {expected} feltöltve",
-        "complete": "Minden aktív alkalmazotthoz elérhető a havi bérjegyzék.",
+        "complete": "Minden aktív alkalmazotthoz elérhető a kiválasztott hónap bérjegyzéke.",
         "missing": "Hiányzik",
         "uploadFor": "Bérjegyzék feltöltése: {name}"
       },
