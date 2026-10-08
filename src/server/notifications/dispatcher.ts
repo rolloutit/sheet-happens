@@ -9,12 +9,21 @@ import {
   processQueuedNotificationEmails,
   type NotificationRecipient,
 } from "./delivery";
-import { getInvoiceReminderOccurrence, getWeeklyOccurrence } from "./schedule";
+import { refreshStalePublicHolidays } from "@/src/server/leave/holidays";
+import {
+  getInvoiceReminderOccurrence,
+  getMonthEndLeaveReminderOccurrence,
+  getWeeklyOccurrence,
+  LEAVE_REMINDER_TIME,
+} from "./schedule";
 
 const JOB_NAME = "notification_dispatch";
 const JOB_HEARTBEAT_KEY = `${JOB_NAME}:heartbeat`;
 const CURSOR_OVERLAP_MS = 60_000;
 const ADVISORY_LOCK_ID = "6001134311443833413";
+/** The holiday cache is checked at most this often; the API is only called when a year is stale. */
+const HOLIDAY_REFRESH_INTERVAL_MS = 6 * 60 * 60 * 1000;
+let lastHolidayRefreshAt = 0;
 
 type RuleMap = Map<NotificationType, NotificationRuleValue>;
 
@@ -61,14 +70,16 @@ async function runLockedNotificationDispatcher(now: Date) {
         : (storedConfiguration?.createdAt ?? now);
     const rules = new Map(configuration.rules.map((rule) => [rule.type, rule])) as RuleMap;
 
-    const [workflowCount, weeklyCount, invoiceCount] = await Promise.all([
+    const [workflowCount, weeklyCount, invoiceCount, leaveCount] = await Promise.all([
       projectWorkflowNotifications({ since, now, rules }),
       projectWeeklyReminders({ now, configuration, rules }),
       projectInvoiceReminders({ now, configuration, rules }),
+      projectLeaveReminders({ now, configuration, rules }),
     ]);
     const deliveries = await processQueuedNotificationEmails({ now });
+    refreshHolidaysInBackground(now);
 
-    const result = { workflowCount, weeklyCount, invoiceCount, deliveries };
+    const result = { workflowCount, weeklyCount, invoiceCount, leaveCount, deliveries };
     await prisma.jobRun.update({
       where: { id: job.id },
       data: {
@@ -298,6 +309,54 @@ async function projectWeeklyReminders(input: {
   }
 
   return missingByMember.size;
+}
+
+/**
+ * Every active employee, every month, whatever they recorded: the reminder asks them to check,
+ * and an employee with nothing to record is exactly who might have forgotten.
+ */
+async function projectLeaveReminders(input: {
+  now: Date;
+  configuration: Awaited<ReturnType<typeof getNotificationConfiguration>>;
+  rules: RuleMap;
+}) {
+  const rule = input.rules.get("LEAVE_MONTH_END_REMINDER");
+  if (!rule || (!rule.emailEnabled && !rule.inAppEnabled)) return 0;
+  const occurrence = getMonthEndLeaveReminderOccurrence({
+    now: input.now,
+    timezone: input.configuration.companyTimezone,
+    time: LEAVE_REMINDER_TIME,
+  });
+  if (!occurrence) return 0;
+
+  const employees = await prisma.member.findMany({
+    where: { currentProfile: "EMPLOYEE", status: "ACTIVE", deletedAt: null },
+    select: { id: true, email: true, locale: true },
+  });
+
+  for (const employee of employees) {
+    await enqueueNotification({
+      recipient: toRecipient(employee),
+      type: "LEAVE_MONTH_END_REMINDER",
+      idempotencyKey: `${occurrence.key}:${employee.id}`,
+      actionUrl: "/leave",
+      metadata: { periodStart: `${occurrence.month}-01` },
+      emailEnabled: rule.emailEnabled,
+      inAppEnabled: rule.inAppEnabled,
+      createdAt: input.now,
+    });
+  }
+
+  return employees.length;
+}
+
+/** Fire and forget: a slow or failing holiday API must never hold up notification delivery. */
+function refreshHolidaysInBackground(now: Date) {
+  if (now.getTime() - lastHolidayRefreshAt < HOLIDAY_REFRESH_INTERVAL_MS) return;
+  lastHolidayRefreshAt = now.getTime();
+  void refreshStalePublicHolidays({ now }).catch((error: unknown) => {
+    console.error("[holidays] Background refresh failed.", error);
+  });
 }
 
 async function projectInvoiceReminders(input: {

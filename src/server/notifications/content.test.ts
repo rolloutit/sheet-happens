@@ -22,4 +22,18 @@ describe("notification content", () => {
     );
     expect(metadata).toEqual({ periodStart: "2026-08-01", reason: "Incorrect total" });
   });
+
+  it("names the month in the leave reminder subject and keeps the deadline in the body", () => {
+    const hu = buildNotificationContent("LEAVE_MONTH_END_REMINDER", "hu", {
+      periodStart: "2026-10-01",
+    });
+    const en = buildNotificationContent("LEAVE_MONTH_END_REMINDER", "en", {
+      periodStart: "2026-10-01",
+    });
+
+    expect(hu.emailSubject).toContain("október");
+    expect(hu.body).toContain("holnap 12:00-ig");
+    expect(en.emailSubject).toContain("October");
+    expect(en.body).toContain("12:00 tomorrow");
+  });
 });

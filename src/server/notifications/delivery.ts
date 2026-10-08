@@ -103,7 +103,7 @@ export async function processQueuedNotificationEmails(input: { now?: Date; limit
         to: delivery.email,
         subject: content.emailSubject,
         text: `${content.body}${actionUrl ? `\n\n${actionUrl}` : ""}`,
-        html: `<p>${escapeHtml(content.body)}</p>${actionUrl ? `<p><a href="${escapeHtml(actionUrl)}">${locale === "hu" ? "Megnyitás" : "Open Sheet Happens"}</a></p>` : ""}`,
+        html: `<p>${escapeHtml(content.body).replaceAll("\n", "<br>")}</p>${actionUrl ? `<p><a href="${escapeHtml(actionUrl)}">${locale === "hu" ? "Megnyitás" : "Open Sheet Happens"}</a></p>` : ""}`,
       });
       await prisma.notificationDelivery.update({
         where: { id: delivery.id },

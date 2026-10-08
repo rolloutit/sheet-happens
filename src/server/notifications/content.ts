@@ -140,6 +140,31 @@ export function buildNotificationContent(
           ? `An admin changed your time entry. Reason: ${reason}`
           : "An admin changed your time entry.",
       );
+    case "LEAVE_MONTH_END_REMINDER":
+      // Lines rather than one paragraph: the email keeps them, the in-app list reads them as one.
+      return hu
+        ? {
+            title: "Közeleg a hónap vége: nézd át a szabadságaidat",
+            body: [
+              "Szia! 👋",
+              "Közeleg a hónap vége, ezért kérlek, nézd meg, hogy az e havi szabikat, betegszabikat (ha volt) beírtad-e. 🗓️",
+              "Ha még szabadságon vagy, vagy leszel a hónapban, és nem írtad be, akkor kérlek, holnap 12:00-ig tedd meg. 🙂",
+              "Ha voltál táppénzen, és még nem küldted el a papírt, azt is küldd el addig.",
+              "✨ Köszönöm! ✨",
+            ].join("\n"),
+            emailSubject: `Sheet Happens: szabadságok ellenőrzése (${month})`,
+          }
+        : {
+            title: "Month end is coming: check your leave",
+            body: [
+              "Hi! 👋",
+              "The month is nearly over, so please check that this month's vacation and sick leave (if any) are recorded. 🗓️",
+              "If you are on leave now, or will be later this month, and have not recorded it yet, please do so by 12:00 tomorrow. 🙂",
+              "If you were on sick pay and have not sent the paperwork yet, please send that by then too.",
+              "✨ Thank you! ✨",
+            ].join("\n"),
+            emailSubject: `Sheet Happens: check your leave (${month})`,
+          };
     default:
       return hu
         ? {

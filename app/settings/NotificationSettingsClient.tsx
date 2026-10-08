@@ -1,6 +1,6 @@
 "use client";
 
-import { Bell, Clock3, Info, Mail, MonitorDot, Save, Users } from "lucide-react";
+import { Bell, Clock3, Info, Mail, MonitorDot, Palmtree, Save, Users } from "lucide-react";
 import { useActionState } from "react";
 import { useTranslations } from "next-intl";
 
@@ -141,6 +141,18 @@ export function NotificationSettingsClient({
           <span className="text-xs font-normal text-muted-foreground">{t("hoursUnit")}</span>
         </label>
         <p className="sm:col-span-2 text-xs text-muted-foreground">{t("invoice.exactHours")}</p>
+      </ScheduleRule>
+
+      <ScheduleRule
+        icon={Palmtree}
+        title={t("leave.title")}
+        description={t("leave.description")}
+        type="LEAVE_MONTH_END_REMINDER"
+        emailEnabled={rules.get("LEAVE_MONTH_END_REMINDER")?.emailEnabled ?? true}
+        inAppEnabled={rules.get("LEAVE_MONTH_END_REMINDER")?.inAppEnabled ?? true}
+        t={t}
+      >
+        <p className="sm:col-span-2 text-xs text-muted-foreground">{t("leave.timing")}</p>
       </ScheduleRule>
 
       <section className="grid gap-3">
