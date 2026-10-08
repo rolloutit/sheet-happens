@@ -131,8 +131,8 @@ function WeekRow({
                     ? "bg-accent font-semibold text-accent-foreground"
                     : day.holiday
                       ? "font-semibold text-destructive-bright"
-                      : day.weekend
-                        ? "text-subtle-foreground"
+                      : day.weekend || !day.inMonth
+                        ? "text-muted-foreground"
                         : "text-foreground",
                 )}
               >

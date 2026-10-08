@@ -51,9 +51,11 @@ export const leaveDayVariants = cva("border-border", {
       weekend: "bg-surface-inset",
       holiday: "bg-[color-mix(in_srgb,var(--destructive-soft)_55%,var(--card))]",
     },
+    // Days of the neighbouring months are told apart by their muted number (set where the number
+    // is drawn), not by opacity: fading the whole cell took the number below AA contrast.
     inMonth: {
       true: "",
-      false: "opacity-55",
+      false: "",
     },
   },
   defaultVariants: {

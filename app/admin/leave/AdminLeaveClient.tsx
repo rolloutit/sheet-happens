@@ -3,7 +3,7 @@
 import { CalendarDays, CircleCheck, List, Paperclip, Pencil, Sunrise, Sunset } from "lucide-react";
 import type { Route } from "next";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useCallback, useMemo, useState, useTransition } from "react";
+import { useCallback, useMemo, useOptimistic, useState, useTransition } from "react";
 
 import { LeaveCalendar } from "@/src/components/sheet/LeaveCalendar";
 import { LeaveKindBadge } from "@/src/components/sheet/LeaveKindBadge";
@@ -55,7 +55,7 @@ export function AdminLeaveClient({
   view,
   filters,
   employeeOptions,
-  rows,
+  rows: serverRows,
   page,
   totalPages,
   totalItems,
@@ -71,6 +71,21 @@ export function AdminLeaveClient({
   const [editing, setEditing] = useState<AdminLeaveView | null>(null);
   const [checked, setChecked] = useState<string[]>([]);
   const [pending, startTransition] = useTransition();
+  // The HR tick answers the click at once; the revalidated rows replace it when the action lands.
+  const [rows, applyHr] = useOptimistic(
+    serverRows,
+    (current, update: { leaveIds: string[]; processed: boolean }) =>
+      current.map((row) =>
+        update.leaveIds.includes(row.id)
+          ? {
+              ...row,
+              hrProcessedAt: update.processed
+                ? (row.hrProcessedAt ?? new Date().toISOString())
+                : null,
+            }
+          : row,
+      ),
+  );
   const calendarLabels = useLeaveCalendarLabels(`${calendar?.month ?? "2000-01"}-01`);
 
   const selected = useMemo(
@@ -86,9 +101,13 @@ export function AdminLeaveClient({
     router.push((query ? `/admin/leave?${query}` : "/admin/leave") as Route, { scroll: false });
   };
 
+  /** Called inside a transition by both the table and the details dialog. */
   const setHr = useCallback(
-    (leaveIds: string[], processed: boolean) => setLeaveHrProcessedAction({ leaveIds, processed }),
-    [],
+    (leaveIds: string[], processed: boolean) => {
+      applyHr({ leaveIds, processed });
+      return setLeaveHrProcessedAction({ leaveIds, processed });
+    },
+    [applyHr],
   );
 
   const adminControls: LeaveAdminControls = {
