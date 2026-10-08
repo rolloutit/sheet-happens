@@ -10,6 +10,7 @@ import { notify } from "@/src/components/sheet/Toast";
 import { Button } from "@/src/components/ui/Button";
 import { SectionHead } from "@/src/components/ui/SectionHead";
 import { SegmentedControl } from "@/src/components/ui/SegmentedControl";
+import { formatList } from "@/src/lib/formatting";
 import { useOverlayParam } from "@/src/lib/use-overlay-param";
 import { createLeaveAction } from "./actions";
 import { LeaveDetailsDialog } from "./LeaveDetailsDialog";
@@ -111,8 +112,17 @@ export function LeaveClient({
             {summaryEmpty
               ? t("summary.none")
               : t("summary.month", {
-                  vacation: text.workdays(ownSummary.vacation),
-                  sick: text.workdays(ownSummary.sick),
+                  parts: formatList(
+                    [
+                      ownSummary.vacation > 0
+                        ? t("summary.vacation", { days: text.workdays(ownSummary.vacation) })
+                        : null,
+                      ownSummary.sick > 0
+                        ? t("summary.sick", { days: text.workdays(ownSummary.sick) })
+                        : null,
+                    ].filter((part): part is string => part !== null),
+                    text.locale,
+                  ),
                 })}
           </p>
           <LeaveCalendar

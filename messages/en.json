@@ -3336,7 +3336,9 @@
     },
     "summary": {
       "none": "You have no leave recorded this month.",
-      "month": "This month: {vacation} vacation, {sick} sick leave."
+      "month": "This month: {parts}.",
+      "vacation": "{days} of vacation",
+      "sick": "{days} of sick leave"
     },
     "calendar": {
       "label": "Leave calendar, {month}",
@@ -3375,7 +3377,9 @@
       "submit": "Add leave",
       "save": "Save",
       "created": "Leave added.",
-      "updated": "Leave updated."
+      "updated": "Leave updated.",
+      "chooseFile": "Choose file",
+      "noFile": "No file chosen"
     },
     "discardDialog": {
       "title": "Discard your changes?",
@@ -3487,6 +3491,9 @@
         "selected": "{count} selected",
         "markProcessed": "Mark as entered",
         "markUnprocessed": "Unmark"
+      },
+      "views": {
+        "list": "List"
       }
     }
   },

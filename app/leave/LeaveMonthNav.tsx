@@ -48,7 +48,7 @@ export function LeaveMonthNav({
       </Button>
       <h2
         aria-live="polite"
-        className="min-w-40 text-center font-ui text-lg font-semibold text-foreground capitalize tabular-nums"
+        className="min-w-40 text-center font-ui text-lg font-semibold text-foreground tabular-nums"
       >
         {formatMonthLabel(`${month}-01`, locale)}
       </h2>

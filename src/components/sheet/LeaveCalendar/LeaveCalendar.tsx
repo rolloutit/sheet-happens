@@ -100,7 +100,12 @@ function WeekRow({
       <div
         className="relative grid min-h-28 grid-cols-7"
         style={{
-          gridTemplateRows: `auto repeat(${week.laneCount}, 1.75rem) minmax(0.75rem, 1fr)`,
+          // A fixed header row for the day numbers: every day cell spans all rows, so an `auto` row
+          // would collapse to nothing and the ribbons would ride over the numbers. The last row
+          // keeps room under the ribbons for a holiday's name.
+          gridTemplateRows: `2.25rem repeat(${week.laneCount}, 1.75rem) minmax(${
+            week.days.some((day) => day.holiday) ? "2.5rem" : "0.75rem"
+          }, 1fr)`,
         }}
       >
         {week.days.map((day, index) => (
@@ -111,7 +116,7 @@ function WeekRow({
                 tone: day.holiday ? "holiday" : day.weekend ? "weekend" : "workday",
                 inMonth: day.inMonth,
               }),
-              "flex min-w-0 flex-col gap-0.5 px-2 pt-1.5 pb-1",
+              "flex min-w-0 flex-col justify-between gap-0.5 px-2 pt-1.5 pb-1.5",
               index > 0 && "border-l",
             )}
             style={{ gridColumn: index + 1, gridRow: "1 / -1" }}

@@ -247,7 +247,7 @@ export function AdminLeaveClient({
             })
           }
           items={[
-            { value: "list", label: t("views.list"), icon: List },
+            { value: "list", label: t("admin.views.list"), icon: List },
             { value: "calendar", label: t("views.calendar"), icon: CalendarDays },
           ]}
         />

@@ -19,6 +19,7 @@ import { countLeaveWorkdays, type LeaveDayPartValue } from "@/src/lib/leave-days
 import { cn } from "@/src/lib/utils";
 import type { LeaveActionState } from "./action-state";
 import { initialLeaveActionState } from "./action-state";
+import { SickNoteFileInput } from "./SickNoteFileInput";
 import { useLeaveText } from "./use-leave-labels";
 
 type LeaveFormAction = (state: LeaveActionState, formData: FormData) => Promise<LeaveActionState>;
@@ -45,8 +46,6 @@ export type LeaveFormProps = {
   onDirtyChange: (dirty: boolean) => void;
   onDone: (message: string) => void;
 };
-
-const SICK_NOTE_ACCEPT = ".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png";
 
 export function LeaveForm({
   action,
@@ -298,15 +297,7 @@ export function LeaveForm({
             error={state.fieldErrors?.file}
           >
             {({ id, describedBy, invalid }) => (
-              <input
-                id={id}
-                name="file"
-                type="file"
-                accept={SICK_NOTE_ACCEPT}
-                aria-describedby={describedBy}
-                aria-invalid={invalid || undefined}
-                className="block w-full text-sm text-muted-foreground file:mr-3 file:rounded-[var(--radius-pill)] file:border file:border-border-strong file:bg-secondary file:px-3 file:py-1.5 file:font-ui file:text-sm file:font-semibold file:text-secondary-foreground hover:file:bg-muted"
-              />
+              <SickNoteFileInput id={id} describedBy={describedBy} invalid={invalid} />
             )}
           </Field>
         ) : null}

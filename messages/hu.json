@@ -3336,7 +3336,9 @@
     },
     "summary": {
       "none": "Ebben a hónapban nincs rögzített távolléted.",
-      "month": "Ebben a hónapban: {vacation} szabadság, {sick} betegszabi."
+      "month": "Ebben a hónapban: {parts}.",
+      "vacation": "{days} szabadság",
+      "sick": "{days} betegszabi"
     },
     "calendar": {
       "label": "Szabadságnaptár, {month}",
@@ -3375,7 +3377,9 @@
       "submit": "Felvitel",
       "save": "Mentés",
       "created": "Szabadság felvive.",
-      "updated": "Szabadság módosítva."
+      "updated": "Szabadság módosítva.",
+      "chooseFile": "Fájl kiválasztása",
+      "noFile": "Nincs kiválasztott fájl"
     },
     "discardDialog": {
       "title": "Elveted a változtatásokat?",
@@ -3487,6 +3491,9 @@
         "selected": "{count, plural, one {# kijelölve} other {# kijelölve}}",
         "markProcessed": "Feldolgozottnak jelöl",
         "markUnprocessed": "Jelölés visszavonása"
+      },
+      "views": {
+        "list": "Lista"
       }
     }
   },

@@ -11,7 +11,7 @@ import {
   Upload,
 } from "lucide-react";
 import type { Route } from "next";
-import { useRef, useState, useTransition } from "react";
+import { useState, useTransition } from "react";
 
 import { notify } from "@/src/components/sheet/Toast";
 import { LeaveKindBadge } from "@/src/components/sheet/LeaveKindBadge";
@@ -30,6 +30,7 @@ import { formatDateTime } from "@/src/lib/formatting";
 import { initialLeaveActionState, type LeaveActionState } from "./action-state";
 import { uploadLeaveAttachmentAction } from "./actions";
 import type { AdminLeaveView, LeaveView } from "./leave-view-types";
+import { SickNoteFileInput } from "./SickNoteFileInput";
 import { useLeaveText } from "./use-leave-labels";
 
 export type LeaveAdminControls = {
@@ -126,7 +127,8 @@ function AttachmentSection({ leave, admin }: { leave: LeaveView; admin?: LeaveAd
   const [uploading, startUploading] = useTransition();
   const [removing, startRemoving] = useTransition();
   const [error, setError] = useState<string | null>(null);
-  const fileRef = useRef<HTMLInputElement>(null);
+  // Bumped after an upload so the file input remounts empty, filename and all.
+  const [inputKey, setInputKey] = useState(0);
   const [chosen, setChosen] = useState<string | null>(null);
   const href = `/api/leave/${leave.id}/attachment`;
 
@@ -139,7 +141,7 @@ function AttachmentSection({ leave, admin }: { leave: LeaveView; admin?: LeaveAd
 
       {leave.attachment ? (
         <div className="flex flex-wrap items-center gap-2">
-          <span className="min-w-0 flex-1 truncate text-sm font-medium text-foreground">
+          <span className="w-full min-w-0 truncate text-sm font-medium text-foreground">
             {leave.attachment.filename}
           </span>
           <Button asChild variant="soft" size="sm">
@@ -189,23 +191,13 @@ function AttachmentSection({ leave, admin }: { leave: LeaveView; admin?: LeaveAd
             }
             setError(null);
             setChosen(null);
-            if (fileRef.current) fileRef.current.value = "";
+            setInputKey((key) => key + 1);
             notify("success", result.message);
           });
         }}
       >
         <input type="hidden" name="leaveId" value={leave.id} />
-        <label className="min-w-0 flex-1">
-          <span className="sr-only">{t("form.file")}</span>
-          <input
-            ref={fileRef}
-            name="file"
-            type="file"
-            accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png"
-            onChange={(event) => setChosen(event.target.files?.[0]?.name ?? null)}
-            className="block w-full text-sm text-muted-foreground file:mr-3 file:rounded-[var(--radius-pill)] file:border file:border-border-strong file:bg-card file:px-3 file:py-1.5 file:font-ui file:text-sm file:font-semibold file:text-foreground hover:file:bg-muted"
-          />
-        </label>
+        <SickNoteFileInput key={inputKey} id={`leave-file-${leave.id}`} onFileChange={setChosen} />
         <Button
           type="submit"
           size="sm"

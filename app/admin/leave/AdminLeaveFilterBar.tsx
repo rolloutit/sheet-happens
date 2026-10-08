@@ -124,7 +124,8 @@ export function AdminLeaveFilterBar({
           <Select
             name="type"
             label={t("admin.filters.type")}
-            defaultValue={type}
+            placeholder={t("admin.filters.allTypes")}
+            defaultValue={type || undefined}
             labels={pickerLabels.combobox}
             options={[
               { value: "", label: t("admin.filters.allTypes") },
@@ -138,7 +139,8 @@ export function AdminLeaveFilterBar({
             <Select
               name="hr"
               label={t("admin.filters.hr")}
-              defaultValue={hr === "all" ? "" : hr}
+              placeholder={t("admin.filters.hrOptions.all")}
+              defaultValue={hr === "all" ? undefined : hr}
               labels={pickerLabels.combobox}
               options={[
                 { value: "", label: t("admin.filters.hrOptions.all") },
