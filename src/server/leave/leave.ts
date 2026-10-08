@@ -689,7 +689,15 @@ export function normalizeAdminLeaveFilters(raw: {
   };
 }
 
-export async function listLeaveForAdmin(filters: AdminLeaveFilters) {
+/**
+ * The admin's list. `pageSize` is raised by the calendar view, which needs a whole month at once
+ * and is bounded by that month rather than by paging.
+ */
+export async function listLeaveForAdmin(
+  filters: AdminLeaveFilters,
+  options: { pageSize?: number } = {},
+) {
+  const pageSize = options.pageSize ?? ADMIN_PAGE_SIZE;
   const monthWhere = filters.month
     ? (() => {
         const start = parseDateOnly(`${filters.month}-01`);
@@ -718,13 +726,13 @@ export async function listLeaveForAdmin(filters: AdminLeaveFilters) {
       select: { id: true, displayName: true, email: true },
     }),
   ]);
-  const totalPages = Math.max(1, Math.ceil(totalItems / ADMIN_PAGE_SIZE));
+  const totalPages = Math.max(1, Math.ceil(totalItems / pageSize));
   const page = Math.min(filters.page, totalPages);
   const records = await prisma.leave.findMany({
     where,
     orderBy: [{ startDate: "desc" }, { member: { displayName: "asc" } }, { id: "desc" }],
-    skip: (page - 1) * ADMIN_PAGE_SIZE,
-    take: ADMIN_PAGE_SIZE,
+    skip: (page - 1) * pageSize,
+    take: pageSize,
     select: {
       ...leaveItemSelect,
       createdAt: true,
