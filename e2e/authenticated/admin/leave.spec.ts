@@ -55,6 +55,8 @@ test("matches the committed aria snapshot of the frozen month", async ({ page })
 });
 
 test("records a half day, ticks it as entered into HR and deletes it", async ({ page }) => {
+  // Three cold pages in a row on a dev server; see time.spec.ts for why the budget is generous.
+  test.setTimeout(90_000);
   const target = wednesdayTwoMonthsOut();
   const dayName = new Intl.DateTimeFormat("en", {
     weekday: "long",
@@ -77,13 +79,20 @@ test("records a half day, ticks it as entered into HR and deletes it", async ({ 
   // A run that failed half way leaves its leave behind, and the next one would hit the overlap
   // rule. Clear it first, through the same admin delete the test ends with.
   await visit(page, `/admin/leave?month=${month}`);
-  while ((await row.count()) > 0) {
+  for (let remaining = await row.count(); remaining > 0; remaining -= 1) {
     await deleteLeave(page, row.first());
+    // Wait for the refreshed list, or the next pass would open the row just deleted.
+    await expect(row).toHaveCount(remaining - 1);
   }
 
   await visit(page, "/leave?new=leave");
   const drawer = page.getByRole("dialog", { name: "Add leave" });
-  await drawer.getByRole("button", { name: /^Dates/ }).click();
+  // Each first click after a navigation can land before React hydrates and do nothing, so it is
+  // retried until its effect shows, the pattern time.spec.ts uses. Opening a picker is idempotent.
+  await expect(async () => {
+    await drawer.getByRole("button", { name: /^Dates/ }).click();
+    await expect(page.getByRole("button", { name: "Next month" })).toBeVisible({ timeout: 2_000 });
+  }).toPass({ timeout: 60_000 });
   await page.getByRole("button", { name: "Next month" }).click();
   await page.getByRole("button", { name: dayName }).click();
   await page.getByRole("button", { name: "Done" }).click();
@@ -96,7 +105,10 @@ test("records a half day, ticks it as entered into HR and deletes it", async ({ 
   const hr = page.getByRole("checkbox", {
     name: `Admin User (${rangeLabel}) entered into the HR system`,
   });
-  await hr.check();
+  // `check` clicks only while the box is unticked, so retrying it cannot untick it again.
+  await expect(async () => {
+    await hr.check({ timeout: 2_000 });
+  }).toPass({ timeout: 60_000 });
   await expect(page.getByText("1 leave marked as entered.")).toBeVisible();
   await expect(hr).toBeChecked();
 
@@ -105,7 +117,10 @@ test("records a half day, ticks it as entered into HR and deletes it", async ({ 
 });
 
 async function deleteLeave(page: Page, row: Locator) {
-  await row.getByRole("button", { name: "Open" }).click();
+  await expect(async () => {
+    await row.getByRole("button", { name: "Open" }).click();
+    await expect(page.getByRole("button", { name: "Delete" })).toBeVisible({ timeout: 2_000 });
+  }).toPass({ timeout: 60_000 });
   await page.getByRole("button", { name: "Delete" }).click();
   await page.getByRole("button", { name: "Yes, delete" }).click();
   await expect(page.getByText("Leave deleted.").first()).toBeVisible();
