@@ -21,6 +21,8 @@ export type PublicHolidayValue = {
 const DEFAULT_HOLIDAY_API_BASE_URL = "https://date.nager.at/api/v3";
 const FETCH_TIMEOUT_MS = 3_000;
 const REFRESH_AFTER_MS = 30 * 24 * 60 * 60 * 1000;
+/** Years further from today than this are never fetched on demand, whatever range is asked for. */
+const ON_DEMAND_YEAR_WINDOW = 5;
 
 const nagerHolidaySchema = z.object({
   date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
@@ -100,7 +102,10 @@ export async function getPublicHolidaysInRange(
   end: string,
   deps: HolidayDeps = {},
 ): Promise<PublicHolidayValue[]> {
-  const years = yearsBetween(start, end);
+  const thisYear = (deps.now ?? new Date()).getUTCFullYear();
+  const years = yearsBetween(start, end).filter(
+    (year) => Math.abs(year - thisYear) <= ON_DEMAND_YEAR_WINDOW,
+  );
   const cached = await prisma.publicHolidayYear.findMany({
     where: { year: { in: years } },
     select: { year: true },

@@ -1,9 +1,5 @@
-import {
-  countLeaveWorkdays,
-  eachDateValue,
-  leaveRangesOverlap,
-  type LeaveRange,
-} from "@/src/lib/leave-days";
+import { isDateValue } from "@/src/lib/date-values";
+import { countLeaveWorkdays, leaveRangesOverlap, type LeaveRange } from "@/src/lib/leave-days";
 
 export const LEAVE_ATTACHMENT_MAX_BYTES = 10 * 1024 * 1024;
 export const LEAVE_MAX_SPAN_DAYS = 366;
@@ -33,20 +29,21 @@ export class LeaveError extends Error {
   }
 }
 
+const DAY_MS = 24 * 60 * 60 * 1000;
+
 /**
- * Every rule a leave has to satisfy before it is stored, for a new leave and an admin edit alike.
+ * The checks that need no data: real dates, in order, a half day on a single date, not before the
+ * earliest allowed day, at most a year long. Callers run this before anything that scales with the
+ * range, such as fetching that range's holidays, so an absurd range costs nothing.
  *
  * `earliestStartDate` is the first of the employee's current month; an admin edit passes `null`
- * because correcting a past leave is exactly what the admin is for. `existing` is the member's other
- * live leaves, so an edit must leave itself out.
+ * because correcting a past leave is exactly what the admin is for.
  */
-export function validateLeaveInput(
-  input: LeaveRange & {
-    holidayDates: Iterable<string>;
-    earliestStartDate: string | null;
-    existing: readonly LeaveRange[];
-  },
-) {
+export function assertLeaveRangeShape(input: LeaveRange & { earliestStartDate: string | null }) {
+  if (!isDateValue(input.startDate) || !isDateValue(input.endDate)) {
+    throw new LeaveError("Choose valid dates.", "INVALID_RANGE");
+  }
+
   if (input.endDate < input.startDate) {
     throw new LeaveError("The leave must end on or after its first day.", "INVALID_RANGE");
   }
@@ -62,9 +59,28 @@ export function validateLeaveInput(
     );
   }
 
-  if (eachDateValue(input.startDate, input.endDate).length > LEAVE_MAX_SPAN_DAYS) {
+  const spanDays =
+    (Date.parse(`${input.endDate}T00:00:00.000Z`) -
+      Date.parse(`${input.startDate}T00:00:00.000Z`)) /
+      DAY_MS +
+    1;
+  if (spanDays > LEAVE_MAX_SPAN_DAYS) {
     throw new LeaveError("A single leave cannot be longer than a year.", "TOO_LONG");
   }
+}
+
+/**
+ * Every rule a leave has to satisfy before it is stored, for a new leave and an admin edit alike.
+ * `existing` is the member's other live leaves, so an edit must leave itself out.
+ */
+export function validateLeaveInput(
+  input: LeaveRange & {
+    holidayDates: Iterable<string>;
+    earliestStartDate: string | null;
+    existing: readonly LeaveRange[];
+  },
+) {
+  assertLeaveRangeShape(input);
 
   const count = countLeaveWorkdays(input);
   if (count.workdays === 0) {

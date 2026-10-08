@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  assertLeaveRangeShape,
   LEAVE_ATTACHMENT_MAX_BYTES,
   LeaveError,
   validateLeaveAttachment,
@@ -57,6 +58,25 @@ describe("validateLeaveInput", () => {
 
     expect(codeOf(() => validateLeaveInput(lastMonth))).toBe("BEFORE_CURRENT_MONTH");
     expect(validateLeaveInput({ ...lastMonth, earliestStartDate: null }).workdays).toBe(3);
+  });
+
+  it("rejects dates that do not exist", () => {
+    expect(codeOf(() => validateLeaveInput({ ...base, endDate: "2026-02-31" }))).toBe(
+      "INVALID_RANGE",
+    );
+  });
+
+  it("rejects an absurd range by arithmetic, before looking at a single day", () => {
+    expect(
+      codeOf(() =>
+        assertLeaveRangeShape({
+          startDate: "0001-01-01",
+          endDate: "9999-12-31",
+          dayPart: "FULL",
+          earliestStartDate: null,
+        }),
+      ),
+    ).toBe("TOO_LONG");
   });
 
   it("rejects a leave longer than a year", () => {

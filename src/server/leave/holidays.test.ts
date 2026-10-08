@@ -100,6 +100,18 @@ describe("getPublicHolidaysInRange", () => {
     );
   });
 
+  it("never fetches years far from today, however wide the range", async () => {
+    db.publicHolidayYear.findMany.mockResolvedValue([]);
+    const fetcher = jsonFetch([]);
+
+    await getPublicHolidaysInRange("0001-01-01", "9999-12-31", {
+      fetch: fetcher,
+      now: new Date("2026-10-08T00:00:00.000Z"),
+    });
+
+    expect(fetcher).toHaveBeenCalledTimes(11);
+  });
+
   it("keeps working when the API is down", async () => {
     db.publicHolidayYear.findMany.mockResolvedValue([]);
     const error = vi.spyOn(console, "error").mockImplementation(() => undefined);

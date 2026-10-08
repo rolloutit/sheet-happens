@@ -18,6 +18,7 @@ import {
 
 import { getPublicHolidaysInRange, type PublicHolidayValue } from "./holidays";
 import {
+  assertLeaveRangeShape,
   LeaveError,
   validateLeaveAttachment,
   validateLeaveInput,
@@ -129,8 +130,9 @@ export async function createLeave(
   }
 
   const contentType = input.file ? validateLeaveAttachment(input.file) : null;
-  const holidays = await getHolidayDates(input.startDate, input.endDate);
   const earliestStartDate = getLeaveEarliestStartDate(member.timezone, now);
+  assertLeaveRangeShape({ ...input, earliestStartDate });
+  const holidays = await getHolidayDates(input.startDate, input.endDate);
   // Fails fast before the upload; repeated inside the transaction against a locked member row.
   validateLeaveInput({ ...input, holidayDates: holidays, earliestStartDate, existing: [] });
 
@@ -211,6 +213,7 @@ export async function updateLeaveForAdmin(
   deps: { now?: Date } = {},
 ) {
   const now = deps.now ?? new Date();
+  assertLeaveRangeShape({ ...input, earliestStartDate: null });
   const holidays = await getHolidayDates(input.startDate, input.endDate);
 
   return prisma.$transaction(async (tx) => {
