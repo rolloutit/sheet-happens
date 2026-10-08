@@ -411,6 +411,56 @@ Scope:
 - One payslip record per employee/month.
 - Document storage uses the shared document metadata table.
 
+## Leave
+
+Leave is an employee-only module: who is away when, recorded by the employee and bookkept by the
+admin. Contractors neither see it nor appear in it. Code: `src/server/leave`, screens `/leave` and
+`/admin/leave`.
+
+Model:
+
+- `leaves`: member, type (`vacation` | `sick`), start and end date, day part (`full` | `morning` |
+  `afternoon`), optional note, optional sick note (a `documents` row of type `sick_note`), the
+  admin's HR tick (`hr_processed_at`, `hr_processed_by_member_id`), soft delete.
+- A half day is only possible on a single date; the database enforces it with a check constraint,
+  alongside `end_date >= start_date`.
+- Workdays are never stored. They are Monday to Friday minus public holidays, counted on read by
+  `countLeaveWorkdays` (`src/lib/leave-days.ts`), which the form also uses for its live count. A half
+  day is 0.5.
+- `public_holidays` caches Hungary's holidays from the keyless Nager.Date API per year
+  (`public_holiday_years` marks a year as fetched). A missing year is fetched on demand, at most
+  five years from today; the notification dispatcher refreshes this year and next every 30 days.
+  If the API is down the calendar shows no holidays for that year and nothing else breaks.
+  Hungarian transferred workdays are not modelled.
+
+Rules:
+
+- No approval. A leave is valid the moment it is recorded. The admin's only state is the HR tick,
+  which the employee never sees.
+- An employee records leave for themselves only, starting no earlier than the 1st of their current
+  month (their own time zone). Recording stays open until the month ends; the month-end reminder's
+  "by 12:00 tomorrow" is a request, not a lock.
+- A leave must contain at least one workday, may not be longer than a year, and may not overlap the
+  member's other live leave, except that a morning and an afternoon can share a day. Writes take a
+  row lock on the member so two tabs cannot both pass the overlap check.
+- After recording, an employee can only add or replace the sick note on a sick leave, at any time,
+  also for a past month. Editing, deleting and removing a sick note are admin actions; an admin
+  edit may move a leave into the past but is held to the overlap and workday rules.
+
+Visibility:
+
+- Colleagues see each other's leave on the calendar as `Away`: name and dates, never the type, the
+  note or the sick note. The redaction happens in `listLeaveCalendar`, not in the UI.
+- The owner and admins see everything. The sick note is served through a short-lived signed URL
+  from `/api/leave/[leaveId]/attachment`, which answers 404 to anyone else.
+
+Audit: `leave.created`, `leave.updated`, `leave.deleted`, `leave.hr_processed`,
+`leave.hr_unprocessed`, `leave.attachment_uploaded`, `leave.attachment_removed`,
+`leave.attachment_read`.
+
+Reminder: `LEAVE_MONTH_END_REMINDER` goes to every active employee, email and in-app, on the
+second-to-last day of the month at 9:00 company time.
+
 ## Information Page
 
 The functional spec mentions Contentful, while the tech-stack document later suggests Postgres-backed
