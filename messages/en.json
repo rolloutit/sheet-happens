@@ -3232,7 +3232,7 @@
       "overview": {
         "title": "Month overview",
         "posted": "{posted} of {expected} posted",
-        "complete": "Every active employee has a payslip for this month.",
+        "complete": "Every active employee has a payslip for the selected month.",
         "missing": "Missing",
         "uploadFor": "Upload payslip for {name}"
       },

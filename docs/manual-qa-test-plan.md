@@ -1481,7 +1481,7 @@ must have an active employee profile; contractor profiles must not be used for t
 
 1. Sign in as `{ADMIN_EMAIL}` and open `https://{DOMAIN_NAME}/admin/payslips`.
 2. In the month overview, click `{EMPLOYEE_EMAIL}` or choose `Upload payslip`.
-3. Confirm the month selector shows January through December of the current year and initially selects the current month.
+3. Confirm the month selector shows the twelve months of the overview month's calendar year and initially selects the overview month — the previous month by default.
 4. Use the previous-year and next-year buttons. Confirm each step replaces the grid with all 12 months of the adjacent calendar year, then return to the year containing `{PAYSLIP_MONTH}`.
 5. Select `{EMPLOYEE_EMAIL}` and `{PAYSLIP_MONTH}`.
 6. Upload `{PAYSLIP_PDF_FILE}` and submit.
@@ -1540,6 +1540,24 @@ Expected result:
 - The employee history is retrieved in pages of 12 rather than loading every historical document.
 - Another member cannot preview or download the employee's payslip through the application endpoint.
 - Contractor profiles cannot access the payslip page and do not see it in navigation.
+
+### Month Overview Defaults To The Previous Month
+
+Payslips are uploaded for the month before: in October, the admin uploads September's.
+
+1. Sign in as `{ADMIN_EMAIL}` and open `https://{DOMAIN_NAME}/admin/payslips` with no filters.
+2. Confirm the month overview names the previous calendar month and counts posted payslips against it.
+3. Confirm the missing list contains only the active employees without a payslip for that month.
+4. Click a missing employee, and separately choose `Upload payslip`; confirm both dialogs preselect the previous month.
+5. Choose the current month in the month filter and apply it; confirm the overview switches to the current month.
+6. Switch the language to Hungarian and confirm the overview label is the same month in Hungarian.
+
+Expected result:
+
+- Without a month filter, the overview checks the previous month, not the current one.
+- In January, the default is December of the previous year, and the upload dialog opens on that year.
+- On the first day of a month, the default switches at midnight in the admin's time zone, not at UTC midnight.
+- A month filter still overrides the default.
 
 ## Admin Projects
 

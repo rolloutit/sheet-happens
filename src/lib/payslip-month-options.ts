@@ -1,3 +1,10 @@
+import {
+  addUtcMonths,
+  dateValueToMonthValue,
+  todayDateValue,
+  toMonthValue,
+} from "@/src/lib/date-values";
+
 export type AdminPayslipMonthOption = {
   value: string;
   label: string;
@@ -10,10 +17,18 @@ const MONTHS_PER_YEAR = 12;
 export function getPayslipMonthOptions(
   locale: string,
   now: Date = new Date(),
+  timeZone = "UTC",
 ): AdminPayslipMonthOption[] {
-  const newestMonth = `${now.getUTCFullYear()}-${String(now.getUTCMonth() + 1).padStart(2, "0")}`;
+  return buildMonthOptions(locale, currentMonthValue(now, timeZone), 0, 24);
+}
 
-  return buildMonthOptions(locale, newestMonth, 0, 24);
+/** Payslips are issued for the month before: in October the admin uploads September's. */
+export function getDefaultPayslipMonth(now: Date = new Date(), timeZone = "UTC"): string {
+  return toMonthValue(addUtcMonths(parseMonth(currentMonthValue(now, timeZone)), -1));
+}
+
+function currentMonthValue(now: Date, timeZone: string): string {
+  return dateValueToMonthValue(todayDateValue(timeZone, now));
 }
 
 export function getPayslipMonthWindow(
