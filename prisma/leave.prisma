@@ -1,0 +1,50 @@
+model Leave {
+  id                    String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  memberId              String       @map("member_id") @db.Uuid
+  type                  LeaveType
+  startDate             DateTime     @map("start_date") @db.Date
+  endDate               DateTime     @map("end_date") @db.Date
+  dayPart               LeaveDayPart @default(FULL) @map("day_part")
+  note                  String?
+  attachmentDocumentId  String?      @unique @map("attachment_document_id") @db.Uuid
+  hrProcessedAt         DateTime?    @map("hr_processed_at") @db.Timestamptz(6)
+  hrProcessedByMemberId String?      @map("hr_processed_by_member_id") @db.Uuid
+  createdByMemberId     String       @map("created_by_member_id") @db.Uuid
+  createdAt             DateTime     @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt             DateTime     @updatedAt @map("updated_at") @db.Timestamptz(6)
+  deletedAt             DateTime?    @map("deleted_at") @db.Timestamptz(6)
+  deletedByMemberId     String?      @map("deleted_by_member_id") @db.Uuid
+
+  member             Member    @relation("LeaveMember", fields: [memberId], references: [id], onDelete: Restrict)
+  attachmentDocument Document? @relation(fields: [attachmentDocumentId], references: [id], onDelete: Restrict)
+  hrProcessedBy      Member?   @relation("LeaveHrProcessedBy", fields: [hrProcessedByMemberId], references: [id], onDelete: SetNull)
+  createdBy          Member    @relation("LeaveCreatedBy", fields: [createdByMemberId], references: [id], onDelete: Restrict)
+  deletedBy          Member?   @relation("LeaveDeletedBy", fields: [deletedByMemberId], references: [id], onDelete: SetNull)
+
+  @@index([memberId, startDate])
+  @@index([startDate, endDate])
+  @@index([hrProcessedAt])
+  @@map("leaves")
+}
+
+/// Hungarian public holidays as published by the Nager.Date API, cached per year so a page never
+/// waits on the network twice and the calendar keeps working when the API is down.
+model PublicHoliday {
+  date      DateTime @id @db.Date
+  year      Int
+  localName String   @map("local_name")
+  name      String
+  fetchedAt DateTime @map("fetched_at") @db.Timestamptz(6)
+
+  @@index([year])
+  @@map("public_holidays")
+}
+
+/// One row per year whose holidays have been fetched, so an empty year is distinguishable from an
+/// unfetched one.
+model PublicHolidayYear {
+  year      Int      @id
+  fetchedAt DateTime @map("fetched_at") @db.Timestamptz(6)
+
+  @@map("public_holiday_years")
+}

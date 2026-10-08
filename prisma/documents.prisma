@@ -16,6 +16,7 @@ model Document {
 
   contractorInvoice ContractorInvoice?
   hoursDeclaration  MonthlyHourDeclaration?
+  leave             Leave?
   owner             Member?                 @relation("DocumentOwner", fields: [ownerMemberId], references: [id], onDelete: SetNull)
   payslip           Payslip?
   reportExport      ReportExport?
