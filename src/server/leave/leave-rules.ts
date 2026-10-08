@@ -17,7 +17,8 @@ export type LeaveErrorCode =
   | "ATTACHMENT_SICK_ONLY"
   | "ATTACHMENT_REQUIRED"
   | "ATTACHMENT_TOO_LARGE"
-  | "ATTACHMENT_TYPE";
+  | "ATTACHMENT_TYPE"
+  | "SICK_NOTE_ATTACHED";
 
 export class LeaveError extends Error {
   readonly code: LeaveErrorCode;

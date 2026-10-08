@@ -8,8 +8,12 @@ const db = vi.hoisted(() => ({
 
 vi.mock("@/src/server/db/client", () => ({ prisma: db }));
 
-const { fetchPublicHolidays, getPublicHolidaysInRange, refreshStalePublicHolidays } =
-  await import("./holidays");
+const {
+  fetchPublicHolidays,
+  getPublicHolidaysInRange,
+  refreshStalePublicHolidays,
+  resetHolidayFetchState,
+} = await import("./holidays");
 
 const nagerPayload = [
   {
@@ -43,6 +47,7 @@ function jsonFetch(body: unknown, status = 200) {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  resetHolidayFetchState();
   db.publicHoliday.findMany.mockResolvedValue([]);
 });
 
@@ -121,6 +126,34 @@ describe("getPublicHolidaysInRange", () => {
     ).resolves.toEqual([]);
     expect(error).toHaveBeenCalled();
     expect(db.publicHolidayYear.upsert).not.toHaveBeenCalled();
+  });
+});
+
+describe("an API outage", () => {
+  it("costs one attempt per year, not one per request, until the back-off passes", async () => {
+    db.publicHolidayYear.findMany.mockResolvedValue([]);
+    vi.spyOn(console, "error").mockImplementation(() => undefined);
+    const fetcher = jsonFetch({}, 503);
+    const at = (iso: string) => ({ fetch: fetcher, now: new Date(iso) });
+
+    await getPublicHolidaysInRange("2026-10-01", "2026-10-31", at("2026-10-08T10:00:00.000Z"));
+    await getPublicHolidaysInRange("2026-10-01", "2026-10-31", at("2026-10-08T10:05:00.000Z"));
+    expect(fetcher).toHaveBeenCalledTimes(1);
+
+    await getPublicHolidaysInRange("2026-10-01", "2026-10-31", at("2026-10-08T10:11:00.000Z"));
+    expect(fetcher).toHaveBeenCalledTimes(2);
+  });
+
+  it("shares one fetch between concurrent requests for the same year", async () => {
+    db.publicHolidayYear.findMany.mockResolvedValue([]);
+    const fetcher = jsonFetch([]);
+
+    await Promise.all([
+      getPublicHolidaysInRange("2026-10-01", "2026-10-31", { fetch: fetcher }),
+      getPublicHolidaysInRange("2026-11-01", "2026-11-30", { fetch: fetcher }),
+    ]);
+
+    expect(fetcher).toHaveBeenCalledTimes(1);
   });
 });
 

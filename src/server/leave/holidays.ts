@@ -23,6 +23,22 @@ const FETCH_TIMEOUT_MS = 3_000;
 const REFRESH_AFTER_MS = 30 * 24 * 60 * 60 * 1000;
 /** Years further from today than this are never fetched on demand, whatever range is asked for. */
 const ON_DEMAND_YEAR_WINDOW = 5;
+/** After a failed fetch a year is not asked for again on the request path for this long. */
+const FAILURE_BACKOFF_MS = 10 * 60 * 1000;
+
+/**
+ * Per-process memory of the on-demand fetches: the one in flight for a year, so concurrent page
+ * loads share it instead of racing to write the same rows, and when a year last failed, so an
+ * outage costs one timeout per year every few minutes rather than one on every request.
+ */
+const inFlight = new Map<number, Promise<unknown>>();
+const lastFailureAt = new Map<number, number>();
+
+/** Test hook: forget fetches and failures between cases. */
+export function resetHolidayFetchState() {
+  inFlight.clear();
+  lastFailureAt.clear();
+}
 
 const nagerHolidaySchema = z.object({
   date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
@@ -112,11 +128,12 @@ export async function getPublicHolidaysInRange(
   });
   const cachedYears = new Set(cached.map(({ year }) => year));
 
-  for (const year of years.filter((candidate) => !cachedYears.has(candidate))) {
-    await syncPublicHolidayYear(year, deps).catch((error: unknown) => {
-      console.error(`[holidays] Could not fetch public holidays for ${year}.`, error);
-    });
-  }
+  const now = (deps.now ?? new Date()).getTime();
+  const missing = years.filter(
+    (year) =>
+      !cachedYears.has(year) && now - (lastFailureAt.get(year) ?? -Infinity) >= FAILURE_BACKOFF_MS,
+  );
+  await Promise.all(missing.map((year) => fetchYearOnce(year, deps, now)));
 
   const rows = await prisma.publicHoliday.findMany({
     where: { date: { gte: parseDateOnly(start), lte: parseDateOnly(end) } },
@@ -129,6 +146,21 @@ export async function getPublicHolidaysInRange(
     localName: row.localName,
     name: row.name,
   }));
+}
+
+function fetchYearOnce(year: number, deps: HolidayDeps, now: number) {
+  const running = inFlight.get(year);
+  if (running) return running;
+
+  const attempt = syncPublicHolidayYear(year, deps)
+    .then(() => lastFailureAt.delete(year))
+    .catch((error: unknown) => {
+      lastFailureAt.set(year, now);
+      console.error(`[holidays] Could not fetch public holidays for ${year}.`, error);
+    })
+    .finally(() => inFlight.delete(year));
+  inFlight.set(year, attempt);
+  return attempt;
 }
 
 /**

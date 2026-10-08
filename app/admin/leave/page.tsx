@@ -38,13 +38,19 @@ export default async function AdminLeavePage({ searchParams }: AdminLeavePagePro
       : parsed;
   const thisYear = Number.parseInt(todayIso.slice(0, 4), 10);
   const calendarMonth = filters.month ?? currentMonth;
+  // The calendar draws Monday of the first week to Sunday of the last; a week either side covers it.
   const [gridYear, gridMonth] = calendarMonth.split("-").map(Number) as [number, number];
   const gridStart = new Date(Date.UTC(gridYear, gridMonth - 1, -6)).toISOString().slice(0, 10);
   const gridEnd = new Date(Date.UTC(gridYear, gridMonth, 7)).toISOString().slice(0, 10);
 
   const [locale, result, formHolidays, calendarHolidays] = await Promise.all([
     getLocale(),
-    listLeaveForAdmin(filters, view === "calendar" ? { pageSize: CALENDAR_PAGE_SIZE } : {}),
+    listLeaveForAdmin(
+      filters,
+      view === "calendar"
+        ? { pageSize: CALENDAR_PAGE_SIZE, range: { from: gridStart, to: gridEnd } }
+        : {},
+    ),
     getPublicHolidaysInRange(`${thisYear - 1}-01-01`, `${thisYear + 1}-12-31`),
     view === "calendar" ? getPublicHolidaysInRange(gridStart, gridEnd) : Promise.resolve([]),
   ]);

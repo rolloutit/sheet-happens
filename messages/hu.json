@@ -3431,7 +3431,8 @@
       "attachmentType": "PDF, JPG vagy PNG fájlt tölts fel.",
       "notAllowed": "Ehhez nincs jogosultságod.",
       "storageMissing": "A fájltárolás nincs beállítva. Szólj az adminnak.",
-      "saveFailed": "Nem sikerült menteni. Próbáld újra."
+      "saveFailed": "Nem sikerült menteni. Próbáld újra.",
+      "sickNoteAttached": "Előbb töröld az orvosi igazolást, csak utána lehet szabadságra váltani."
     },
     "admin": {
       "title": "Szabadságok",

@@ -227,10 +227,19 @@ export async function updateLeaveForAdmin(
         endDate: true,
         dayPart: true,
         note: true,
+        attachmentDocumentId: true,
       },
     });
 
     if (!existing) throw new LeaveError("Leave not found.", "NOT_FOUND");
+    // A sick note is health data; it must not stay attached to what is now a vacation, and
+    // deleting it as a side effect of an edit would be a surprise. The admin removes it first.
+    if (input.type !== "SICK" && existing.attachmentDocumentId) {
+      throw new LeaveError(
+        "Remove the sick note before changing this leave to vacation.",
+        "SICK_NOTE_ATTACHED",
+      );
+    }
 
     await lockMember(tx, existing.memberId);
     const counted = validateLeaveInput({
@@ -690,20 +699,26 @@ export function normalizeAdminLeaveFilters(raw: {
 }
 
 /**
- * The admin's list. `pageSize` is raised by the calendar view, which needs a whole month at once
- * and is bounded by that month rather than by paging.
+ * The admin's list. The calendar view raises `pageSize`, since it needs a whole month at once, and
+ * passes `range` for the grid's Monday-to-Sunday span: leave that only touches the neighbouring
+ * months' days in the first and last row would otherwise be missing from the drawing.
  */
 export async function listLeaveForAdmin(
   filters: AdminLeaveFilters,
-  options: { pageSize?: number } = {},
+  options: { pageSize?: number; range?: { from: string; to: string } } = {},
 ) {
   const pageSize = options.pageSize ?? ADMIN_PAGE_SIZE;
-  const monthWhere = filters.month
-    ? (() => {
-        const start = parseDateOnly(`${filters.month}-01`);
-        return { startDate: { lte: getMonthEnd(start) }, endDate: { gte: start } };
-      })()
-    : {};
+  const monthWhere = options.range
+    ? {
+        startDate: { lte: parseDateOnly(options.range.to) },
+        endDate: { gte: parseDateOnly(options.range.from) },
+      }
+    : filters.month
+      ? (() => {
+          const start = parseDateOnly(`${filters.month}-01`);
+          return { startDate: { lte: getMonthEnd(start) }, endDate: { gte: start } };
+        })()
+      : {};
   const scope = {
     deletedAt: null,
     member: liveEmployee,

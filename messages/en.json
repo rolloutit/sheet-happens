@@ -3431,7 +3431,8 @@
       "attachmentType": "Upload a PDF, JPG or PNG file.",
       "notAllowed": "You are not allowed to do that.",
       "storageMissing": "File storage is not configured. Ask an admin.",
-      "saveFailed": "Could not save. Try again."
+      "saveFailed": "Could not save. Try again.",
+      "sickNoteAttached": "Remove the sick note before changing this leave to vacation."
     },
     "admin": {
       "title": "Leave",

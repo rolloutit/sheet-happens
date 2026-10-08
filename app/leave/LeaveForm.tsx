@@ -158,6 +158,9 @@ export function LeaveForm({
               );
             })}
           </div>
+          {state.fieldErrors?.type ? (
+            <FormMessage tone="error">{state.fieldErrors.type}</FormMessage>
+          ) : null}
         </fieldset>
 
         <Field

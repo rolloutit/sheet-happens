@@ -95,6 +95,7 @@ const errorKeys: Record<LeaveErrorCode, { key: string; field?: LeaveFormField }>
   ATTACHMENT_REQUIRED: { key: "errors.attachmentRequired", field: "file" },
   ATTACHMENT_TOO_LARGE: { key: "errors.attachmentTooLarge", field: "file" },
   ATTACHMENT_TYPE: { key: "errors.attachmentType", field: "file" },
+  SICK_NOTE_ATTACHED: { key: "errors.sickNoteAttached", field: "type" },
 };
 
 export function leaveErrorState(error: unknown, t: Translate, scope: string): LeaveActionState {
