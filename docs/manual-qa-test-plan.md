@@ -1633,6 +1633,23 @@ Expected result:
 - The colleague's leave reads `Away` in a hatched neutral ribbon, with name and dates only.
 - Neither the type, the note nor the sick note is shown or reachable; the attachment URL answers 404.
 
+### A Crowded Week Stays Readable
+
+1. With at least six employees, record overlapping leave so that five or more people are away on
+   the same workdays of one week in `{LEAVE_MONTH}`. Include one morning and one afternoon.
+2. Open `https://{DOMAIN_NAME}/leave` and `https://{DOMAIN_NAME}/admin/leave?view=calendar` on that
+   month.
+3. Hover, then focus with the keyboard, a `+N more` button. Then click it and choose a name.
+
+Expected result:
+
+- Each workday with two or more people away shows `N away` beside the day number, amber from four.
+  Weekends and public holidays show no count.
+- The week draws at most four rows of ribbons, own leave on top; the rest sits behind one
+  `+N more` per workday, never on a weekend or holiday.
+- The tooltip names who is behind the button; the click lists everyone away that day, half days
+  marked, and choosing one opens its details. Colleagues still read as `Away`.
+
 ### Contractors Do Not Have Leave
 
 1. Sign in as `{CONTRACTOR_EMAIL}`.
