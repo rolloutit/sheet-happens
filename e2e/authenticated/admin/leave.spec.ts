@@ -54,7 +54,7 @@ test("matches the committed aria snapshot of the frozen month", async ({ page })
   });
 });
 
-test("records a half day, ticks it as entered into HR and deletes it", async ({ page }) => {
+test("records a half day, ticks it as processed and deletes it", async ({ page }) => {
   // Three cold pages in a row on a dev server; see time.spec.ts for why the budget is generous.
   test.setTimeout(90_000);
   const target = wednesdayTwoMonthsOut();
@@ -103,13 +103,13 @@ test("records a half day, ticks it as entered into HR and deletes it", async ({ 
 
   await visit(page, `/admin/leave?month=${month}`);
   const hr = page.getByRole("checkbox", {
-    name: `Admin User (${rangeLabel}) entered into the HR system`,
+    name: `Admin User (${rangeLabel}) processed`,
   });
   // `check` clicks only while the box is unticked, so retrying it cannot untick it again.
   await expect(async () => {
     await hr.check({ timeout: 2_000 });
   }).toPass({ timeout: 60_000 });
-  await expect(page.getByText("1 leave marked as entered.")).toBeVisible();
+  await expect(page.getByText("1 leave marked as processed.")).toBeVisible();
   await expect(hr).toBeChecked();
 
   await deleteLeave(page, row);

@@ -2030,8 +2030,8 @@
         "leave__created": "Recorded",
         "leave__updated": "Updated",
         "leave__deleted": "Deleted",
-        "leave__hr_processed": "Entered into HR",
-        "leave__hr_unprocessed": "HR mark removed",
+        "leave__hr_processed": "Processed",
+        "leave__hr_unprocessed": "Processed mark removed",
         "leave__attachment_uploaded": "Sick note uploaded",
         "leave__attachment_removed": "Sick note removed",
         "leave__attachment_read": "Sick note opened"
@@ -3439,9 +3439,9 @@
     },
     "admin": {
       "title": "Leave",
-      "subtitle": "Employees' time off. Tick what you have already entered into the HR system.",
-      "pending": "{count, plural, one {# leave waiting to be entered into HR} other {# leaves waiting to be entered into HR}}",
-      "allProcessed": "Every leave has been entered into the HR system.",
+      "subtitle": "Employees' time off. Tick what you have already processed.",
+      "pending": "{count, plural, one {# leave waiting to be processed} other {# leaves waiting to be processed}}",
+      "allProcessed": "Every leave has been processed.",
       "empty": "No leave matches these filters.",
       "edit": "Edit",
       "editLeave": "Edit {name}'s leave ({range})",
@@ -3450,27 +3450,27 @@
       "deleteConfirmAction": "Yes, delete",
       "deleted": "Leave deleted.",
       "hr": {
-        "label": "Entered into the HR system",
+        "label": "Processed",
         "hint": "Only visible to you; the employee does not see it.",
-        "toggle": "{name} ({range}) entered into the HR system",
-        "done": "Entered",
-        "todo": "Not entered yet",
-        "processedBy": "Entered by {name}, {date}",
-        "marked": "{count, plural, one {# leave marked as entered.} other {# leaves marked as entered.}}",
+        "toggle": "{name} ({range}) processed",
+        "done": "Processed",
+        "todo": "Not processed yet",
+        "processedBy": "Processed by {name}, {date}",
+        "marked": "{count, plural, one {# leave marked as processed.} other {# leaves marked as processed.}}",
         "unmarked": "{count, plural, one {# leave unmarked.} other {# leaves unmarked.}}"
       },
       "filters": {
         "month": "Month",
         "member": "Employee",
         "type": "Type",
-        "hr": "HR status",
+        "hr": "Processing",
         "allMonths": "All months",
         "allMembers": "All employees",
         "allTypes": "All types",
         "hrOptions": {
           "all": "All",
-          "pending": "Not entered yet",
-          "processed": "Entered"
+          "pending": "Not processed yet",
+          "processed": "Processed"
         },
         "apply": "Apply",
         "active": "Active filters",
@@ -3486,14 +3486,14 @@
         "workdays": "Workdays",
         "kind": "Type",
         "details": "Details",
-        "hr": "HR",
+        "hr": "Processed",
         "actions": "Actions",
         "open": "Open"
       },
       "bulk": {
         "region": "Selected leave",
         "selected": "{count} selected",
-        "markProcessed": "Mark as entered",
+        "markProcessed": "Mark as processed",
         "markUnprocessed": "Unmark"
       },
       "views": {
