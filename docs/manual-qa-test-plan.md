@@ -1662,11 +1662,11 @@ Expected result:
 ### Admin Bookkeeps Leave
 
 1. Sign in as `{ADMIN_EMAIL}` and open `https://{DOMAIN_NAME}/admin/leave`.
-2. Filter by month, by `{EMPLOYEE_EMAIL}`, by type and by HR status, then remove each filter chip.
-3. Tick the HR checkbox on one row. Select two others and use `Mark as entered`, then
+2. Filter by month, by `{EMPLOYEE_EMAIL}`, by type and by processing status, then remove each filter chip.
+3. Tick the `Processed` checkbox on one row. Select two others and use `Mark as processed`, then
    `Unmark` on one of them.
-4. Open a row: confirm the employee's note and sick note are visible and the HR tick shows who
-   ticked it and when.
+4. Open a row: confirm the employee's note and sick note are visible and the `Processed` tick shows
+   who ticked it and when.
 5. Use `Edit` to move a leave into last month and change its type. Then `Delete` another leave
    and confirm.
 6. Switch to `Calendar`.
@@ -1674,8 +1674,8 @@ Expected result:
 Expected result:
 
 - The tick answers the click at once and survives a reload; the header counts the leave still
-  waiting for HR.
-- The employee never sees the HR state anywhere.
+  waiting to be processed.
+- The employee never sees the processed state anywhere.
 - An admin edit may move a leave into the past, but overlap and the workday rule still apply.
 - A deleted leave disappears for the employee and from the calendar.
 - The admin calendar shows every kind in colour: mint vacation, lavender sick leave.
@@ -4086,7 +4086,7 @@ surfaces, and every table on it goes through `DataTable` in responsive mode — 
   a single date, and never an overlap.
 - Colleagues see each other's leave as `Away` only; the sick note is reachable by its owner and
   admins alone.
-- The admin can filter leave, tick it as entered into HR, edit and delete it.
+- The admin can filter leave, tick it as processed, edit and delete it.
 - Invitation activation works for a new invited user.
 - Magic-link login works for an active user.
 - Password setup, password login, and password reset work for active users.
