@@ -59,6 +59,9 @@ export function useLeaveCalendarLabels(monthStart: string): LeaveCalendarLabels 
       morning: t("dayParts.MORNING"),
       afternoon: t("dayParts.AFTERNOON"),
       empty: t("calendar.empty"),
+      away: (count) => t("calendar.away", { count }),
+      more: (count) => t("calendar.more", { count }),
+      awayOn: (isoDate) => t("calendar.awayOn", { day: formatDayHeading(isoDate, locale) }),
     }),
     [monthStart, locale, t, text],
   );

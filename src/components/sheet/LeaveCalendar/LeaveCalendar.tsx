@@ -1,14 +1,22 @@
 "use client";
 
-import { Sunrise, Sunset } from "lucide-react";
-import { useMemo } from "react";
+import { Sunrise, Sunset, Users } from "lucide-react";
+import { useMemo, useState } from "react";
 
+import { Popover, PopoverContent, PopoverTrigger } from "@/src/components/ui/Popover";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/src/components/ui/Tooltip";
 import { formatWeekdayLabel } from "@/src/lib/formatting";
 import { cn } from "@/src/lib/utils";
 
 import { leaveKindIcons, LeaveKindBadge } from "../LeaveKindBadge";
-import { buildLeaveAgenda, buildLeaveWeeks } from "./LeaveCalendar.model";
+import { BUSY_DAY_THRESHOLD, buildLeaveAgenda, buildLeaveWeeks } from "./LeaveCalendar.model";
 import type {
+  LeaveCalendarDay,
   LeaveCalendarKind,
   LeaveCalendarLabels,
   LeaveCalendarLeave,
@@ -70,11 +78,13 @@ export function LeaveCalendar({
             </span>
           ))}
         </div>
-        <ol className="divide-y divide-border">
-          {weeks.map((week) => (
-            <WeekRow key={week.weekStart} week={week} labels={labels} onSelect={onSelectLeave} />
-          ))}
-        </ol>
+        <TooltipProvider delayDuration={200}>
+          <ol className="divide-y divide-border">
+            {weeks.map((week) => (
+              <WeekRow key={week.weekStart} week={week} labels={labels} onSelect={onSelectLeave} />
+            ))}
+          </ol>
+        </TooltipProvider>
       </div>
 
       <Agenda agenda={agenda} labels={labels} onSelect={onSelectLeave} />
@@ -86,6 +96,9 @@ export function LeaveCalendar({
 
 const kindOrder: LeaveCalendarKind[] = ["vacation", "sick", "absent"];
 
+/** A lone absence is already its ribbon; the headcount starts where counting ribbons gets tedious. */
+const SHOW_AWAY_COUNT_FROM = 2;
+
 function WeekRow({
   week,
   labels,
@@ -95,6 +108,8 @@ function WeekRow({
   labels: LeaveCalendarLabels;
   onSelect?: (leave: LeaveCalendarLeave) => void;
 }) {
+  const overflowing = week.visibleLaneCount < week.laneCount;
+
   return (
     <li aria-label={labels.week(week.weekNumber)}>
       <div
@@ -102,8 +117,9 @@ function WeekRow({
         style={{
           // A fixed header row for the day numbers: every day cell spans all rows, so an `auto` row
           // would collapse to nothing and the ribbons would ride over the numbers. The last row
-          // keeps room under the ribbons for a holiday's name.
-          gridTemplateRows: `2.25rem repeat(${week.laneCount}, 1.75rem) minmax(${
+          // keeps room under the ribbons for a holiday's name; a crowded week adds one row for its
+          // "+N more" buttons instead of growing a lane per person.
+          gridTemplateRows: `2.25rem repeat(${week.visibleLaneCount + (overflowing ? 1 : 0)}, 1.75rem) minmax(${
             week.days.some((day) => day.holiday) ? "2.5rem" : "0.75rem"
           }, 1fr)`,
         }}
@@ -139,6 +155,9 @@ function WeekRow({
                 {day.dayNumber}
               </span>
               {day.today ? <span className="sr-only">{labels.today}</span> : null}
+              {day.awayCount >= SHOW_AWAY_COUNT_FROM ? (
+                <AwayCount count={day.awayCount} labels={labels} />
+              ) : null}
             </span>
             {day.holiday ? (
               <span className="line-clamp-2 text-[0.68rem] leading-tight font-medium text-destructive-bright">
@@ -149,17 +168,129 @@ function WeekRow({
           </div>
         ))}
 
-        {week.segments.map((segment) => (
-          <Ribbon
-            key={`${segment.leave.id}-${week.weekStart}`}
-            segment={segment}
-            labels={labels}
-            onSelect={onSelect}
-          />
-        ))}
+        {week.segments
+          .filter((segment) => !segment.hidden)
+          .map((segment) => (
+            <Ribbon
+              key={`${segment.leave.id}-${week.weekStart}`}
+              segment={segment}
+              labels={labels}
+              onSelect={onSelect}
+            />
+          ))}
+
+        {overflowing
+          ? week.days.map((day, index) =>
+              day.hidden.length > 0 ? (
+                <DayOverflow
+                  key={`more-${day.isoDate}`}
+                  day={day}
+                  column={index + 1}
+                  row={week.visibleLaneCount + 2}
+                  labels={labels}
+                  onSelect={onSelect}
+                />
+              ) : null,
+            )
+          : null}
       </div>
     </li>
   );
+}
+
+/** The day's headcount; from `BUSY_DAY_THRESHOLD` people it turns amber so a thin day stands out. */
+function AwayCount({ count, labels }: { count: number; labels: LeaveCalendarLabels }) {
+  const busy = count >= BUSY_DAY_THRESHOLD;
+  return (
+    <span
+      className={cn(
+        "ml-auto inline-flex items-center gap-1 rounded-[var(--radius-pill)] border px-1.5 py-0.5 font-ui text-[0.68rem] leading-none font-semibold tabular-nums",
+        busy
+          ? "border-warning/45 bg-warning-soft text-warning"
+          : "border-border bg-secondary text-muted-foreground",
+      )}
+    >
+      <Users aria-hidden="true" className="size-3" />
+      {labels.away(count)}
+    </span>
+  );
+}
+
+/**
+ * What a crowded week does not draw. Hovering or focusing names who is behind the button; clicking
+ * opens the whole day, drawn and hidden alike, each one selectable.
+ */
+function DayOverflow({
+  day,
+  column,
+  row,
+  labels,
+  onSelect,
+}: {
+  day: LeaveCalendarDay;
+  column: number;
+  row: number;
+  labels: LeaveCalendarLabels;
+  onSelect?: (leave: LeaveCalendarLeave) => void;
+}) {
+  const [open, setOpen] = useState(false);
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <PopoverTrigger asChild>
+            <button
+              type="button"
+              className="relative z-10 mx-1 flex h-6 items-center justify-center self-center rounded-full border border-dashed border-border-strong bg-card font-ui text-[0.72rem] font-semibold text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+              style={{ gridColumn: column, gridRow: row }}
+            >
+              {labels.more(day.hidden.length)}
+            </button>
+          </PopoverTrigger>
+        </TooltipTrigger>
+        <TooltipContent side="top" className="max-w-56">
+          <ul className="grid gap-0.5 text-xs">
+            {day.hidden.map((leave) => (
+              <li key={leave.id}>{labels.ribbon(leave)}</li>
+            ))}
+          </ul>
+        </TooltipContent>
+      </Tooltip>
+      <PopoverContent align="start" className="w-64 p-3">
+        <p className="mb-2 font-ui text-sm font-semibold text-foreground">
+          {labels.awayOn(day.isoDate)}
+        </p>
+        <ul className="grid gap-1.5">
+          {day.leaves.map((leave) => (
+            <li key={leave.id}>
+              <button
+                type="button"
+                aria-label={labels.leave(leave)}
+                onClick={() => {
+                  setOpen(false);
+                  onSelect?.(leave);
+                }}
+                className="rounded-full focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+              >
+                <LeaveKindBadge kind={leave.kind} label={halfDayLabel(leave, labels)} />
+              </button>
+            </li>
+          ))}
+        </ul>
+      </PopoverContent>
+    </Popover>
+  );
+}
+
+function halfDayLabel(leave: LeaveCalendarLeave, labels: LeaveCalendarLabels) {
+  const part =
+    leave.dayPart === "MORNING"
+      ? `, ${labels.morning}`
+      : leave.dayPart === "AFTERNOON"
+        ? `, ${labels.afternoon}`
+        : "";
+  return `${labels.ribbon(leave)}${part}`;
 }
 
 function Ribbon({
@@ -241,6 +372,8 @@ function Agenda({
                 <span className="sr-only">{labels.holiday}: </span>
                 {day.holiday}
               </span>
+            ) : day.awayCount >= SHOW_AWAY_COUNT_FROM ? (
+              <AwayCount count={day.awayCount} labels={labels} />
             ) : null}
           </div>
           {leaves.length > 0 ? (
@@ -253,16 +386,7 @@ function Agenda({
                     onClick={() => onSelect?.(leave)}
                     className="rounded-full focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
                   >
-                    <LeaveKindBadge
-                      kind={leave.kind}
-                      label={`${labels.ribbon(leave)}${
-                        leave.dayPart === "MORNING"
-                          ? `, ${labels.morning}`
-                          : leave.dayPart === "AFTERNOON"
-                            ? `, ${labels.afternoon}`
-                            : ""
-                      }`}
-                    />
+                    <LeaveKindBadge kind={leave.kind} label={halfDayLabel(leave, labels)} />
                   </button>
                 </li>
               ))}

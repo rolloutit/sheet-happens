@@ -1,8 +1,13 @@
 import type { Meta, StoryObj } from "@storybook/nextjs-vite";
-import { expect, fn } from "storybook/test";
+import { expect, fn, within } from "storybook/test";
 
 import { LeaveCalendar } from ".";
-import { englishLabels, octoberHolidays, octoberLeaves } from "./LeaveCalendar.fixtures";
+import {
+  crowdedOctoberLeaves,
+  englishLabels,
+  octoberHolidays,
+  octoberLeaves,
+} from "./LeaveCalendar.fixtures";
 
 const meta = {
   title: "Sheet/LeaveCalendar",
@@ -76,6 +81,34 @@ export const BusyWeek: Story = {
       workdays: 5 - index,
       isOwn: false,
     })),
+  },
+};
+
+/**
+ * Twelve people off around the 23 October holiday. Each day from two people away carries its
+ * headcount, amber from four; the week draws four lanes and lists the rest behind "+N more".
+ */
+export const CrowdedWeek: Story = {
+  args: { leaves: crowdedOctoberLeaves },
+};
+
+/** The "+N more" button: its tooltip names who is hidden, its popover lists the whole day. */
+export const CrowdedWeekOverflow: Story = {
+  args: { leaves: crowdedOctoberLeaves },
+  play: async ({ args, canvas, canvasElement, userEvent }) => {
+    const week = canvas.getByRole("listitem", { name: "Week 43" });
+    const more = within(week).getAllByRole("button", { name: /^\+\d+ more$/ })[0]!;
+
+    await userEvent.hover(more);
+    const body = within(canvasElement.ownerDocument.body);
+    await expect(await body.findByRole("tooltip")).toBeVisible();
+
+    await userEvent.click(more);
+    const day = await body.findByRole("dialog");
+    await expect(day).toHaveTextContent(/^Away on \w+day, October \d+/);
+    const [pick] = within(day).getAllByRole("button");
+    await userEvent.click(pick!);
+    await expect(args.onSelectLeave).toHaveBeenCalledOnce();
   },
 };
 

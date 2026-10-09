@@ -70,6 +70,41 @@ export const octoberLeaves: LeaveCalendarLeave[] = [
   },
 ];
 
+const crowd: Array<
+  [string, string, string, LeaveCalendarLeave["kind"], LeaveCalendarLeave["dayPart"]]
+> = [
+  ["Anna Kiss", "2026-10-19", "2026-10-23", "sick", "FULL"],
+  ["Bence Nagy", "2026-10-19", "2026-10-30", "vacation", "FULL"],
+  ["Csilla Tóth", "2026-10-20", "2026-10-22", "vacation", "FULL"],
+  ["Dávid Szabó", "2026-10-21", "2026-10-27", "vacation", "FULL"],
+  ["Eszter Horváth", "2026-10-21", "2026-10-21", "sick", "MORNING"],
+  ["Ferenc Varga", "2026-10-22", "2026-10-22", "vacation", "FULL"],
+  ["Gréta Kovács", "2026-10-19", "2026-10-21", "vacation", "FULL"],
+  ["Hanna Molnár", "2026-10-26", "2026-10-30", "vacation", "FULL"],
+  ["István Farkas", "2026-10-20", "2026-10-28", "sick", "FULL"],
+  ["Judit Balogh", "2026-10-22", "2026-10-29", "vacation", "FULL"],
+  ["Kristóf Papp", "2026-10-21", "2026-10-21", "vacation", "AFTERNOON"],
+  ["Lilla Takács", "2026-10-19", "2026-10-20", "vacation", "FULL"],
+];
+
+/**
+ * A week when most of the team is off at once (the autumn school break around 23 October), for
+ * the lane cap: four lanes drawn, the rest behind each day's "+N more".
+ */
+export const crowdedOctoberLeaves: LeaveCalendarLeave[] = crowd.map(
+  ([memberName, startDate, endDate, kind, dayPart], index) => ({
+    id: `crowd-${index}`,
+    memberId: memberName,
+    memberName,
+    kind,
+    dayPart,
+    startDate,
+    endDate,
+    workdays: 1,
+    isOwn: index === 1,
+  }),
+);
+
 export const octoberHolidays = [
   { date: "2026-10-23", name: "National Day" },
   { date: "2026-11-01", name: "All Saints' Day" },
@@ -94,4 +129,8 @@ export const englishLabels: LeaveCalendarLabels = {
   morning: "Morning",
   afternoon: "Afternoon",
   empty: "Nobody is away this month.",
+  away: (count) => `${count} away`,
+  more: (count) => `+${count} more`,
+  awayOn: (isoDate) =>
+    `Away on ${new Intl.DateTimeFormat("en", { weekday: "long", month: "long", day: "numeric", timeZone: "UTC" }).format(new Date(`${isoDate}T00:00:00Z`))}`,
 };

@@ -19,6 +19,12 @@ function mondayOf(isoDate: string) {
   return shift(isoDate, -((date.getUTCDay() + 6) % 7));
 }
 
+/** Ribbon lanes drawn per week before the rest goes behind a day's "+N more". */
+export const MAX_VISIBLE_LANES = 4;
+
+/** From this many people away the day's headcount is drawn as a warning. */
+export const BUSY_DAY_THRESHOLD = 4;
+
 function daysBetween(from: string, to: string) {
   return Math.round((Date.parse(`${to}T00:00:00Z`) - Date.parse(`${from}T00:00:00Z`)) / 86_400_000);
 }
@@ -35,7 +41,10 @@ function slotsOf(segment: Pick<LeaveSegment, "startColumn" | "span" | "leave">) 
  * Own leave first so it always sits on the top lane, then whatever starts earliest, then the
  * longer run, so a long leave is not pushed below the short ones it overlaps.
  */
-function compareSegments(a: Omit<LeaveSegment, "lane">, b: Omit<LeaveSegment, "lane">) {
+function compareSegments(
+  a: Omit<LeaveSegment, "lane" | "hidden">,
+  b: Omit<LeaveSegment, "lane" | "hidden">,
+) {
   if (a.leave.isOwn !== b.leave.isOwn) return a.leave.isOwn ? -1 : 1;
   if (a.startColumn !== b.startColumn) return a.startColumn - b.startColumn;
   if (a.span !== b.span) return b.span - a.span;
@@ -52,14 +61,18 @@ function compareSegments(a: Omit<LeaveSegment, "lane">, b: Omit<LeaveSegment, "l
  * those days is still drawn: a Friday-to-Tuesday leave reads as one continuous run.
  *
  * Lanes are packed per week in half-day slots, so a morning and an afternoon of the same day can
- * share a lane and a week with no overlap stays one lane tall.
+ * share a lane and a week with no overlap stays one lane tall. A week needing more than
+ * `maxLanes` draws the first `maxLanes` and adds one row for each day's "+N more", so the row never
+ * grows past a fixed height however many people are away; nothing is dropped, only listed.
  */
 export function buildLeaveWeeks(input: {
   monthStart: string;
   todayIso: string;
   leaves: readonly LeaveCalendarLeave[];
   holidays: readonly LeaveCalendarHoliday[];
+  maxLanes?: number;
 }): LeaveCalendarWeek[] {
+  const maxLanes = input.maxLanes ?? MAX_VISIBLE_LANES;
   const monthPrefix = input.monthStart.slice(0, 7);
   const year = Number.parseInt(input.monthStart.slice(0, 4), 10);
   const month = Number.parseInt(input.monthStart.slice(5, 7), 10);
@@ -74,17 +87,7 @@ export function buildLeaveWeeks(input: {
     weekStart = shift(weekStart, 7)
   ) {
     const weekEnd = shift(weekStart, 6);
-    const days = Array.from({ length: 7 }, (_, index) => {
-      const isoDate = shift(weekStart, index);
-      return {
-        isoDate,
-        dayNumber: Number.parseInt(isoDate.slice(8), 10),
-        inMonth: isoDate.startsWith(monthPrefix),
-        weekend: index >= 5,
-        today: isoDate === input.todayIso,
-        holiday: holidays.get(isoDate) ?? null,
-      };
-    });
+    const dates = Array.from({ length: 7 }, (_, index) => shift(weekStart, index));
 
     const unplaced = input.leaves
       .filter((leave) => leave.startDate <= weekEnd && leave.endDate >= weekStart)
@@ -102,7 +105,7 @@ export function buildLeaveWeeks(input: {
       .sort(compareSegments);
 
     const lanes: boolean[][] = [];
-    const segments: LeaveSegment[] = unplaced.map((segment) => {
+    const placed = unplaced.map((segment) => {
       const { first, last } = slotsOf(segment);
       let lane = lanes.findIndex((slots) => slots.slice(first, last + 1).every((taken) => !taken));
       if (lane === -1) {
@@ -113,12 +116,46 @@ export function buildLeaveWeeks(input: {
       return { ...segment, lane };
     });
 
+    const visibleLaneCount = Math.min(lanes.length, maxLanes);
+    const segments: LeaveSegment[] = placed.map((segment) => ({
+      ...segment,
+      hidden: segment.lane >= visibleLaneCount,
+    }));
+
+    const days = dates.map((isoDate, index) => {
+      const weekend = index >= 5;
+      const holiday = holidays.get(isoDate) ?? null;
+      const covering = segments
+        .filter(
+          (segment) => index >= segment.startColumn && index < segment.startColumn + segment.span,
+        )
+        .sort((a, b) => a.lane - b.lane);
+      return {
+        isoDate,
+        dayNumber: Number.parseInt(isoDate.slice(8), 10),
+        inMonth: isoDate.startsWith(monthPrefix),
+        weekend,
+        today: isoDate === input.todayIso,
+        holiday,
+        awayCount:
+          weekend || holiday ? 0 : new Set(covering.map((segment) => segment.leave.memberId)).size,
+        leaves: covering.map((segment) => segment.leave),
+        // Nobody works on a weekend or a holiday, so a hidden leave running through one is not
+        // worth a "+N more" there; its workdays carry the button.
+        hidden:
+          weekend || holiday
+            ? []
+            : covering.filter((segment) => segment.hidden).map((segment) => segment.leave),
+      };
+    });
+
     weeks.push({
       weekStart,
       weekNumber: isoWeekNumber(weekStart),
       days,
       segments,
       laneCount: lanes.length,
+      visibleLaneCount,
     });
   }
 
@@ -133,14 +170,7 @@ export function buildLeaveAgenda(weeks: readonly LeaveCalendarWeek[]): LeaveAgen
   return weeks.flatMap((week) =>
     week.days.flatMap((day) => {
       if (!day.inMonth) return [];
-      const leaves = day.weekend
-        ? []
-        : week.segments
-            .filter(
-              (segment) =>
-                day.isoDate >= segment.leave.startDate && day.isoDate <= segment.leave.endDate,
-            )
-            .map((segment) => segment.leave);
+      const leaves = day.weekend ? [] : day.leaves;
       return leaves.length > 0 || day.holiday ? [{ day, leaves }] : [];
     }),
   );

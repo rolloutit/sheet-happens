@@ -3350,7 +3350,10 @@
       "monthNav": "Choose month",
       "previousMonth": "Previous month",
       "nextMonth": "Next month",
-      "thisMonth": "This month"
+      "thisMonth": "This month",
+      "away": "{count} away",
+      "more": "+{count} more",
+      "awayOn": "Away on {day}"
     },
     "form": {
       "title": "Add leave",

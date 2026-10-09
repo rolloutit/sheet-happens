@@ -3350,7 +3350,10 @@
       "monthNav": "Hónap kiválasztása",
       "previousMonth": "Előző hónap",
       "nextMonth": "Következő hónap",
-      "thisMonth": "Aktuális hónap"
+      "thisMonth": "Aktuális hónap",
+      "away": "{count} távol",
+      "more": "+{count} további",
+      "awayOn": "Távol: {day}"
     },
     "form": {
       "title": "Szabadság felvitele",

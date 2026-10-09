@@ -92,6 +92,71 @@ describe("buildLeaveWeeks", () => {
   });
 });
 
+describe("crowded weeks", () => {
+  const crowd = (count: number) =>
+    Array.from({ length: count }, (_, index) =>
+      leave({
+        id: `p${index}`,
+        memberId: `m${index}`,
+        startDate: "2026-10-19",
+        endDate: "2026-10-21",
+      }),
+    );
+
+  it("counts the people away on each workday, a half day included", () => {
+    const weeks = october([
+      leave({ id: "a", startDate: "2026-10-19", endDate: "2026-10-20" }),
+      leave({ id: "b", startDate: "2026-10-20", endDate: "2026-10-20", dayPart: "MORNING" }),
+    ]);
+
+    expect(weeks[3]?.days.slice(0, 3).map((day) => day.awayCount)).toEqual([1, 2, 0]);
+  });
+
+  it("does not count anyone away on a weekend or a public holiday", () => {
+    const weeks = october([leave({ id: "a", startDate: "2026-10-22", endDate: "2026-10-26" })]);
+
+    expect(weeks[3]?.days.slice(3).map((day) => day.awayCount)).toEqual([1, 0, 0, 0]);
+  });
+
+  it("shows every lane while the week fits", () => {
+    const week = october(crowd(4))[3]!;
+
+    expect(week.laneCount).toBe(4);
+    expect(week.visibleLaneCount).toBe(4);
+    expect(week.segments.every((segment) => !segment.hidden)).toBe(true);
+    expect(week.days.every((day) => day.hidden.length === 0)).toBe(true);
+  });
+
+  it("offers no '+N more' on a weekend a hidden leave runs through", () => {
+    const week = october(
+      Array.from({ length: 6 }, (_, index) =>
+        leave({
+          id: `w${index}`,
+          memberId: `w${index}`,
+          startDate: "2026-10-19",
+          endDate: "2026-10-26",
+        }),
+      ),
+    )[3]!;
+
+    expect(week.days.map((day) => day.hidden.length)).toEqual([2, 2, 2, 2, 0, 0, 0]);
+  });
+
+  it("caps a crowded week at four lanes and lists the rest per day", () => {
+    const week = october([
+      ...crowd(6),
+      leave({ id: "late", startDate: "2026-10-23", endDate: "2026-10-23" }),
+    ])[3]!;
+
+    expect(week.laneCount).toBe(6);
+    expect(week.visibleLaneCount).toBe(4);
+    expect(week.segments.filter((segment) => segment.hidden)).toHaveLength(2);
+    expect(week.days.slice(0, 5).map((day) => day.hidden.length)).toEqual([2, 2, 2, 0, 0]);
+    // Every leave of the day stays reachable, hidden or not.
+    expect(week.days[0]?.leaves).toHaveLength(6);
+  });
+});
+
 describe("buildLeaveAgenda", () => {
   it("lists the workdays a leave covers and the holidays, nothing else", () => {
     const agenda = buildLeaveAgenda(

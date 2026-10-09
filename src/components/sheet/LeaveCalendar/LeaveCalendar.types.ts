@@ -27,6 +27,15 @@ export type LeaveCalendarDay = {
   weekend: boolean;
   today: boolean;
   holiday: string | null;
+  /** People away on this day; always 0 on a weekend or a public holiday, when nobody works. */
+  awayCount: number;
+  /** Every leave touching this day, in lane order, for the day's full list. */
+  leaves: LeaveCalendarLeave[];
+  /**
+   * The leave of this workday that sits on a lane past the cap and is not drawn as a ribbon.
+   * Always empty on a weekend or a public holiday.
+   */
+  hidden: LeaveCalendarLeave[];
 };
 
 /** One leave's run inside one week row. A leave crossing a Sunday becomes two segments. */
@@ -38,6 +47,8 @@ export type LeaveSegment = {
   lane: number;
   continuesBefore: boolean;
   continuesAfter: boolean;
+  /** On a lane past the week's cap: listed under the day's "+N more" instead of drawn. */
+  hidden: boolean;
 };
 
 export type LeaveCalendarWeek = {
@@ -46,6 +57,8 @@ export type LeaveCalendarWeek = {
   days: LeaveCalendarDay[];
   segments: LeaveSegment[];
   laneCount: number;
+  /** Lanes actually drawn; smaller than `laneCount` only in a crowded week. */
+  visibleLaneCount: number;
 };
 
 export type LeaveAgendaDay = {
@@ -71,6 +84,12 @@ export type LeaveCalendarLabels = {
   afternoon: string;
   /** The agenda's line when the month holds no leave and no holiday. */
   empty: string;
+  /** `5 away`, the day's headcount. */
+  away: (count: number) => string;
+  /** `+3 more`, the button for the leave a crowded week does not draw. */
+  more: (count: number) => string;
+  /** Names the day's full list: `Away on Thursday, October 22`. */
+  awayOn: (isoDate: string) => string;
 };
 
 export type LeaveCalendarProps = {
