@@ -47,6 +47,13 @@ const storyCases: StoryVisualCase[] = [
     locale: "en",
   },
   {
+    id: "sheet-leavecalendar--crowded-week",
+    slug: "leave-calendar-crowded-light",
+    theme: "light",
+    locale: "en",
+    projects: ["desktop"],
+  },
+  {
     id: "sheet-leavecalendar--admin-view",
     slug: "leave-calendar-admin-light",
     theme: "light",
