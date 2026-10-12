@@ -1193,6 +1193,9 @@ Expected result:
 - Hours in the admin list, the review summary, the project snapshot, and every source line render
   decimal at two fraction digits (e.g. `9.50 h`) next to their amount, regardless of the admin's
   `Time display` preference.
+- Each project caption in the snapshot names the unit once (`81.75 h, 18 entries` /
+  `81,75 h, 18 bejegyzés`, a declared project `52.00 h declared for the month`), never `h h` or
+  `h óra`.
 - Approval changes the status to approved.
 - Source time entries remain locked after approval.
 - The audit log contains a `timesheet.approved` row.
