@@ -4100,3 +4100,5 @@ surfaces, and every table on it goes through `DataTable` in responsive mode — 
   the field rather than floating over the keyboard.
 - An agent connected over MCP sees the same recent descriptions per project in `time_get_context`
   and reuses that wording instead of inventing its own.
+- The e-mail field on `/login` shows a neutral `te@example.com` / `you@example.com` placeholder in
+  Hungarian and English, never a real company domain.
