@@ -29,7 +29,7 @@ approach before you spend time on it. Translation fixes and small bug fixes can 
 ```bash
 pnpm install
 pnpm setup:git             # once per clone: pre-push guard and push defaults (local git config only)
-cp .env.example .env.local # then fill in what the comments in the file ask for
+cp .env.example .env.local # the defaults work for local development
 pnpm db:dev                # starts Postgres + MinIO in Docker, migrates, seeds fake data
 pnpm dev                   # http://localhost:3000
 ```
@@ -55,6 +55,10 @@ imperative subject`, lowercase, no trailing period (for example `fix(time): clam
 | Formatting              | `pnpm format` checks, `pnpm format:write` fixes                        |
 | Visual regression (Mac) | `pnpm test:visual`; baselines are macOS-only, CI skips them            |
 | Browser/e2e             | `pnpm db:test` once per clone, then `pnpm dev:e2e` and `pnpm e2e`      |
+
+The Storybook, visual and e2e checks drive Chromium through Playwright. Install the browser once
+per Playwright version with `pnpm exec playwright install chromium`, or those steps of
+`pnpm verify` fail before running a single test.
 
 Refresh visual baselines (`pnpm test:visual:update`) only for an intentional visual change, and say
 so in the commit.
