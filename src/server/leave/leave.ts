@@ -251,8 +251,14 @@ export async function updateLeaveForAdmin(
     });
     await assertNoTimeEntriesOnLeaveDays(tx, existing.memberId, input);
 
-    await tx.leave.update({
-      where: { id: existing.id },
+    // The note check above is a plain read, and uploads do not take the member lock; repeating it
+    // in the update closes the window in which a sick note lands on what this edit makes a vacation.
+    const updated = await tx.leave.updateMany({
+      where: {
+        id: existing.id,
+        deletedAt: null,
+        ...(input.type === "SICK" ? {} : { attachmentDocumentId: null }),
+      },
       data: {
         type: input.type,
         startDate: parseDateOnly(input.startDate),
@@ -261,8 +267,19 @@ export async function updateLeaveForAdmin(
         note: input.note,
         updatedAt: now,
       },
-      select: { id: true },
     });
+    if (updated.count === 0) {
+      const live = await tx.leave.findFirst({
+        where: { id: existing.id, deletedAt: null },
+        select: { id: true },
+      });
+      throw live
+        ? new LeaveError(
+            "Remove the sick note before changing this leave to vacation.",
+            "SICK_NOTE_ATTACHED",
+          )
+        : new LeaveError("Leave not found.", "NOT_FOUND");
+    }
 
     await tx.auditLog.create({
       data: {
@@ -436,11 +453,21 @@ export async function uploadLeaveAttachment(
         select: { id: true },
       });
 
-      await tx.leave.update({
-        where: { id: leave.id },
+      // The checks above ran before the upload, so they are repeated in the update itself: an
+      // admin may have deleted the leave or changed it to vacation while the file was in flight.
+      const attached = await tx.leave.updateMany({
+        where: { id: leave.id, deletedAt: null, type: "SICK" },
         data: { attachmentDocumentId: document.id },
-        select: { id: true },
       });
+      if (attached.count === 0) {
+        const changed = await tx.leave.findFirst({
+          where: { id: leave.id, deletedAt: null },
+          select: { id: true },
+        });
+        throw changed
+          ? new LeaveError("Only sick leave takes a sick note.", "ATTACHMENT_SICK_ONLY")
+          : new LeaveError("Leave not found.", "NOT_FOUND");
+      }
 
       const previous = current.attachmentDocument;
       if (previous) {

@@ -7,7 +7,14 @@ const db = vi.hoisted(() => ({
   timeEntry: { findFirst: vi.fn() },
   runningTimer: { findUnique: vi.fn() },
   auditLog: { create: vi.fn() },
-  leave: { findMany: vi.fn(), create: vi.fn() },
+  document: { create: vi.fn() },
+  leave: {
+    findMany: vi.fn(),
+    findFirst: vi.fn(),
+    findUniqueOrThrow: vi.fn(),
+    create: vi.fn(),
+    updateMany: vi.fn(),
+  },
   publicHolidayYear: { findMany: vi.fn(async () => [{ year: 2026 }]) },
   publicHoliday: {
     findMany: vi.fn(async () => [
@@ -28,6 +35,8 @@ const {
   getLeaveEarliestStartDate,
   listLeaveCalendar,
   normalizeAdminLeaveFilters,
+  updateLeaveForAdmin,
+  uploadLeaveAttachment,
 } = await import("./leave");
 
 function record(overrides: Record<string, unknown>) {
@@ -177,6 +186,97 @@ describe("createLeave over logged time", () => {
       createLeave({ ...input, endDate: "2026-10-12", dayPart: "MORNING" }, { now }),
     ).resolves.toMatchObject({ leaveId: "leave-new" });
     expect(db.timeEntry.findFirst).not.toHaveBeenCalled();
+  });
+});
+
+describe("a sick note racing an admin edit", () => {
+  const storage = {
+    putObject: vi.fn(async ({ key }: { key: string }) => ({ bucket: "leave", key })),
+    deleteObject: vi.fn(async () => undefined),
+  };
+  const file = {
+    bytes: Buffer.from("%PDF-1.7\nexample"),
+    originalFilename: "igazolas.pdf",
+    contentType: "application/pdf",
+    byteSize: 16,
+  };
+
+  beforeEach(() => {
+    db.$transaction.mockImplementation((callback: (tx: typeof db) => unknown) => callback(db));
+    db.leave.findFirst.mockReset();
+    db.leave.findMany.mockResolvedValue([]);
+    db.leave.findUniqueOrThrow.mockResolvedValue({ attachmentDocument: null });
+    db.document.create.mockResolvedValue({ id: "document-new" });
+    db.timeEntry.findFirst.mockResolvedValue(null);
+    db.runningTimer.findUnique.mockResolvedValue(null);
+    storage.deleteObject.mockClear();
+  });
+
+  it("refuses the note when the leave became a vacation during the upload", async () => {
+    db.leave.findFirst
+      .mockResolvedValueOnce({ id: "leave-1", memberId: "member-own", type: "SICK" })
+      .mockResolvedValueOnce({ id: "leave-1" });
+    db.leave.updateMany.mockResolvedValue({ count: 0 });
+
+    await expect(
+      uploadLeaveAttachment(
+        { leaveId: "leave-1", viewer: { memberId: "member-own", isAdmin: false }, file },
+        { storage: storage as never },
+      ),
+    ).rejects.toMatchObject({ code: "ATTACHMENT_SICK_ONLY" });
+    expect(db.leave.updateMany).toHaveBeenCalledWith({
+      where: { id: "leave-1", deletedAt: null, type: "SICK" },
+      data: { attachmentDocumentId: "document-new" },
+    });
+    // The uploaded object is cleaned up rather than left behind as orphaned health data.
+    expect(storage.deleteObject).toHaveBeenCalledOnce();
+  });
+
+  it("refuses the note when the leave was deleted during the upload", async () => {
+    db.leave.findFirst
+      .mockResolvedValueOnce({ id: "leave-1", memberId: "member-own", type: "SICK" })
+      .mockResolvedValueOnce(null);
+    db.leave.updateMany.mockResolvedValue({ count: 0 });
+
+    await expect(
+      uploadLeaveAttachment(
+        { leaveId: "leave-1", viewer: { memberId: "member-own", isAdmin: false }, file },
+        { storage: storage as never },
+      ),
+    ).rejects.toMatchObject({ code: "NOT_FOUND" });
+  });
+
+  it("refuses a change to vacation when a note arrived after the check", async () => {
+    db.leave.findFirst
+      .mockResolvedValueOnce({
+        id: "leave-1",
+        memberId: "member-own",
+        type: "SICK",
+        startDate: new Date("2026-10-12T00:00:00.000Z"),
+        endDate: new Date("2026-10-12T00:00:00.000Z"),
+        dayPart: "FULL",
+        note: null,
+        attachmentDocumentId: null,
+      })
+      .mockResolvedValueOnce({ id: "leave-1" });
+    db.leave.updateMany.mockResolvedValue({ count: 0 });
+
+    await expect(
+      updateLeaveForAdmin({
+        leaveId: "leave-1",
+        actorMemberId: "admin",
+        type: "VACATION",
+        startDate: "2026-10-12",
+        endDate: "2026-10-12",
+        dayPart: "FULL",
+        note: null,
+      }),
+    ).rejects.toMatchObject({ code: "SICK_NOTE_ATTACHED" });
+    expect(db.leave.updateMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { id: "leave-1", deletedAt: null, attachmentDocumentId: null },
+      }),
+    );
   });
 });
 
