@@ -122,6 +122,12 @@ export function buildLeaveWeeks(input: {
       hidden: segment.lane >= visibleLaneCount,
     }));
 
+    const isWorkday = (index: number) => index < 5 && !holidays.has(dates[index]!);
+    const coversWorkday = (segment: LeaveSegment) =>
+      Array.from({ length: segment.span }, (_, offset) => segment.startColumn + offset).some(
+        isWorkday,
+      );
+
     const days = dates.map((isoDate, index) => {
       const weekend = index >= 5;
       const holiday = holidays.get(isoDate) ?? null;
@@ -141,11 +147,15 @@ export function buildLeaveWeeks(input: {
           weekend || holiday ? 0 : new Set(covering.map((segment) => segment.leave.memberId)).size,
         leaves: covering.map((segment) => segment.leave),
         // Nobody works on a weekend or a holiday, so a hidden leave running through one is not
-        // worth a "+N more" there; its workdays carry the button.
-        hidden:
-          weekend || holiday
-            ? []
-            : covering.filter((segment) => segment.hidden).map((segment) => segment.leave),
+        // worth a "+N more" there; its workdays carry the button. A leave that touches this week
+        // only on such days has no workday to carry it, so its first day here does.
+        hidden: covering
+          .filter(
+            (segment) =>
+              segment.hidden &&
+              (isWorkday(index) || (segment.startColumn === index && !coversWorkday(segment))),
+          )
+          .map((segment) => segment.leave),
       };
     });
 

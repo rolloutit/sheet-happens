@@ -142,6 +142,24 @@ describe("crowded weeks", () => {
     expect(week.days.map((day) => day.hidden.length)).toEqual([2, 2, 2, 2, 0, 0, 0]);
   });
 
+  it("lists a hidden leave that touches the week only on its weekend", () => {
+    const week = october([
+      ...Array.from({ length: 6 }, (_, index) =>
+        leave({
+          id: `w${index}`,
+          memberId: `w${index}`,
+          startDate: "2026-10-19",
+          endDate: "2026-10-25",
+        }),
+      ),
+      leave({ id: "late", startDate: "2026-10-24", endDate: "2026-10-27" }),
+    ])[3]!;
+
+    expect(week.segments.find((segment) => segment.leave.id === "late")?.hidden).toBe(true);
+    // The 23rd is a holiday; the leave that starts on Saturday is listed there, once.
+    expect(week.days.map((day) => day.hidden.length)).toEqual([2, 2, 2, 2, 0, 1, 0]);
+  });
+
   it("caps a crowded week at four lanes and lists the rest per day", () => {
     const week = october([
       ...crowd(6),
