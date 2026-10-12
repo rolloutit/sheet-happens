@@ -8,6 +8,11 @@
  * workdays (a Saturday worked to bridge a holiday) are not modelled.
  */
 
+import { addUtcDays, toDateValue } from "./date-values";
+
+/** The longest note a leave takes; the form's limit and the server's check share it. */
+export const LEAVE_NOTE_MAX_LENGTH = 500;
+
 export type LeaveDayPartValue = "FULL" | "MORNING" | "AFTERNOON";
 
 export type LeaveRange = {
@@ -16,10 +21,8 @@ export type LeaveRange = {
   dayPart: LeaveDayPartValue;
 };
 
-function shiftDateValue(value: string, days: number) {
-  const date = new Date(`${value}T00:00:00.000Z`);
-  date.setUTCDate(date.getUTCDate() + days);
-  return date.toISOString().slice(0, 10);
+export function shiftDateValue(value: string, days: number) {
+  return toDateValue(addUtcDays(new Date(`${value}T00:00:00.000Z`), days));
 }
 
 /** Every date of an inclusive range; empty when `end` is before `start`. */

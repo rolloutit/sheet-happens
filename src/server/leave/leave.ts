@@ -1,5 +1,6 @@
 import { createHash, randomUUID } from "node:crypto";
 
+import { isMonthValue } from "@/src/lib/date-values";
 import { countLeaveWorkdays, type LeaveDayPartValue, type LeaveRange } from "@/src/lib/leave-days";
 import { listSearchParam, type SearchParamValue } from "@/src/lib/search-params";
 import { prisma } from "@/src/server/db/client";
@@ -740,7 +741,7 @@ export function normalizeAdminLeaveFilters(raw: {
   const page = Number.parseInt(listSearchParam(raw.page).at(0) ?? "", 10);
 
   return {
-    month: /^\d{4}-(0[1-9]|1[0-2])$/.test(month) ? month : null,
+    month: isMonthValue(month) ? month : null,
     memberIds: listSearchParam(raw.member).filter((id) => /^[0-9a-f-]{36}$/i.test(id)),
     types: listSearchParam(raw.type)
       .map((type) => type.toUpperCase())

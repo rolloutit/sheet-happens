@@ -6,13 +6,12 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 
 import { Button } from "@/src/components/ui/Button";
+import { addUtcMonths, toMonthValue } from "@/src/lib/date-values";
 import { formatMonthLabel } from "@/src/lib/formatting";
 import { useLeaveText } from "./use-leave-labels";
 
 function shiftMonth(month: string, amount: number) {
-  const date = new Date(`${month}-01T00:00:00.000Z`);
-  date.setUTCMonth(date.getUTCMonth() + amount);
-  return date.toISOString().slice(0, 7);
+  return toMonthValue(addUtcMonths(new Date(`${month}-01T00:00:00.000Z`), amount));
 }
 
 /**

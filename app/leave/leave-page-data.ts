@@ -1,3 +1,4 @@
+import { isMonthValue } from "@/src/lib/date-values";
 import type { LeaveItem, PublicHolidayValue } from "@/src/server/leave";
 import type { LeaveHoliday, LeaveView } from "./leave-view-types";
 
@@ -29,5 +30,5 @@ export function toLeaveHolidays(holidays: PublicHolidayValue[], locale: string):
 /** `YYYY-MM` from a search param, or `fallback` when it is missing or malformed. */
 export function readMonthParam(value: string | string[] | undefined, fallback: string) {
   const raw = Array.isArray(value) ? value[0] : value;
-  return raw && /^\d{4}-(0[1-9]|1[0-2])$/.test(raw) ? raw : fallback;
+  return raw && isMonthValue(raw) ? raw : fallback;
 }

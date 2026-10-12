@@ -15,7 +15,11 @@ import { Field } from "@/src/components/ui/Field";
 import { FormMessage } from "@/src/components/ui/FormMessage";
 import { Textarea } from "@/src/components/ui/Textarea";
 import { usePickerLabels } from "@/src/i18n/picker-labels";
-import { countLeaveWorkdays, type LeaveDayPartValue } from "@/src/lib/leave-days";
+import {
+  countLeaveWorkdays,
+  LEAVE_NOTE_MAX_LENGTH,
+  type LeaveDayPartValue,
+} from "@/src/lib/leave-days";
 import { cn } from "@/src/lib/utils";
 import type { LeaveActionState } from "./action-state";
 import { initialLeaveActionState } from "./action-state";
@@ -283,7 +287,7 @@ export function LeaveForm({
               id={id}
               name="note"
               rows={3}
-              maxLength={500}
+              maxLength={LEAVE_NOTE_MAX_LENGTH}
               value={note}
               onChange={(event) => setNote(event.target.value)}
               aria-describedby={describedBy}

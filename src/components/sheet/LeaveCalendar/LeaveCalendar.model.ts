@@ -1,4 +1,5 @@
 import { isoWeekNumber } from "@/src/lib/date-values";
+import { shiftDateValue as shift } from "@/src/lib/leave-days";
 
 import type {
   LeaveAgendaDay,
@@ -7,12 +8,6 @@ import type {
   LeaveCalendarWeek,
   LeaveSegment,
 } from "./LeaveCalendar.types";
-
-function shift(isoDate: string, days: number) {
-  const date = new Date(`${isoDate}T00:00:00.000Z`);
-  date.setUTCDate(date.getUTCDate() + days);
-  return date.toISOString().slice(0, 10);
-}
 
 function mondayOf(isoDate: string) {
   const date = new Date(`${isoDate}T00:00:00.000Z`);

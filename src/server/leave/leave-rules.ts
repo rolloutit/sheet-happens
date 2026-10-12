@@ -1,9 +1,15 @@
 import { isDateValue } from "@/src/lib/date-values";
-import { countLeaveWorkdays, leaveRangesOverlap, type LeaveRange } from "@/src/lib/leave-days";
+import {
+  countLeaveWorkdays,
+  LEAVE_NOTE_MAX_LENGTH,
+  leaveRangesOverlap,
+  type LeaveRange,
+} from "@/src/lib/leave-days";
+
+export { LEAVE_NOTE_MAX_LENGTH };
 
 export const LEAVE_ATTACHMENT_MAX_BYTES = 10 * 1024 * 1024;
 export const LEAVE_MAX_SPAN_DAYS = 366;
-export const LEAVE_NOTE_MAX_LENGTH = 500;
 
 export type LeaveErrorCode =
   | "INVALID_RANGE"
