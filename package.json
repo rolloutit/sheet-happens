@@ -2,6 +2,15 @@
   "name": "sheet-happens",
   "version": "0.1.0",
   "private": true,
+  "license": "AGPL-3.0-only",
+  "homepage": "https://sheethappens.rolloutit.net",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/rolloutit/sheet-happens.git"
+  },
+  "bugs": {
+    "url": "https://github.com/rolloutit/sheet-happens/issues"
+  },
   "packageManager": "pnpm@11.5.3",
   "engines": {
     "node": ">=22.12.0",
