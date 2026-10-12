@@ -94,6 +94,21 @@ async function ensureLeave(client, leave) {
   );
   if (existing.rowCount > 0) return 0;
 
+  // The app refuses a full-day leave over logged time. A database seeded before leave existed
+  // already has time on these days, so the leave is left out there rather than stored over it.
+  if (leave.dayPart === "full") {
+    const logged = await client.query(
+      `
+        SELECT 1 FROM time_entries
+        WHERE member_id = $1::uuid AND deleted_at IS NULL AND source <> 'declared'
+          AND local_date BETWEEN $2::date AND $3::date
+        LIMIT 1
+      `,
+      [leave.memberId, leave.startDate, leave.endDate],
+    );
+    if (logged.rowCount > 0) return 0;
+  }
+
   await client.query(
     `
       INSERT INTO leaves (member_id, type, start_date, end_date, day_part, note, created_by_member_id, updated_at)
