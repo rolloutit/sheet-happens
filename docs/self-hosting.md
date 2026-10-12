@@ -141,7 +141,7 @@ services:
       SMTP_USER: ${SMTP_USER}
       SMTP_PASSWORD: ${SMTP_PASSWORD}
       SMTP_SECURE: ${SMTP_SECURE:-false}
-      # Must be reachable from the app container AND from users' browsers (see section 1 note below).
+      # Must be reachable from the app container AND from users' browsers (see the notes below).
       S3_ENDPOINT: ${S3_PUBLIC_ENDPOINT}
       S3_REGION: us-east-1
       S3_BUCKET: sheet-happens
@@ -447,8 +447,8 @@ The product's domain rules (timesheet revisions, locks, rates, invoices) are in
 ### Upgrading
 
 ```bash
-cd sheet-happens
-git pull
+# From the directory that holds docker-compose.yml, next to the clone (section 2.2):
+git -C sheet-happens pull
 docker compose build app
 docker compose run --rm app pnpm db:migrate:deploy   # apply new migrations
 docker compose up -d app
