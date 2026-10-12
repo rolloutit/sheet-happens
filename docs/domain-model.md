@@ -446,6 +446,13 @@ Rules:
 - After recording, an employee can only add or replace the sick note on a sick leave, at any time,
   also for a past month. Editing, deleting and removing a sick note are admin actions; an admin
   edit may move a leave into the past but is held to the overlap and workday rules.
+- A full-day leave and logged time exclude each other, in both directions. No time entry can be
+  created, moved onto, restored onto or timed on a day a live full-day leave covers (every date of
+  its range, weekends and holidays included), and a full-day leave cannot be recorded or edited over
+  days that already hold live time entries or the start of a running timer. A half day blocks
+  nothing, and a declared month does not count as time on its 1st. Copying a day or week skips the covered days instead of failing. Both
+  sides take the member row lock, so a leave and an entry for the same day cannot both slip through.
+  Deleting an entry on a covered day stays allowed. Code: `src/server/time-tracking/leave-guard.ts`.
 
 Visibility:
 
