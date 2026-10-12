@@ -1,6 +1,6 @@
 "use client";
 
-import { AlertTriangle, ChevronRight, Lock } from "lucide-react";
+import { AlertTriangle, ChevronRight, Lock, Palmtree } from "lucide-react";
 import * as m from "motion/react-m";
 
 import { levelTransition, springRing } from "@/src/lib/motion";
@@ -70,6 +70,12 @@ export function DayColumnHeader({
       aria-label={labels.locked ?? ""}
       className="size-3.5 shrink-0 text-muted-foreground"
     />
+  ) : day.onLeave ? (
+    <Palmtree
+      role="img"
+      aria-label={labels.onLeave ?? ""}
+      className="size-3.5 shrink-0 text-muted-foreground"
+    />
   ) : variant === "chip" ? null : (
     /* The zoom affordance the hidden "press the chip again" gesture never had: a chevron that
        appears on hover and focus, and the header lifting by a pixel. */
@@ -127,6 +133,12 @@ export function DayColumnHeader({
             <Lock
               role="img"
               aria-label={labels.locked ?? ""}
+              className="absolute right-1.5 top-1.5 size-3 text-muted-foreground"
+            />
+          ) : day.onLeave ? (
+            <Palmtree
+              role="img"
+              aria-label={labels.onLeave ?? ""}
               className="absolute right-1.5 top-1.5 size-3 text-muted-foreground"
             />
           ) : null}

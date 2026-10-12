@@ -2426,6 +2426,7 @@
     "header": {
       "open": "{date} megnyitása",
       "locked": "Beküldött munkaidő-nyilvántartás zárolja",
+      "onLeave": "Szabadságon",
       "today": "Ma",
       "over": "Több mint {target}"
     },

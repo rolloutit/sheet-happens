@@ -12,6 +12,7 @@ const labels: WeekAgendaLabels = {
   capacity: (day) => `${day.totalMinutes / 60} h of 8 h`,
   over: "over 8 h",
   locked: "Locked",
+  onLeave: "On leave",
   today: "Today",
   columnEmpty: "Nothing logged",
   copyYesterday: "Copy yesterday",
@@ -75,6 +76,7 @@ function buildDays(
       dayNumber: String(Number.parseInt(isoDate.slice(8), 10)),
       state: index === 2 ? "today" : index > 2 ? "future" : "normal",
       locked: false,
+      onLeave: false,
       totalMinutes: entries.reduce((sum, item) => sum + item.durationMinutes, 0),
       entries,
       canCopyPreviousDay: index > 0 && (entriesByIndex[index - 1]?.length ?? 0) > 0,
@@ -249,6 +251,24 @@ describe("WeekAgenda", () => {
     expect(
       wednesday.queryByRole("button", { name: "Add entry on Wednesday" }),
     ).not.toBeInTheDocument();
+  });
+
+  it("marks a leave day and offers no add or copy on it", () => {
+    renderWeek({
+      days: buildDays({ 1: [entry()] }).map((day, index) =>
+        index === 2 ? { ...day, onLeave: true } : day,
+      ),
+    });
+
+    const wednesday = within(screen.getByRole("region", { name: "Wednesday" }));
+    expect(wednesday.getByRole("img", { name: "On leave" })).toBeInTheDocument();
+    expect(
+      wednesday.queryByRole("button", { name: "Add entry on Wednesday" }),
+    ).not.toBeInTheDocument();
+    expect(wednesday.queryByRole("button", { name: "Copy yesterday" })).not.toBeInTheDocument();
+
+    const thursday = within(screen.getByRole("region", { name: "Thursday" }));
+    expect(thursday.getByRole("button", { name: "Add entry on Thursday" })).toBeInTheDocument();
   });
 
   it("surfaces a warning, a timer glyph and an admin correction on the card", () => {

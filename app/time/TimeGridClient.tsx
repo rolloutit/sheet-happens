@@ -365,6 +365,8 @@ function TimeGridContent({ week, months }: { week: TimeGridWeek; months: MemberM
   const weekTotal = dailyTotals.reduce((sum, minutes) => sum + minutes, 0);
   const selectedDay =
     week.days.find((day) => day.isoDate === selectedDayIso) ?? week.days[0] ?? null;
+  /** Nothing can be added on a day a submitted timesheet locks or a full-day leave covers. */
+  const selectedDayClosed = Boolean(selectedDay?.locked || selectedDay?.onLeave);
   const selectedDayEntries = selectedDay ? (entriesByDay.get(selectedDay.isoDate) ?? []) : [];
   const targetDate = selectedDay?.isoDate ?? week.weekStart;
   const selectedDayTotalMinutes = selectedDay
@@ -382,6 +384,7 @@ function TimeGridContent({ week, months }: { week: TimeGridWeek; months: MemberM
     dayNumber: day.dayNumber,
     state: day.state,
     locked: day.locked,
+    onLeave: day.onLeave,
     totalMinutes: dailyTotals[dayIndex] ?? 0,
   }));
   const daysByIso = new Map(days.map((day) => [day.isoDate, day]));
@@ -873,7 +876,7 @@ function TimeGridContent({ week, months }: { week: TimeGridWeek; months: MemberM
   };
   /** The Day rail's composer is open whenever the rail is; there is no state to open it. */
   const railComposerOpen =
-    scope === "day" && desktop && projectRows.length > 0 && !(selectedDay?.locked ?? false);
+    scope === "day" && desktop && projectRows.length > 0 && !selectedDayClosed;
   const composerOpenFor = composer?.localDate ?? (railComposerOpen ? targetDate : null);
 
   function openComposer(localDate: string, anchor: ComposerAnchor) {
@@ -893,7 +896,7 @@ function TimeGridContent({ week, months }: { week: TimeGridWeek; months: MemberM
 
   /** `N`: the composer for the selected day, wherever it lives at this scope and width. */
   function compose() {
-    if (!projectRows.length || !selectedDay || selectedDay.locked) return;
+    if (!projectRows.length || !selectedDay || selectedDayClosed) return;
     if (!desktop) {
       openComposer(targetDate, "sheet");
       return;
@@ -1338,7 +1341,7 @@ function TimeGridContent({ week, months }: { week: TimeGridWeek; months: MemberM
             {t("actions.duplicateLastWeek")}
           </DropdownItem>
           <DropdownItem
-            disabled={isPending || !selectedDay || selectedDay.locked}
+            disabled={isPending || !selectedDay || selectedDayClosed}
             onSelect={() => requestCopyPreviousDay()}
           >
             <Copy className="size-4" aria-hidden="true" />
@@ -1459,7 +1462,7 @@ function TimeGridContent({ week, months }: { week: TimeGridWeek; months: MemberM
         locale={locale}
         durationDisplayFormat={durationDisplayFormat}
         disabled={isPending}
-        locked={selectedDay?.locked ?? false}
+        locked={selectedDayClosed}
         animateEntries={animateEntries}
         runningTimer={runningTimerView ? { ...runningTimerView, elapsedLabel } : null}
         highlight={highlight}
@@ -1514,6 +1517,7 @@ function TimeGridContent({ week, months }: { week: TimeGridWeek; months: MemberM
           capacity: capacityLabel,
           over: overLabel,
           locked: t("header.locked"),
+          onLeave: t("header.onLeave"),
           today: t("header.today"),
           columnEmpty: t("week.columnEmpty"),
           copyYesterday: t("empty.copyYesterday"),
@@ -1738,6 +1742,7 @@ function TimeGridContent({ week, months }: { week: TimeGridWeek; months: MemberM
             capacity: capacityLabel,
             over: overLabel,
             locked: t("header.locked"),
+            onLeave: t("header.onLeave"),
             today: t("header.today"),
           }}
           onScopeChange={changeScope}
@@ -1771,7 +1776,7 @@ function TimeGridContent({ week, months }: { week: TimeGridWeek; months: MemberM
         <button
           type="button"
           aria-label={t("mobile.addEntry")}
-          disabled={isPending || (selectedDay?.locked ?? false)}
+          disabled={isPending || selectedDayClosed}
           className="fixed bottom-24 right-4 z-30 grid size-14 place-items-center rounded-full bg-[linear-gradient(135deg,var(--cta),var(--cta-hover))] text-cta-foreground shadow-cta-glow transition-transform duration-[var(--duration-micro)] active:scale-95 disabled:opacity-50 lg:hidden"
           onClick={() => openComposer(targetDate, "sheet")}
         >

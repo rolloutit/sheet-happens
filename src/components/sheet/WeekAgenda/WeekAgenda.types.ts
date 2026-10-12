@@ -40,6 +40,7 @@ export type WeekAgendaLabels = {
   /** `over 8 h`. */
   over: string;
   locked: string;
+  onLeave: string;
   today: string;
   columnEmpty: string;
   copyYesterday: string;

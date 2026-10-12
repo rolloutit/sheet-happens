@@ -438,6 +438,7 @@ export async function getMemberWeeklyTimeGrid(input: {
     inactiveWeeks,
     entryDraft,
     suggestionRows,
+    leaveDates,
   ] = await Promise.all([
     loadLockedMonthStarts({ memberId: member.id, monthStarts }),
     loadAssignedProjects({ memberId: member.id, member, from: weekStart, to: weekEnd }),
@@ -531,6 +532,7 @@ export async function getMemberWeeklyTimeGrid(input: {
        should be offered what they were writing in March. It also means the window over a fixed past
        week is a fixed set of rows, which is what makes the e2e assertion possible. */
     loadDescriptionSuggestionRows({ memberId: member.id, windowEnd: weekEnd }),
+    findFullDayLeaveDates(prisma, member.id, formatDateOnly(weekStart), formatDateOnly(weekEnd)),
   ]);
 
   const projectsById = new Map(projectRows.map((project) => [project.projectId, project]));
@@ -553,6 +555,7 @@ export async function getMemberWeeklyTimeGrid(input: {
       weekStart,
       todayIso,
       lockedMonthStarts,
+      leaveDates,
     }),
     projects: projectRows,
     recentProjects,

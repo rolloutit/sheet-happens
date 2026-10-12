@@ -2426,6 +2426,7 @@
     "header": {
       "open": "Open {date}",
       "locked": "Locked by a submitted timesheet",
+      "onLeave": "On leave",
       "today": "Today",
       "over": "Over {target}"
     },
