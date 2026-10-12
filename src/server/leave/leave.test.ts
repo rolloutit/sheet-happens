@@ -1,7 +1,13 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const db = vi.hoisted(() => ({
-  leave: { findMany: vi.fn() },
+  $queryRaw: vi.fn(async () => []),
+  $transaction: vi.fn(),
+  member: { findFirst: vi.fn() },
+  timeEntry: { findFirst: vi.fn() },
+  runningTimer: { findUnique: vi.fn() },
+  auditLog: { create: vi.fn() },
+  leave: { findMany: vi.fn(), create: vi.fn() },
   publicHolidayYear: { findMany: vi.fn(async () => [{ year: 2026 }]) },
   publicHoliday: {
     findMany: vi.fn(async () => [
@@ -18,6 +24,7 @@ vi.mock("@/src/server/db/client", () => ({ prisma: db }));
 
 const {
   buildLeaveAttachmentKey,
+  createLeave,
   getLeaveEarliestStartDate,
   listLeaveCalendar,
   normalizeAdminLeaveFilters,
@@ -105,6 +112,71 @@ describe("listLeaveCalendar", () => {
 
     expect(result.items[0]?.workdays).toBe(5);
     expect(result.ownSummary).toEqual({ vacation: 2, sick: 0 });
+  });
+});
+
+describe("createLeave over logged time", () => {
+  const now = new Date("2026-10-01T08:00:00.000Z");
+  const input = {
+    memberId: "member-own",
+    type: "VACATION" as const,
+    startDate: "2026-10-12",
+    endDate: "2026-10-14",
+    dayPart: "FULL" as const,
+    note: null,
+  };
+
+  beforeEach(() => {
+    db.$transaction.mockImplementation((callback: (tx: typeof db) => unknown) => callback(db));
+    db.member.findFirst.mockResolvedValue({ id: "member-own", timezone: "Europe/Budapest" });
+    db.leave.findMany.mockResolvedValue([]);
+    db.leave.create.mockResolvedValue({ id: "leave-new" });
+    db.timeEntry.findFirst.mockReset();
+    db.timeEntry.findFirst.mockResolvedValue(null);
+    db.runningTimer.findUnique.mockResolvedValue(null);
+  });
+
+  it("refuses a full-day leave over days that already have time", async () => {
+    db.timeEntry.findFirst.mockResolvedValue({ id: "entry-1" });
+
+    await expect(createLeave(input, { now })).rejects.toMatchObject({
+      code: "TIME_ENTRIES_ON_DAYS",
+    });
+    expect(db.timeEntry.findFirst).toHaveBeenCalledWith({
+      where: {
+        memberId: "member-own",
+        deletedAt: null,
+        source: { not: "DECLARED" },
+        localDate: {
+          gte: new Date("2026-10-12T00:00:00.000Z"),
+          lte: new Date("2026-10-14T00:00:00.000Z"),
+        },
+      },
+      select: { id: true },
+    });
+    expect(db.leave.create).not.toHaveBeenCalled();
+  });
+
+  it("refuses a full-day leave over the day a running timer started", async () => {
+    db.runningTimer.findUnique.mockResolvedValue({
+      // 00:30 on 13 October in Budapest, still the 12th in UTC.
+      startedAt: new Date("2026-10-12T22:30:00.000Z"),
+      timezone: "Europe/Budapest",
+    });
+
+    await expect(
+      createLeave({ ...input, startDate: "2026-10-13", endDate: "2026-10-13" }, { now }),
+    ).rejects.toMatchObject({ code: "TIME_ENTRIES_ON_DAYS" });
+    expect(db.leave.create).not.toHaveBeenCalled();
+  });
+
+  it("records a half day even when the day has time", async () => {
+    db.timeEntry.findFirst.mockResolvedValue({ id: "entry-1" });
+
+    await expect(
+      createLeave({ ...input, endDate: "2026-10-12", dayPart: "MORNING" }, { now }),
+    ).resolves.toMatchObject({ leaveId: "leave-new" });
+    expect(db.timeEntry.findFirst).not.toHaveBeenCalled();
   });
 });
 

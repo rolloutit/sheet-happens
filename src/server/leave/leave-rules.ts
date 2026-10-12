@@ -12,6 +12,7 @@ export type LeaveErrorCode =
   | "BEFORE_CURRENT_MONTH"
   | "TOO_LONG"
   | "OVERLAP"
+  | "TIME_ENTRIES_ON_DAYS"
   | "EMPLOYEE_REQUIRED"
   | "NOT_FOUND"
   | "ATTACHMENT_SICK_ONLY"

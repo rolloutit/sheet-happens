@@ -318,6 +318,26 @@ describe("time_create_entry", () => {
     expect(getMemberTimeEntry).not.toHaveBeenCalled();
   });
 
+  it("maps a full-day leave onto its wire code", async () => {
+    const { TimeTrackingError } = await import("@/src/server/time-tracking");
+
+    createTimeEntry.mockRejectedValue(
+      new TimeTrackingError("This day is covered by leave.", "DAY_ON_LEAVE"),
+    );
+
+    const { handler } = register(createEntryTool, actor);
+    const result = await handler({
+      date: "2026-07-14",
+      projectId: "project-1",
+      description: "Work on leave",
+      durationMinutes: 60,
+    } as never);
+
+    expect(result.isError).toBe(true);
+    expect((result.structuredContent as { code: string }).code).toBe("DAY_ON_LEAVE");
+    expect(getMemberTimeEntry).not.toHaveBeenCalled();
+  });
+
   it("maps a declared project onto its wire code", async () => {
     const { TimeTrackingError } = await import("@/src/server/time-tracking");
 

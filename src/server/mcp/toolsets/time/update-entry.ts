@@ -105,7 +105,7 @@ const DESCRIPTION = `Change one existing time entry of the signed-in member. Onl
 
 Give at least one field besides \`entryId\`. Timing is replaced as a whole: send \`durationMinutes\`, or both \`startTime\` and \`endTime\` (\`HH:mm\`, 24-hour, in the member's timezone) — never both forms in one call. Send neither and the entry keeps the timing it has, so changing only the description or the project never re-times it.
 
-Moving an entry with \`date\` re-checks the day it lands on, not the day it came from: that day's month must not be locked by a submitted timesheet (\`PERIOD_LOCKED\`), the project must be assigned on it (\`PROJECT_NOT_AVAILABLE\`), and the day's total including this entry must stay inside 24 hours (\`DAILY_LIMIT_EXCEEDED\`).
+Moving an entry with \`date\` re-checks the day it lands on, not the day it came from: that day's month must not be locked by a submitted timesheet (\`PERIOD_LOCKED\`), it must not be covered by a full-day leave (\`DAY_ON_LEAVE\`), the project must be assigned on it (\`PROJECT_NOT_AVAILABLE\`), and the day's total including this entry must stay inside 24 hours (\`DAILY_LIMIT_EXCEEDED\`).
 
 Fails with \`ENTRY_NOT_FOUND\` for an id that is not this member's, \`ENTRY_LOCKED\` once a submitted timesheet covers the entry, and \`ENTRY_IS_DECLARED\` for an entry in a month that declares its hours — those are corrected a month at a time in the web app, not here.
 

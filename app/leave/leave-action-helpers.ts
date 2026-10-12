@@ -89,6 +89,7 @@ const errorKeys: Record<LeaveErrorCode, { key: string; field?: LeaveFormField }>
   BEFORE_CURRENT_MONTH: { key: "errors.beforeCurrentMonth", field: "startDate" },
   TOO_LONG: { key: "errors.tooLong", field: "startDate" },
   OVERLAP: { key: "errors.overlap", field: "startDate" },
+  TIME_ENTRIES_ON_DAYS: { key: "errors.timeEntriesOnDays", field: "startDate" },
   EMPLOYEE_REQUIRED: { key: "errors.employeeRequired" },
   NOT_FOUND: { key: "errors.notFound" },
   ATTACHMENT_SICK_ONLY: { key: "errors.attachmentSickOnly", field: "file" },

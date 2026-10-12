@@ -26,6 +26,7 @@ import {
   loadDescriptionSuggestionRows,
   type DescriptionSuggestion,
 } from "./description-suggestions";
+import { findFullDayLeaveDates, lockMemberRow } from "./leave-guard";
 import { resolveTrackingMode, type TrackingMode, type TrackingModeMember } from "./tracking-mode";
 
 /**
@@ -336,6 +337,7 @@ export type TimeTrackingErrorCode =
   | "ENTRY_IS_DECLARED"
   | "PERIOD_LOCKED"
   | "WEEK_LOCKED"
+  | "DAY_ON_LEAVE"
   | "PROJECT_REQUIRED"
   | "PROJECT_NOT_AVAILABLE"
   | "PROJECT_NOT_ASSIGNED_FOR_WEEK"
@@ -577,6 +579,7 @@ export async function createTimeEntry(input: TimeEntryMutationInput) {
 
   return prisma.$transaction(async (tx) => {
     await assertDateOpen(tx, input.memberId, normalized.localDate);
+    await assertDateNotOnLeave(tx, input.memberId, normalized.localDate);
     const assignment = await findAssignmentForDate(tx, {
       memberId: input.memberId,
       projectId: normalized.projectId,
@@ -711,6 +714,10 @@ export async function updateTimeEntry(input: TimeEntryUpdateInput) {
         };
 
     await assertDateOpen(tx, input.memberId, nextLocalDate);
+    // Only a move onto a leave day is refused; an entry already on that day stays editable.
+    if (nextLocalDate.getTime() !== normalizeDateOnly(current.localDate).getTime()) {
+      await assertDateNotOnLeave(tx, input.memberId, nextLocalDate);
+    }
     await assertDailyTotalWithinHardLimit(tx, {
       memberId: input.memberId,
       localDate: nextLocalDate,
@@ -894,6 +901,7 @@ export async function restoreTimeEntry(input: TimeEntryRestoreInput) {
     }
 
     await assertDateOpen(tx, input.memberId, current.localDate);
+    await assertDateNotOnLeave(tx, input.memberId, current.localDate);
     await assertAssignmentStillTracked(tx, current.projectAssignmentId);
     await assertDailyTotalWithinHardLimit(tx, {
       memberId: input.memberId,
@@ -943,6 +951,7 @@ export async function startRunningTimer(input: RunningTimerStartInput) {
     const localDate = parseDateOnly(getTodayIsoInTimezone(timezone, now));
 
     await assertDateOpen(tx, input.memberId, localDate);
+    await assertDateNotOnLeave(tx, input.memberId, localDate);
 
     const assignment = await findAssignmentForDate(tx, {
       memberId: input.memberId,
@@ -1032,6 +1041,7 @@ export async function stopRunningTimer(input: RunningTimerStopInput) {
 
     const localDate = parseDateOnly(getTodayIsoInTimezone(timer.timezone, timer.startedAt));
     await assertDateOpen(tx, input.memberId, localDate);
+    await assertDateNotOnLeave(tx, input.memberId, localDate);
     /* A timer cannot be *started* on a declared assignment, but the mode-switch guard counts
        entries and a running timer is not one yet — so the assignment can change under a timer that
        is already running. Re-reading it here is the last point before the entry is written. */
@@ -1426,6 +1436,15 @@ async function copyEntriesByDateShift(input: {
       await assertDateOpen(tx, input.memberId, parseDateOnly(targetDate));
     }
 
+    await lockMemberRow(tx, input.memberId);
+    const sortedTargetDates = [...targetDates].sort();
+    const leaveDates = await findFullDayLeaveDates(
+      tx,
+      input.memberId,
+      sortedTargetDates[0]!,
+      sortedTargetDates.at(-1)!,
+    );
+
     let createdCount = 0;
     let skippedCount = 0;
     const createdEntryIds: string[] = [];
@@ -1434,7 +1453,10 @@ async function copyEntriesByDateShift(input: {
       const targetDate = addDays(sourceEntry.localDate, input.dayShift);
       const targetDateIso = formatDateOnly(targetDate);
 
-      if (occupiedTargetCells.has(copiedEntryCellKey(sourceEntry.projectId, targetDateIso))) {
+      if (
+        leaveDates.has(targetDateIso) ||
+        occupiedTargetCells.has(copiedEntryCellKey(sourceEntry.projectId, targetDateIso))
+      ) {
         skippedCount += 1;
         continue;
       }
@@ -1655,6 +1677,20 @@ async function assertDateOpen(tx: TimeTrackingTransaction, memberId: string, loc
 
   if (lockedPeriod) {
     throw new TimeTrackingError("This period is locked by a submitted timesheet.", "PERIOD_LOCKED");
+  }
+}
+
+async function assertDateNotOnLeave(
+  tx: TimeTrackingTransaction,
+  memberId: string,
+  localDate: Date,
+) {
+  await lockMemberRow(tx, memberId);
+  const day = formatDateOnly(localDate);
+  const leaveDates = await findFullDayLeaveDates(tx, memberId, day, day);
+
+  if (leaveDates.has(day)) {
+    throw new TimeTrackingError("This day is covered by leave.", "DAY_ON_LEAVE");
   }
 }
 

@@ -38,7 +38,7 @@ Nothing reaches the timesheet until \`timer_stop\`, and the entry that stop crea
 
 \`projectId\` comes from \`time_get_context\`; names are not accepted. A project with \`canLogTime: false\` declares its hours a month at a time and cannot be timed (\`PROJECT_DECLARES_MONTHLY\`). \`description\` is optional and becomes "${DEFAULT_DESCRIPTION}" when omitted; after the stop it can be changed with \`time_update_entry\`.
 
-A member can have one timer at a time. If one is already running this fails with \`TIMER_ALREADY_RUNNING\` and returns that timer in \`details.timer\`, so you can tell the member what would be stopped before you stop it. It also fails if the day's month has a submitted timesheet (\`PERIOD_LOCKED\`) or the project is not assigned today (\`PROJECT_NOT_AVAILABLE\`).
+A member can have one timer at a time. If one is already running this fails with \`TIMER_ALREADY_RUNNING\` and returns that timer in \`details.timer\`, so you can tell the member what would be stopped before you stop it. It also fails if the day's month has a submitted timesheet (\`PERIOD_LOCKED\`), if the member is on full-day leave today (\`DAY_ON_LEAVE\`), or if the project is not assigned today (\`PROJECT_NOT_AVAILABLE\`).
 
 Returns the running timer and how long it has been going.`;
 

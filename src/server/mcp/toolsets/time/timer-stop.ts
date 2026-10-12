@@ -9,7 +9,7 @@ const DESCRIPTION = `Stop the running timer and save it as a time entry. Takes n
 
 The saved duration is the elapsed time rounded UP to the next whole minute, with a minimum of one minute, so a 20-second timer still saves as 1 minute. A timer started without a description is saved as "Tracked with timer"; call \`time_update_entry\` with the returned entry id to replace that text. The entry is dated to the day the timer STARTED, so a timer left running past midnight still lands on the earlier day.
 
-Fails with \`NO_TIMER_RUNNING\` when nothing is running, and with \`PERIOD_LOCKED\` when the timer's own day has since been locked by a submitted timesheet. \`TIMER_DISCARDED_DAILY_LIMIT\` is different from both: the timer was stopped but NOT saved, because the entry would have taken that day over 24 hours. The elapsed time is discarded and cannot be recovered — report that loss rather than a save.
+Fails with \`NO_TIMER_RUNNING\` when nothing is running, with \`PERIOD_LOCKED\` when the timer's own day has since been locked by a submitted timesheet, and with \`DAY_ON_LEAVE\` when a full-day leave has since been recorded for it. \`TIMER_DISCARDED_DAILY_LIMIT\` is different from all of these: the timer was stopped but NOT saved, because the entry would have taken that day over 24 hours. The elapsed time is discarded and cannot be recovered — report that loss rather than a save.
 
 On success returns the saved entry and the day's new total. A day over 8 hours comes back as a warning, not an error.`;
 

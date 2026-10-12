@@ -1,6 +1,6 @@
 import { createHash, randomUUID } from "node:crypto";
 
-import { countLeaveWorkdays, type LeaveDayPartValue } from "@/src/lib/leave-days";
+import { countLeaveWorkdays, type LeaveDayPartValue, type LeaveRange } from "@/src/lib/leave-days";
 import { listSearchParam, type SearchParamValue } from "@/src/lib/search-params";
 import { prisma } from "@/src/server/db/client";
 import type { Prisma } from "@/src/server/db/generated/client";
@@ -155,6 +155,7 @@ export async function createLeave(
         earliestStartDate,
         existing: await listLiveRanges(tx, member.id),
       });
+      await assertNoTimeEntriesOnLeaveDays(tx, member.id, input);
 
       const document = stored
         ? await tx.document.create({
@@ -248,6 +249,7 @@ export async function updateLeaveForAdmin(
       earliestStartDate: null,
       existing: await listLiveRanges(tx, existing.memberId, existing.id),
     });
+    await assertNoTimeEntriesOnLeaveDays(tx, existing.memberId, input);
 
     await tx.leave.update({
       where: { id: existing.id },
@@ -830,6 +832,45 @@ async function getHolidayDatesFor(records: ReadonlyArray<{ startDate: Date; endD
 /** Serializes concurrent writes for one member, so two tabs cannot both pass the overlap check. */
 async function lockMember(tx: Prisma.TransactionClient, memberId: string) {
   await tx.$queryRaw`SELECT id FROM members WHERE id = ${memberId}::uuid FOR UPDATE`;
+}
+
+/**
+ * A full-day leave and logged time exclude each other (see `time-tracking/leave-guard.ts` for the
+ * other direction). A half day leaves the rest of the day open, and a declared month is a monthly
+ * figure dated to its 1st rather than work on that day, so neither counts. A running timer counts
+ * as time on the day it started: once a leave covered that day the timer could never be stopped,
+ * and nothing else can end it.
+ */
+async function assertNoTimeEntriesOnLeaveDays(
+  tx: Prisma.TransactionClient,
+  memberId: string,
+  input: LeaveRange,
+) {
+  if (input.dayPart !== "FULL") return;
+
+  const entry = await tx.timeEntry.findFirst({
+    where: {
+      memberId,
+      deletedAt: null,
+      source: { not: "DECLARED" },
+      localDate: { gte: parseDateOnly(input.startDate), lte: parseDateOnly(input.endDate) },
+    },
+    select: { id: true },
+  });
+
+  const timer = entry
+    ? null
+    : await tx.runningTimer.findUnique({
+        where: { memberId },
+        select: { startedAt: true, timezone: true },
+      });
+  const timerDate = timer ? getTodayIsoInTimezone(timer.timezone, timer.startedAt) : null;
+  const timerInRange =
+    timerDate !== null && timerDate >= input.startDate && timerDate <= input.endDate;
+
+  if (entry || timerInRange) {
+    throw new LeaveError("Time is already logged on some of these days.", "TIME_ENTRIES_ON_DAYS");
+  }
 }
 
 async function listLiveRanges(tx: Prisma.TransactionClient, memberId: string, excludeId?: string) {
