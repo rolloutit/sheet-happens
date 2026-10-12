@@ -654,7 +654,9 @@ export async function listLeaveCalendar(input: {
       select: leaveItemSelect,
     }),
   ]);
-  const holidayDates = holidays.map(({ date }) => date);
+  // A leave can run past the grid, so its workdays need the holidays of its whole range, not only
+  // the ones drawn; otherwise a leave into January counts New Year's Day in December's view.
+  const holidayDates = await getHolidayDatesFor(records);
   const items = records.map((record) => toLeaveItem(record, input.viewer, holidayDates));
   const monthFirst = formatDateOnly(monthStart);
   const monthLast = formatDateOnly(monthEnd);

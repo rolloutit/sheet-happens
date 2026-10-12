@@ -17,13 +17,16 @@ const db = vi.hoisted(() => ({
   },
   publicHolidayYear: { findMany: vi.fn(async () => [{ year: 2026 }]) },
   publicHoliday: {
-    findMany: vi.fn(async () => [
-      {
-        date: new Date("2026-10-23T00:00:00.000Z"),
-        localName: "Nemzeti ünnep",
-        name: "National day",
-      },
-    ]),
+    // Honours the range like the real query, so a lookup that misses the 23rd sees no holiday.
+    findMany: vi.fn(async ({ where }: { where: { date: { gte: Date; lte: Date } } }) =>
+      [
+        {
+          date: new Date("2026-10-23T00:00:00.000Z"),
+          localName: "Nemzeti ünnep",
+          name: "National day",
+        },
+      ].filter(({ date }) => date >= where.date.gte && date <= where.date.lte),
+    ),
   },
 }));
 
@@ -121,6 +124,25 @@ describe("listLeaveCalendar", () => {
 
     expect(result.items[0]?.workdays).toBe(5);
     expect(result.ownSummary).toEqual({ vacation: 2, sick: 0 });
+  });
+
+  it("counts a leave running past the grid against the holidays of its whole range", async () => {
+    db.leave.findMany.mockResolvedValue([
+      record({
+        startDate: new Date("2026-09-30T00:00:00.000Z"),
+        endDate: new Date("2026-10-27T00:00:00.000Z"),
+      }),
+    ]);
+
+    const result = await listLeaveCalendar({
+      month: "2026-09",
+      viewer: { memberId: "member-own", isAdmin: false },
+    });
+
+    // September's grid ends on 4 October, before the holiday on the 23rd.
+    expect(result.gridEnd).toBe("2026-10-04");
+    expect(result.holidays).toEqual([]);
+    expect(result.items[0]?.workdays).toBe(19);
   });
 });
 
