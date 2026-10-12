@@ -2,6 +2,16 @@
   "name": "sheet-happens",
   "version": "0.1.0",
   "private": true,
+  "description": "Time tracking, monthly timesheet approval and contractor invoice verification for companies that bill by the hour.",
+  "keywords": [
+    "time-tracking",
+    "timesheet",
+    "invoicing",
+    "self-hosted",
+    "nextjs",
+    "prisma",
+    "mcp"
+  ],
   "license": "AGPL-3.0-only",
   "homepage": "https://sheethappens.rolloutit.net",
   "repository": {
