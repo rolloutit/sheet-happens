@@ -336,6 +336,42 @@ production rules apply to every container.
 | `TYPST_TEMPLATES_DIR` | no       | `src/server/pdf/templates` under cwd | Override the Typst template directory. Correct by default in dev and in the standalone build. |
 | `TYPST_FONTS_DIR`     | no       | `src/server/pdf/fonts` under cwd     | Override the bundled font directory.                                                          |
 
+### Branding
+
+Out of the box the app presents itself as plain **Sheet Happens**: its own pictogram, no organisation
+name, a generic tagline under the wordmark and a neutral PDF letterhead. To show your organisation
+instead, set the variables below. They are read in one place, `src/lib/branding.ts`, and nothing
+else in the code names an organisation.
+
+| Variable                    | Required | Default | Description                                                                                                                                                     |
+| --------------------------- | -------- | ------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `NEXT_PUBLIC_ORG_NAME`      | no       | none    | Shown under the wordmark in the app and on the sign-in screens, as the logo's alt text, and appended to the PDF letterhead (`Sheet Happens - <name>`).          |
+| `NEXT_PUBLIC_ORG_LOGO`      | no       | none    | Logo for light surfaces: a path under `public/` (for example `/brand/acme.svg`) or an absolute `https://` URL. Square works best. Empty keeps the default mark. |
+| `NEXT_PUBLIC_ORG_LOGO_DARK` | no       | none    | Logo for dark surfaces and the sign-in panel. Falls back to `NEXT_PUBLIC_ORG_LOGO` (and the other way round), so a single logo that reads on both is enough.    |
+| `ORG_LOGO_PDF_PATH`         | no       | none    | File the PDF letterhead uses: `.png`, `.jpg`, `.gif`, `.webp` or `.svg`, absolute or relative to the server's working directory (`/app` in the image). Runtime. |
+
+The three `NEXT_PUBLIC_*` variables are baked into the client bundle at build time, like the URLs in
+§2.1: pass them as `--build-arg`s (the `Dockerfile` accepts all three) or have them in the
+environment of `pnpm build`, and rebuild to change them. `ORG_LOGO_PDF_PATH` is read on every
+export, so it can point at a mounted file. A missing or unsupported file silently falls back to a
+letterhead without a logo.
+
+To ship a logo inside the image, put the files under `public/brand/` before building and use
+`/brand/<file>` for the app and `public/brand/<file>` for the PDF:
+
+```bash
+docker build -t sheet-happens \
+  --build-arg NEXT_PUBLIC_ORG_NAME="Acme Corp" \
+  --build-arg NEXT_PUBLIC_ORG_LOGO=/brand/acme.svg \
+  --build-arg NEXT_PUBLIC_ORG_LOGO_DARK=/brand/acme-light.svg \
+  …
+# at runtime: ORG_LOGO_PDF_PATH=public/brand/acme.png
+```
+
+Two things stay as they are because they are the product, not the organisation: the "Sheet Happens"
+wordmark and the colour palette. The welcome page in the in-app manual is editable by admins at
+`/admin/info`, so rewrite it for your team there.
+
 ### First admin bootstrap
 
 Read only by `scripts/bootstrap-admin.mjs`.

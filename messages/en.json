@@ -1,7 +1,6 @@
 {
   "app": {
-    "name": "Sheet Happens",
-    "company": "Rollout IT"
+    "name": "Sheet Happens"
   },
   "Pickers": {
     "search": "Search",
@@ -22,7 +21,7 @@
   },
   "AppShell": {
     "brand": {
-      "subtitle": "Rollout IT · internal"
+      "subtitle": "Time & timesheets"
     },
     "primaryNavigation": "Primary navigation",
     "mobileNavigation": "Mobile navigation",
@@ -102,7 +101,7 @@
     }
   },
   "AuthShell": {
-    "brandSubtitle": "Rollout IT · internal",
+    "brandSubtitle": "Time & timesheets",
     "panelFooter": "Time tracking, timesheets and invoice checks — in one place.",
     "panelTip": "Tip: passkeys get you in two seconds flat.",
     "language": "Language",
@@ -132,7 +131,7 @@
     "system": "System"
   },
   "Login": {
-    "brandSubtitle": "Rollout IT · internal",
+    "brandSubtitle": "Time & timesheets",
     "badge": "Welcome back",
     "title": "Welcome back",
     "description": "Sign in to Sheet Happens.",
@@ -3108,7 +3107,7 @@
       "declaredOnly": "Every hour in this scope was declared monthly for another company's system, so the report excludes it. Declared hours are reviewed with the timesheet, not here."
     },
     "pdf": {
-      "brand": "Sheet Happens - Rollout IT",
+      "brand": "Sheet Happens",
       "confidential": "Confidential",
       "page": "Page",
       "generatedAt": "Generated",

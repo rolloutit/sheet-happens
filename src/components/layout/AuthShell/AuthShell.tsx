@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { useTransition } from "react";
 
 import { localeCookieName } from "@/src/i18n/locales";
+import { orgBranding } from "@/src/lib/branding";
 import { cn } from "@/src/lib/utils";
 import { Atmosphere } from "../Atmosphere";
 import { AuthGyroscope } from "../AuthGyroscope";
@@ -93,7 +94,7 @@ export function AuthShell({
             <div className="leading-tight">
               <p className="font-ui text-[17px] font-semibold text-[#eafbfa]">Sheet Happens</p>
               <p className="font-ui text-[10.5px] font-medium uppercase tracking-[0.06em] text-[#eafbfa]/60">
-                {t("brandSubtitle")}
+                {orgBranding.name ?? t("brandSubtitle")}
               </p>
             </div>
           </div>

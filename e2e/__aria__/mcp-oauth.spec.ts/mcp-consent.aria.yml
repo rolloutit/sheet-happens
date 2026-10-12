@@ -1,8 +1,7 @@
 - main:
   - complementary:
-    - img "Rollout IT"
     - paragraph: Sheet Happens
-    - paragraph: Rollout IT · internal
+    - paragraph: Time & timesheets
     - heading "One step more — for safety." [level=1]
     - paragraph: Just making sure it's really you.
     - text: "Tip: passkeys get you in two seconds flat."

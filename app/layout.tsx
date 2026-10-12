@@ -12,7 +12,8 @@ import { stopRunningTimerAction } from "./time/actions";
 
 export const metadata: Metadata = {
   title: "Sheet Happens",
-  description: "Internal time tracking and timesheet workflow for Rollout IT.",
+  description:
+    "Time tracking, monthly timesheets and contractor invoice verification for small teams.",
 };
 
 export default async function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
