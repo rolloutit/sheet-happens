@@ -1,0 +1,56 @@
+# Gitleaks configuration: the default ruleset plus a short allowlist of values that look like
+# secrets but are documented placeholders, throwaway CI values or test fixtures. Every entry matches
+# an exact value rather than a whole file, so a real secret added next to one is still reported.
+#
+#   gitleaks dir .            # working tree
+#   gitleaks git              # history
+#
+# Never allowlist a value that has ever been a real secret: rotate it instead.
+
+[extend]
+useDefault = true
+
+[[allowlists]]
+description = "Built-in dev-only auth secrets: getAuthSecret() and the login-attempt HMAC fall back to them outside production, and the Dockerfile uses one only when no build arg is given"
+regexes = [
+  '''^sheet-happens-local-dev-only-auth-secret-please-set-better-auth-secret$''',
+  '''^local-build-only-secret-please-set-real-value$''',
+  '''^local-dev-only$''',
+]
+
+[[allowlists]]
+description = "CI-only values in .github/workflows/ci.yml for an ephemeral runner database and MinIO; not used anywhere else"
+regexes = [
+  '''^ci-only-auth-secret-not-used-anywhere-else$''',
+  '''^ci-only-login-attempt-secret-value$''',
+  '''^ci-access-key$''',
+  '''^ci-secret-key$''',
+]
+
+[[allowlists]]
+description = "Local Docker Postgres and MinIO credentials (docker-compose.dev.yml, .env.example, docs/local-dev-db.md)"
+regexes = [
+  '''^sheet_happens$''',
+  '''postgresql://sheet_happens:sheet_happens@localhost''',
+]
+
+[[allowlists]]
+description = "Placeholders in .env.example that a deployment must replace"
+regexes = ['''^replace-with-[a-z0-9-]+$''']
+
+[[allowlists]]
+description = "Seeded invitation token, only ever present in the local dev and e2e databases"
+regexes = ['''^dev-admin-invite-token$''']
+
+[[allowlists]]
+description = "Demo TOTP secret rendered by the TotpSetupDialog default props and story"
+regexes = ['''^SH-2026-DEMO$''']
+
+[[allowlists]]
+description = "Unit-test fixtures: placeholder secrets and a connection string on a reserved .test host"
+condition = "AND"
+paths = ['''\.test\.tsx?$''']
+regexes = [
+  '''^(auth-secret|access-key|secret-key|secret)$''',
+  '''postgresql://user:password@example\.test/db''',
+]
