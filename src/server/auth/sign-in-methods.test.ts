@@ -32,10 +32,9 @@ describe("Google auth settings", () => {
   });
 
   it("deduplicates and normalizes allowed domains", () => {
-    expect(parseDomainList(" Acme.EXAMPLE,acme.example, example.com, invalid, @bad.test ")).toEqual([
-      "acme.example",
-      "example.com",
-    ]);
+    expect(parseDomainList(" Acme.EXAMPLE,acme.example, example.com, invalid, @bad.test ")).toEqual(
+      ["acme.example", "example.com"],
+    );
   });
 
   it("uses wildcard hosted-domain enforcement for multiple configured domains", () => {
