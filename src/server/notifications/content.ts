@@ -1,4 +1,5 @@
 import type { AppLocale } from "@/src/i18n/locales";
+import { formatDateRangeLabel } from "@/src/lib/formatting";
 import type { NotificationType } from "@/src/server/db/generated/enums";
 
 export type NotificationMetadata = Record<string, unknown>;
@@ -140,6 +141,18 @@ export function buildNotificationContent(
           ? `An admin changed your time entry. Reason: ${reason}`
           : "An admin changed your time entry.",
       );
+    case "LEAVE_RECORDED_BY_ADMIN": {
+      const leave = formatLeave(metadata, locale);
+      return workflowContent(
+        hu,
+        "Egy admin szabadságot rögzített neked",
+        leave
+          ? `Egy admin rögzítette a távollétedet: ${leave}.`
+          : "Egy admin rögzítette a távollétedet.",
+        "An admin recorded leave for you",
+        leave ? `An admin recorded your time off: ${leave}.` : "An admin recorded your time off.",
+      );
+    }
     case "LEAVE_MONTH_END_REMINDER":
       // Lines rather than one paragraph: the email keeps them, the in-app list reads them as one.
       return hu
@@ -200,6 +213,33 @@ function formatMonth(value: unknown, locale: AppLocale) {
     month: "long",
     timeZone: "UTC",
   }).format(date);
+}
+
+/** `vacation, Oct 12 – 14, 2026` or `betegszabadság, 2026. okt. 12. (délelőtt)`. */
+function formatLeave(metadata: NotificationMetadata, locale: AppLocale) {
+  const startDate = textValue(metadata.startDate);
+  const endDate = textValue(metadata.endDate) || startDate;
+  if (!startDate) return "";
+  const hu = locale === "hu";
+  const kind =
+    metadata.type === "SICK"
+      ? hu
+        ? "betegszabadság"
+        : "sick leave"
+      : hu
+        ? "szabadság"
+        : "vacation";
+  const dayPart =
+    metadata.dayPart === "MORNING"
+      ? hu
+        ? " (délelőtt)"
+        : " (morning)"
+      : metadata.dayPart === "AFTERNOON"
+        ? hu
+          ? " (délután)"
+          : " (afternoon)"
+        : "";
+  return `${kind}, ${formatDateRangeLabel(startDate, endDate, locale)}${dayPart}`;
 }
 
 function textValue(value: unknown) {

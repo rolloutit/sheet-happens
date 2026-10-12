@@ -31,6 +31,7 @@ const workflowTypes = [
   "TIMESHEET_PAID",
   "PAYSLIP_AVAILABLE",
   "TIME_ENTRY_ADMIN_MODIFIED",
+  "LEAVE_RECORDED_BY_ADMIN",
 ] as const satisfies readonly ConfigurableNotificationType[];
 
 export function NotificationSettingsClient({

@@ -2815,7 +2815,8 @@
         "TIMESHEET_PAID": "Payment recorded",
         "PAYSLIP_AVAILABLE": "Payslip available",
         "TIME_ENTRY_ADMIN_MODIFIED": "Time entry changed by admin",
-        "LEAVE_MONTH_END_REMINDER": "Monthly leave reminder"
+        "LEAVE_MONTH_END_REMINDER": "Monthly leave reminder",
+        "LEAVE_RECORDED_BY_ADMIN": "Leave recorded by admin"
       },
       "typeDescriptions": {
         "TIMESHEET_SUBMITTED": "Notifies active admins when a contractor submits or resubmits a timesheet for review.",
@@ -2827,7 +2828,8 @@
         "TIMESHEET_PAID": "Notifies the contractor when an admin records the workflow as paid.",
         "PAYSLIP_AVAILABLE": "Notifies the employee when an admin uploads or replaces their payslip.",
         "TIME_ENTRY_ADMIN_MODIFIED": "Notifies the affected member when an admin permanently changes one of their recorded time entries.",
-        "LEAVE_MONTH_END_REMINDER": "Reminds employees on the second-to-last day of the month to record their vacation and sick leave."
+        "LEAVE_MONTH_END_REMINDER": "Reminds employees on the second-to-last day of the month to record their vacation and sick leave.",
+        "LEAVE_RECORDED_BY_ADMIN": "Notifies the employee when an admin records leave for them."
       },
       "leave": {
         "title": "Monthly leave reminder",

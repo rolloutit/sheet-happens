@@ -36,4 +36,24 @@ describe("notification content", () => {
     expect(en.emailSubject).toContain("October");
     expect(en.body).toContain("12:00 tomorrow");
   });
+
+  it("names the kind and the days of a leave an admin recorded", () => {
+    const sick = { type: "SICK", startDate: "2026-09-14", endDate: "2026-09-16", dayPart: "FULL" };
+    const half = {
+      type: "VACATION",
+      startDate: "2026-09-14",
+      endDate: "2026-09-14",
+      dayPart: "MORNING",
+    };
+
+    const en = buildNotificationContent("LEAVE_RECORDED_BY_ADMIN", "en", sick);
+    expect(en.title).toBe("An admin recorded leave for you");
+    expect(en.body).toBe("An admin recorded your time off: sick leave, Sep 14 – 16, 2026.");
+    expect(buildNotificationContent("LEAVE_RECORDED_BY_ADMIN", "hu", sick).body).toContain(
+      "betegszabadság, 2026. szept. 14–16.",
+    );
+    expect(buildNotificationContent("LEAVE_RECORDED_BY_ADMIN", "hu", half).body).toContain(
+      "szabadság, 2026. szept. 14. (délelőtt)",
+    );
+  });
 });

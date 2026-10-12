@@ -186,6 +186,7 @@ enum NotificationType {
   PAYSLIP_AVAILABLE         @map("payslip_available")
   TIME_ENTRY_ADMIN_MODIFIED @map("time_entry_admin_modified")
   LEAVE_MONTH_END_REMINDER  @map("leave_month_end_reminder")
+  LEAVE_RECORDED_BY_ADMIN   @map("leave_recorded_by_admin")
 
   @@map("notification_type")
 }

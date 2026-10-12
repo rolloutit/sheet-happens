@@ -130,6 +130,23 @@ async function withDispatcherLock<T>(work: () => Promise<T>) {
   }
 }
 
+/** Audit actions that notify the member they are about, and where the notification links. */
+const auditNotificationTypes = {
+  "payslip.uploaded": "PAYSLIP_AVAILABLE",
+  "payslip.replaced": "PAYSLIP_AVAILABLE",
+  "time_entry.admin_updated": "TIME_ENTRY_ADMIN_MODIFIED",
+  "leave.created": "LEAVE_RECORDED_BY_ADMIN",
+} as const satisfies Record<string, NotificationType>;
+
+const auditNotificationUrls = {
+  PAYSLIP_AVAILABLE: "/payslips",
+  TIME_ENTRY_ADMIN_MODIFIED: "/time",
+  LEAVE_RECORDED_BY_ADMIN: "/leave?view=list",
+} as const satisfies Record<
+  (typeof auditNotificationTypes)[keyof typeof auditNotificationTypes],
+  string
+>;
+
 async function projectWorkflowNotifications(input: { since: Date; now: Date; rules: RuleMap }) {
   const [events, auditEvents, admins] = await Promise.all([
     prisma.timesheetEvent.findMany({
@@ -149,7 +166,7 @@ async function projectWorkflowNotifications(input: { since: Date; now: Date; rul
     prisma.auditLog.findMany({
       where: {
         createdAt: { gte: input.since, lte: input.now },
-        action: { in: ["payslip.uploaded", "payslip.replaced", "time_entry.admin_updated"] },
+        action: { in: Object.keys(auditNotificationTypes) },
       },
       orderBy: { createdAt: "asc" },
       take: 1_000,
@@ -191,11 +208,11 @@ async function projectWorkflowNotifications(input: { since: Date; now: Date; rul
 
   for (const event of auditEvents) {
     const data = { ...asObject(event.before), ...asObject(event.after) };
-    const type: NotificationType = event.action.startsWith("payslip.")
-      ? "PAYSLIP_AVAILABLE"
-      : "TIME_ENTRY_ADMIN_MODIFIED";
+    const type = auditNotificationTypes[event.action as keyof typeof auditNotificationTypes];
     const memberId = text(data.employeeMemberId) || text(data.memberId);
-    if (!memberId) continue;
+    if (!type || !memberId) continue;
+    // Recording your own leave is not news to you; only someone else's recording is.
+    if (type === "LEAVE_RECORDED_BY_ADMIN" && event.actorMemberId === memberId) continue;
     const member = await prisma.member.findUnique({
       where: { id: memberId },
       select: { id: true, email: true, locale: true },
@@ -207,7 +224,7 @@ async function projectWorkflowNotifications(input: { since: Date; now: Date; rul
       recipient: toRecipient(member),
       type,
       idempotencyKey: `audit-event:${event.id}:${member.id}`,
-      actionUrl: type === "PAYSLIP_AVAILABLE" ? "/payslips" : "/time",
+      actionUrl: auditNotificationUrls[type],
       metadata: {
         ...data,
         reason: text(data.adminModificationReason),
