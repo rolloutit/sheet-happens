@@ -1640,6 +1640,8 @@ Expected result:
 2. Open `https://{DOMAIN_NAME}/leave` and `https://{DOMAIN_NAME}/admin/leave?view=calendar` on that
    month.
 3. Hover, then focus with the keyboard, a `+N more` button. Then click it and choose a name.
+4. Let at least four of those leaves run through the weekend into the next week, then add one more
+   that starts on that Saturday and ends on the following Tuesday.
 
 Expected result:
 
@@ -1649,6 +1651,24 @@ Expected result:
   `+N more` per workday, never on a weekend or holiday.
 - The tooltip names who is behind the button; the click lists everyone away that day, half days
   marked, and choosing one opens its details. Colleagues still read as `Away`.
+- The one exception: a leave that reaches a crowded week only on its weekend or holidays and finds
+  no free row there is listed behind a `+1 more` on its first day in that week, so it is never
+  missing from the week.
+
+### A Leave Into The Next Month Counts The Same Everywhere
+
+1. As `{ADMIN_EMAIL}`, record a vacation for `{EMPLOYEE_EMAIL}` that starts in the last week of a
+   month and ends after a weekday public holiday falling past that month's last calendar row, for
+   example 30 September to 27 October 2026 across Friday 23 October (September's last row ends on
+   4 October).
+2. Open `https://{DOMAIN_NAME}/admin/leave?view=calendar` on the month it starts in and open the
+   ribbon. Then switch to the list view and find the same leave.
+3. Sign in as `{EMPLOYEE_EMAIL}` and compare the dialog on `/leave` with the row in `My leave`.
+
+Expected result:
+
+- The details dialog, the admin list and `My leave` show the same workday count, with the holiday
+  in the next month left out, although that holiday is not drawn on the starting month's calendar.
 
 ### No Time On A Full-Day Leave
 
