@@ -1650,6 +1650,34 @@ Expected result:
 - The tooltip names who is behind the button; the click lists everyone away that day, half days
   marked, and choosing one opens its details. Colleagues still read as `Away`.
 
+### No Time On A Full-Day Leave
+
+1. Sign in as `{EMPLOYEE_EMAIL}`. On `/leave`, record a full-day vacation for two workdays of the
+   current week that hold no time yet, and a morning half day for a third day.
+2. Open `https://{DOMAIN_NAME}/time` on that week, in the Week agenda, the Grid and the Day view, on
+   a desktop and on a phone.
+3. Select a leave day and press `N`, open the actions menu's `Copy yesterday into`, and start the
+   timer if one of the leave days is today.
+4. Move an entry from another day onto a leave day through its edit dialog.
+5. Use `Duplicate last week` on a week whose previous week has time on the leave days' weekdays.
+6. Back on `/leave`, try to record a full-day leave over a day that already has time. Then record
+   a half day on that same day.
+
+Expected result:
+
+- Each full-day leave day shows a palm tree in its header, labelled `On leave` / `Szabadságon`,
+  and offers no `+`, no `Copy yesterday`, no composer and no phone `+`. Empty Grid cells on it are
+  disabled; existing entries there can still be deleted.
+- The half day stays fully open for time.
+- Saving onto a leave day, or starting or stopping a timer on one, shows the error
+  `You are on leave this day, so no time can be logged on it.` in English and
+  `Ezen a napon szabadságon vagy, ezért nem rögzíthetsz rá időt.` in Hungarian.
+- `Duplicate last week` copies every other day and skips the leave days.
+- The full-day leave over logged time is refused under the dates with
+  `Time is already logged on some of these days. …` in English and
+  `Ezen napok némelyikére már van rögzített idő. …` in Hungarian; the half day is recorded.
+- An agent's `time_create_entry` on a leave day gets `DAY_ON_LEAVE`.
+
 ### Contractors Do Not Have Leave
 
 1. Sign in as `{CONTRACTOR_EMAIL}`.
