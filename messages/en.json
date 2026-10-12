@@ -981,10 +981,10 @@
       "locked": "Locked",
       "unlocked": "Unlocked",
       "empty": "This revision has no snapshot lines.",
-      "projectSummary": "{hours} h, {entries} entries",
+      "projectSummary": "{hours}, {entries} entries",
       "lineCaption": "Timesheet snapshot source lines",
       "declared": "Declared monthly",
-      "declaredSummary": "{hours} h declared for the month",
+      "declaredSummary": "{hours} declared for the month",
       "declaredLineDate": "{month} · declared",
       "openProof": "Open proof",
       "proofMissing": "These declared hours have no proof document."

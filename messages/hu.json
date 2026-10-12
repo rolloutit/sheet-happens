@@ -981,10 +981,10 @@
       "locked": "Zárolva",
       "unlocked": "Feloldva",
       "empty": "Ehhez a revízióhoz nincs snapshot sor.",
-      "projectSummary": "{hours} óra, {entries} bejegyzés",
+      "projectSummary": "{hours}, {entries} bejegyzés",
       "lineCaption": "Timesheet snapshot forrássorok",
       "declared": "Havonta bevallott",
-      "declaredSummary": "{hours} óra a hónapra bevallva",
+      "declaredSummary": "{hours} a hónapra bevallva",
       "declaredLineDate": "{month} · bevallott",
       "openProof": "Igazolás megnyitása",
       "proofMissing": "Ezekhez a bevallott órákhoz nincs igazoló dokumentum."
