@@ -413,8 +413,8 @@ Scope:
 
 ## Leave
 
-Leave is an employee-only module: who is away when, recorded by the employee and bookkept by the
-admin. Contractors neither see it nor appear in it. Code: `src/server/leave`, screens `/leave` and
+Leave is an employee-only module: who is away when, recorded by the employee (or, for them, by an
+admin) and bookkept by the admin. Contractors neither see it nor appear in it. Code: `src/server/leave`, screens `/leave` and
 `/admin/leave`.
 
 Model:
@@ -440,6 +440,9 @@ Rules:
 - An employee records leave for themselves only, starting no earlier than the 1st of their current
   month (their own time zone). Recording stays open until the month ends; the month-end reminder's
   "by 12:00 tomorrow" is a request, not a lock.
+- An admin can record leave for any active employee, for any date, sick note included. Every other
+  rule below still applies. `created_by_member_id` then holds the admin, and so does the audit
+  actor; the HR tick stays a separate step.
 - A leave must contain at least one workday, may not be longer than a year, and may not overlap the
   member's other live leave, except that a morning and an afternoon can share a day. Writes take a
   row lock on the member so two tabs cannot both pass the overlap check.
@@ -467,6 +470,10 @@ Audit: `leave.created`, `leave.updated`, `leave.deleted`, `leave.hr_processed`,
 
 Reminder: `LEAVE_MONTH_END_REMINDER` goes to every active employee, email and in-app, on the
 second-to-last day of the month at 9:00 company time.
+
+Recorded by an admin: `LEAVE_RECORDED_BY_ADMIN` tells the employee, email and in-app, when someone
+else recorded their leave. The dispatcher reads it from the `leave.created` audit row, whose `after`
+carries the employee's `memberId`, and skips rows the employee wrote themselves.
 
 ## Information Page
 
