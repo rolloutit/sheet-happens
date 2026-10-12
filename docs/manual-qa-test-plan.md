@@ -1731,6 +1731,30 @@ Expected result:
   `leave.hr_processed`, `leave.hr_unprocessed`, `leave.attachment_uploaded` and
   `leave.attachment_read`.
 
+### Admin Records Leave For An Employee
+
+1. Sign in as `{ADMIN_EMAIL}`, open `https://{DOMAIN_NAME}/admin/leave` and use `Add leave`.
+2. Submit without choosing an employee.
+3. Choose `{EMPLOYEE_EMAIL}`, `Sick leave`, three workdays in last month, a note and a PDF sick
+   note, and submit.
+4. Record a second leave for the same employee over one of those days.
+5. Record a full-day leave for the same employee on a day that already holds logged time.
+6. Sign in as `{EMPLOYEE_EMAIL}`, open `/leave?view=list` and the notifications, and check the
+   inbox.
+
+Expected result:
+
+- The drawer is titled `Add leave for an employee` and lists only active employees; the date
+  picker allows any month.
+- Without an employee the form asks for one and keeps the dates and the note.
+- The leave appears in the list as waiting to be processed; the admin ticks it separately.
+- The overlap and the logged-time day are refused with the same messages the employee gets.
+- The employee sees the leave with its note and sick note, gets one in-app notification and one
+  email (`An admin recorded leave for you` / `Egy admin szabadságot rögzített neked`) naming the
+  kind and the days, linking to `/leave`. Recording their own leave never notifies them.
+- `/settings` lists `Leave recorded by admin` among the workflow notifications.
+- The audit log shows `leave.created` with the admin as actor.
+
 ### Month-End Leave Reminder
 
 1. As `{ADMIN_EMAIL}`, open `/settings` → notifications and confirm `Monthly leave reminder` is
