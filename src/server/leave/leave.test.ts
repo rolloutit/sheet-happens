@@ -7,12 +7,13 @@ const db = vi.hoisted(() => ({
   timeEntry: { findFirst: vi.fn() },
   runningTimer: { findUnique: vi.fn() },
   auditLog: { create: vi.fn() },
-  document: { create: vi.fn() },
+  document: { create: vi.fn(), update: vi.fn() },
   leave: {
     findMany: vi.fn(),
     findFirst: vi.fn(),
     findUniqueOrThrow: vi.fn(),
     create: vi.fn(),
+    update: vi.fn(),
     updateMany: vi.fn(),
   },
   publicHolidayYear: { findMany: vi.fn(async () => [{ year: 2026 }]) },
@@ -37,6 +38,7 @@ const {
   createLeave,
   getLeaveEarliestStartDate,
   listLeaveCalendar,
+  deleteLeaveForAdmin,
   normalizeAdminLeaveFilters,
   updateLeaveForAdmin,
   uploadLeaveAttachment,
@@ -299,6 +301,57 @@ describe("a sick note racing an admin edit", () => {
         where: { id: "leave-1", deletedAt: null, attachmentDocumentId: null },
       }),
     );
+  });
+});
+
+describe("deleteLeaveForAdmin", () => {
+  const storage = { deleteObject: vi.fn(async () => undefined) };
+
+  beforeEach(() => {
+    db.$transaction.mockImplementation((callback: (tx: typeof db) => unknown) => callback(db));
+    db.leave.findFirst.mockReset();
+    db.leave.findFirst.mockResolvedValue({
+      id: "leave-1",
+      memberId: "member-own",
+      type: "SICK",
+      startDate: new Date("2026-10-12T00:00:00.000Z"),
+      endDate: new Date("2026-10-12T00:00:00.000Z"),
+      dayPart: "FULL",
+      note: null,
+    });
+    db.document.update.mockClear();
+    storage.deleteObject.mockClear();
+  });
+
+  it("takes the sick note down with the leave", async () => {
+    db.leave.update.mockResolvedValue({
+      attachmentDocument: { id: "document-1", storageBucket: "leave", storageKey: "sick-notes/a" },
+    });
+
+    await deleteLeaveForAdmin(
+      { leaveId: "leave-1", actorMemberId: "admin" },
+      { storage: storage as never },
+    );
+
+    expect(db.document.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { id: "document-1" },
+        data: expect.objectContaining({ status: "DELETED", deletedByMemberId: "admin" }),
+      }),
+    );
+    expect(storage.deleteObject).toHaveBeenCalledWith({ bucket: "leave", key: "sick-notes/a" });
+  });
+
+  it("touches no document when the leave had no note", async () => {
+    db.leave.update.mockResolvedValue({ attachmentDocument: null });
+
+    await deleteLeaveForAdmin(
+      { leaveId: "leave-1", actorMemberId: "admin" },
+      { storage: storage as never },
+    );
+
+    expect(db.document.update).not.toHaveBeenCalled();
+    expect(storage.deleteObject).not.toHaveBeenCalled();
   });
 });
 

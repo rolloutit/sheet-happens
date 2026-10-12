@@ -306,11 +306,12 @@ export async function updateLeaveForAdmin(
 
 export async function deleteLeaveForAdmin(
   input: { leaveId: string; actorMemberId: string; requestMetadata?: LeaveRequestMetadata },
-  deps: { now?: Date } = {},
+  deps: { storage?: ObjectStorage; now?: Date } = {},
 ) {
   const now = deps.now ?? new Date();
+  const storage = deps.storage ?? getObjectStorage();
 
-  return prisma.$transaction(async (tx) => {
+  const deleted = await prisma.$transaction(async (tx) => {
     const existing = await tx.leave.findFirst({
       where: { id: input.leaveId, deletedAt: null },
       select: {
@@ -326,11 +327,22 @@ export async function deleteLeaveForAdmin(
 
     if (!existing) throw new LeaveError("Leave not found.", "NOT_FOUND");
 
-    await tx.leave.update({
+    // The sick note goes with the leave: nothing can reach it once the leave is gone. Read from
+    // the update itself, which holds the row, so a note an upload attached a moment ago is caught.
+    const { attachmentDocument: note } = await tx.leave.update({
       where: { id: existing.id },
       data: { deletedAt: now, deletedByMemberId: input.actorMemberId },
-      select: { id: true },
+      select: {
+        attachmentDocument: { select: { id: true, storageBucket: true, storageKey: true } },
+      },
     });
+    if (note) {
+      await tx.document.update({
+        where: { id: note.id },
+        data: { status: "DELETED", deletedAt: now, deletedByMemberId: input.actorMemberId },
+        select: { id: true },
+      });
+    }
 
     await tx.auditLog.create({
       data: {
@@ -347,14 +359,23 @@ export async function deleteLeaveForAdmin(
             dayPart: existing.dayPart,
             note: existing.note,
           }),
+          attachmentDocumentId: note?.id ?? null,
         },
         ...input.requestMetadata,
         createdAt: now,
       },
     });
 
-    return { leaveId: existing.id };
+    return { leaveId: existing.id, note };
   });
+
+  if (deleted.note) {
+    await storage
+      .deleteObject({ bucket: deleted.note.storageBucket, key: deleted.note.storageKey })
+      .catch(() => undefined);
+  }
+
+  return { leaveId: deleted.leaveId };
 }
 
 /** Ticks or unticks "entered into HR" on several leaves at once; unchanged ones are skipped. */
