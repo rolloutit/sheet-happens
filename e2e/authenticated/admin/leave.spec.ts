@@ -116,6 +116,67 @@ test("records a half day, ticks it as processed and deletes it", async ({ page }
   await expect(hr).toHaveCount(0);
 });
 
+test("records a past half day for an employee and deletes it", async ({ page }) => {
+  test.setTimeout(90_000);
+  // Last month is closed to the employee, and holds no seeded leave: the relative ones start in the
+  // current month. A half day, because the generated time entries may cover the day.
+  const target = secondWednesdayLastMonth();
+  const dayName = new Intl.DateTimeFormat("en", {
+    weekday: "long",
+    month: "long",
+    day: "numeric",
+    year: "numeric",
+    timeZone: "UTC",
+  }).format(target);
+  const month = target.toISOString().slice(0, 7);
+  const rangeLabel = new Intl.DateTimeFormat("en", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+    timeZone: "UTC",
+  }).format(target);
+  const row = page.getByRole("row", {
+    name: new RegExp(`Dóra Kovács.*${escapeRegExp(rangeLabel)}`),
+  });
+
+  await visit(page, `/admin/leave?month=${month}`);
+  for (let remaining = await row.count(); remaining > 0; remaining -= 1) {
+    await deleteLeave(page, row.first());
+    await expect(row).toHaveCount(remaining - 1);
+  }
+
+  // The employee picker pushes the dates down, and at 720 pixels the two-month calendar fits
+  // neither below nor above them: the shared popover has no height limit, so its month controls
+  // land off screen.
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await visit(page, "/admin/leave?new=leave");
+  const drawer = page.getByRole("dialog", { name: "Add leave for an employee" });
+  await expect(async () => {
+    await drawer.getByRole("combobox", { name: "Employee" }).click();
+    await expect(page.getByRole("option", { name: /Dóra Kovács/ })).toBeVisible({
+      timeout: 2_000,
+    });
+  }).toPass({ timeout: 60_000 });
+  await page.getByRole("option", { name: /Dóra Kovács/ }).click();
+  await drawer.getByRole("button", { name: /^Dates/ }).click();
+  await page.getByRole("button", { name: "Previous month" }).click();
+  await page.getByRole("button", { name: dayName }).click();
+  await page.getByRole("button", { name: "Done" }).click();
+  await drawer.getByText("Morning", { exact: true }).click();
+  await expect(drawer.getByText("0.5 workdays")).toBeVisible();
+  await drawer.getByRole("button", { name: "Add leave" }).click();
+  await expect(page.getByText("Leave added.")).toBeVisible();
+
+  await visit(page, `/admin/leave?month=${month}`);
+  // Recorded by the admin, but not yet entered into HR: the tick stays the admin's own step.
+  await expect(
+    page.getByRole("checkbox", { name: `Dóra Kovács (${rangeLabel}) processed` }),
+  ).not.toBeChecked();
+
+  await deleteLeave(page, row);
+  await expect(row).toHaveCount(0);
+});
+
 async function deleteLeave(page: Page, row: Locator) {
   await expect(async () => {
     await row.getByRole("button", { name: "Open" }).click();
@@ -131,6 +192,14 @@ async function deleteLeave(page: Page, row: Locator) {
 function wednesdayTwoMonthsOut() {
   const now = new Date();
   const date = new Date(Date.UTC(now.getFullYear(), now.getMonth() + 2, 1));
+  while (date.getUTCDay() !== 3) date.setUTCDate(date.getUTCDate() + 1);
+  return date;
+}
+
+/** The second Wednesday of last month, at UTC midnight: days 8 to 14 hold no Hungarian holiday. */
+function secondWednesdayLastMonth() {
+  const now = new Date();
+  const date = new Date(Date.UTC(now.getFullYear(), now.getMonth() - 1, 8));
   while (date.getUTCDay() !== 3) date.setUTCDate(date.getUTCDate() + 1);
   return date;
 }

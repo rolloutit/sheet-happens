@@ -10,6 +10,7 @@ import {
   useFormDrawerClose,
 } from "@/src/components/sheet/FormDrawer";
 import { Button } from "@/src/components/ui/Button";
+import { Combobox } from "@/src/components/ui/Combobox";
 import { DateRangePicker, type DateRangeValue } from "@/src/components/ui/DateRangePicker";
 import { Field } from "@/src/components/ui/Field";
 import { FormMessage } from "@/src/components/ui/FormMessage";
@@ -47,6 +48,8 @@ export type LeaveFormProps = {
   holidayDates: readonly string[];
   /** Whose leave an admin is editing, shown read-only above the form. */
   memberName?: string;
+  /** The employees an admin can record leave for; shows the picker when set. */
+  memberOptions?: readonly { id: string; name: string; email: string }[];
   onDirtyChange: (dirty: boolean) => void;
   onDone: (message: string) => void;
 };
@@ -58,6 +61,7 @@ export function LeaveForm({
   minDate,
   holidayDates,
   memberName,
+  memberOptions,
   onDirtyChange,
   onDone,
 }: LeaveFormProps) {
@@ -72,6 +76,7 @@ export function LeaveForm({
   });
   const [dayPart, setDayPart] = useState<LeaveDayPartValue>(initial?.dayPart ?? "FULL");
   const [note, setNote] = useState(initial?.note ?? "");
+  const [memberId, setMemberId] = useState("");
   const handledStateRef = useRef<LeaveActionState | null>(null);
 
   const startDate = range.from;
@@ -117,6 +122,38 @@ export function LeaveForm({
             <span className="text-muted-foreground">{t("form.member")}: </span>
             <span className="font-ui font-semibold text-foreground">{memberName}</span>
           </p>
+        ) : null}
+
+        {memberOptions ? (
+          <Field
+            id="leave-member"
+            label={t("form.member")}
+            required
+            error={state.fieldErrors?.memberId}
+          >
+            {({ id, describedBy, invalid }) => (
+              <Combobox
+                id={id}
+                name="memberId"
+                label={t("form.member")}
+                placeholder={t("form.memberPlaceholder")}
+                value={memberId}
+                onValueChange={(value) => {
+                  setMemberId(value);
+                  markDirty();
+                }}
+                options={memberOptions.map((option) => ({
+                  value: option.id,
+                  label: option.name,
+                  meta: option.email,
+                }))}
+                labels={pickerLabels.combobox}
+                aria-describedby={describedBy}
+                invalid={invalid}
+                required
+              />
+            )}
+          </Field>
         ) : null}
 
         <fieldset className="grid gap-2">

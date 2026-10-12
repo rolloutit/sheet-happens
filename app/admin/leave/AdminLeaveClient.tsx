@@ -1,6 +1,15 @@
 "use client";
 
-import { CalendarDays, CircleCheck, List, Paperclip, Pencil, Sunrise, Sunset } from "lucide-react";
+import {
+  CalendarDays,
+  CircleCheck,
+  List,
+  Paperclip,
+  Pencil,
+  Plus,
+  Sunrise,
+  Sunset,
+} from "lucide-react";
 import type { Route } from "next";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useMemo, useOptimistic, useState, useTransition } from "react";
@@ -17,12 +26,14 @@ import { SectionHead } from "@/src/components/ui/SectionHead";
 import { SegmentedControl } from "@/src/components/ui/SegmentedControl";
 import { DataTable, type TableColumn } from "@/src/components/ui/Table";
 import { formatDateTime } from "@/src/lib/formatting";
+import { useOverlayParam } from "@/src/lib/use-overlay-param";
 import { LeaveDetailsDialog, type LeaveAdminControls } from "@/app/leave/LeaveDetailsDialog";
 import { LeaveFormDrawer } from "@/app/leave/LeaveFormDrawer";
 import { LeaveMonthNav } from "@/app/leave/LeaveMonthNav";
 import type { AdminLeaveView, LeaveHoliday } from "@/app/leave/leave-view-types";
 import { useLeaveCalendarLabels, useLeaveText } from "@/app/leave/use-leave-labels";
 import {
+  createLeaveAction,
   deleteLeaveAction,
   removeLeaveAttachmentAction,
   setLeaveHrProcessedAction,
@@ -33,7 +44,10 @@ import { AdminLeaveFilterBar, type AdminLeaveFilterBarProps } from "./AdminLeave
 export type AdminLeaveClientProps = {
   view: "list" | "calendar";
   filters: Omit<AdminLeaveFilterBarProps, "view" | "employeeOptions">;
-  employeeOptions: AdminLeaveFilterBarProps["employeeOptions"];
+  /** Every employee for the filter; only the active ones can have leave recorded. */
+  employeeOptions: readonly (AdminLeaveFilterBarProps["employeeOptions"][number] & {
+    active: boolean;
+  })[];
   rows: AdminLeaveView[];
   page: number;
   totalPages: number;
@@ -45,7 +59,7 @@ export type AdminLeaveClientProps = {
     todayIso: string;
     holidays: LeaveHoliday[];
   } | null;
-  /** Holidays of last year to next year, for the edit form's live workday count. */
+  /** Holidays of last year to next year, for the forms' live workday count. */
   formHolidayDates: string[];
 };
 
@@ -69,6 +83,7 @@ export function AdminLeaveClient({
   const searchParams = useSearchParams();
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [editing, setEditing] = useState<AdminLeaveView | null>(null);
+  const [creating, setCreating] = useOverlayParam("new", "leave");
   const [checked, setChecked] = useState<string[]>([]);
   const [pending, startTransition] = useTransition();
   // The HR tick answers the click at once; the revalidated rows replace it when the action lands.
@@ -93,6 +108,10 @@ export function AdminLeaveClient({
     [rows, selectedId],
   );
   const visibleChecked = checked.filter((id) => rows.some((row) => row.id === id));
+  const activeEmployees = useMemo(
+    () => employeeOptions.filter((employee) => employee.active),
+    [employeeOptions],
+  );
 
   const pushParams = (update: (params: URLSearchParams) => void) => {
     const params = new URLSearchParams(searchParams.toString());
@@ -251,7 +270,15 @@ export function AdminLeaveClient({
 
   return (
     <section className="mx-auto grid w-full max-w-7xl gap-6 px-4 py-8 sm:px-6 lg:px-8">
-      <SectionHead title={t("admin.title")} subtitle={t("admin.subtitle")} />
+      <SectionHead
+        title={t("admin.title")}
+        subtitle={t("admin.subtitle")}
+        actions={
+          <Button type="button" icon={Plus} onClick={() => setCreating(true)}>
+            {t("actions.add")}
+          </Button>
+        }
+      />
 
       <div className="flex flex-wrap items-center justify-between gap-3">
         <SegmentedControl
@@ -379,6 +406,16 @@ export function AdminLeaveClient({
         onOpenChange={(open) => {
           if (!open) setSelectedId(null);
         }}
+      />
+
+      <LeaveFormDrawer
+        open={creating}
+        onOpenChange={setCreating}
+        onDone={(message) => notify("success", message)}
+        action={createLeaveAction}
+        mode="create"
+        memberOptions={activeEmployees}
+        holidayDates={formHolidayDates}
       />
 
       <LeaveFormDrawer

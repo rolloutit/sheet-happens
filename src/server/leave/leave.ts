@@ -32,7 +32,7 @@ import {
  * There is no approval. A leave is valid the moment it is recorded; the admin's only workflow
  * state is `hrProcessedAt`, a private tick for "entered into the HR system". Employees record
  * their own leave for the current month or later and can afterwards only add a sick note; every
- * edit and delete is the admin's.
+ * edit and delete is the admin's, and an admin can also record leave for an employee, for any date.
  *
  * What a viewer sees is decided here, not in the UI: colleagues see that someone is away, never
  * why, and never the note or the attachment.
@@ -108,13 +108,34 @@ export function getLeaveEarliestStartDate(timezone: string, now = new Date()) {
   return `${getTodayIsoInTimezone(timezone, now).slice(0, 7)}-01`;
 }
 
-export async function createLeave(
-  input: LeaveFormInput & {
-    memberId: string;
-    file?: LeaveAttachmentInput | null;
-    requestMetadata?: LeaveRequestMetadata;
-  },
+type CreateLeaveInput = LeaveFormInput & {
+  memberId: string;
+  file?: LeaveAttachmentInput | null;
+  requestMetadata?: LeaveRequestMetadata;
+};
+
+/** An employee recording their own leave, from the 1st of their current month on. */
+export function createLeave(
+  input: CreateLeaveInput,
   deps: { storage?: ObjectStorage; now?: Date } = {},
+) {
+  return recordLeave({ ...input, actorMemberId: input.memberId, adminCorrection: false }, deps);
+}
+
+/**
+ * An admin recording leave for an employee: any date, like an admin edit, but still no overlap,
+ * at least one workday and no logged time underneath.
+ */
+export function createLeaveForAdmin(
+  input: CreateLeaveInput & { actorMemberId: string },
+  deps: { storage?: ObjectStorage; now?: Date } = {},
+) {
+  return recordLeave({ ...input, adminCorrection: true }, deps);
+}
+
+async function recordLeave(
+  input: CreateLeaveInput & { actorMemberId: string; adminCorrection: boolean },
+  deps: { storage?: ObjectStorage; now?: Date },
 ) {
   const now = deps.now ?? new Date();
   const member = await prisma.member.findFirst({
@@ -131,7 +152,9 @@ export async function createLeave(
   }
 
   const contentType = input.file ? validateLeaveAttachment(input.file) : null;
-  const earliestStartDate = getLeaveEarliestStartDate(member.timezone, now);
+  const earliestStartDate = input.adminCorrection
+    ? null
+    : getLeaveEarliestStartDate(member.timezone, now);
   assertLeaveRangeShape({ ...input, earliestStartDate });
   const holidays = await getHolidayDates(input.startDate, input.endDate);
   // Fails fast before the upload; repeated inside the transaction against a locked member row.
@@ -160,7 +183,7 @@ export async function createLeave(
 
       const document = stored
         ? await tx.document.create({
-            data: buildDocumentData(stored, member.id, member.id, now),
+            data: buildDocumentData(stored, member.id, input.actorMemberId, now),
             select: { id: true },
           })
         : null;
@@ -175,7 +198,7 @@ export async function createLeave(
           dayPart: input.dayPart,
           note: input.note,
           attachmentDocumentId: document?.id ?? null,
-          createdByMemberId: member.id,
+          createdByMemberId: input.actorMemberId,
           createdAt: now,
         },
         select: { id: true },
@@ -183,11 +206,14 @@ export async function createLeave(
 
       await tx.auditLog.create({
         data: {
-          actorMemberId: member.id,
+          actorMemberId: input.actorMemberId,
           action: "leave.created",
           targetType: "leave",
           targetId: leave.id,
           after: {
+            // The notification dispatcher reads the employee from here to tell them when someone
+            // else recorded their leave.
+            memberId: member.id,
             ...auditSnapshot(input),
             workdays: counted.workdays,
             documentId: document?.id ?? null,
@@ -791,7 +817,7 @@ export async function listLeaveForAdmin(
     prisma.member.findMany({
       where: liveEmployee,
       orderBy: [{ displayName: "asc" }, { email: "asc" }],
-      select: { id: true, displayName: true, email: true },
+      select: { id: true, displayName: true, email: true, status: true },
     }),
   ]);
   const totalPages = Math.max(1, Math.ceil(totalItems / pageSize));
@@ -829,6 +855,8 @@ export async function listLeaveForAdmin(
       id: employee.id,
       name: employee.displayName,
       email: employee.email,
+      /** Only an active employee can have leave recorded; the filter still lists everyone. */
+      active: employee.status === "ACTIVE",
     })),
   };
 }

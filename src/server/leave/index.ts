@@ -8,6 +8,7 @@ export {
   buildLeaveAttachmentKey,
   createLeave,
   createLeaveAttachmentReadUrl,
+  createLeaveForAdmin,
   deleteLeaveForAdmin,
   getLeaveEarliestStartDate,
   listLeaveCalendar,

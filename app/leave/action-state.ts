@@ -1,4 +1,5 @@
-export type LeaveFormField = "type" | "startDate" | "endDate" | "dayPart" | "note" | "file";
+export type LeaveFormField =
+  "memberId" | "type" | "startDate" | "endDate" | "dayPart" | "note" | "file";
 
 export type LeaveActionState = {
   status: "idle" | "success" | "error";

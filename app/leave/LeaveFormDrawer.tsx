@@ -39,13 +39,21 @@ export function LeaveFormDrawer({
   );
 
   const create = formProps.mode === "create";
+  // An admin recording for someone else picks the employee; the employee's own copy would be wrong.
+  const adminCreate = create && Boolean(formProps.memberOptions);
 
   return (
     <FormDrawer
       open={open}
       onOpenChange={handleOpenChange}
-      title={create ? t("form.title") : t("form.editTitle")}
-      description={create ? t("form.description") : t("form.editDescription")}
+      title={adminCreate ? t("form.adminTitle") : create ? t("form.title") : t("form.editTitle")}
+      description={
+        adminCreate
+          ? t("form.adminDescription")
+          : create
+            ? t("form.description")
+            : t("form.editDescription")
+      }
       dirty={dirty}
       closeLabel={t("actions.close")}
       discardLabels={{

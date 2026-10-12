@@ -36,6 +36,7 @@ vi.mock("@/src/server/db/client", () => ({ prisma: db }));
 const {
   buildLeaveAttachmentKey,
   createLeave,
+  createLeaveForAdmin,
   getLeaveEarliestStartDate,
   listLeaveCalendar,
   deleteLeaveForAdmin,
@@ -210,6 +211,119 @@ describe("createLeave over logged time", () => {
       createLeave({ ...input, endDate: "2026-10-12", dayPart: "MORNING" }, { now }),
     ).resolves.toMatchObject({ leaveId: "leave-new" });
     expect(db.timeEntry.findFirst).not.toHaveBeenCalled();
+  });
+});
+
+describe("createLeaveForAdmin", () => {
+  const now = new Date("2026-10-01T08:00:00.000Z");
+  const storage = {
+    putObject: vi.fn(async ({ key }: { key: string }) => ({ bucket: "leave", key })),
+    deleteObject: vi.fn(async () => undefined),
+  };
+  const input = {
+    memberId: "member-own",
+    actorMemberId: "member-admin",
+    type: "VACATION" as const,
+    startDate: "2026-09-14",
+    endDate: "2026-09-15",
+    dayPart: "FULL" as const,
+    note: null,
+  };
+
+  beforeEach(() => {
+    db.$transaction.mockImplementation((callback: (tx: typeof db) => unknown) => callback(db));
+    db.member.findFirst.mockResolvedValue({ id: "member-own", timezone: "Europe/Budapest" });
+    db.leave.findMany.mockResolvedValue([]);
+    db.leave.create.mockReset();
+    db.leave.create.mockResolvedValue({ id: "leave-new" });
+    db.document.create.mockReset();
+    db.document.create.mockResolvedValue({ id: "document-new" });
+    db.auditLog.create.mockReset();
+    db.timeEntry.findFirst.mockReset();
+    db.timeEntry.findFirst.mockResolvedValue(null);
+    db.runningTimer.findUnique.mockResolvedValue(null);
+  });
+
+  it("records a leave before the employee's current month, which the employee cannot", async () => {
+    await expect(createLeave(input, { now })).rejects.toMatchObject({
+      code: "BEFORE_CURRENT_MONTH",
+    });
+
+    await expect(createLeaveForAdmin(input, { now })).resolves.toEqual({
+      leaveId: "leave-new",
+      workdays: 2,
+    });
+  });
+
+  it("records the admin as the author and the employee as the owner", async () => {
+    await createLeaveForAdmin(input, { now });
+
+    expect(db.leave.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          memberId: "member-own",
+          createdByMemberId: "member-admin",
+        }),
+      }),
+    );
+    expect(db.auditLog.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        actorMemberId: "member-admin",
+        action: "leave.created",
+        after: expect.objectContaining({ memberId: "member-own", startDate: "2026-09-14" }),
+      }),
+    });
+  });
+
+  it("keeps a sick note with the employee and names the admin as its uploader", async () => {
+    await createLeaveForAdmin(
+      {
+        ...input,
+        type: "SICK",
+        file: {
+          bytes: Buffer.from("%PDF-1.7\nexample"),
+          originalFilename: "igazolas.pdf",
+          contentType: "application/pdf",
+          byteSize: 16,
+        },
+      },
+      { now, storage: storage as never },
+    );
+
+    expect(db.document.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        ownerMemberId: "member-own",
+        uploadedByMemberId: "member-admin",
+      }),
+      select: { id: true },
+    });
+  });
+
+  it("refuses anyone who is not an active employee", async () => {
+    db.member.findFirst.mockResolvedValue(null);
+
+    await expect(createLeaveForAdmin(input, { now })).rejects.toMatchObject({
+      code: "EMPLOYEE_REQUIRED",
+    });
+    expect(db.leave.create).not.toHaveBeenCalled();
+  });
+
+  it("still refuses an overlap and days with logged time", async () => {
+    db.leave.findMany.mockResolvedValue([
+      {
+        startDate: new Date("2026-09-15T00:00:00.000Z"),
+        endDate: new Date("2026-09-15T00:00:00.000Z"),
+        dayPart: "FULL",
+      },
+    ]);
+    await expect(createLeaveForAdmin(input, { now })).rejects.toMatchObject({ code: "OVERLAP" });
+
+    db.leave.findMany.mockResolvedValue([]);
+    db.timeEntry.findFirst.mockResolvedValue({ id: "entry-1" });
+    await expect(createLeaveForAdmin(input, { now })).rejects.toMatchObject({
+      code: "TIME_ENTRIES_ON_DAYS",
+    });
+    expect(db.leave.create).not.toHaveBeenCalled();
   });
 });
 

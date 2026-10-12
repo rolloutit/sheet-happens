@@ -9,11 +9,14 @@ import {
   getLeaveRequestMetadata,
   leaveErrorState,
   leaveFormFieldErrors,
+  readLeaveFile,
   readLeaveForm,
 } from "@/app/leave/leave-action-helpers";
 import { requireAdminAppMemberForAction } from "@/src/server/auth/app-access";
 import {
+  createLeaveForAdmin,
   deleteLeaveForAdmin,
+  LeaveError,
   removeLeaveAttachmentForAdmin,
   setLeaveHrProcessed,
   updateLeaveForAdmin,
@@ -24,6 +27,48 @@ const leaveIdSchema = z.string().uuid();
 function revalidateLeave() {
   revalidatePath("/admin/leave");
   revalidatePath("/leave");
+}
+
+export async function createLeaveAction(
+  _previousState: LeaveActionState,
+  formData: FormData,
+): Promise<LeaveActionState> {
+  const t = await getTranslations("Leave");
+  const memberId = leaveIdSchema.safeParse(formData.get("memberId"));
+  const parsed = readLeaveForm(formData);
+
+  if (!memberId.success || !parsed.success) {
+    return {
+      status: "error",
+      message: t("errors.checkFields"),
+      fieldErrors: {
+        ...(parsed.success ? {} : leaveFormFieldErrors(parsed.error.issues, t)),
+        ...(memberId.success ? {} : { memberId: t("errors.memberRequired") }),
+      },
+    };
+  }
+
+  try {
+    const { member } = await requireAdminAppMemberForAction();
+    const file = parsed.data.type === "SICK" ? await readLeaveFile(formData) : null;
+    await createLeaveForAdmin({
+      ...parsed.data,
+      memberId: memberId.data,
+      actorMemberId: member.id,
+      file,
+      requestMetadata: await getLeaveRequestMetadata(),
+    });
+
+    revalidateLeave();
+    return { status: "success", message: t("form.created") };
+  } catch (error) {
+    // The shared message speaks to an employee recording their own leave; here it is the pick.
+    if (error instanceof LeaveError && error.code === "EMPLOYEE_REQUIRED") {
+      const message = t("errors.memberNotEmployee");
+      return { status: "error", message, fieldErrors: { memberId: message } };
+    }
+    return leaveErrorState(error, t, "admin create");
+  }
 }
 
 export async function updateLeaveAction(
