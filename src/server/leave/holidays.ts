@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { z } from "zod";
 
 import { prisma } from "@/src/server/db/client";
@@ -110,6 +111,24 @@ function yearsBetween(start: string, end: string) {
 }
 
 /**
+ * Every stored year and holiday, read once per request. Both tables hold about a dozen rows a
+ * year, and one leave page asks for several overlapping ranges (the calendar grid, each list's
+ * span, the form's years), so one read serves them all. Outside a React request `cache` keeps
+ * nothing, so an action reads fresh rows on every call.
+ */
+const readStoredHolidays = cache(async () => {
+  const [years, rows] = await Promise.all([
+    prisma.publicHolidayYear.findMany({ select: { year: true } }),
+    prisma.publicHoliday.findMany({
+      orderBy: { date: "asc" },
+      select: { date: true, localName: true, name: true },
+    }),
+  ]);
+
+  return { years: new Set(years.map(({ year }) => year)), holidays: rows.map(toHolidayValue) };
+});
+
+/**
  * The holidays between two dates, inclusive. Years never fetched before are fetched now; a failed
  * fetch is logged and the year stays empty until the next attempt.
  */
@@ -122,30 +141,32 @@ export async function getPublicHolidaysInRange(
   const years = yearsBetween(start, end).filter(
     (year) => Math.abs(year - thisYear) <= ON_DEMAND_YEAR_WINDOW,
   );
-  const cached = await prisma.publicHolidayYear.findMany({
-    where: { year: { in: years } },
-    select: { year: true },
-  });
-  const cachedYears = new Set(cached.map(({ year }) => year));
+  const stored = await readStoredHolidays();
 
   const now = (deps.now ?? new Date()).getTime();
   const missing = years.filter(
     (year) =>
-      !cachedYears.has(year) && now - (lastFailureAt.get(year) ?? -Infinity) >= FAILURE_BACKOFF_MS,
+      !stored.years.has(year) && now - (lastFailureAt.get(year) ?? -Infinity) >= FAILURE_BACKOFF_MS,
   );
+
+  if (missing.length === 0) {
+    return stored.holidays.filter((holiday) => holiday.date >= start && holiday.date <= end);
+  }
+
   await Promise.all(missing.map((year) => fetchYearOnce(year, deps, now)));
 
+  // The stored copy predates the fetch, so the range is read again.
   const rows = await prisma.publicHoliday.findMany({
     where: { date: { gte: parseDateOnly(start), lte: parseDateOnly(end) } },
     orderBy: { date: "asc" },
     select: { date: true, localName: true, name: true },
   });
 
-  return rows.map((row) => ({
-    date: formatDateOnly(row.date),
-    localName: row.localName,
-    name: row.name,
-  }));
+  return rows.map(toHolidayValue);
+}
+
+function toHolidayValue(row: { date: Date; localName: string; name: string }) {
+  return { date: formatDateOnly(row.date), localName: row.localName, name: row.name };
 }
 
 function fetchYearOnce(year: number, deps: HolidayDeps, now: number) {

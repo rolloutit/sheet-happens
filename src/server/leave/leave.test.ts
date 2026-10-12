@@ -19,14 +19,14 @@ const db = vi.hoisted(() => ({
   publicHolidayYear: { findMany: vi.fn(async () => [{ year: 2026 }]) },
   publicHoliday: {
     // Honours the range like the real query, so a lookup that misses the 23rd sees no holiday.
-    findMany: vi.fn(async ({ where }: { where: { date: { gte: Date; lte: Date } } }) =>
+    findMany: vi.fn(async ({ where }: { where?: { date: { gte: Date; lte: Date } } }) =>
       [
         {
           date: new Date("2026-10-23T00:00:00.000Z"),
           localName: "Nemzeti ünnep",
           name: "National day",
         },
-      ].filter(({ date }) => date >= where.date.gte && date <= where.date.lte),
+      ].filter(({ date }) => !where || (date >= where.date.gte && date <= where.date.lte)),
     ),
   },
 }));
