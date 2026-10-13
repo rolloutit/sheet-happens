@@ -3952,6 +3952,9 @@ week`, while every column still has its `+`. A locked day shows no `+` at all. A
     a duration field and a description field. Type `2h30`, a description, Enter. The popover closes,
     the card enters with the stagger and its rail pulses once. Try `lots` as a duration: the composer
     refuses and explains; nothing is sent.
+    Switch the app to Hungarian and open the composer again: the empty duration field shows `2h30`,
+    not `2ó30`. Typing exactly the placeholder saves a 2:30 entry — the parser reads `h` and `m` in
+    every locale, so no Hungarian hint may suggest `ó` or `p`.
 18. In Day scope the composer is open in the rail; `N` focuses its duration field. `More options`
     opens the full dialog with the project, date, duration text and description carried over;
     `Interval instead` opens it in interval mode. A half-typed description is autosaved as a draft.
