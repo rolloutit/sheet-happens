@@ -116,6 +116,7 @@ export function WeekAgenda({
                     capacity: labels.capacity(day),
                     over: labels.over,
                     locked: labels.locked,
+                    onLeave: labels.onLeave,
                     today: labels.today,
                   }}
                   expanded={columns ? undefined : expanded}
@@ -194,7 +195,7 @@ export function WeekAgenda({
                      line in either locale — so the label has to be allowed to wrap. */
                   <div className="grid grid-cols-1 justify-items-center gap-1 px-1 py-3 text-center">
                     <p className="text-xs text-muted-foreground">{labels.columnEmpty}</p>
-                    {day.canCopyPreviousDay && onCopyPreviousDay && !day.locked ? (
+                    {day.canCopyPreviousDay && onCopyPreviousDay && !day.locked && !day.onLeave ? (
                       <button
                         type="button"
                         disabled={disabled}
@@ -208,9 +209,9 @@ export function WeekAgenda({
                   </div>
                 ) : null}
 
-                {/* Hidden, not disabled, on a locked day (§5.10): there is nothing a member can do
-                    there, and a disabled control invites a click that explains nothing. */}
-                {day.locked ? null : (
+                {/* Hidden, not disabled, on a locked or leave day (§5.10): there is nothing a member
+                    can do there, and a disabled control invites a click that explains nothing. */}
+                {day.locked || day.onLeave ? null : (
                   <Popover
                     open={composerOpen}
                     onOpenChange={(open) => onComposerOpenChange?.(day.isoDate, open)}
@@ -264,7 +265,7 @@ export function WeekAgenda({
               variant="cta"
               size="sm"
               icon={Plus}
-              disabled={disabled || days.every((day) => day.locked)}
+              disabled={disabled || days.every((day) => day.locked || day.onLeave)}
               onClick={() => onAddEntry(selectedDayIso)}
             >
               {labels.addEntryPlain}

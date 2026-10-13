@@ -40,6 +40,10 @@ model Member {
   infoPageVersions                  InfoPageVersion[]           @relation("InfoPageVersionCreatedBy")
   invitations                       Invitation[]                @relation("InvitationMember")
   invitedByInvitations              Invitation[]                @relation("InvitationInvitedBy")
+  leaves                            Leave[]                     @relation("LeaveMember")
+  leavesCreated                     Leave[]                     @relation("LeaveCreatedBy")
+  leavesDeleted                     Leave[]                     @relation("LeaveDeletedBy")
+  leavesHrProcessed                 Leave[]                     @relation("LeaveHrProcessedBy")
   notificationDeliveries            NotificationDelivery[]
   notificationPreferences           NotificationPreference?
   notifications                     Notification[]

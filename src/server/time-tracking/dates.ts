@@ -7,6 +7,8 @@ export type TimeGridDay = {
   dayNumber: string;
   state: TimeGridDayState;
   locked: boolean;
+  /** A full-day leave covers the day; see `leave-guard.ts`. */
+  onLeave: boolean;
 };
 
 const dayLabels = [
@@ -207,6 +209,7 @@ export function buildWeekDays(input: {
   weekStart: Date;
   todayIso: string;
   lockedMonthStarts: Set<string>;
+  leaveDates?: Set<string>;
 }) {
   return Array.from({ length: 7 }, (_, dayIndex): TimeGridDay => {
     const date = addDays(input.weekStart, dayIndex);
@@ -221,6 +224,7 @@ export function buildWeekDays(input: {
       dayNumber: String(date.getUTCDate()),
       state,
       locked: input.lockedMonthStarts.has(formatDateOnly(getMonthStart(date))),
+      onLeave: input.leaveDates?.has(isoDate) ?? false,
     };
   });
 }

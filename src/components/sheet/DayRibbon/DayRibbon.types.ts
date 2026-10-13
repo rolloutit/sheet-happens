@@ -12,6 +12,7 @@ export type DayRibbonLabels = {
   /** The over-target label — `over 8 h`. */
   over: string;
   locked: string;
+  onLeave: string;
   today: string;
 };
 

@@ -107,7 +107,7 @@ Recommended logical enums:
 - `timesheet_correction_status`: `open`, `cancellation_required`, `correction_in_progress`,
   `corrected_invoice_required`, `closed`, `cancelled`
 - `rate_source`: `member_default`, `project_override`
-- `document_type`: `contractor_invoice`, `report_export`, `payslip`, `hours_proof`
+- `document_type`: `contractor_invoice`, `report_export`, `payslip`, `hours_proof`, `sick_note`
 - `document_status`: `pending`, `available`, `failed`, `deleted`
 - `invoice_role`: `original`, `replacement`, `cancellation`, `corrected`
 - `invoice_status`: `uploaded`, `accepted`, `rejected`, `replaced`, `cancelled`, `deleted`
@@ -119,6 +119,8 @@ Recommended logical enums:
   `invoice_uploaded`, `invoice_rejected`, `invoice_accepted`, `timesheet_paid`
 - `delivery_status`: `queued`, `sent`, `failed`, `skipped`
 - `payslip_status`: `available`, `missing`, `processing`, `failed`
+- `leave_type`: `vacation`, `sick`
+- `leave_day_part`: `full`, `morning`, `afternoon`
 
 Prisma can model these as enums. Postgres enum migrations are acceptable, but changing enum values
 later needs deliberate migrations.
@@ -847,6 +849,60 @@ Domain rules:
 
 - Employee picker should exclude contractors.
 - Document type must be `payslip`.
+
+## Leave Tables
+
+### leaves
+
+Employee leave. See the Leave section of `docs/domain-model.md` for the rules.
+
+Key columns:
+
+- `id uuid primary key`
+- `member_id uuid not null references members(id)`
+- `type leave_type not null`
+- `start_date date not null`
+- `end_date date not null`
+- `day_part leave_day_part not null default 'full'`
+- `note text null`
+- `attachment_document_id uuid null unique references documents(id)`
+- `hr_processed_at timestamptz null`
+- `hr_processed_by_member_id uuid null references members(id)`
+- `created_by_member_id uuid not null references members(id)`
+- `created_at timestamptz not null`
+- `updated_at timestamptz not null`
+- `deleted_at timestamptz null`
+- `deleted_by_member_id uuid null references members(id)`
+
+Constraints/indexes:
+
+- check `end_date >= start_date`
+- check `day_part = 'full' or start_date = end_date`
+- `(member_id, start_date)`, `(start_date, end_date)`, `(hr_processed_at)`
+
+Domain rules:
+
+- Workdays are computed on read, never stored.
+- Overlap between a member's live leaves is refused in the domain layer, under a row lock on the
+  member.
+- Document type of the attachment must be `sick_note`.
+
+### public_holidays
+
+Cache of Hungary's public holidays from the Nager.Date API.
+
+- `date date primary key`
+- `year integer not null` (indexed)
+- `local_name text not null`, `name text not null`
+- `fetched_at timestamptz not null`
+
+### public_holiday_years
+
+- `year integer primary key`
+- `fetched_at timestamptz not null`
+
+A row here means the year was fetched, so a year with no holidays is distinguishable from one that
+was never asked for.
 
 ## Information Page Tables
 

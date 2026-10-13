@@ -130,7 +130,11 @@ export function WeekGridLens({
                           key={day.isoDate}
                           type="button"
                           aria-label={`${project.name}, ${day.label}`}
-                          disabled={day.locked || !isProjectAssignableOnDate(project, day.isoDate)}
+                          disabled={
+                            day.locked ||
+                            (day.onLeave && cell.entries.length === 0) ||
+                            !isProjectAssignableOnDate(project, day.isoDate)
+                          }
                           className={cn(
                             "rounded-[var(--radius-sm)] border border-border bg-background px-1 py-2 font-ui text-sm font-semibold tabular-nums disabled:opacity-35",
                             cell.totalMinutes > 0 &&
@@ -189,6 +193,7 @@ export function WeekGridLens({
                       target: formatMinutesWithUnit(DAILY_SOFT_WARNING_MINUTES),
                     }),
                     locked: t("header.locked"),
+                    onLeave: t("header.onLeave"),
                     today: t("header.today"),
                   }}
                   layoutId={dayLayoutId(day.isoDate)}
@@ -263,32 +268,42 @@ export function WeekGridLens({
                       <InactiveProjectRow onUndo={() => onToggleInactive(project, true)} />
                     ) : (
                       <>
-                        {days.map((day, dayIndex) => (
-                          <TimeGridCell
-                            key={day.isoDate}
-                            day={day}
-                            dayTotalMinutes={dailyTotals[dayIndex] ?? 0}
-                            entriesByDay={entriesByDay}
-                            project={project}
-                            cell={getCellEntries(entriesByCell, project.projectId, day.isoDate)}
-                            disabled={
-                              disabled ||
-                              day.locked ||
-                              !isProjectAssignableOnDate(project, day.isoDate)
-                            }
-                            crosshair={
-                              rowHovered ||
-                              (crosshair?.isoDate === day.isoDate &&
-                                crosshair.projectId !== project.projectId)
-                            }
-                            onHover={() =>
-                              setCrosshair({ projectId: project.projectId, isoDate: day.isoDate })
-                            }
-                            onCommit={(rawValue) => onCellCommit(project, day, rawValue)}
-                            onOpenBreakdown={() => onOpenBreakdown(project.projectId, day.isoDate)}
-                            t={t}
-                          />
-                        ))}
+                        {days.map((day, dayIndex) => {
+                          const cell = getCellEntries(
+                            entriesByCell,
+                            project.projectId,
+                            day.isoDate,
+                          );
+                          return (
+                            <TimeGridCell
+                              key={day.isoDate}
+                              day={day}
+                              dayTotalMinutes={dailyTotals[dayIndex] ?? 0}
+                              entriesByDay={entriesByDay}
+                              project={project}
+                              cell={cell}
+                              disabled={
+                                disabled ||
+                                day.locked ||
+                                (day.onLeave && cell.entries.length === 0) ||
+                                !isProjectAssignableOnDate(project, day.isoDate)
+                              }
+                              crosshair={
+                                rowHovered ||
+                                (crosshair?.isoDate === day.isoDate &&
+                                  crosshair.projectId !== project.projectId)
+                              }
+                              onHover={() =>
+                                setCrosshair({ projectId: project.projectId, isoDate: day.isoDate })
+                              }
+                              onCommit={(rawValue) => onCellCommit(project, day, rawValue)}
+                              onOpenBreakdown={() =>
+                                onOpenBreakdown(project.projectId, day.isoDate)
+                              }
+                              t={t}
+                            />
+                          );
+                        })}
                         <div
                           className={cn(
                             "flex min-h-14 items-center justify-center border-b border-border font-ui text-base font-semibold tabular-nums transition-colors duration-[var(--duration-micro)]",

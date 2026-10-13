@@ -35,6 +35,7 @@ export type McpErrorCode =
   | "ENTRY_LOCKED"
   | "ENTRY_IS_DECLARED"
   | "PERIOD_LOCKED"
+  | "DAY_ON_LEAVE"
   | "TIMER_ALREADY_RUNNING"
   | "NO_TIMER_RUNNING"
   | "TIMER_DISCARDED_DAILY_LIMIT"
@@ -66,6 +67,7 @@ const DOMAIN_CODE_TO_MCP = {
   // Only reachable through the inactive-week tools, which v1 does not expose. Mapped rather than
   // omitted so a later toolset cannot accidentally surface it as INTERNAL.
   WEEK_LOCKED: "PERIOD_LOCKED",
+  DAY_ON_LEAVE: "DAY_ON_LEAVE",
   PROJECT_REQUIRED: "PROJECT_REQUIRED",
   PROJECT_NOT_AVAILABLE: "PROJECT_NOT_AVAILABLE",
   PROJECT_NOT_ASSIGNED_FOR_WEEK: "PROJECT_NOT_AVAILABLE",
@@ -103,6 +105,7 @@ export const DOMAIN_MESSAGE_TO_MCP: Record<string, McpErrorCode> = {
   "Declared hours are corrected on the month level.": "ENTRY_IS_DECLARED",
   "This period is locked by a submitted timesheet.": "PERIOD_LOCKED",
   "This week touches a locked period.": "PERIOD_LOCKED",
+  "This day is covered by leave.": "DAY_ON_LEAVE",
   "Choose a project.": "PROJECT_REQUIRED",
   "This project is not active for the selected date.": "PROJECT_NOT_AVAILABLE",
   "This project is not assigned for the selected week.": "PROJECT_NOT_AVAILABLE",
@@ -135,6 +138,8 @@ const MESSAGE_OVERRIDES: Partial<Record<McpErrorCode, string>> = {
     "That project declares its hours a month at a time, so individual entries cannot be written for it.",
   PERIOD_LOCKED: "That period is locked by a submitted timesheet and can no longer be changed.",
   ENTRY_LOCKED: "That entry is locked by a submitted timesheet and can no longer be changed.",
+  DAY_ON_LEAVE:
+    "The member is on full-day leave that day, so no time can be logged on it. A half-day leave does not block the day.",
   ENTRY_IS_DECLARED:
     "That entry belongs to a declared month, which is corrected on the month level rather than per entry.",
   CURSOR_INVALID:

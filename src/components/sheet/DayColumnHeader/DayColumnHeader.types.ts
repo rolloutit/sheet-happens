@@ -13,6 +13,8 @@ export type DayColumnHeaderDay = {
   dayNumber: string;
   state: DayColumnHeaderDayState;
   locked: boolean;
+  /** A full-day leave covers the day, so nothing can be logged on it. */
+  onLeave: boolean;
   totalMinutes: number;
 };
 
@@ -29,6 +31,7 @@ export type DayColumnHeaderLabels = {
   /** Shown beside the total when the day is over its target. */
   over?: string;
   locked?: string;
+  onLeave?: string;
   today?: string;
 };
 

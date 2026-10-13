@@ -62,7 +62,9 @@
       "audit": "Audit log",
       "system": "System",
       "info": "Information page",
-      "settings": "Settings"
+      "settings": "Settings",
+      "leave": "Leave",
+      "leaveAdmin": "Leave"
     },
     "notifications": {
       "trigger": "Notifications",
@@ -2024,7 +2026,15 @@
         "timesheet__paid": "Marked paid",
         "timesheet__rejected": "Rejected",
         "timesheet__resubmitted": "Resubmitted",
-        "timesheet__submitted": "Submitted"
+        "timesheet__submitted": "Submitted",
+        "leave__created": "Recorded",
+        "leave__updated": "Updated",
+        "leave__deleted": "Deleted",
+        "leave__hr_processed": "Processed",
+        "leave__hr_unprocessed": "Processed mark removed",
+        "leave__attachment_uploaded": "Sick note uploaded",
+        "leave__attachment_removed": "Sick note removed",
+        "leave__attachment_read": "Sick note opened"
       },
       "targets": {
         "assignment_rate_period": "Project rate",
@@ -2045,7 +2055,8 @@
         "running_timer": "Timer",
         "time_entries": "Time entries",
         "time_entry": "Time entry",
-        "timesheet": "Timesheet"
+        "timesheet": "Timesheet",
+        "leave": "Leave"
       }
     },
     "client": {
@@ -2415,6 +2426,7 @@
     "header": {
       "open": "Open {date}",
       "locked": "Locked by a submitted timesheet",
+      "onLeave": "On leave",
       "today": "Today",
       "over": "Over {target}"
     },
@@ -2557,6 +2569,7 @@
       "timeEntryNotFound": "Time entry not found.",
       "entryLocked": "This entry is locked by a submitted timesheet.",
       "periodLocked": "This period is locked by a submitted timesheet.",
+      "dayOnLeave": "You are on leave this day, so no time can be logged on it.",
       "weekTouchesLockedPeriod": "This week touches a locked period.",
       "inactiveWeekHasEntries": "Remove this week's entries before marking the project inactive.",
       "stopTimerFirst": "Stop the running timer before starting another one.",
@@ -2801,7 +2814,9 @@
         "INVOICE_ACCEPTED": "Invoice accepted",
         "TIMESHEET_PAID": "Payment recorded",
         "PAYSLIP_AVAILABLE": "Payslip available",
-        "TIME_ENTRY_ADMIN_MODIFIED": "Time entry changed by admin"
+        "TIME_ENTRY_ADMIN_MODIFIED": "Time entry changed by admin",
+        "LEAVE_MONTH_END_REMINDER": "Monthly leave reminder",
+        "LEAVE_RECORDED_BY_ADMIN": "Leave recorded by admin"
       },
       "typeDescriptions": {
         "TIMESHEET_SUBMITTED": "Notifies active admins when a contractor submits or resubmits a timesheet for review.",
@@ -2812,7 +2827,14 @@
         "INVOICE_ACCEPTED": "Notifies the contractor when an admin accepts the invoice and it is awaiting payment.",
         "TIMESHEET_PAID": "Notifies the contractor when an admin records the workflow as paid.",
         "PAYSLIP_AVAILABLE": "Notifies the employee when an admin uploads or replaces their payslip.",
-        "TIME_ENTRY_ADMIN_MODIFIED": "Notifies the affected member when an admin permanently changes one of their recorded time entries."
+        "TIME_ENTRY_ADMIN_MODIFIED": "Notifies the affected member when an admin permanently changes one of their recorded time entries.",
+        "LEAVE_MONTH_END_REMINDER": "Reminds employees on the second-to-last day of the month to record their vacation and sick leave.",
+        "LEAVE_RECORDED_BY_ADMIN": "Notifies the employee when an admin records leave for them."
+      },
+      "leave": {
+        "title": "Monthly leave reminder",
+        "description": "On the second-to-last day of the month, asks every active employee to check their vacation and sick leave for the month.",
+        "timing": "Sent at 9:00 on the second-to-last day of the month, in the company time zone."
       }
     },
     "setupBanner": {
@@ -3287,6 +3309,206 @@
       "summary": "Page {page} of {totalPages}, {totalItems} payslips",
       "previous": "Previous",
       "next": "Next"
+    }
+  },
+  "Leave": {
+    "you": "You",
+    "workdays": "{count, plural, one {# workday} other {# workdays}}",
+    "kinds": {
+      "vacation": "Vacation",
+      "sick": "Sick leave",
+      "absent": "Away"
+    },
+    "dayParts": {
+      "FULL": "Full day",
+      "MORNING": "Morning",
+      "AFTERNOON": "Afternoon"
+    },
+    "page": {
+      "title": "Leave",
+      "subtitle": "Record your vacation and sick leave, and see who on the team is away when."
+    },
+    "views": {
+      "label": "View",
+      "calendar": "Calendar",
+      "list": "My leave"
+    },
+    "actions": {
+      "add": "Add leave",
+      "close": "Close",
+      "cancel": "Cancel"
+    },
+    "summary": {
+      "none": "You have no leave recorded this month.",
+      "month": "This month: {parts}.",
+      "vacation": "{days} of vacation",
+      "sick": "{days} of sick leave"
+    },
+    "calendar": {
+      "label": "Leave calendar, {month}",
+      "week": "Week {week}",
+      "ownRibbon": "You: {kind}",
+      "holiday": "Public holiday",
+      "today": "Today",
+      "empty": "Nobody is away this month and there are no public holidays.",
+      "monthNav": "Choose month",
+      "previousMonth": "Previous month",
+      "nextMonth": "Next month",
+      "thisMonth": "This month",
+      "away": "{count} away",
+      "more": "+{count} more",
+      "awayOn": "Away on {day}"
+    },
+    "form": {
+      "title": "Add leave",
+      "description": "Your leave shows on the calendar straight away. Only an admin can change or delete it afterwards.",
+      "editTitle": "Edit leave",
+      "editDescription": "As an admin you can correct any month; the overlap and workday rules still apply.",
+      "adminTitle": "Add leave for an employee",
+      "adminDescription": "Any month can be chosen; the overlap and workday rules still apply. The employee is notified, and the leave shows on the calendar straight away.",
+      "member": "Employee",
+      "memberPlaceholder": "Choose an employee",
+      "type": "Type",
+      "typeHint": {
+        "vacation": "Planned time off",
+        "sick": "Away because of illness"
+      },
+      "dates": "Dates",
+      "datesHint": "You can record leave for the current month or later.",
+      "datesPlaceholder": "First and last day",
+      "dayPart": "Part of the day",
+      "summaryEmpty": "Choose the first and the last day.",
+      "summaryNoWorkdays": "The selected days contain no workday.",
+      "summarySkipped": "({count, plural, one {# public holiday skipped} other {# public holidays skipped}})",
+      "note": "Note",
+      "noteHint": "Optional. For the admin; colleagues do not see it.",
+      "file": "Sick note",
+      "fileHint": "PDF, JPG or PNG, up to 10 MB. You can also upload it later.",
+      "submit": "Add leave",
+      "save": "Save",
+      "created": "Leave added.",
+      "updated": "Leave updated.",
+      "chooseFile": "Choose file",
+      "noFile": "No file chosen"
+    },
+    "discardDialog": {
+      "title": "Discard your changes?",
+      "description": "What you entered will be lost.",
+      "confirm": "Discard",
+      "cancel": "Keep editing"
+    },
+    "list": {
+      "emptyTitle": "No leave recorded yet",
+      "emptyDescription": "Your vacation and sick leave show up here once you add them.",
+      "upcoming": "Coming up",
+      "past": "Earlier",
+      "noUpcoming": "Nothing coming up.",
+      "noteMissing": "Sick note missing",
+      "noteAttached": "Sick note attached"
+    },
+    "details": {
+      "note": "Note",
+      "attachment": "Sick note",
+      "noAttachment": "No sick note uploaded yet.",
+      "open": "Open",
+      "download": "Download",
+      "upload": "Upload",
+      "replace": "Replace",
+      "removeAttachment": "Remove sick note",
+      "adminOnly": "Only an admin can change or delete this leave."
+    },
+    "attachment": {
+      "uploaded": "Sick note uploaded.",
+      "replaced": "Sick note replaced.",
+      "removed": "Sick note removed."
+    },
+    "errors": {
+      "checkFields": "Check the highlighted fields.",
+      "typeRequired": "Choose a type.",
+      "datesRequired": "Enter the first and the last day.",
+      "noteTooLong": "The note can be at most 500 characters.",
+      "invalidRange": "The last day cannot be before the first.",
+      "halfDayRange": "A half day can only be chosen for a single-day leave.",
+      "noWorkdays": "The selected days contain no workday.",
+      "beforeCurrentMonth": "You can record leave for the current month or later.",
+      "tooLong": "A single leave can be at most a year long.",
+      "overlap": "Leave is already recorded for these days.",
+      "timeEntriesOnDays": "Time is already logged on some of these days. Remove those entries first, or record a half day.",
+      "employeeRequired": "Only employees can record leave.",
+      "memberRequired": "Choose an employee.",
+      "memberNotEmployee": "The selected person is not an active employee.",
+      "notFound": "This leave no longer exists.",
+      "attachmentSickOnly": "A sick note can only be attached to sick leave.",
+      "attachmentRequired": "Choose a file.",
+      "attachmentTooLarge": "The file is larger than 10 MB.",
+      "attachmentType": "Upload a PDF, JPG or PNG file.",
+      "notAllowed": "You are not allowed to do that.",
+      "storageMissing": "File storage is not configured. Ask an admin.",
+      "saveFailed": "Could not save. Try again.",
+      "sickNoteAttached": "Remove the sick note before changing this leave to vacation."
+    },
+    "admin": {
+      "title": "Leave",
+      "subtitle": "Employees' time off. Tick what you have already processed.",
+      "pending": "{count, plural, one {# leave waiting to be processed} other {# leaves waiting to be processed}}",
+      "allProcessed": "Every leave has been processed.",
+      "empty": "No leave matches these filters.",
+      "edit": "Edit",
+      "editLeave": "Edit {name}'s leave ({range})",
+      "delete": "Delete",
+      "deleteConfirm": "Delete this leave?",
+      "deleteConfirmAction": "Yes, delete",
+      "deleted": "Leave deleted.",
+      "hr": {
+        "label": "Processed",
+        "hint": "Only visible to you; the employee does not see it.",
+        "toggle": "{name} ({range}) processed",
+        "done": "Processed",
+        "todo": "Not processed yet",
+        "processedBy": "Processed by {name}, {date}",
+        "marked": "{count, plural, one {# leave marked as processed.} other {# leaves marked as processed.}}",
+        "unmarked": "{count, plural, one {# leave unmarked.} other {# leaves unmarked.}}"
+      },
+      "filters": {
+        "month": "Month",
+        "member": "Employee",
+        "type": "Type",
+        "hr": "Processing",
+        "allMonths": "All months",
+        "allMembers": "All employees",
+        "allTypes": "All types",
+        "hrOptions": {
+          "all": "All",
+          "pending": "Not processed yet",
+          "processed": "Processed"
+        },
+        "apply": "Apply",
+        "active": "Active filters",
+        "clear": "Clear filters",
+        "remove": "Remove filter {filter}"
+      },
+      "table": {
+        "label": "Leave list",
+        "selectAll": "Select all",
+        "select": "Select {name} ({range})",
+        "member": "Employee",
+        "period": "Dates",
+        "workdays": "Workdays",
+        "kind": "Type",
+        "details": "Details",
+        "hr": "Processed",
+        "actions": "Actions",
+        "open": "Open"
+      },
+      "bulk": {
+        "region": "Selected leave",
+        "selected": "{count} selected",
+        "markProcessed": "Mark as processed",
+        "markUnprocessed": "Unmark"
+      },
+      "views": {
+        "list": "List"
+      }
     }
   },
   "TwoFactorActions": {

@@ -24,6 +24,7 @@ const days: DayColumnHeaderDay[] = [
   dayNumber: String(Number.parseInt(isoDate.slice(8), 10)),
   state: index === 2 ? "today" : index > 2 ? "future" : "normal",
   locked: false,
+  onLeave: false,
   totalMinutes: [510, 390, 480, 480, 300, 0, 0][index],
 }));
 
@@ -33,6 +34,7 @@ const labels = {
   capacity: (day: DayColumnHeaderDay) => `${day.totalMinutes / 60} h of 8 h`,
   over: "over 8 h",
   locked: "Locked by a submitted timesheet",
+  onLeave: "On leave",
   today: "Today",
 };
 

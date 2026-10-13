@@ -411,6 +411,70 @@ Scope:
 - One payslip record per employee/month.
 - Document storage uses the shared document metadata table.
 
+## Leave
+
+Leave is an employee-only module: who is away when, recorded by the employee (or, for them, by an
+admin) and bookkept by the admin. Contractors neither see it nor appear in it. Code: `src/server/leave`, screens `/leave` and
+`/admin/leave`.
+
+Model:
+
+- `leaves`: member, type (`vacation` | `sick`), start and end date, day part (`full` | `morning` |
+  `afternoon`), optional note, optional sick note (a `documents` row of type `sick_note`), the
+  admin's HR tick (`hr_processed_at`, `hr_processed_by_member_id`), soft delete.
+- A half day is only possible on a single date; the database enforces it with a check constraint,
+  alongside `end_date >= start_date`.
+- Workdays are never stored. They are Monday to Friday minus public holidays, counted on read by
+  `countLeaveWorkdays` (`src/lib/leave-days.ts`), which the form also uses for its live count. A half
+  day is 0.5.
+- `public_holidays` caches Hungary's holidays from the keyless Nager.Date API per year
+  (`public_holiday_years` marks a year as fetched). A missing year is fetched on demand, at most
+  five years from today; the notification dispatcher refreshes this year and next every 30 days.
+  If the API is down the calendar shows no holidays for that year and nothing else breaks.
+  Hungarian transferred workdays are not modelled.
+
+Rules:
+
+- No approval. A leave is valid the moment it is recorded. The admin's only state is the HR tick,
+  which the employee never sees.
+- An employee records leave for themselves only, starting no earlier than the 1st of their current
+  month (their own time zone). Recording stays open until the month ends; the month-end reminder's
+  "by 12:00 tomorrow" is a request, not a lock.
+- An admin can record leave for any active employee, for any date, sick note included. Every other
+  rule below still applies. `created_by_member_id` then holds the admin, and so does the audit
+  actor; the HR tick stays a separate step.
+- A leave must contain at least one workday, may not be longer than a year, and may not overlap the
+  member's other live leave, except that a morning and an afternoon can share a day. Writes take a
+  row lock on the member so two tabs cannot both pass the overlap check.
+- After recording, an employee can only add or replace the sick note on a sick leave, at any time,
+  also for a past month. Editing, deleting and removing a sick note are admin actions; an admin
+  edit may move a leave into the past but is held to the overlap and workday rules.
+- A full-day leave and logged time exclude each other, in both directions. No time entry can be
+  created, moved onto, restored onto or timed on a day a live full-day leave covers (every date of
+  its range, weekends and holidays included), and a full-day leave cannot be recorded or edited over
+  days that already hold live time entries or the start of a running timer. A half day blocks
+  nothing, and a declared month does not count as time on its 1st. Copying a day or week skips the covered days instead of failing. Both
+  sides take the member row lock, so a leave and an entry for the same day cannot both slip through.
+  Deleting an entry on a covered day stays allowed. Code: `src/server/time-tracking/leave-guard.ts`.
+
+Visibility:
+
+- Colleagues see each other's leave on the calendar as `Away`: name and dates, never the type, the
+  note or the sick note. The redaction happens in `listLeaveCalendar`, not in the UI.
+- The owner and admins see everything. The sick note is served through a short-lived signed URL
+  from `/api/leave/[leaveId]/attachment`, which answers 404 to anyone else.
+
+Audit: `leave.created`, `leave.updated`, `leave.deleted`, `leave.hr_processed`,
+`leave.hr_unprocessed`, `leave.attachment_uploaded`, `leave.attachment_removed`,
+`leave.attachment_read`.
+
+Reminder: `LEAVE_MONTH_END_REMINDER` goes to every active employee, email and in-app, on the
+second-to-last day of the month at 9:00 company time.
+
+Recorded by an admin: `LEAVE_RECORDED_BY_ADMIN` tells the employee, email and in-app, when someone
+else recorded their leave. The dispatcher reads it from the `leave.created` audit row, whose `after`
+carries the employee's `memberId`, and skips rows the employee wrote themselves.
+
 ## Information Page
 
 The functional spec mentions Contentful, while the tech-stack document later suggests Postgres-backed
