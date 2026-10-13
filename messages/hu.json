@@ -2449,7 +2449,7 @@
       "title": "Hozzáadás: {date}",
       "description": "Min dolgoztál?",
       "duration": "Időtartam",
-      "durationPlaceholder": "2ó30",
+      "durationPlaceholder": "2h30",
       "project": "Projekt",
       "more": "További beállítások",
       "interval": "Inkább időszak",

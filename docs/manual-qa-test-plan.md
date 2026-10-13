@@ -3952,6 +3952,9 @@ week`, while every column still has its `+`. A locked day shows no `+` at all. A
     a duration field and a description field. Type `2h30`, a description, Enter. The popover closes,
     the card enters with the stagger and its rail pulses once. Try `lots` as a duration: the composer
     refuses and explains; nothing is sent.
+    Switch the app to Hungarian and open the composer again: the empty duration field shows `2h30`,
+    not `2ó30`. Typing exactly the placeholder saves a 2:30 entry — the parser reads `h` and `m` in
+    every locale, so no Hungarian hint may suggest `ó` or `p`.
 18. In Day scope the composer is open in the rail; `N` focuses its duration field. `More options`
     opens the full dialog with the project, date, duration text and description carried over;
     `Interval instead` opens it in interval mode. A half-typed description is autosaved as a draft.
@@ -4151,6 +4154,19 @@ surfaces, and every table on it goes through `DataTable` in responsive mode — 
   or the drilldown's own heading), column headers and rows. The old markup was a `div` grid with no
   table semantics at all.
 - All of the above reads correctly in Hungarian and English, in both themes.
+
+## Dashboard Greeting Uses The First Name
+
+The dashboard heading greets the signed-in member by the first name stored on their member record,
+not by a word picked out of the display name. The display name has no fixed name order, so its last
+word used to come out as the family name ("Hi, Szabó!").
+
+- Sign in as an admin, a contractor and an employee in turn and open `/dashboard`. Each heading
+  reads "Hi, {first name}!" in English and "Szia, {first name}!" in Hungarian, the first name
+  exactly as the "First name" field of that member's edit drawer in `/admin/people` holds it.
+- A member whose display name puts the family name first, and one whose display name puts it last,
+  are both greeted by first name.
+- A member with a two-part first name (e.g. "Anna Mária") is greeted with both parts.
 
 ## Regression Checklist For Every Release
 
