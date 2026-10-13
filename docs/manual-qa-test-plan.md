@@ -4152,6 +4152,19 @@ surfaces, and every table on it goes through `DataTable` in responsive mode — 
   table semantics at all.
 - All of the above reads correctly in Hungarian and English, in both themes.
 
+## Dashboard Greeting Uses The First Name
+
+The dashboard heading greets the signed-in member by the first name stored on their member record,
+not by a word picked out of the display name. The display name has no fixed name order, so its last
+word used to come out as the family name ("Hi, Szabó!").
+
+- Sign in as an admin, a contractor and an employee in turn and open `/dashboard`. Each heading
+  reads "Hi, {first name}!" in English and "Szia, {first name}!" in Hungarian, the first name
+  exactly as the "First name" field of that member's edit drawer in `/admin/people` holds it.
+- A member whose display name puts the family name first, and one whose display name puts it last,
+  are both greeted by first name.
+- A member with a two-part first name (e.g. "Anna Mária") is greeted with both parts.
+
 ## Regression Checklist For Every Release
 
 - An employee can record vacation and sick leave for the current month or later, a half day only on
