@@ -7,6 +7,7 @@ import {
   deriveMissingTimesheetCount,
   deriveMissingTimesheetRows,
   getContractorDashboardNextAction,
+  getGreetingName,
   parseAdminDashboardDrilldown,
 } from "./dashboard";
 
@@ -465,6 +466,29 @@ describe("dashboard helpers", () => {
         today: "2026-07-15",
       }),
     ).toBe(400);
+  });
+
+  it("greets a member by first name whatever order the display name uses", () => {
+    expect(
+      getGreetingName({
+        displayName: "Réka Szabó",
+        firstName: "Réka",
+        lastName: "Szabó",
+      }),
+    ).toBe("Réka");
+    expect(
+      getGreetingName({
+        displayName: "Szabó Réka",
+        firstName: " Réka ",
+        lastName: "Szabó",
+      }),
+    ).toBe("Réka");
+  });
+
+  it("falls back to the display name when the first name is blank", () => {
+    expect(getGreetingName({ displayName: "Ops Desk", firstName: " ", lastName: "" })).toBe(
+      "Ops Desk",
+    );
   });
 
   it("derives the contractor's next action from the month-end workflow", () => {
