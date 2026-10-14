@@ -161,7 +161,8 @@ export function buildNotificationContent(
             body: [
               "Szia! 👋",
               "Közeleg a hónap vége, ezért kérlek, nézd meg, hogy az e havi szabikat, betegszabikat (ha volt) beírtad-e. 🗓️",
-              "Ha még szabadságon vagy, vagy leszel a hónapban, és nem írtad be, akkor kérlek, holnap 12:00-ig tedd meg. 🙂",
+              "Ha a hónapban még szabadságon leszel, és nem írtad be, akkor kérlek, holnap 12:00-ig tedd meg. 🙂",
+              "Ha egy korábbi nap hiányzik, azt már csak admin tudja rögzíteni, ezért szólj az adminnak.",
               "Ha voltál táppénzen, és még nem küldted el a papírt, azt is küldd el addig.",
               "✨ Köszönöm! ✨",
             ].join("\n"),
@@ -172,7 +173,8 @@ export function buildNotificationContent(
             body: [
               "Hi! 👋",
               "The month is nearly over, so please check that this month's vacation and sick leave (if any) are recorded. 🗓️",
-              "If you are on leave now, or will be later this month, and have not recorded it yet, please do so by 12:00 tomorrow. 🙂",
+              "If you will be on leave later this month and have not recorded it yet, please do so by 12:00 tomorrow. 🙂",
+              "If an earlier day is missing, only an admin can record it now, so please let an admin know.",
               "If you were on sick pay and have not sent the paperwork yet, please send that by then too.",
               "✨ Thank you! ✨",
             ].join("\n"),
