@@ -204,6 +204,17 @@ describe("createLeave over logged time", () => {
     expect(db.leave.create).not.toHaveBeenCalled();
   });
 
+  it("records a leave from yesterday, but not from the day before", async () => {
+    // 08:00 UTC on 1 October is 10:00 in Budapest, so yesterday is 30 September.
+    await expect(
+      createLeave({ ...input, startDate: "2026-09-30", endDate: "2026-09-30" }, { now }),
+    ).resolves.toMatchObject({ leaveId: "leave-new" });
+
+    await expect(
+      createLeave({ ...input, startDate: "2026-09-29", endDate: "2026-09-30" }, { now }),
+    ).rejects.toMatchObject({ code: "BEFORE_YESTERDAY" });
+  });
+
   it("records a half day even when the day has time", async () => {
     db.timeEntry.findFirst.mockResolvedValue({ id: "entry-1" });
 
@@ -244,9 +255,9 @@ describe("createLeaveForAdmin", () => {
     db.runningTimer.findUnique.mockResolvedValue(null);
   });
 
-  it("records a leave before the employee's current month, which the employee cannot", async () => {
+  it("records a leave before yesterday, which the employee cannot", async () => {
     await expect(createLeave(input, { now })).rejects.toMatchObject({
-      code: "BEFORE_CURRENT_MONTH",
+      code: "BEFORE_YESTERDAY",
     });
 
     await expect(createLeaveForAdmin(input, { now })).resolves.toEqual({
@@ -470,10 +481,10 @@ describe("deleteLeaveForAdmin", () => {
 });
 
 describe("leave helpers", () => {
-  it("starts the allowed range on the 1st of the employee's current month", () => {
+  it("starts the allowed range on the employee's yesterday", () => {
     // 23:30 UTC on 31 October is already 1 November in Budapest.
     expect(getLeaveEarliestStartDate("Europe/Budapest", new Date("2026-10-31T23:30:00.000Z"))).toBe(
-      "2026-11-01",
+      "2026-10-31",
     );
   });
 

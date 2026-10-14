@@ -33,8 +33,10 @@ describe("notification content", () => {
 
     expect(hu.emailSubject).toContain("október");
     expect(hu.body).toContain("holnap 12:00-ig");
+    expect(hu.body).toContain("szólj az adminnak");
     expect(en.emailSubject).toContain("October");
     expect(en.body).toContain("12:00 tomorrow");
+    expect(en.body).toContain("let an admin know");
   });
 
   it("names the kind and the days of a leave an admin recorded", () => {

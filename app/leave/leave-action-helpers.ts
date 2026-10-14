@@ -86,7 +86,7 @@ const errorKeys: Record<LeaveErrorCode, { key: string; field?: LeaveFormField }>
   INVALID_RANGE: { key: "errors.invalidRange", field: "startDate" },
   HALF_DAY_RANGE: { key: "errors.halfDayRange", field: "dayPart" },
   NO_WORKDAYS: { key: "errors.noWorkdays", field: "startDate" },
-  BEFORE_CURRENT_MONTH: { key: "errors.beforeCurrentMonth", field: "startDate" },
+  BEFORE_YESTERDAY: { key: "errors.beforeYesterday", field: "startDate" },
   TOO_LONG: { key: "errors.tooLong", field: "startDate" },
   OVERLAP: { key: "errors.overlap", field: "startDate" },
   TIME_ENTRIES_ON_DAYS: { key: "errors.timeEntriesOnDays", field: "startDate" },
