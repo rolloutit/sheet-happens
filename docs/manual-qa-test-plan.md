@@ -1572,8 +1572,8 @@ Leave is employee-only. Run employee scenarios as `{EMPLOYEE_EMAIL}`, the collea
 1. Sign in as `{EMPLOYEE_EMAIL}` and open `https://{DOMAIN_NAME}/leave`.
 2. Confirm the calendar shows the current month, Monday first, today marked, and every public
    holiday in rose with its name.
-3. Click `Add leave`. Open the date picker and confirm days before the 1st of the current month
-   cannot be chosen and the previous-month arrow is disabled.
+3. Click `Add leave`. Open the date picker and confirm days before yesterday cannot be chosen, and
+   that the hint under the dates says earlier days go through an admin.
 4. Pick a week in `{LEAVE_MONTH}` that contains a weekday public holiday: click its first day, then
    its last day.
 5. Confirm the summary under the dates counts the workdays without the weekend and says one public
@@ -1603,6 +1603,22 @@ Expected result:
   `Leave is already recorded for these days.` and the form keeps what was entered.
 - A weekend-only range is refused because it contains no workday; a range over a year is refused.
 - No option anywhere lets an employee enter hours.
+
+### Employee Records Leave From Yesterday, Not Earlier
+
+1. As `{EMPLOYEE_EMAIL}`, open `Add leave` on a Tuesday to Friday. In the date picker, pick
+   yesterday as a single `Sick leave` day and submit.
+2. Open `Add leave` again and try to pick the day before yesterday.
+3. Repeat step 2 on a Monday for the previous Friday.
+4. As `{ADMIN_EMAIL}`, record the day before yesterday for `{EMPLOYEE_EMAIL}` from `/admin/leave`.
+
+Expected result:
+
+- Yesterday is accepted and shows in `My leave`.
+- The day before yesterday cannot be chosen, and on a Monday neither can Friday; the hint reads
+  `You can record leave from yesterday on. For earlier days, ask an admin.` (Hungarian:
+  `Szabadságot legkorábban tegnaptól vihetsz fel. Korábbi napokhoz szólj az adminnak.`).
+- The admin can still record any earlier day.
 
 ### Sick Leave And The Sick Note
 
@@ -1766,8 +1782,9 @@ Expected result:
 
 - Every active employee gets one in-app notification and one email, linking to `/leave`; no
   contractor does.
-- The Hungarian text asks to check the month's leave and sick leave by 12:00 tomorrow and to send
-  any sick-pay paperwork; the English one says the same.
+- The Hungarian text asks to check the month's leave and sick leave, to record the rest of the
+  month by 12:00 tomorrow, to tell an admin about any earlier day that is missing, and to send any
+  sick-pay paperwork; the English one says the same.
 - A second dispatcher run that day does not send it again.
 
 ### Leave In Both Languages, Both Themes And On A Phone
@@ -4170,8 +4187,8 @@ word used to come out as the family name ("Hi, Szabó!").
 
 ## Regression Checklist For Every Release
 
-- An employee can record vacation and sick leave for the current month or later, a half day only on
-  a single date, and never an overlap.
+- An employee can record vacation and sick leave from yesterday on, a half day only on a single
+  date, and never an overlap.
 - Colleagues see each other's leave as `Away` only; the sick note is reachable by its owner and
   admins alone.
 - The admin can filter leave, tick it as processed, edit and delete it.
