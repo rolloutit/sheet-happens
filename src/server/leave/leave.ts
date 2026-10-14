@@ -1,7 +1,12 @@
 import { createHash, randomUUID } from "node:crypto";
 
 import { isMonthValue } from "@/src/lib/date-values";
-import { countLeaveWorkdays, type LeaveDayPartValue, type LeaveRange } from "@/src/lib/leave-days";
+import {
+  countLeaveWorkdays,
+  shiftDateValue,
+  type LeaveDayPartValue,
+  type LeaveRange,
+} from "@/src/lib/leave-days";
 import { listSearchParam, type SearchParamValue } from "@/src/lib/search-params";
 import { prisma } from "@/src/server/db/client";
 import type { Prisma } from "@/src/server/db/generated/client";
@@ -31,7 +36,7 @@ import {
  *
  * There is no approval. A leave is valid the moment it is recorded; the admin's only workflow
  * state is `hrProcessedAt`, a private tick for "entered into the HR system". Employees record
- * their own leave for the current month or later and can afterwards only add a sick note; every
+ * their own leave from yesterday on and can afterwards only add a sick note; every
  * edit and delete is the admin's, and an admin can also record leave for an employee, for any date.
  *
  * What a viewer sees is decided here, not in the UI: colleagues see that someone is away, never
@@ -103,9 +108,9 @@ const liveEmployee = {
   status: { not: "DELETED" },
 } satisfies Prisma.MemberWhereInput;
 
-/** The first day an employee may still record leave for: the 1st of their current month. */
+/** The first day an employee may still record leave for: yesterday, in their own time zone. */
 export function getLeaveEarliestStartDate(timezone: string, now = new Date()) {
-  return `${getTodayIsoInTimezone(timezone, now).slice(0, 7)}-01`;
+  return shiftDateValue(getTodayIsoInTimezone(timezone, now), -1);
 }
 
 type CreateLeaveInput = LeaveFormInput & {
@@ -114,7 +119,7 @@ type CreateLeaveInput = LeaveFormInput & {
   requestMetadata?: LeaveRequestMetadata;
 };
 
-/** An employee recording their own leave, from the 1st of their current month on. */
+/** An employee recording their own leave, from yesterday on. */
 export function createLeave(
   input: CreateLeaveInput,
   deps: { storage?: ObjectStorage; now?: Date } = {},

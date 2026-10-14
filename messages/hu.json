@@ -3374,7 +3374,7 @@
         "sick": "Betegség miatti távollét"
       },
       "dates": "Időszak",
-      "datesHint": "Csak az aktuális hónapra vagy későbbre vihetsz fel szabadságot.",
+      "datesHint": "Szabadságot legkorábban tegnaptól vihetsz fel. Korábbi napokhoz szólj az adminnak.",
       "datesPlaceholder": "Első és utolsó nap",
       "dayPart": "Napszak",
       "summaryEmpty": "Válaszd ki az első és az utolsó napot.",
@@ -3430,7 +3430,7 @@
       "invalidRange": "Az utolsó nap nem lehet az első előtt.",
       "halfDayRange": "Fél napot csak egynapos szabadságnál lehet választani.",
       "noWorkdays": "A kiválasztott napok között nincs munkanap.",
-      "beforeCurrentMonth": "Csak az aktuális hónapra vagy későbbre vihetsz fel szabadságot.",
+      "beforeYesterday": "Szabadságot legkorábban tegnaptól vihetsz fel. Korábbi napokhoz szólj az adminnak.",
       "tooLong": "Egy szabadság legfeljebb egy év lehet.",
       "overlap": "Erre az időszakra már van rögzített szabadság.",
       "timeEntriesOnDays": "Ezen napok némelyikére már van rögzített idő. Előbb töröld azokat a bejegyzéseket, vagy vegyél ki félnapot.",

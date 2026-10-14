@@ -54,10 +54,16 @@ describe("validateLeaveInput", () => {
   });
 
   it("rejects a start before the earliest allowed date, but not when there is none", () => {
-    const lastMonth = { ...base, startDate: "2026-09-30", endDate: "2026-10-02" };
+    // Monday the 12th, so yesterday is the 11th.
+    const tooEarly = {
+      ...base,
+      earliestStartDate: "2026-10-11",
+      startDate: "2026-10-08",
+      endDate: "2026-10-12",
+    };
 
-    expect(codeOf(() => validateLeaveInput(lastMonth))).toBe("BEFORE_CURRENT_MONTH");
-    expect(validateLeaveInput({ ...lastMonth, earliestStartDate: null }).workdays).toBe(3);
+    expect(codeOf(() => validateLeaveInput(tooEarly))).toBe("BEFORE_YESTERDAY");
+    expect(validateLeaveInput({ ...tooEarly, earliestStartDate: null }).workdays).toBe(3);
   });
 
   it("rejects dates that do not exist", () => {

@@ -3374,7 +3374,7 @@
         "sick": "Away because of illness"
       },
       "dates": "Dates",
-      "datesHint": "You can record leave for the current month or later.",
+      "datesHint": "You can record leave from yesterday on. For earlier days, ask an admin.",
       "datesPlaceholder": "First and last day",
       "dayPart": "Part of the day",
       "summaryEmpty": "Choose the first and the last day.",
@@ -3430,7 +3430,7 @@
       "invalidRange": "The last day cannot be before the first.",
       "halfDayRange": "A half day can only be chosen for a single-day leave.",
       "noWorkdays": "The selected days contain no workday.",
-      "beforeCurrentMonth": "You can record leave for the current month or later.",
+      "beforeYesterday": "You can record leave from yesterday on. For earlier days, ask an admin.",
       "tooLong": "A single leave can be at most a year long.",
       "overlap": "Leave is already recorded for these days.",
       "timeEntriesOnDays": "Time is already logged on some of these days. Remove those entries first, or record a half day.",

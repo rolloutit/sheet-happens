@@ -15,7 +15,7 @@ export type LeaveErrorCode =
   | "INVALID_RANGE"
   | "HALF_DAY_RANGE"
   | "NO_WORKDAYS"
-  | "BEFORE_CURRENT_MONTH"
+  | "BEFORE_YESTERDAY"
   | "TOO_LONG"
   | "OVERLAP"
   | "TIME_ENTRIES_ON_DAYS"
@@ -44,7 +44,7 @@ const DAY_MS = 24 * 60 * 60 * 1000;
  * earliest allowed day, at most a year long. Callers run this before anything that scales with the
  * range, such as fetching that range's holidays, so an absurd range costs nothing.
  *
- * `earliestStartDate` is the first of the employee's current month; an admin edit passes `null`
+ * `earliestStartDate` is the employee's yesterday; an admin edit passes `null`
  * because correcting a past leave is exactly what the admin is for.
  */
 export function assertLeaveRangeShape(input: LeaveRange & { earliestStartDate: string | null }) {
@@ -61,10 +61,7 @@ export function assertLeaveRangeShape(input: LeaveRange & { earliestStartDate: s
   }
 
   if (input.earliestStartDate && input.startDate < input.earliestStartDate) {
-    throw new LeaveError(
-      "Leave can only be recorded for the current month or later.",
-      "BEFORE_CURRENT_MONTH",
-    );
+    throw new LeaveError("Leave can only be recorded from yesterday on.", "BEFORE_YESTERDAY");
   }
 
   const spanDays =
