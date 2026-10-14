@@ -437,9 +437,10 @@ Rules:
 
 - No approval. A leave is valid the moment it is recorded. The admin's only state is the HR tick,
   which the employee never sees.
-- An employee records leave for themselves only, starting no earlier than the 1st of their current
-  month (their own time zone). Recording stays open until the month ends; the month-end reminder's
-  "by 12:00 tomorrow" is a request, not a lock.
+- An employee records leave for themselves only, starting no earlier than yesterday (their own
+  time zone, calendar day: on a Monday that is Sunday, so Friday is already the admin's). Anything
+  earlier is recorded by an admin. The month-end reminder's "by 12:00 tomorrow" is a request, not a
+  lock.
 - An admin can record leave for any active employee, for any date, sick note included. Every other
   rule below still applies. `created_by_member_id` then holds the admin, and so does the audit
   actor; the HR tick stays a separate step.
