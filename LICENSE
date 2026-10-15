@@ -659,3 +659,11 @@ specific requirements.
 if any, to sign a "copyright disclaimer" for the program, if necessary.
 For more information on this, and how to apply and follow the GNU AGPL, see
 <https://www.gnu.org/licenses/>.
+
+                            Trademarks
+
+  The AGPL-3.0 covers the source code of Sheet Happens only. The Rollout IT
+name and logo, including the files public/brand/rolloutit-mark-*.png, are
+trademarks of Rollout IT and are not licensed under the AGPL-3.0. You may
+not use them to identify your own deployment, fork or derived work without
+written permission from Rollout IT.
