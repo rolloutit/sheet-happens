@@ -107,8 +107,12 @@ export function Calendar({
            * someone holding Jun 10-18 who wants Jun 22-26 clicks 22 and gets 10-22, clicks
            * 26 and gets 10-26 — they can never reach the range they wanted without finding
            * the clear button first. Treating the click as a new start is what people mean.
+           *
+           * A single-day range does not count as complete: react-day-picker answers the very
+           * first click with `from` and `to` on the same day, so restarting there would turn
+           * every second click into a new start and no range could ever be picked.
            */
-          if (from && to && triggerDate) {
+          if (from && to && value?.from !== value?.to && triggerDate) {
             onValueChange?.({ from: toDateValue(triggerDate), to: undefined });
             return;
           }

@@ -84,6 +84,7 @@ export function DayRibbon({
                 capacity: labels.capacity(day),
                 over: labels.over,
                 locked: labels.locked,
+                onLeave: labels.onLeave,
                 today: labels.today,
               }}
               pressed={selected}

@@ -324,6 +324,9 @@ function printSummary(summary) {
       ` (${summary.timesheets.revisions} revisions, ${summary.timesheets.invoices} invoices)`,
   );
   console.log(`- timesheet statuses: ${summary.timesheetStatuses.join(", ")}`);
+  console.log(
+    `- leave seeded this run: ${summary.leaves} (public holidays: ${summary.publicHolidays})`,
+  );
   console.log("- no payslips (create those by hand)");
   console.log("");
   console.log("Seeded invite links:");

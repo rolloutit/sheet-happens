@@ -11,6 +11,7 @@ const day: DayColumnHeaderDay = {
   dayNumber: "31",
   state: "normal",
   locked: false,
+  onLeave: false,
   totalMinutes: 510,
 };
 
@@ -18,6 +19,7 @@ const labels = {
   capacity: "8.5 h of 8 h",
   over: "over 8 h",
   locked: "Locked by a submitted timesheet",
+  onLeave: "On leave",
   today: "Today",
 };
 
@@ -76,6 +78,32 @@ export const ColumnLocked: Story = {
   args: {
     day: { ...day, locked: true },
   },
+};
+
+/** A full-day leave: the palm tree where the chevron would be. */
+export const ColumnOnLeave: Story = {
+  args: {
+    day: { ...day, onLeave: true, totalMinutes: 0 },
+    totalLabel: "0 h",
+    labels: { ...labels, capacity: "0 h of 8 h" },
+  },
+};
+
+export const ChipOnLeave: Story = {
+  args: {
+    variant: "chip",
+    label: "Select Monday",
+    day: { ...day, onLeave: true, totalMinutes: 0 },
+    totalLabel: "0 h",
+    labels: { ...labels, capacity: "0 h of 8 h" },
+  },
+  decorators: [
+    (Story) => (
+      <div className="w-20">
+        <Story />
+      </div>
+    ),
+  ],
 };
 
 /** The ribbon stop: the same facts stacked, `aria-pressed` for the selection. */

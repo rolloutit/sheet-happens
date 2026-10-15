@@ -33,6 +33,7 @@ vi.mock("@/src/server/db/client", () => ({
     runningTimer: { findUnique: vi.fn(async () => null) },
     inactiveProjectWeek: { findMany: vi.fn(async () => []) },
     timeEntryDraft: { findUnique: vi.fn(async () => null) },
+    leave: { findMany: vi.fn(async () => []) },
   },
 }));
 

@@ -316,7 +316,7 @@ function DashboardGreeting({
         {t("eyebrow")}
       </p>
       <h1 className="font-display text-[34px] font-medium leading-none tracking-[-0.02em] text-foreground sm:text-[38px]">
-        {t("greeting", { name: getGivenName(name) })}
+        {t("greeting", { name })}
       </h1>
       <p className="mt-3 text-base text-muted-foreground">{subtitle}</p>
     </header>
@@ -1663,9 +1663,4 @@ function getInitials(name: string) {
     .slice(0, 2)
     .map((part) => part[0]?.toUpperCase() ?? "")
     .join("");
-}
-
-function getGivenName(name: string) {
-  const parts = name.split(/\s+/).filter(Boolean);
-  return parts.at(-1) ?? name;
 }

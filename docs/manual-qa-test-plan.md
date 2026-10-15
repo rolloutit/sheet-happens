@@ -83,6 +83,9 @@ Replace placeholder values before sharing a concrete test run:
 - `{HELP_WELCOME_MARKDOWN}`: markdown body used when testing admin-edited Help welcome content.
 - `{PAYSLIP_MONTH}`: employee payslip month formatted as `YYYY-MM`.
 - `{PAYSLIP_PDF_FILE}`: valid PDF file, no larger than 10 MB, used for payslip upload.
+- `{SECOND_EMPLOYEE_EMAIL}`: another active employee, used to look at `{EMPLOYEE_EMAIL}`'s leave as a colleague.
+- `{SICK_NOTE_FILE}`: a PDF, JPG or PNG no larger than 10 MB, used as a sick note.
+- `{LEAVE_MONTH}`: a month after the current one with a public holiday on a weekday, for example the month holding 23 October or 1 May.
 - `{PAYSLIP_REPLACEMENT_PDF_FILE}`: different valid PDF file used to replace a payslip.
 - `{NON_PDF_FILE}`: non-PDF file used to test payslip file validation.
 
@@ -1561,6 +1564,242 @@ Expected result:
 - In January, the default is December of the previous year, and the upload dialog opens on that year.
 - On the first day of a month, the default switches at midnight in the admin's time zone, not at UTC midnight.
 - A month filter still overrides the default.
+
+## Leave
+
+Leave is employee-only. Run employee scenarios as `{EMPLOYEE_EMAIL}`, the colleague view as
+`{SECOND_EMPLOYEE_EMAIL}`, and admin scenarios as `{ADMIN_EMAIL}`.
+
+### Employee Records Vacation And Sees The Workday Count
+
+1. Sign in as `{EMPLOYEE_EMAIL}` and open `https://{DOMAIN_NAME}/leave`.
+2. Confirm the calendar shows the current month, Monday first, today marked, and every public
+   holiday in rose with its name.
+3. Click `Add leave`. Open the date picker and confirm days before yesterday cannot be chosen, and
+   that the hint under the dates says earlier days go through an admin.
+4. Pick a week in `{LEAVE_MONTH}` that contains a weekday public holiday: click its first day, then
+   its last day.
+5. Confirm the summary under the dates counts the workdays without the weekend and says one public
+   holiday was skipped. Confirm `Part of the day` is not offered for a multi-day range.
+6. Submit with `Vacation` and a short note.
+
+Expected result:
+
+- The picker takes two clicks for a range; the second click extends the range rather than starting
+  a new one.
+- `Leave added.` appears and the leave shows on the calendar as one ribbon labelled `You: Vacation`,
+  cut square where it crosses into the next week.
+- `My leave` lists it under `Coming up` with the same workday count and the note.
+
+### Half Days, Overlaps And Past Months Are Refused Or Constrained
+
+1. As `{EMPLOYEE_EMAIL}`, open `Add leave` and pick a single workday. Choose `Morning` and submit.
+2. Add a second leave on the same day with `Afternoon`.
+3. Try a third leave on the same day with `Full day`.
+4. Try a leave covering only a Saturday and Sunday.
+5. Try a range longer than a year.
+
+Expected result:
+
+- A single day offers Full day, Morning and Afternoon; the summary reads `0.5 workdays` for a half.
+- Morning and afternoon of the same day can both be recorded; the full day is refused with
+  `Leave is already recorded for these days.` and the form keeps what was entered.
+- A weekend-only range is refused because it contains no workday; a range over a year is refused.
+- No option anywhere lets an employee enter hours.
+
+### Employee Records Leave From Yesterday, Not Earlier
+
+1. As `{EMPLOYEE_EMAIL}`, open `Add leave` on a Tuesday to Friday. In the date picker, pick
+   yesterday as a single `Sick leave` day and submit.
+2. Open `Add leave` again and try to pick the day before yesterday.
+3. Repeat step 2 on a Monday for the previous Friday.
+4. As `{ADMIN_EMAIL}`, record the day before yesterday for `{EMPLOYEE_EMAIL}` from `/admin/leave`.
+
+Expected result:
+
+- Yesterday is accepted and shows in `My leave`.
+- The day before yesterday cannot be chosen, and on a Monday neither can Friday; the hint reads
+  `You can record leave from yesterday on. For earlier days, ask an admin.` (Hungarian:
+  `Szabadságot legkorábban tegnaptól vihetsz fel. Korábbi napokhoz szólj az adminnak.`).
+- The admin can still record any earlier day.
+
+### Sick Leave And The Sick Note
+
+1. As `{EMPLOYEE_EMAIL}`, add a `Sick leave` for today without a file.
+2. In `My leave`, confirm the row says `Sick note missing`. Open it.
+3. Upload `{SICK_NOTE_FILE}` from the dialog. Then use `Open` and `Download`.
+4. Upload a `.txt` file renamed to `.pdf`, and a file over 10 MB.
+5. Repeat step 3 on a sick leave from a month that is already over.
+
+Expected result:
+
+- The file control's words are in the app's language, not the browser's.
+- After the upload the row says `Sick note attached`; Open shows the file inline, Download saves it.
+- A renamed or oversized file is refused with a clear message.
+- A sick note can still be added after the month is over.
+- The dialog says only an admin can change or delete the leave, and offers no edit or delete.
+
+### Colleagues See Who Is Away, Never Why
+
+1. Sign in as `{SECOND_EMPLOYEE_EMAIL}` and open `https://{DOMAIN_NAME}/leave` on the month holding
+   `{EMPLOYEE_EMAIL}`'s sick leave.
+2. Open that ribbon.
+3. Copy the sick note URL from the employee's dialog (`/api/leave/<id>/attachment`) and open it
+   as `{SECOND_EMPLOYEE_EMAIL}`.
+
+Expected result:
+
+- The colleague's leave reads `Away` in a hatched neutral ribbon, with name and dates only.
+- Neither the type, the note nor the sick note is shown or reachable; the attachment URL answers 404.
+
+### A Crowded Week Stays Readable
+
+1. With at least six employees, record overlapping leave so that five or more people are away on
+   the same workdays of one week in `{LEAVE_MONTH}`. Include one morning and one afternoon.
+2. Open `https://{DOMAIN_NAME}/leave` and `https://{DOMAIN_NAME}/admin/leave?view=calendar` on that
+   month.
+3. Hover, then focus with the keyboard, a `+N more` button. Then click it and choose a name.
+4. Let at least four of those leaves run through the weekend into the next week, then add one more
+   that starts on that Saturday and ends on the following Tuesday.
+
+Expected result:
+
+- Each workday with two or more people away shows `N away` beside the day number, amber from four.
+  Weekends and public holidays show no count.
+- The week draws at most four rows of ribbons, own leave on top; the rest sits behind one
+  `+N more` per workday, never on a weekend or holiday.
+- The tooltip names who is behind the button; the click lists everyone away that day, half days
+  marked, and choosing one opens its details. Colleagues still read as `Away`.
+- The one exception: a leave that reaches a crowded week only on its weekend or holidays and finds
+  no free row there is listed behind a `+1 more` on its first day in that week, so it is never
+  missing from the week.
+
+### A Leave Into The Next Month Counts The Same Everywhere
+
+1. As `{ADMIN_EMAIL}`, record a vacation for `{EMPLOYEE_EMAIL}` that starts in the last week of a
+   month and ends after a weekday public holiday falling past that month's last calendar row, for
+   example 30 September to 27 October 2026 across Friday 23 October (September's last row ends on
+   4 October).
+2. Open `https://{DOMAIN_NAME}/admin/leave?view=calendar` on the month it starts in and open the
+   ribbon. Then switch to the list view and find the same leave.
+3. Sign in as `{EMPLOYEE_EMAIL}` and compare the dialog on `/leave` with the row in `My leave`.
+
+Expected result:
+
+- The details dialog, the admin list and `My leave` show the same workday count, with the holiday
+  in the next month left out, although that holiday is not drawn on the starting month's calendar.
+
+### No Time On A Full-Day Leave
+
+1. Sign in as `{EMPLOYEE_EMAIL}`. On `/leave`, record a full-day vacation for two workdays of the
+   current week that hold no time yet, and a morning half day for a third day.
+2. Open `https://{DOMAIN_NAME}/time` on that week, in the Week agenda, the Grid and the Day view, on
+   a desktop and on a phone.
+3. Select a leave day and press `N`, open the actions menu's `Copy yesterday into`, and start the
+   timer if one of the leave days is today.
+4. Move an entry from another day onto a leave day through its edit dialog.
+5. Use `Duplicate last week` on a week whose previous week has time on the leave days' weekdays.
+6. Back on `/leave`, try to record a full-day leave over a day that already has time. Then record
+   a half day on that same day.
+
+Expected result:
+
+- Each full-day leave day shows a palm tree in its header, labelled `On leave` / `Szabadságon`,
+  and offers no `+`, no `Copy yesterday`, no composer and no phone `+`. Empty Grid cells on it are
+  disabled; existing entries there can still be deleted.
+- The half day stays fully open for time.
+- Saving onto a leave day, or starting or stopping a timer on one, shows the error
+  `You are on leave this day, so no time can be logged on it.` in English and
+  `Ezen a napon szabadságon vagy, ezért nem rögzíthetsz rá időt.` in Hungarian.
+- `Duplicate last week` copies every other day and skips the leave days.
+- The full-day leave over logged time is refused under the dates with
+  `Time is already logged on some of these days. …` in English and
+  `Ezen napok némelyikére már van rögzített idő. …` in Hungarian; the half day is recorded.
+- An agent's `time_create_entry` on a leave day gets `DAY_ON_LEAVE`.
+
+### Contractors Do Not Have Leave
+
+1. Sign in as `{CONTRACTOR_EMAIL}`.
+2. Confirm the navigation has no `Leave` item, and open `https://{DOMAIN_NAME}/leave` directly.
+
+Expected result:
+
+- `/leave` is a 404, and no contractor appears on any employee's calendar.
+
+### Admin Bookkeeps Leave
+
+1. Sign in as `{ADMIN_EMAIL}` and open `https://{DOMAIN_NAME}/admin/leave`.
+2. Filter by month, by `{EMPLOYEE_EMAIL}`, by type and by processing status, then remove each filter chip.
+3. Tick the `Processed` checkbox on one row. Select two others and use `Mark as processed`, then
+   `Unmark` on one of them.
+4. Open a row: confirm the employee's note and sick note are visible and the `Processed` tick shows
+   who ticked it and when.
+5. Use `Edit` to move a leave into last month and change its type. Then `Delete` another leave
+   and confirm.
+6. Switch to `Calendar`.
+
+Expected result:
+
+- The tick answers the click at once and survives a reload; the header counts the leave still
+  waiting to be processed.
+- The employee never sees the processed state anywhere.
+- An admin edit may move a leave into the past, but overlap and the workday rule still apply.
+- A deleted leave disappears for the employee and from the calendar.
+- The admin calendar shows every kind in colour: mint vacation, lavender sick leave.
+- Audit log entries exist for `leave.created`, `leave.updated`, `leave.deleted`,
+  `leave.hr_processed`, `leave.hr_unprocessed`, `leave.attachment_uploaded` and
+  `leave.attachment_read`.
+
+### Admin Records Leave For An Employee
+
+1. Sign in as `{ADMIN_EMAIL}`, open `https://{DOMAIN_NAME}/admin/leave` and use `Add leave`.
+2. Submit without choosing an employee.
+3. Choose `{EMPLOYEE_EMAIL}`, `Sick leave`, three workdays in last month, a note and a PDF sick
+   note, and submit.
+4. Record a second leave for the same employee over one of those days.
+5. Record a full-day leave for the same employee on a day that already holds logged time.
+6. Sign in as `{EMPLOYEE_EMAIL}`, open `/leave?view=list` and the notifications, and check the
+   inbox.
+
+Expected result:
+
+- The drawer is titled `Add leave for an employee` and lists only active employees; the date
+  picker allows any month.
+- Without an employee the form asks for one and keeps the dates and the note.
+- The leave appears in the list as waiting to be processed; the admin ticks it separately.
+- The overlap and the logged-time day are refused with the same messages the employee gets.
+- The employee sees the leave with its note and sick note, gets one in-app notification and one
+  email (`An admin recorded leave for you` / `Egy admin szabadságot rögzített neked`) naming the
+  kind and the days, linking to `/leave`. Recording their own leave never notifies them.
+- `/settings` lists `Leave recorded by admin` among the workflow notifications.
+- The audit log shows `leave.created` with the admin as actor.
+
+### Month-End Leave Reminder
+
+1. As `{ADMIN_EMAIL}`, open `/settings` → notifications and confirm `Monthly leave reminder` is
+   listed with its timing and both delivery methods.
+2. On the second-to-last day of a month, after 9:00 company time, check `{EMPLOYEE_EMAIL}`'s
+   notifications and inbox.
+
+Expected result:
+
+- Every active employee gets one in-app notification and one email, linking to `/leave`; no
+  contractor does.
+- The Hungarian text asks to check the month's leave and sick leave, to record the rest of the
+  month by 12:00 tomorrow, to tell an admin about any earlier day that is missing, and to send any
+  sick-pay paperwork; the English one says the same.
+- A second dispatcher run that day does not send it again.
+
+### Leave In Both Languages, Both Themes And On A Phone
+
+1. Repeat the employee calendar and the admin list in Hungarian and English, light and dark.
+2. Open `/leave` on a phone-width screen.
+
+Expected result:
+
+- Every label, error and toast is translated; Hungarian month names are lowercase.
+- Holiday names follow the language (`Nemzeti ünnep` / `1956 Revolution Memorial Day`).
+- On a phone the grid becomes a day-by-day list of the days that hold leave or a holiday.
 
 ## Admin Projects
 
@@ -3742,6 +3981,9 @@ week`, while every column still has its `+`. A locked day shows no `+` at all. A
     a duration field and a description field. Type `2h30`, a description, Enter. The popover closes,
     the card enters with the stagger and its rail pulses once. Try `lots` as a duration: the composer
     refuses and explains; nothing is sent.
+    Switch the app to Hungarian and open the composer again: the empty duration field shows `2h30`,
+    not `2ó30`. Typing exactly the placeholder saves a 2:30 entry — the parser reads `h` and `m` in
+    every locale, so no Hungarian hint may suggest `ó` or `p`.
 18. In Day scope the composer is open in the rail; `N` focuses its duration field. `More options`
     opens the full dialog with the project, date, duration text and description carried over;
     `Interval instead` opens it in interval mode. A half-typed description is autosaved as a draft.
@@ -3942,8 +4184,26 @@ surfaces, and every table on it goes through `DataTable` in responsive mode — 
   table semantics at all.
 - All of the above reads correctly in Hungarian and English, in both themes.
 
+## Dashboard Greeting Uses The First Name
+
+The dashboard heading greets the signed-in member by the first name stored on their member record,
+not by a word picked out of the display name. The display name has no fixed name order, so its last
+word used to come out as the family name ("Hi, Szabó!").
+
+- Sign in as an admin, a contractor and an employee in turn and open `/dashboard`. Each heading
+  reads "Hi, {first name}!" in English and "Szia, {first name}!" in Hungarian, the first name
+  exactly as the "First name" field of that member's edit drawer in `/admin/people` holds it.
+- A member whose display name puts the family name first, and one whose display name puts it last,
+  are both greeted by first name.
+- A member with a two-part first name (e.g. "Anna Mária") is greeted with both parts.
+
 ## Regression Checklist For Every Release
 
+- An employee can record vacation and sick leave from yesterday on, a half day only on a single
+  date, and never an overlap.
+- Colleagues see each other's leave as `Away` only; the sick note is reachable by its owner and
+  admins alone.
+- The admin can filter leave, tick it as processed, edit and delete it.
 - Invitation activation works for a new invited user.
 - Magic-link login works for an active user.
 - Password setup, password login, and password reset work for active users.

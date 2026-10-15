@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 import {
   copyPreviousDayEntries,
   deleteTimeEntryDraft,
+  duplicatePreviousWeek,
   saveTimeEntryDraft,
   TimeTrackingError,
   type TimeEntryDraftPayload,
@@ -17,6 +18,7 @@ function createTimeTrackingDb(
     sourceEntries?: unknown[];
     existingTargetEntries?: unknown[];
     timezone?: string;
+    leaves?: unknown[];
   } = {},
 ) {
   let createdCount = 0;
@@ -58,6 +60,10 @@ function createTimeTrackingDb(
     auditLog: {
       create: vi.fn().mockResolvedValue({ id: "audit-1" }),
     },
+    leave: {
+      findMany: vi.fn().mockResolvedValue(overrides.leaves ?? []),
+    },
+    $queryRaw: vi.fn().mockResolvedValue([]),
   };
   const db = {
     $transaction: vi.fn((callback) => callback(tx)),
@@ -210,6 +216,49 @@ describe("time entry services", () => {
 
     expect(tx.timeEntry.create).not.toHaveBeenCalled();
     expect(tx.auditLog.create).not.toHaveBeenCalled();
+  });
+
+  it("skips copy targets on a full-day leave and copies the rest of the week", async () => {
+    const sourceEntry = (id: string, localDate: string) => ({
+      id,
+      projectId: "project-a",
+      projectAssignmentId: "assignment-a",
+      localDate: dateOnly(localDate),
+      durationMinutes: 60,
+      description: `Work on ${localDate}`,
+      startedAt: null,
+      endedAt: null,
+      timezone: "Europe/Budapest",
+    });
+    const { db, tx } = createTimeTrackingDb({
+      sourceEntries: [
+        sourceEntry("source-mon", "2026-06-29"),
+        sourceEntry("source-tue", "2026-06-30"),
+      ],
+      leaves: [{ startDate: dateOnly("2026-07-07"), endDate: dateOnly("2026-07-10") }],
+    });
+
+    const result = await duplicatePreviousWeek(
+      {
+        memberId: "member-1",
+        actorMemberId: "member-1",
+        weekStartDate: dateOnly("2026-07-06"),
+      },
+      { db: db as never },
+    );
+
+    expect(result).toEqual({ sourceCount: 2, createdCount: 1, skippedCount: 1 });
+    expect(tx.timeEntry.create).toHaveBeenCalledTimes(1);
+    expect(tx.timeEntry.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({ localDate: dateOnly("2026-07-06") }),
+      }),
+    );
+    expect(tx.leave.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({ memberId: "member-1", deletedAt: null, dayPart: "FULL" }),
+      }),
+    );
   });
 
   it("saves a normalized time entry draft", async () => {
