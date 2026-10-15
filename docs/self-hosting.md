@@ -397,6 +397,20 @@ The defaults (`QA`, `Admin`, `Europe/Budapest`) are developer conveniences; set 
 The MCP endpoint is `<BETTER_AUTH_URL>/api/mcp`; the OAuth issuer is `<BETTER_AUTH_URL>/api/auth`.
 Everything else about it is in [`mcp-server.md`](mcp-server.md).
 
+### Leave calendar
+
+| Variable               | Required | Default                        | Description                                                                                                     |
+| ---------------------- | -------- | ------------------------------ | --------------------------------------------------------------------------------------------------------------- |
+| `HOLIDAY_API_BASE_URL` | no       | `https://date.nager.at/api/v3` | Base URL of a [Nager.Date](https://date.nager.at)-compatible API the leave calendar reads public holidays from. |
+
+Unlike SMTP, object storage and Google sign-in, which only reach services you configure, this call
+is on by default: the free, keyless Nager.Date API, asked for Hungarian public holidays
+(`/PublicHolidays/<year>/HU`; the country is not configurable). Each year is fetched once, stored
+in the database and refreshed in the background by the notification dispatcher. If the API is
+unreachable the calendar shows no holidays for that year and the failure is logged; recording leave
+never depends on it. To keep the instance off the internet, point the variable at a mirror that
+serves the same paths.
+
 ### Observability
 
 There is no built-in telemetry, tracing or error-reporting integration and no variable for one. Logs
