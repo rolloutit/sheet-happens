@@ -45,10 +45,9 @@ jobs:
       - run: pnpm lint
       - run: pnpm format
 
-  # Scans the working tree with the repo's `.gitleaks.toml`. The official `gitleaks-action` needs a
-  # licence key for organisations, so this runs the pinned binary directly and verifies its
-  # checksum. Tree only, not history: the history still holds one retired development secret that
-  # is deliberately not allowlisted. Needs no repository secrets, so it also runs on fork PRs.
+  # Scans the full git history with the repo's `.gitleaks.toml`. The official `gitleaks-action`
+  # needs a licence key for organisations, so this runs the pinned binary directly and verifies its
+  # checksum. Needs no repository secrets, so it also runs on fork PRs.
   secrets:
     runs-on: ubuntu-latest
     env:
@@ -56,12 +55,14 @@ jobs:
       GITLEAKS_SHA256: 551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb
     steps:
       - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
       - name: Install gitleaks
         run: |
           curl -sSfL -o gitleaks.tar.gz "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz"
           echo "${GITLEAKS_SHA256}  gitleaks.tar.gz" | sha256sum --check
           tar -xzf gitleaks.tar.gz -C "$RUNNER_TEMP" gitleaks
-      - run: "$RUNNER_TEMP/gitleaks dir . --config .gitleaks.toml --redact"
+      - run: "$RUNNER_TEMP/gitleaks git . --config .gitleaks.toml --redact"
 
   unit:
     runs-on: ubuntu-latest
