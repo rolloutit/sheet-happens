@@ -28,6 +28,11 @@
 
 [![Sheet Happens: Secure Time Tracking & Timesheet Approval for Companies](https://img.youtube.com/vi/6xhXj7_6j0w/maxresdefault.jpg)](https://youtu.be/6xhXj7_6j0w)
 
+## Live demo
+
+Want to try a live Sheet Happens instance as an employee, a contractor or an admin? A public demo
+environment is coming soon.
+
 ## Why Sheet Happens
 
 Companies that work with both employees and contractors need more than a stopwatch. Tracked hours
