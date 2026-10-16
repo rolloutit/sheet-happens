@@ -46,6 +46,7 @@ function buildPayload(
     generatedAt,
     durationDisplayFormat,
     t: translator(locale),
+    orgName: null,
   });
 }
 
@@ -396,11 +397,26 @@ describe("report PDF payload", () => {
     expect(payload.groups[1].sharePercent).toBe(100);
   });
 
+  it("appends the deployment's organisation name to the letterhead wordmark", () => {
+    const payload = buildReportPdfPayload({
+      title: "Client July report",
+      snapshot: createInternalReportSnapshot(),
+      locale: "en",
+      timezone,
+      generatedAt,
+      durationDisplayFormat: "DECIMAL_HOURS",
+      t: translator("en"),
+      orgName: "Acme Corp",
+    });
+
+    expect(payload.labels.brand).toBe("Sheet Happens - Acme Corp");
+  });
+
   it("resolves every label from the message catalogue", () => {
     const payload = buildPayload(createInternalReportSnapshot());
 
     expect(payload.labels).toEqual({
-      brand: "Sheet Happens - Rollout IT",
+      brand: "Sheet Happens",
       confidential: "Confidential",
       page: "Page",
       generatedAt: "Generated",

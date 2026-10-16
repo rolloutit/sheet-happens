@@ -90,6 +90,11 @@ The default connection string is:
 postgresql://sheet_happens:sheet_happens@localhost:5432/sheet_happens?schema=public
 ```
 
+`pnpm db:dev` publishes Postgres on `5432` and MinIO on `9000`/`9001`, so stop anything else that
+holds those ports first. The `db:*` scripts and the Prisma CLI load `.env` (through `dotenv`), not
+`.env.local`: to point them at another Postgres or MinIO, export `DATABASE_URL` and `S3_ENDPOINT` in
+the shell. `pnpm db:test` never touches Docker and works against any server reached that way.
+
 Email delivery defaults to console mode. Magic links, invitation emails, and password setup/reset
 links are printed by the dev server when `AUTH_EMAIL_DELIVERY_MODE=console`. To use SMTP, set
 `AUTH_EMAIL_DELIVERY_MODE=smtp` and the `SMTP_*` variables before starting the Next.js dev server.

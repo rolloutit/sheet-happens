@@ -4,7 +4,7 @@ Date: 2026-06-24
 
 ## Sources
 
-- Design inventory: `../components.md`.
+- Design inventory: the original design brief (kept outside this repository).
 - Library rules: `src/components/README.md`.
 - Implemented source: `src/components/ui`, `src/components/sheet`, `src/components/layout`.
 - Story coverage: colocated `*.stories.tsx` files.

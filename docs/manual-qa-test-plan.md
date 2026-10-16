@@ -1193,6 +1193,9 @@ Expected result:
 - Hours in the admin list, the review summary, the project snapshot, and every source line render
   decimal at two fraction digits (e.g. `9.50 h`) next to their amount, regardless of the admin's
   `Time display` preference.
+- Each project caption in the snapshot names the unit once (`81.75 h, 18 entries` /
+  `81,75 h, 18 bejegyzés`, a declared project `52.00 h declared for the month`), never `h h` or
+  `h óra`.
 - Approval changes the status to approved.
 - Source time entries remain locked after approval.
 - The audit log contains a `timesheet.approved` row.
@@ -3039,35 +3042,44 @@ Expected result:
 - "Approved" is the same green and "rejected" the same rose in both themes — the hue does not
   drift between light and dark, and the pill text stays readable on its tint in both.
 
-### Rollout IT Brand Mark
+### Brand Mark and Organisation Branding
 
-1. Open `https://{DOMAIN_NAME}/dashboard` in the dark theme and look at the top of the sidebar.
-2. Switch to the light theme without reloading.
-3. Collapse the sidebar with `Oldalsáv összecsukása` / `Collapse sidebar`, then reload the page.
-4. Below the `lg` breakpoint, open the navigation drawer and look at its header.
-5. Sign out, then look at the brand tile on the teal panel of `/login` in both themes, and at mobile
-   width where the panel becomes a banner.
-6. With devtools open on the network tab, hard-reload and filter for `rolloutit`.
+1. On a build with none of the `NEXT_PUBLIC_ORG_*` variables set, open `https://{DOMAIN_NAME}/dashboard`
+   in the dark theme and look at the top of the sidebar.
+2. Switch to the light theme without reloading, then collapse the sidebar with
+   `Oldalsáv összecsukása` / `Collapse sidebar` and reload.
+3. Below the `lg` breakpoint, open the navigation drawer and look at its header.
+4. Sign out and look at the brand tile on the teal panel of `/login` in both themes and at mobile
+   width. Open the browser tab of `/login` and check the page description in the page source.
+5. Rebuild with `NEXT_PUBLIC_ORG_NAME="Acme Corp"`, `NEXT_PUBLIC_ORG_LOGO=/brand/rolloutit-mark-blue.png`
+   and `NEXT_PUBLIC_ORG_LOGO_DARK=/brand/rolloutit-mark-light.png` and repeat steps 1–4. With devtools
+   open on the network tab, hard-reload `/dashboard` and filter for `rolloutit`.
+6. As an admin export a report PDF, first without and then with `ORG_LOGO_PDF_PATH=public/brand/rolloutit-mark-blue.png`
+   set on the server.
 
 Expected result:
 
-- The sidebar shows the Rollout IT pictogram instead of the old `SH` tile, with `Sheet Happens` and
-  the subtitle beside it.
-- The mark is cream in the dark theme and deep teal in the light theme, and it swaps the instant the
-  theme changes — no reload, no flash of the wrong colour, and never a light mark on a white surface.
-- The collapsed rail keeps the mark centred at the same size, and a reload paints the correct colour
-  straight away.
-- The mobile drawer header shows the same mark.
-- The auth panel keeps its frosted tile and shows the cream mark in **both** themes — the panel is
-  teal either way, so a deep-teal mark there would be a bug, not a theme.
-- Both files are requested once and the mark stays crisp on a retina display.
+- Without configuration the sidebar shows Sheet Happens' own clock pictogram (teal), the `Sheet Happens`
+  wordmark and the subtitle `Time & timesheets` / `Idő és timesheet`. No Rollout IT name, logo or
+  `internal` label appears anywhere, including the auth panel, and the page description is the
+  generic one.
+- The default mark follows the palette in the sidebar and is light on the auth panel in **both**
+  themes — the panel is teal either way.
+- With the three variables set, the subtitle becomes `Acme Corp`, the sidebar shows the configured
+  logo — the dark-surface file in the dark theme and the light-surface file in the light theme,
+  swapping the instant the theme changes — and the auth panel shows the dark-surface file in both
+  themes. Both files are requested once.
+- The collapsed rail and the mobile drawer header show the same mark as the expanded sidebar.
+- The PDF header reads `SHEET HAPPENS` without configuration and `SHEET HAPPENS - ACME CORP` with the
+  name set, and carries a logo left of it only when `ORG_LOGO_PDF_PATH` points at a readable image.
+  A wrong path still exports, just without a logo.
 
 ### Auth Panel Gyroscope
 
 1. Sign out, then open `https://{DOMAIN_NAME}/login` on a desktop width and watch the teal panel for
    the first two seconds without touching anything.
 2. Keep watching for two or three minutes without scrolling or moving the pointer.
-3. Note where the Rollout IT mark sits, wait about twenty seconds, and look again. Repeat a few times.
+3. Note where the brand mark sits, wait about twenty seconds, and look again. Repeat a few times.
 4. Maximise the window on the tallest display available and watch another two minutes.
 5. Narrow the window from full width down to roughly 1024px, then shorten it to roughly 700px tall and
    then to roughly 640px, watching the mark against the headline, the tip pill, and the footer line the
@@ -3095,7 +3107,7 @@ Expected result:
   snap anywhere, including where it passes back through the middle.
 - The taller the window, the further up and down it ranges; a short window is mostly side to side, and
   around 640px tall it stops moving vertically altogether. That is expected — there is no room.
-- The Rollout IT mark stays upright and perfectly still on its frosted tile throughout — it never
+- The brand mark stays upright and perfectly still on its frosted tile throughout — it never
   rotates with the rings, and it does not tilt or spin as the cage travels. It breathes very slightly,
   out of step with the glow behind it.
 - The mark is the cream version at every width and in every theme, since the panel is teal in both.
@@ -4100,3 +4112,5 @@ surfaces, and every table on it goes through `DataTable` in responsive mode — 
   the field rather than floating over the keyboard.
 - An agent connected over MCP sees the same recent descriptions per project in `time_get_context`
   and reuses that wording instead of inventing its own.
+- The e-mail field on `/login` shows a neutral `te@example.com` / `you@example.com` placeholder in
+  Hungarian and English, never a real company domain.

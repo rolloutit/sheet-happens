@@ -1,14 +1,16 @@
 import { execFile } from "node:child_process";
-import { cp, mkdtemp, readdir, readFile, rm, writeFile } from "node:fs/promises";
+import { copyFile, cp, mkdtemp, readdir, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { promisify } from "node:util";
 
+import { resolveOrgLogoFile } from "./org-logo";
 import { resolveTypstFontsDir, resolveTypstTemplatesDir, type TypstTemplate } from "./templates";
 
 const execFileAsync = promisify(execFile);
 const DEFAULT_TYPST_TIMEOUT_MS = 15_000;
 const DATA_FILENAME = "data.json";
+const BRAND_FILENAME = "brand.json";
 
 export type TypstOutputFormat = "pdf" | "png" | "svg";
 
@@ -90,6 +92,20 @@ async function compileTypstDocument(
     if (input.data !== undefined) {
       await writeFile(path.join(workdir, DATA_FILENAME), JSON.stringify(input.data), "utf8");
     }
+
+    // The deployment's own letterhead logo, if it configured one. Templates read `/brand.json`
+    // whether or not there is a logo, so they never have to probe for a file Typst cannot stat.
+    const logo = resolveOrgLogoFile();
+
+    if (logo) {
+      await copyFile(logo.source, path.join(workdir, logo.target));
+    }
+
+    await writeFile(
+      path.join(workdir, BRAND_FILENAME),
+      JSON.stringify({ mark: logo?.target ?? null }),
+      "utf8",
+    );
 
     await execFileAsync(
       typstBin,

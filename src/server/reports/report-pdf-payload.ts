@@ -1,5 +1,7 @@
 import type { getTranslations } from "next-intl/server";
 
+import { orgBranding } from "@/src/lib/branding";
+
 import {
   formatCount,
   formatDateLabel,
@@ -200,6 +202,8 @@ export type BuildReportPdfPayloadInput = {
   generatedAt: Date;
   durationDisplayFormat: DurationDisplayFormat;
   t: ReportPdfTranslator;
+  /** Defaults to the deployment's `NEXT_PUBLIC_ORG_NAME`; appended to the letterhead wordmark. */
+  orgName?: string | null;
 };
 
 export function normalizeReportPdfTitle(title: string) {
@@ -208,7 +212,10 @@ export function normalizeReportPdfTitle(title: string) {
 
 export function buildReportPdfPayload(input: BuildReportPdfPayloadInput): ReportPdfPayload {
   const { snapshot, locale, t } = input;
-  const labels = resolveReportPdfLabels(t);
+  const labels = resolveReportPdfLabels(
+    t,
+    input.orgName === undefined ? orgBranding.name : input.orgName,
+  );
   const title = normalizeReportPdfTitle(input.title);
   const periodLabel = formatPeriodRange(snapshot.period.start, snapshot.period.end, locale);
 
@@ -273,9 +280,9 @@ export function buildReportPdfPayload(input: BuildReportPdfPayloadInput): Report
   };
 }
 
-function resolveReportPdfLabels(t: ReportPdfTranslator): ReportPdfLabels {
+function resolveReportPdfLabels(t: ReportPdfTranslator, orgName: string | null): ReportPdfLabels {
   return {
-    brand: t("pdf.brand"),
+    brand: orgName ? `${t("pdf.brand")} - ${orgName}` : t("pdf.brand"),
     confidential: t("pdf.confidential"),
     page: t("pdf.page"),
     generatedAt: t("pdf.generatedAt"),

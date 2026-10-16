@@ -1,0 +1,65 @@
+name: Bug report
+description: Something does not work as expected
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting. Search existing issues first. For security problems use
+        [private reporting](https://github.com/rolloutit/sheet-happens/security/advisories/new)
+        instead, and never paste real customer or employee data here.
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: What did you do, what did you expect, what happened instead?
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Go to …
+        2. Click …
+        3. See …
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Version or commit
+      description: Release tag or the commit SHA you are running.
+    validations:
+      required: true
+  - type: dropdown
+    id: deployment
+    attributes:
+      label: Deployment type
+      options:
+        - Local development (pnpm dev)
+        - Docker
+        - Railway
+        - Other
+    validations:
+      required: true
+  - type: dropdown
+    id: locale
+    attributes:
+      label: Interface language
+      options:
+        - Hungarian (HU)
+        - English (EN)
+    validations:
+      required: true
+  - type: input
+    id: browser
+    attributes:
+      label: Browser and OS
+      placeholder: Firefox 140 on macOS 15
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs and screenshots
+      description: Redact secrets and personal data.
+      render: shell

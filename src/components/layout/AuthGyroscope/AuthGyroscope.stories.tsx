@@ -48,9 +48,10 @@ export const Centered: Story = {
     const cage = canvasElement.querySelector(".auth-gyro");
     await expect(cage).toHaveAttribute("aria-hidden", "true");
 
-    // The hub renders `BrandMark`, whose `alt` is "Rollout IT" — decorative here, and only kept out
-    // of the accessibility tree by the `aria-hidden` above.
-    await expect(canvasElement.querySelector("img[alt='Rollout IT']")).toBeInTheDocument();
+    // The hub renders `BrandMark` — the product's own pictogram unless the deployment sets an
+    // organisation logo — decorative here, and only kept out of the accessibility tree by the
+    // `aria-hidden` above.
+    await expect(canvasElement.querySelector(".auth-gyro-hub svg")).toBeInTheDocument();
 
     // Three layers are hidden below `lg` by a `hidden` utility, and Tailwind emits that inside
     // `@layer utilities`, which every unlayered rule in `globals.css` outranks. So `.auth-gyro-layer`

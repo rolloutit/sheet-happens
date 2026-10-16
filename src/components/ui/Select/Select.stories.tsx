@@ -68,7 +68,7 @@ export const WithSecondaryText: Story = {
     label: "Contractor",
     placeholder: "Choose contractor",
     options: [
-      { value: "ben", label: "Szabó Réka", meta: "reka.szabo@example.com" },
+      { value: "reka", label: "Szabó Réka", meta: "reka.szabo@example.com" },
       { value: "ada", label: "Ada Lovelace", meta: "ada@example.com" },
     ],
   },
