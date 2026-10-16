@@ -14,6 +14,7 @@
 
 #import "lib/theme.typ": (
   accent,
+  org-brand,
   brand-mark,
   micro-label,
   muted,
@@ -42,11 +43,12 @@
 
 // ─── Document header ────────────────────────────────────────────────────────────────────────
 #panel-box(radius: radius-lg, inset: 11pt)[
-  // Letterhead: the pictogram left of the wordmark, the same composition as the app's sidebar
-  // header. Sized to the pill opposite it, so the mark reads as branding rather than as a graphic.
+  // Letterhead: the organisation's logo (when the deployment has one) left of the wordmark, the
+  // same composition as the app's sidebar header. Sized to the pill opposite it, so the mark reads
+  // as branding rather than as a graphic.
   #grid(
     columns: (auto, 1fr, auto),
-    column-gutter: (5.5pt, 0pt),
+    column-gutter: (if org-brand.mark != none { 5.5pt } else { 0pt }, 0pt),
     align: (horizon, horizon + left, horizon + right),
     brand-mark(),
     micro-label(labels.brand, fill: accent),

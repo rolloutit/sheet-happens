@@ -10,9 +10,7 @@ schema must preserve.
 
 Sources:
 
-- `../Sheet happens - funkcionális és architekturális specifikáció.pdf`
-- `../Sheet happens - tech stack.md`
-- `../components.md`
+- The original product specification and tech-stack notes (kept outside this repository).
 - Current component-library contracts in `src/components`
 
 ## Core Principles

@@ -21,6 +21,12 @@ src/server/db/generated
 # env
 .env
 .env*.local
+.env.*
+!.env.example
+*.pem
+*.key
+*.dump
+*.sql.gz
 
 # logs
 *.log

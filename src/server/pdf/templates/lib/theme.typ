@@ -42,11 +42,15 @@
   fill: fill,
 )[#upper(label)]
 
-/// Rollout IT pictogram — the same file the app header renders through `BrandMark`, copied from
-/// `public/brand/rolloutit-mark-blue.png`. That is the tone the app picks on a light surface, and a
-/// page is always light. It lives under `templates/assets` because Typst can only read inside
-/// `--root`, and the renderer copies the whole templates folder into the compile root.
-#let brand-mark(height: 12pt) = image("/assets/rolloutit-mark.png", height: height)
+/// The deployment's own letterhead logo, or nothing. The renderer writes `/brand.json` next to the
+/// data file — `mark` is the logo's path inside the compile root, or `none` when the deployment
+/// configured no `ORG_LOGO_PDF_PATH`. Typst can only read inside `--root`, which is why the renderer
+/// copies the file in instead of the template pointing at `public/`.
+#let org-brand = json("/brand.json")
+
+#let brand-mark(height: 12pt) = if org-brand.mark != none {
+  image(org-brand.mark, height: height)
+}
 
 /// Wraps a whole document: page geometry, footer and text defaults.
 /// Apply with `#show: report-theme.with(brand: "…", page-label: "…")`.

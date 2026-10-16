@@ -101,7 +101,7 @@ describe("system checks", () => {
       now,
       env: {
         AUTH_GOOGLE_CLIENT_ID: "client-id",
-        AUTH_GOOGLE_ALLOWED_DOMAINS: "rolloutit.net",
+        AUTH_GOOGLE_ALLOWED_DOMAINS: "example.com",
       },
     });
 

@@ -38,6 +38,7 @@ import {
   DrawerTrigger,
 } from "@/src/components/ui/Drawer";
 import { authClient } from "@/src/lib/auth-client";
+import { orgBranding } from "@/src/lib/branding";
 import { useElapsedLabel } from "@/src/lib/use-elapsed-label";
 import { cn } from "@/src/lib/utils";
 import { setLocaleAction } from "@/src/i18n/actions";
@@ -306,7 +307,7 @@ export function AppShell({
             <div className="min-w-0">
               <p className="truncate text-base font-semibold leading-tight">Sheet Happens</p>
               <p className="font-ui text-[10px] font-medium uppercase tracking-[0.08em] text-muted-foreground">
-                {t("brand.subtitle")}
+                {orgBranding.name ?? t("brand.subtitle")}
               </p>
             </div>
           ) : null}
@@ -411,7 +412,7 @@ export function AppShell({
                           Sheet Happens
                         </DrawerTitle>
                         <DrawerDescription className="font-ui text-[10px] font-medium uppercase tracking-[0.08em] text-muted-foreground">
-                          {t("brand.subtitle")}
+                          {orgBranding.name ?? t("brand.subtitle")}
                         </DrawerDescription>
                       </div>
                     </div>

@@ -19,7 +19,7 @@ connector documentation and the installed packages on 2026-09-07; §17 lists the
 
 ## 0. In one paragraph
 
-Sheet Happens gets a remote MCP server at `https://sheet.example.com/api/mcp`, served by the same
+Sheet Happens gets a remote MCP server at `https://app.example.com/api/mcp`, served by the same
 Next.js process as the web app, protected by OAuth 2.1 with Sheet Happens itself as the
 authorization server (Better Auth's OAuth provider), and speaking both the current stateless MCP
 revision (2026-07-28) and the older handshake-based revisions that Claude.ai still uses today. A
@@ -175,8 +175,8 @@ Claude.ai · Desktop · Cowork · Claude Code                 Sheet Happens (Nex
                                                             └─ requireMcpAuth() ───────────────▶  401  WWW-Authenticate: Bearer
                                                                                                     resource_metadata="…/.well-known/oauth-protected-resource/api/mcp",
                                                                                                     scope="time:read time:write"
-② GET /.well-known/oauth-protected-resource/api/mcp ────▶  { resource: "https://sheet.example.com/api/mcp",
-                                                              authorization_servers: ["https://sheet.example.com/api/auth"] }
+② GET /.well-known/oauth-protected-resource/api/mcp ────▶  { resource: "https://app.example.com/api/mcp",
+                                                              authorization_servers: ["https://app.example.com/api/auth"] }
 ③ GET /api/auth/.well-known/oauth-authorization-server ─▶  { authorization_endpoint, token_endpoint, code_challenge_methods_supported:["S256"],
                                                               client_id_metadata_document_supported: true, token_endpoint_auth_methods_supported:["none",…] }
 ④ browser → /api/auth/oauth2/authorize?client_id=https://claude.ai/…&code_challenge=…&resource=…&scope=…
@@ -249,7 +249,7 @@ would mean a database write at module load.
 
 ### 4.2 Endpoints and discovery documents
 
-With production origin `https://sheet.example.com` (development:
+With production origin `https://app.example.com` (a deployed staging environment:
 `https://<service>-<environment>.up.railway.app`, local: `http://localhost:3000`):
 
 | Purpose                                                                            | URL                                                                              | Served by                                                                                                                         |
@@ -257,7 +257,7 @@ With production origin `https://sheet.example.com` (development:
 | MCP endpoint = protected resource identifier                                       | `/api/mcp`                                                                       | `app/api/mcp/route.ts` (POST; GET/DELETE answer 405 via the SDK)                                                                  |
 | Protected resource metadata, path-suffixed (Claude probes this first)              | `/.well-known/oauth-protected-resource/api/mcp`                                  | `app/.well-known/oauth-protected-resource/api/mcp/route.ts` → `auth.handler(request)`. **A rewrite cannot work here** — see §18.3 |
 | Protected resource metadata, root                                                  | `/.well-known/oauth-protected-resource`                                          | `app/.well-known/oauth-protected-resource/route.ts` → `auth.handler(request)`                                                     |
-| Issuer                                                                             | `https://sheet.example.com/api/auth`                                            | Better Auth `baseURL` + `basePath` (the plugin's default)                                                                         |
+| Issuer                                                                             | `https://app.example.com/api/auth`                                               | Better Auth `baseURL` + `basePath` (the plugin's default)                                                                         |
 | AS metadata, issuer-appended                                                       | `/api/auth/.well-known/oauth-authorization-server`                               | Better Auth                                                                                                                       |
 | AS metadata, RFC 8414 path-inserted alias                                          | `/.well-known/oauth-authorization-server/api/auth`                               | `app/.well-known/oauth-authorization-server/api/auth/route.ts` → `auth.handler(request)`                                          |
 | OpenID Connect discovery                                                           | `/api/auth/.well-known/openid-configuration`                                     | Better Auth (works with no extra routing because the issuer has a path)                                                           |
@@ -279,7 +279,7 @@ Both confirmations the design asked for came back good, verified against a runni
   with `resource` equal to the URL a user types.
 
 The **resource identifier is the exact URL users type**. The doc, the connector setup text (§12) and
-the `resource` option must all say `https://sheet.example.com/api/mcp` with no trailing slash.
+the `resource` option must all say `https://app.example.com/api/mcp` with no trailing slash.
 
 ### 4.3 Client registration: CIMD first
 
@@ -324,7 +324,7 @@ Claude does not reliably carry earlier scopes into a step-up consent.
 
 ### 4.5 Login and consent
 
-1. Claude opens `/api/auth/oauth2/authorize?client_id=…&redirect_uri=…&code_challenge=…&code_challenge_method=S256&resource=https://sheet.example.com/api/mcp&scope=…&state=…`.
+1. Claude opens `/api/auth/oauth2/authorize?client_id=…&redirect_uri=…&code_challenge=…&code_challenge_method=S256&resource=https://app.example.com/api/mcp&scope=…&state=…`.
 2. No Better Auth session: the provider redirects to `/login` with **the entire authorization
    request signed into the query string**. There is no continuation endpoint for this —
    `/oauth2/continue` handles only `select_account`/`create`/`postLogin`. See §18.4 for what the
@@ -339,7 +339,7 @@ Claude does not reliably carry earlier scopes into a step-up consent.
    `{ redirect_uri }` as the plugin's own JSDoc claims (§18.5), and the POST must carry the signed
    query as `oauth_query` plus an `Origin` header.
 4. Claude exchanges the code with the PKCE verifier and the `resource` parameter and receives a JWT
-   access token (`aud` = `https://sheet.example.com/api/mcp`, 1 h) and a refresh token (30 d,
+   access token (`aud` = `https://app.example.com/api/mcp`, 1 h) and a refresh token (30 d,
    rotated on every use, replay-detected).
 
 Consent is remembered per client, user and scope set: verified live, a second authorization whose
@@ -816,7 +816,7 @@ The text below belongs on the Help page (HU/EN) and in the connector's own descr
 
 **Claude.ai, Claude Desktop, Cowork, mobile** (one setup, shared by all four):
 Team/Enterprise: an Owner opens _Organization settings → Connectors → Add → Custom_, name
-"Sheet Happens", URL `https://sheet.example.com/api/mcp`, authentication _Always required_, OAuth
+"Sheet Happens", URL `https://app.example.com/api/mcp`, authentication _Always required_, OAuth
 client _Use Anthropic's hosted client metadata_; members then open _Customize → Connectors_ and
 click _Connect_. Pro/Max/Free: _Customize → Connectors → Add custom connector_ with the same URL.
 Claude detects the auth settings from the 401 handshake and pre-fills them. Signing in uses the
@@ -826,7 +826,7 @@ conversation with the "+" menu; individual tools can be set to _Blocked_ under t
 **Claude Code:**
 
 ```bash
-claude mcp add --transport http sheet-happens https://sheet.example.com/api/mcp
+claude mcp add --transport http sheet-happens https://app.example.com/api/mcp
 claude mcp login sheet-happens            # or /mcp inside a session; --no-browser for SSH
 ```
 
@@ -834,7 +834,7 @@ For the team, a project-scoped `.mcp.json` committed to any repo that benefits f
 
 ```json
 {
-  "mcpServers": { "sheet-happens": { "type": "http", "url": "https://sheet.example.com/api/mcp" } }
+  "mcpServers": { "sheet-happens": { "type": "http", "url": "https://app.example.com/api/mcp" } }
 }
 ```
 
@@ -843,8 +843,8 @@ sensible default allow-list is the four read tools.
 
 **Local development:** `claude mcp add --transport http sheet-happens-local http://localhost:3000/api/mcp`
 works directly (loopback redirect). Claude.ai cannot reach localhost; test the hosted flow against
-the development environment `https://<service>-<environment>.up.railway.app/api/mcp` rather than a
-tunnel.
+a deployed non-production environment (e.g. `https://<service>-<environment>.up.railway.app/api/mcp`)
+rather than a tunnel.
 
 **Manual inspection:** `pnpm dlx @modelcontextprotocol/inspector` (UI, OAuth via DCR in
 non-production) or the CLI with a bearer token:

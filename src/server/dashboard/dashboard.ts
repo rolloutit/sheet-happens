@@ -1,8 +1,6 @@
 import { isProjectColorToken, projectColorValues } from "@/src/lib/project-colors";
 import { prisma } from "@/src/server/db/client";
-import type { PrismaClient } from "@/src/server/db/generated/client";
 import {
-  addDays,
   formatDateOnly,
   getMonday,
   getMonthStart,
@@ -218,13 +216,6 @@ export type AdminDashboardData = {
 };
 
 export type DashboardData = EmployeeDashboardData | ContractorDashboardData | AdminDashboardData;
-
-type DashboardDeps = {
-  db?: Pick<
-    PrismaClient,
-    "projectAssignment" | "timeEntry" | "inactiveProjectWeek" | "timesheet" | "member"
-  >;
-};
 
 type DashboardAssignment = {
   memberId: string;

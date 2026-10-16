@@ -118,9 +118,9 @@ function Satellite({ angle, size, tone = "teal", trail = false }: SatelliteProps
 }
 
 /**
- * Rollout IT's mark held still at the centre of a tilted, counter-rotating ring cage.
+ * The brand mark held still at the centre of a tilted, counter-rotating ring cage.
  *
- * The mark is an open ring with a bar through it, so the cage is the mark's own arc continued
+ * The default mark is a ring with a bar through it, so the cage is the mark's own arc continued
  * outward rather than decoration parked beside it. Nothing here spins the mark: rings move around a
  * fixed centre, which reads as a brand at the heart of a system instead of as a loading spinner.
  *

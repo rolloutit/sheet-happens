@@ -16,7 +16,7 @@ and left two copies of react, zod and chromatic in the lockfile; the ranges dedu
 - `pnpm setup:git` — run once per clone: installs the pre-push guard and the push defaults that
   keep a feature branch off `develop`. Local git config only, never global.
 - `pnpm dev` — Next dev server (Turbopack) on `:3000`
-- `pnpm db:dev` — start Postgres 17 + MinIO in Docker, migrate, seed. Also `db:dev:reset`,
+- `pnpm db:dev` — start Postgres 18 + MinIO in Docker, migrate, seed. Also `db:dev:reset`,
   `db:dev:seed`, `db:dev:stop`. Requires Docker running.
 - `pnpm db:generate` — regenerate Prisma client after any schema edit
 - `pnpm typecheck` · `pnpm lint` · `pnpm format` (check only; `pnpm format:write` fixes)
@@ -188,9 +188,9 @@ Detailed workflow lives in the `/git-workflow` skill (`.claude/skills/git-workfl
 - `docs/database-schema.md` · `docs/auth-user-management.md` · `docs/frontend-stack.md`
 - `docs/tokens.md` — design tokens · `docs/component-library-audit.md` — component inventory
 - `docs/local-dev-db.md` · `docs/manual-qa-test-plan.md`
-- `docs/railway-projects.md` — deployed project/environment topology, domain moves, deployed-DB
-  access, and why config lives in `railway.json` rather than Railway IaC. Read before changing
-  anything on Railway.
+- `docs/railway-projects.md` — deploying on Railway: recommended project/environment layout, PR
+  environments, domain moves, deployed-DB access, and why config lives in `railway.json` rather than
+  Railway IaC. Read before changing anything on Railway.
 
 ## Working agreements
 

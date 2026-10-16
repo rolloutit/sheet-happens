@@ -1,7 +1,6 @@
 {
   "app": {
-    "name": "Sheet Happens",
-    "company": "Rollout IT"
+    "name": "Sheet Happens"
   },
   "Pickers": {
     "search": "Keresés",
@@ -22,7 +21,7 @@
   },
   "AppShell": {
     "brand": {
-      "subtitle": "Rollout IT · belső"
+      "subtitle": "Idő és timesheet"
     },
     "primaryNavigation": "Elsődleges navigáció",
     "mobileNavigation": "Mobil navigáció",
@@ -104,7 +103,7 @@
     }
   },
   "AuthShell": {
-    "brandSubtitle": "Rollout IT · belső",
+    "brandSubtitle": "Idő és timesheet",
     "panelFooter": "Időkövetés, timesheet és számlaellenőrzés — egy helyen.",
     "panelTip": "Tipp: passkey-vel két másodperc a belépés.",
     "language": "Nyelv",
@@ -134,7 +133,7 @@
     "system": "Rendszer"
   },
   "Login": {
-    "brandSubtitle": "Rollout IT · belső",
+    "brandSubtitle": "Idő és timesheet",
     "badge": "Üdv újra",
     "title": "Üdv újra",
     "description": "Jelentkezz be a Sheet Happensbe.",
@@ -984,10 +983,10 @@
       "locked": "Zárolva",
       "unlocked": "Feloldva",
       "empty": "Ehhez a revízióhoz nincs snapshot sor.",
-      "projectSummary": "{hours} óra, {entries} bejegyzés",
+      "projectSummary": "{hours}, {entries} bejegyzés",
       "lineCaption": "Timesheet snapshot forrássorok",
       "declared": "Havonta bevallott",
-      "declaredSummary": "{hours} óra a hónapra bevallva",
+      "declaredSummary": "{hours} a hónapra bevallva",
       "declaredLineDate": "{month} · bevallott",
       "openProof": "Igazolás megnyitása",
       "proofMissing": "Ezekhez a bevallott órákhoz nincs igazoló dokumentum."
@@ -3130,7 +3129,7 @@
       "declaredOnly": "Ebben a szűrésben minden órát havonta vallottak be egy másik cég rendszerében, ezért a riport nem tartalmazza. A bevallott órák az időelszámolásnál nézhetők át, nem itt."
     },
     "pdf": {
-      "brand": "Sheet Happens - Rollout IT",
+      "brand": "Sheet Happens",
       "confidential": "Bizalmas",
       "page": "Oldal",
       "generatedAt": "Generálva",
