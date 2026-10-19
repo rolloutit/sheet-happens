@@ -4,6 +4,9 @@
 
 - **Questions** about running or using Sheet Happens: ask in
   [GitHub Discussions](https://github.com/rolloutit/sheet-happens/discussions).
+- **Chat** with other users and the maintainers on [Discord](https://discord.gg/GXVwYPhbS3). Quick
+  questions are welcome there; if the answer would help the next person, Discussions is the better
+  place, because it can be searched.
 - **Bugs** and **feature requests**: open an [issue](https://github.com/rolloutit/sheet-happens/issues/new/choose).
   Search the existing ones first.
 - **Security problems**: do not use either of the above, follow [SECURITY.md](SECURITY.md).
