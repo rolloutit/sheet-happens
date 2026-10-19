@@ -15,6 +15,7 @@ Please follow our [Code of Conduct](CODE_OF_CONDUCT.md). For security problems, 
 For anything larger than a small fix, open an issue or a
 [Discussion](https://github.com/rolloutit/sheet-happens/discussions) first so we can agree on the
 approach before you spend time on it. Translation fixes and small bug fixes can go straight to a PR.
+Quick questions while you work are welcome in `#contributing` on [Discord](https://discord.gg/GXVwYPhbS3).
 
 ## Prerequisites
 
