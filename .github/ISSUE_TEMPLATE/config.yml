@@ -3,6 +3,9 @@ contact_links:
   - name: Question or help running Sheet Happens
     url: https://github.com/rolloutit/sheet-happens/discussions
     about: Ask the community in GitHub Discussions.
+  - name: Chat on Discord
+    url: https://discord.gg/GXVwYPhbS3
+    about: Quick questions and chat with users and maintainers.
   - name: Security vulnerability
     url: https://github.com/rolloutit/sheet-happens/security/advisories/new
     about: Report it privately. Please do not open a public issue.

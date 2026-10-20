@@ -9,12 +9,14 @@
   <a href="https://youtu.be/6xhXj7_6j0w">Video overview</a> ·
   <a href="docs/self-hosting.md">Self-hosting</a> ·
   <a href="docs/README.md">Documentation</a> ·
-  <a href="CONTRIBUTING.md">Contributing</a>
+  <a href="CONTRIBUTING.md">Contributing</a> ·
+  <a href="https://discord.gg/GXVwYPhbS3">Discord</a>
 </p>
 
 <p>
   <a href="LICENSE"><img alt="License: AGPL-3.0" src="https://img.shields.io/badge/license-AGPL--3.0-blue"></a>
   <a href="https://github.com/rolloutit/sheet-happens/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/rolloutit/sheet-happens/actions/workflows/ci.yml/badge.svg"></a>
+  <a href="https://discord.gg/GXVwYPhbS3"><img alt="Discord" src="https://img.shields.io/discord/1561750326909083768?label=discord&logo=discord&logoColor=white"></a>
 </p>
 
 <picture>
@@ -152,8 +154,8 @@ GitHub's [private vulnerability reporting](https://github.com/rolloutit/sheet-ha
 ## Support
 
 - **Community:** questions in [GitHub Discussions](https://github.com/rolloutit/sheet-happens/discussions),
-  bugs and ideas in [Issues](https://github.com/rolloutit/sheet-happens/issues). See
-  [SUPPORT.md](SUPPORT.md).
+  bugs and ideas in [Issues](https://github.com/rolloutit/sheet-happens/issues), chat on
+  [Discord](https://discord.gg/GXVwYPhbS3). See [SUPPORT.md](SUPPORT.md).
 - **Need help running it?** Sheet Happens is free to self-host under the AGPL-3.0. If you'd rather
   not run it yourself, [Rollout IT](https://rolloutit.net) offers paid support, setup and hosting,
   and custom development. The money funds the maintenance of this project.
