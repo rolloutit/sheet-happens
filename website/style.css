@@ -292,7 +292,11 @@ p {
   text-decoration: none;
 }
 .btn-primary {
-  background: linear-gradient(135deg, var(--primary), color-mix(in srgb, var(--primary) 70%, var(--accent)));
+  background: linear-gradient(
+    135deg,
+    var(--primary),
+    color-mix(in srgb, var(--primary) 70%, var(--accent))
+  );
   color: var(--primary-fg);
 }
 .btn-cta {
@@ -594,7 +598,11 @@ section {
   margin-top: 1.5rem;
 }
 .panel-support {
-  background: linear-gradient(160deg, var(--card), color-mix(in srgb, var(--accent-soft) 60%, var(--card)));
+  background: linear-gradient(
+    160deg,
+    var(--card),
+    color-mix(in srgb, var(--accent-soft) 60%, var(--card))
+  );
   border-color: color-mix(in srgb, var(--primary) 40%, var(--border));
 }
 
