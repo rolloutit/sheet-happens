@@ -83,6 +83,8 @@ and left two copies of react, zod and chromatic in the lockfile; the ranges dedu
 - `typedRoutes` is enabled — route strings are type-checked, so run `pnpm typecheck` after adding
   or renaming a route.
 - Server Action body limit is 12 MB (file uploads); larger uploads need a different path.
+- `website/` is the static landing page (sheethappens.rolloutit.net), not part of the app: no build
+  step, published over FTPS by `.github/workflows/website.yml` when `main` moves. See its README.
 
 ## i18n is a completion requirement
 

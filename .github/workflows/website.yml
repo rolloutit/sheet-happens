@@ -1,0 +1,44 @@
+name: Website
+
+# Publishes `website/`, the static landing page at https://sheethappens.rolloutit.net, to its FTP
+# host. Released code only: it runs when `main` moves and the page changed, or by hand.
+on:
+  push:
+    branches: [main]
+    paths:
+      - "website/**"
+      - ".github/workflows/website.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# Two uploads into the same directory must not interleave; let the second wait instead.
+concurrency:
+  group: website-deploy
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+      # Uploads only what changed since the last run, tracked in `.ftp-deploy-sync-state.json` on
+      # the server (file hashes only). Files that were never uploaded by it are left alone.
+      - uses: SamKirkland/FTP-Deploy-Action@v4.4.0
+        with:
+          server: ${{ secrets.FTP_SERVER }}
+          username: ${{ secrets.FTP_USERNAME }}
+          password: ${{ secrets.FTP_PASSWORD }}
+          protocol: ftps
+          local-dir: ./website/
+          # Only needed when the FTP account does not land in the subdomain's document root.
+          server-dir: ${{ vars.FTP_SERVER_DIR || './' }}
+          # Overriding `exclude` drops the action's defaults, so the git and node_modules globs are
+          # restated. The README documents this folder for contributors; it is not part of the page.
+          exclude: |
+            **/.git*
+            **/.git*/**
+            **/node_modules/**
+            README.md
