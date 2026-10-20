@@ -26,6 +26,31 @@ export function getWeeklyOccurrence(input: {
   };
 }
 
+/** The wall time the month-end leave reminder goes out, in the company time zone. */
+export const LEAVE_REMINDER_TIME = "09:00";
+
+/**
+ * The month-end leave reminder: the second-to-last day of the month in the company time zone,
+ * from `time` on. Leaves the last day for anyone who still has to record leave or send a sick
+ * note. The key is per month, so every dispatcher tick that day lands on the same notification.
+ */
+export function getMonthEndLeaveReminderOccurrence(input: {
+  now: Date;
+  timezone: string;
+  time: string;
+}) {
+  const local = getZonedMinute(input.now, input.timezone);
+  if (local.minuteOfDay < parseClockMinutes(input.time)) return null;
+
+  const year = Number.parseInt(local.date.slice(0, 4), 10);
+  const month = Number.parseInt(local.date.slice(5, 7), 10);
+  const lastDay = new Date(Date.UTC(year, month, 0)).getUTCDate();
+  if (Number.parseInt(local.date.slice(8, 10), 10) !== lastDay - 1) return null;
+
+  const monthValue = local.date.slice(0, 7);
+  return { key: `leave-month-end:${monthValue}`, month: monthValue };
+}
+
 export function getInvoiceReminderOccurrence(input: {
   now: Date;
   approvedAt: Date;

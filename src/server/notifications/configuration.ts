@@ -13,6 +13,8 @@ export const configurableNotificationTypes = [
   "TIMESHEET_PAID",
   "PAYSLIP_AVAILABLE",
   "TIME_ENTRY_ADMIN_MODIFIED",
+  "LEAVE_MONTH_END_REMINDER",
+  "LEAVE_RECORDED_BY_ADMIN",
 ] as const satisfies readonly NotificationType[];
 
 export type ConfigurableNotificationType = (typeof configurableNotificationTypes)[number];

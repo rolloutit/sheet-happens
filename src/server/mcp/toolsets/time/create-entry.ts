@@ -57,7 +57,7 @@ const DESCRIPTION = `Log time for the signed-in member on one calendar day.
 
 Give either \`durationMinutes\` (integer, 1-${MCP_LIMITS.dailyHardLimitMinutes}) or both \`startTime\` and \`endTime\` (\`HH:mm\`, 24-hour, in the member's timezone) — not both, not neither. An interval whose end is at or before its start is read as running past midnight. \`date\` is \`YYYY-MM-DD\` in the member's timezone; call \`time_get_context\` for today's date and the valid \`projectId\` values.
 
-Fails if the month has a submitted timesheet (\`PERIOD_LOCKED\`), if the project declares its hours monthly (\`PROJECT_DECLARES_MONTHLY\`), if the project is not assigned on that date (\`PROJECT_NOT_AVAILABLE\`), or if the day would exceed 24 hours (\`DAILY_LIMIT_EXCEEDED\`).
+Fails if the month has a submitted timesheet (\`PERIOD_LOCKED\`), if the member is on full-day leave that day (\`DAY_ON_LEAVE\`), if the project declares its hours monthly (\`PROJECT_DECLARES_MONTHLY\`), if the project is not assigned on that date (\`PROJECT_NOT_AVAILABLE\`), or if the day would exceed 24 hours (\`DAILY_LIMIT_EXCEEDED\`).
 
 Returns the created entry and the day's new total. A day over 8 hours comes back as a warning, not an error.`;
 

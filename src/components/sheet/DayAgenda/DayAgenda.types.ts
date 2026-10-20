@@ -67,6 +67,7 @@ export type DayAgendaProps = {
   labels: DayAgendaLabels;
   /** A pending mutation, which disables every affordance that would start another. */
   disabled?: boolean;
+  /** Hides the add affordances: the day is locked by a timesheet or covered by a full-day leave. */
   locked?: boolean;
   /**
    * Whether entry rows animate in when they mount, staggered and capped. Off by default — see the

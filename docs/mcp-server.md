@@ -727,6 +727,7 @@ Codes are a closed union (`McpErrorCode`) mapped from the domain's error message
 | `DURATION_INVALID` · `DAILY_LIMIT_EXCEEDED`                                  | "Duration must be greater than zero." / "too long" / "too large" · "Daily total cannot exceed 24 hours."                       |
 | `DESCRIPTION_REQUIRED` · `DESCRIPTION_TOO_LONG`                              | the description messages                                                                                                       |
 | `ENTRY_NOT_FOUND` · `ENTRY_LOCKED` · `PERIOD_LOCKED` · `ENTRY_IS_DECLARED`   | "Time entry not found." · "locked by a submitted timesheet" (entry) · (period) · "corrected on the month level"                |
+| `DAY_ON_LEAVE`                                                               | "This day is covered by leave." (a full-day leave; a half day does not block)                                                  |
 | `TIMER_ALREADY_RUNNING` · `NO_TIMER_RUNNING` · `TIMER_DISCARDED_DAILY_LIMIT` | "Stop the running timer…" · "No timer is running." · `{ discarded: true }`                                                     |
 | `INTERNAL`                                                                   | anything unmapped; logged with a correlation id, message is generic                                                            |
 

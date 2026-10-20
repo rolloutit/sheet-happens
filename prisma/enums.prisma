@@ -115,6 +115,7 @@ enum DocumentType {
   REPORT_EXPORT      @map("report_export")
   PAYSLIP            @map("payslip")
   HOURS_PROOF        @map("hours_proof")
+  SICK_NOTE          @map("sick_note")
 
   @@map("document_type")
 }
@@ -184,6 +185,8 @@ enum NotificationType {
   TIMESHEET_PAID            @map("timesheet_paid")
   PAYSLIP_AVAILABLE         @map("payslip_available")
   TIME_ENTRY_ADMIN_MODIFIED @map("time_entry_admin_modified")
+  LEAVE_MONTH_END_REMINDER  @map("leave_month_end_reminder")
+  LEAVE_RECORDED_BY_ADMIN   @map("leave_recorded_by_admin")
 
   @@map("notification_type")
 }
@@ -204,4 +207,19 @@ enum PayslipStatus {
   FAILED     @map("failed")
 
   @@map("payslip_status")
+}
+
+enum LeaveType {
+  VACATION @map("vacation")
+  SICK     @map("sick")
+
+  @@map("leave_type")
+}
+
+enum LeaveDayPart {
+  FULL      @map("full")
+  MORNING   @map("morning")
+  AFTERNOON @map("afternoon")
+
+  @@map("leave_day_part")
 }

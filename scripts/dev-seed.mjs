@@ -14,6 +14,7 @@
 import { createHash } from "node:crypto";
 
 import { seedTimesheetWorkflows } from "./dev-seed-timesheets.mjs";
+import { seedLeave } from "./dev-seed-leave.mjs";
 
 const RATE_HISTORY_START = "2024-01-01";
 const ASSIGNMENT_HISTORY_START = "2024-01-01";
@@ -492,6 +493,7 @@ const NOTIFICATION_RULE_TYPES = [
   "timesheet_paid",
   "payslip_available",
   "time_entry_admin_modified",
+  "leave_month_end_reminder",
 ];
 
 export async function seedDevDatabase(client, { objectStorage }) {
@@ -576,6 +578,10 @@ export async function seedDevDatabase(client, { objectStorage }) {
     assignmentsByMember.set(assignment.memberEmail, memberAssignments);
   }
 
+  // Before the time entries: a full-day leave and logged time exclude each other, and the generator
+  // reads the leave back to keep its days empty.
+  const leave = await seedLeave(client, { memberIds, objectStorage });
+
   let timeEntryCount = 0;
   let inactiveWeekCount = 0;
   let frozenWeekCount = 0;
@@ -618,6 +624,8 @@ export async function seedDevDatabase(client, { objectStorage }) {
     inactiveWeeks: inactiveWeekCount,
     timesheets,
     timesheetStatuses: await countTimesheetStatuses(client),
+    leaves: leave.leaves,
+    publicHolidays: leave.holidays,
   };
 }
 
@@ -988,7 +996,7 @@ async function seedMemberTimeTracking(client, { member, memberId, assignments, a
   // days it is missing instead of staying frozen at whatever the first run produced. Months that
   // already carry a timesheet stay untouched: a new entry there would sit outside the submitted
   // snapshot, which is the one thing a timesheet revision must never be.
-  const [seededDays, timesheetMonths] = await Promise.all([
+  const [seededDays, timesheetMonths, leaveDays] = await Promise.all([
     client.query(
       "SELECT DISTINCT to_char(local_date, 'YYYY-MM-DD') AS day FROM time_entries WHERE member_id = $1::uuid",
       [memberId],
@@ -997,8 +1005,17 @@ async function seedMemberTimeTracking(client, { member, memberId, assignments, a
       "SELECT to_char(period_start, 'YYYY-MM') AS month FROM timesheets WHERE contractor_member_id = $1::uuid",
       [memberId],
     ),
+    // A full-day leave day takes no time, so it counts as filled; a half day leaves room for work.
+    client.query(
+      `
+        SELECT DISTINCT to_char(day, 'YYYY-MM-DD') AS day
+        FROM leaves, generate_series(start_date, end_date, interval '1 day') AS day
+        WHERE member_id = $1::uuid AND deleted_at IS NULL AND day_part = 'full'
+      `,
+      [memberId],
+    ),
   ]);
-  const filledDays = new Set(seededDays.rows.map((row) => row.day));
+  const filledDays = new Set([...seededDays.rows, ...leaveDays.rows].map((row) => row.day));
   const closedMonths = new Set(timesheetMonths.rows.map((row) => row.month));
   const random = createRandom(`time-tracking:${member.email}`);
   const windowStart = monthStart(ENTRY_MONTHS_BACK);

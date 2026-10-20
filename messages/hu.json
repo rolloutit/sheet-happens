@@ -61,7 +61,9 @@
       "audit": "Napló",
       "system": "Rendszer",
       "info": "Információs oldal",
-      "settings": "Beállítások"
+      "settings": "Beállítások",
+      "leave": "Szabadság",
+      "leaveAdmin": "Szabadságok"
     },
     "notifications": {
       "trigger": "Értesítések",
@@ -2023,7 +2025,15 @@
         "timesheet__paid": "Kifizetettnek jelölve",
         "timesheet__rejected": "Elutasítva",
         "timesheet__resubmitted": "Újraküldve",
-        "timesheet__submitted": "Beküldve"
+        "timesheet__submitted": "Beküldve",
+        "leave__created": "Rögzítve",
+        "leave__updated": "Módosítva",
+        "leave__deleted": "Törölve",
+        "leave__hr_processed": "Feldolgozva",
+        "leave__hr_unprocessed": "Feldolgozás visszavonva",
+        "leave__attachment_uploaded": "Igazolás feltöltve",
+        "leave__attachment_removed": "Igazolás törölve",
+        "leave__attachment_read": "Igazolás megnyitva"
       },
       "targets": {
         "assignment_rate_period": "Projektóradíj",
@@ -2044,7 +2054,8 @@
         "running_timer": "Időmérő",
         "time_entries": "Időbejegyzések",
         "time_entry": "Időbejegyzés",
-        "timesheet": "Timesheet"
+        "timesheet": "Timesheet",
+        "leave": "Szabadság"
       }
     },
     "client": {
@@ -2414,6 +2425,7 @@
     "header": {
       "open": "{date} megnyitása",
       "locked": "Beküldött munkaidő-nyilvántartás zárolja",
+      "onLeave": "Szabadságon",
       "today": "Ma",
       "over": "Több mint {target}"
     },
@@ -2436,7 +2448,7 @@
       "title": "Hozzáadás: {date}",
       "description": "Min dolgoztál?",
       "duration": "Időtartam",
-      "durationPlaceholder": "2ó30",
+      "durationPlaceholder": "2h30",
       "project": "Projekt",
       "more": "További beállítások",
       "interval": "Inkább időszak",
@@ -2556,6 +2568,7 @@
       "timeEntryNotFound": "Az időbejegyzés nem található.",
       "entryLocked": "Ez a bejegyzés beküldött timesheet miatt zárolt.",
       "periodLocked": "Ez az időszak beküldött timesheet miatt zárolt.",
+      "dayOnLeave": "Ezen a napon szabadságon vagy, ezért nem rögzíthetsz rá időt.",
       "weekTouchesLockedPeriod": "Ez a hét zárolt időszakot érint.",
       "inactiveWeekHasEntries": "Töröld a hét bejegyzéseit, mielőtt inaktívnak jelölöd a projektet.",
       "stopTimerFirst": "Új időmérő indítása előtt állítsd le a futó időmérőt.",
@@ -2800,7 +2813,9 @@
         "INVOICE_ACCEPTED": "Számla elfogadva",
         "TIMESHEET_PAID": "Kifizetés rögzítve",
         "PAYSLIP_AVAILABLE": "Bérjegyzék elérhető",
-        "TIME_ENTRY_ADMIN_MODIFIED": "Admin módosította az időbejegyzést"
+        "TIME_ENTRY_ADMIN_MODIFIED": "Admin módosította az időbejegyzést",
+        "LEAVE_MONTH_END_REMINDER": "Havi szabadság-emlékeztető",
+        "LEAVE_RECORDED_BY_ADMIN": "Admin rögzítette a szabadságot"
       },
       "typeDescriptions": {
         "TIMESHEET_SUBMITTED": "Az aktív adminokat értesíti, amikor egy kontraktor beküld vagy újraküld egy timesheetet jóváhagyásra.",
@@ -2811,7 +2826,14 @@
         "INVOICE_ACCEPTED": "A kontraktort értesíti, amikor egy admin elfogadja a számlát, és az kifizetésre vár.",
         "TIMESHEET_PAID": "A kontraktort értesíti, amikor egy admin kifizetettként rögzíti a folyamatot.",
         "PAYSLIP_AVAILABLE": "Az alkalmazottat értesíti, amikor egy admin feltölti vagy lecseréli a bérjegyzékét.",
-        "TIME_ENTRY_ADMIN_MODIFIED": "Az érintett munkatársat értesíti, amikor egy admin véglegesen módosítja valamelyik rögzített időbejegyzését."
+        "TIME_ENTRY_ADMIN_MODIFIED": "Az érintett munkatársat értesíti, amikor egy admin véglegesen módosítja valamelyik rögzített időbejegyzését.",
+        "LEAVE_MONTH_END_REMINDER": "Az alkalmazottakat a hónap utolsó előtti napján emlékezteti a szabadságok és betegszabik rögzítésére.",
+        "LEAVE_RECORDED_BY_ADMIN": "Az érintett alkalmazottat értesíti, amikor egy admin szabadságot rögzít neki."
+      },
+      "leave": {
+        "title": "Havi szabadság-emlékeztető",
+        "description": "A hónap utolsó előtti napján minden aktív alkalmazottnak szól, hogy ellenőrizze a havi szabadságait és betegszabijait.",
+        "timing": "Kiküldés a hónap utolsó előtti napján 9:00-kor, a céges időzóna szerint."
       }
     },
     "setupBanner": {
@@ -3286,6 +3308,206 @@
       "summary": "{page}. oldal / {totalPages}, {totalItems} bérjegyzék",
       "previous": "Előző",
       "next": "Következő"
+    }
+  },
+  "Leave": {
+    "you": "Te",
+    "workdays": "{count, plural, one {# munkanap} other {# munkanap}}",
+    "kinds": {
+      "vacation": "Szabadság",
+      "sick": "Betegszabi",
+      "absent": "Távol"
+    },
+    "dayParts": {
+      "FULL": "Egész nap",
+      "MORNING": "Délelőtt",
+      "AFTERNOON": "Délután"
+    },
+    "page": {
+      "title": "Szabadság",
+      "subtitle": "Itt rögzítheted a szabadságodat és a betegszabidat, és láthatod, ki mikor van távol a csapatból."
+    },
+    "views": {
+      "label": "Nézet",
+      "calendar": "Naptár",
+      "list": "Saját lista"
+    },
+    "actions": {
+      "add": "Szabadság felvitele",
+      "close": "Bezárás",
+      "cancel": "Mégse"
+    },
+    "summary": {
+      "none": "Ebben a hónapban nincs rögzített távolléted.",
+      "month": "Ebben a hónapban: {parts}.",
+      "vacation": "{days} szabadság",
+      "sick": "{days} betegszabi"
+    },
+    "calendar": {
+      "label": "Szabadságnaptár, {month}",
+      "week": "{week}. hét",
+      "ownRibbon": "Te: {kind}",
+      "holiday": "Ünnepnap",
+      "today": "Ma",
+      "empty": "Ebben a hónapban senki sincs távol, és nincs ünnepnap.",
+      "monthNav": "Hónap kiválasztása",
+      "previousMonth": "Előző hónap",
+      "nextMonth": "Következő hónap",
+      "thisMonth": "Aktuális hónap",
+      "away": "{count} távol",
+      "more": "+{count} további",
+      "awayOn": "Távol: {day}"
+    },
+    "form": {
+      "title": "Szabadság felvitele",
+      "description": "A felvitt szabadság azonnal megjelenik a naptárban. Utólag csak admin módosíthatja vagy törölheti.",
+      "editTitle": "Szabadság szerkesztése",
+      "editDescription": "Adminként bármelyik hónapot javíthatod, de az átfedés és a munkanap-szabály itt is érvényes.",
+      "adminTitle": "Szabadság felvitele alkalmazottnak",
+      "adminDescription": "Bármelyik hónap választható, de az átfedés és a munkanap-szabály itt is érvényes. Az alkalmazott értesítést kap, a szabadság pedig azonnal megjelenik a naptárban.",
+      "member": "Alkalmazott",
+      "memberPlaceholder": "Válassz alkalmazottat",
+      "type": "Típus",
+      "typeHint": {
+        "vacation": "Tervezett szabadság",
+        "sick": "Betegség miatti távollét"
+      },
+      "dates": "Időszak",
+      "datesHint": "Szabadságot legkorábban tegnaptól vihetsz fel. Korábbi napokhoz szólj az adminnak.",
+      "datesPlaceholder": "Első és utolsó nap",
+      "dayPart": "Napszak",
+      "summaryEmpty": "Válaszd ki az első és az utolsó napot.",
+      "summaryNoWorkdays": "A kiválasztott napok között nincs munkanap.",
+      "summarySkipped": "({count, plural, one {# ünnepnap kihagyva} other {# ünnepnap kihagyva}})",
+      "note": "Megjegyzés",
+      "noteHint": "Nem kötelező. Az adminnak szól, a kollégák nem látják.",
+      "file": "Orvosi igazolás",
+      "fileHint": "PDF, JPG vagy PNG, legfeljebb 10 MB. Később is feltöltheted.",
+      "submit": "Felvitel",
+      "save": "Mentés",
+      "created": "Szabadság felvive.",
+      "updated": "Szabadság módosítva.",
+      "chooseFile": "Fájl kiválasztása",
+      "noFile": "Nincs kiválasztott fájl"
+    },
+    "discardDialog": {
+      "title": "Elveted a változtatásokat?",
+      "description": "A beírt adatok elvesznek.",
+      "confirm": "Elvetés",
+      "cancel": "Szerkesztés folytatása"
+    },
+    "list": {
+      "emptyTitle": "Még nincs rögzített szabadságod",
+      "emptyDescription": "A felvitt szabadságaid és betegszabijaid itt jelennek meg.",
+      "upcoming": "Előttem álló",
+      "past": "Korábbi",
+      "noUpcoming": "Nincs előtted álló szabadság.",
+      "noteMissing": "Igazolás hiányzik",
+      "noteAttached": "Igazolás feltöltve"
+    },
+    "details": {
+      "note": "Megjegyzés",
+      "attachment": "Orvosi igazolás",
+      "noAttachment": "Még nincs feltöltve igazolás.",
+      "open": "Megnyitás",
+      "download": "Letöltés",
+      "upload": "Feltöltés",
+      "replace": "Csere",
+      "removeAttachment": "Igazolás törlése",
+      "adminOnly": "Módosítani vagy törölni csak admin tudja."
+    },
+    "attachment": {
+      "uploaded": "Igazolás feltöltve.",
+      "replaced": "Igazolás lecserélve.",
+      "removed": "Igazolás törölve."
+    },
+    "errors": {
+      "checkFields": "Ellenőrizd a kiemelt mezőket.",
+      "typeRequired": "Válaszd ki a típust.",
+      "datesRequired": "Add meg az első és az utolsó napot.",
+      "noteTooLong": "A megjegyzés legfeljebb 500 karakter lehet.",
+      "invalidRange": "Az utolsó nap nem lehet az első előtt.",
+      "halfDayRange": "Fél napot csak egynapos szabadságnál lehet választani.",
+      "noWorkdays": "A kiválasztott napok között nincs munkanap.",
+      "beforeYesterday": "Szabadságot legkorábban tegnaptól vihetsz fel. Korábbi napokhoz szólj az adminnak.",
+      "tooLong": "Egy szabadság legfeljebb egy év lehet.",
+      "overlap": "Erre az időszakra már van rögzített szabadság.",
+      "timeEntriesOnDays": "Ezen napok némelyikére már van rögzített idő. Előbb töröld azokat a bejegyzéseket, vagy vegyél ki félnapot.",
+      "employeeRequired": "Szabadságot csak alkalmazott rögzíthet.",
+      "memberRequired": "Válaszd ki az alkalmazottat.",
+      "memberNotEmployee": "A kiválasztott személy nem aktív alkalmazott.",
+      "notFound": "Ez a szabadság már nem létezik.",
+      "attachmentSickOnly": "Igazolást csak betegszabihoz lehet csatolni.",
+      "attachmentRequired": "Válassz ki egy fájlt.",
+      "attachmentTooLarge": "A fájl nagyobb 10 MB-nál.",
+      "attachmentType": "PDF, JPG vagy PNG fájlt tölts fel.",
+      "notAllowed": "Ehhez nincs jogosultságod.",
+      "storageMissing": "A fájltárolás nincs beállítva. Szólj az adminnak.",
+      "saveFailed": "Nem sikerült menteni. Próbáld újra.",
+      "sickNoteAttached": "Előbb töröld az orvosi igazolást, csak utána lehet szabadságra váltani."
+    },
+    "admin": {
+      "title": "Szabadságok",
+      "subtitle": "Az alkalmazottak távollétei. Pipáld ki, amit már feldolgoztál.",
+      "pending": "{count, plural, one {# szabadság vár feldolgozásra} other {# szabadság vár feldolgozásra}}",
+      "allProcessed": "Minden szabadság feldolgozva.",
+      "empty": "Nincs a szűrőknek megfelelő szabadság.",
+      "edit": "Szerkesztés",
+      "editLeave": "{name} szabadságának szerkesztése ({range})",
+      "delete": "Törlés",
+      "deleteConfirm": "Biztosan törlöd ezt a szabadságot?",
+      "deleteConfirmAction": "Igen, törlöm",
+      "deleted": "Szabadság törölve.",
+      "hr": {
+        "label": "Feldolgozva",
+        "hint": "Csak neked látszik, az alkalmazott nem látja.",
+        "toggle": "{name} ({range}) feldolgozva",
+        "done": "Feldolgozva",
+        "todo": "Feldolgozásra vár",
+        "processedBy": "Feldolgozta: {name}, {date}",
+        "marked": "{count, plural, one {# szabadság feldolgozottnak jelölve.} other {# szabadság feldolgozottnak jelölve.}}",
+        "unmarked": "{count, plural, one {# szabadságnál visszavonva a jelölés.} other {# szabadságnál visszavonva a jelölés.}}"
+      },
+      "filters": {
+        "month": "Hónap",
+        "member": "Alkalmazott",
+        "type": "Típus",
+        "hr": "Feldolgozás",
+        "allMonths": "Minden hónap",
+        "allMembers": "Minden alkalmazott",
+        "allTypes": "Minden típus",
+        "hrOptions": {
+          "all": "Mind",
+          "pending": "Feldolgozásra vár",
+          "processed": "Feldolgozva"
+        },
+        "apply": "Szűrés",
+        "active": "Aktív szűrők",
+        "clear": "Szűrők törlése",
+        "remove": "{filter} szűrő eltávolítása"
+      },
+      "table": {
+        "label": "Szabadságok listája",
+        "selectAll": "Az összes kijelölése",
+        "select": "{name} ({range}) kijelölése",
+        "member": "Alkalmazott",
+        "period": "Időszak",
+        "workdays": "Munkanap",
+        "kind": "Típus",
+        "details": "Részletek",
+        "hr": "Feldolgozva",
+        "actions": "Műveletek",
+        "open": "Megnyitás"
+      },
+      "bulk": {
+        "region": "Kijelölt szabadságok",
+        "selected": "{count, plural, one {# kijelölve} other {# kijelölve}}",
+        "markProcessed": "Feldolgozottnak jelöl",
+        "markUnprocessed": "Jelölés visszavonása"
+      },
+      "views": {
+        "list": "Lista"
+      }
     }
   },
   "TwoFactorActions": {

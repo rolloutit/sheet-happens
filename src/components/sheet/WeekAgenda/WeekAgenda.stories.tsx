@@ -55,6 +55,7 @@ function buildWeek(entriesPerDay: (dayIndex: number) => WeekAgendaEntry[]): Week
       dayNumber: String(Number.parseInt(isoDate.slice(8), 10)),
       state: dayIndex === 2 ? "today" : dayIndex > 2 ? "future" : "normal",
       locked: false,
+      onLeave: false,
       totalMinutes: entries.reduce((sum, item) => sum + item.durationMinutes, 0),
       entries,
       canCopyPreviousDay: dayIndex > 0 && entriesPerDay(dayIndex - 1).length > 0,
@@ -103,6 +104,7 @@ const labels: WeekAgendaLabels = {
   capacity: (day) => `${day.totalMinutes / 60} h of 8 h`,
   over: "over 8 h",
   locked: "Locked by a submitted timesheet",
+  onLeave: "On leave",
   today: "Today",
   columnEmpty: "Nothing logged",
   copyYesterday: "Copy yesterday",
@@ -198,6 +200,15 @@ export const LockedWeek: Story = {
       locked: true,
       entries: day.entries.map((item) => ({ ...item, locked: true })),
     })),
+  },
+};
+
+/** Thursday and Friday on full-day leave: marked, empty, and no `+` to add to them. */
+export const LeaveDays: Story = {
+  args: {
+    days: typicalWeek.map((day, index) =>
+      index === 3 || index === 4 ? { ...day, onLeave: true, entries: [], totalMinutes: 0 } : day,
+    ),
   },
 };
 

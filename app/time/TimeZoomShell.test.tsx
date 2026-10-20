@@ -24,6 +24,7 @@ const days: TimeZoomDay[] = [
   dayNumber: String(Number.parseInt(isoDate.slice(8), 10)),
   state: index === 2 ? "today" : index > 2 ? "future" : "normal",
   locked: false,
+  onLeave: false,
   // Mon-Wed logged, Wednesday over the 8h target; the rest of the week empty.
   totalMinutes: [240, 480, 600, 0, 0, 0, 0][index],
 }));
@@ -72,6 +73,7 @@ function renderShell(
         capacity: (day) => `${day.totalMinutes / 60} h of 8 h`,
         over: "over 8 h",
         locked: "Locked",
+        onLeave: "On leave",
         today: "Today",
       }}
       {...handlers}
@@ -223,6 +225,7 @@ describe("TimeZoomShell", () => {
                 capacity: () => "",
                 over: "over 8 h",
                 locked: "Locked",
+                onLeave: "On leave",
                 today: "Today",
               }}
               {...handlers}
@@ -303,6 +306,7 @@ describe("TimeZoomShell", () => {
               capacity: () => "",
               over: "",
               locked: "",
+              onLeave: "",
               today: "",
             }}
             {...handlers}
@@ -344,6 +348,7 @@ describe("TimeZoomShell", () => {
               capacity: () => "",
               over: "",
               locked: "",
+              onLeave: "",
               today: "",
             }}
             {...handlers}

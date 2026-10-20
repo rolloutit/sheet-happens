@@ -1,4 +1,5 @@
 import type { AppLocale } from "@/src/i18n/locales";
+import { formatDateRangeLabel } from "@/src/lib/formatting";
 import type { NotificationType } from "@/src/server/db/generated/enums";
 
 export type NotificationMetadata = Record<string, unknown>;
@@ -140,6 +141,45 @@ export function buildNotificationContent(
           ? `An admin changed your time entry. Reason: ${reason}`
           : "An admin changed your time entry.",
       );
+    case "LEAVE_RECORDED_BY_ADMIN": {
+      const leave = formatLeave(metadata, locale);
+      return workflowContent(
+        hu,
+        "Egy admin szabadságot rögzített neked",
+        leave
+          ? `Egy admin rögzítette a távollétedet: ${leave}.`
+          : "Egy admin rögzítette a távollétedet.",
+        "An admin recorded leave for you",
+        leave ? `An admin recorded your time off: ${leave}.` : "An admin recorded your time off.",
+      );
+    }
+    case "LEAVE_MONTH_END_REMINDER":
+      // Lines rather than one paragraph: the email keeps them, the in-app list reads them as one.
+      return hu
+        ? {
+            title: "Közeleg a hónap vége: nézd át a szabadságaidat",
+            body: [
+              "Szia! 👋",
+              "Közeleg a hónap vége, ezért kérlek, nézd meg, hogy az e havi szabikat, betegszabikat (ha volt) beírtad-e. 🗓️",
+              "Ha a hónapban még szabadságon leszel, és nem írtad be, akkor kérlek, holnap 12:00-ig tedd meg. 🙂",
+              "Ha egy korábbi nap hiányzik, azt már csak admin tudja rögzíteni, ezért szólj az adminnak.",
+              "Ha voltál táppénzen, és még nem küldted el a papírt, azt is küldd el addig.",
+              "✨ Köszönöm! ✨",
+            ].join("\n"),
+            emailSubject: `Sheet Happens: szabadságok ellenőrzése (${month})`,
+          }
+        : {
+            title: "Month end is coming: check your leave",
+            body: [
+              "Hi! 👋",
+              "The month is nearly over, so please check that this month's vacation and sick leave (if any) are recorded. 🗓️",
+              "If you will be on leave later this month and have not recorded it yet, please do so by 12:00 tomorrow. 🙂",
+              "If an earlier day is missing, only an admin can record it now, so please let an admin know.",
+              "If you were on sick pay and have not sent the paperwork yet, please send that by then too.",
+              "✨ Thank you! ✨",
+            ].join("\n"),
+            emailSubject: `Sheet Happens: check your leave (${month})`,
+          };
     default:
       return hu
         ? {
@@ -175,6 +215,33 @@ function formatMonth(value: unknown, locale: AppLocale) {
     month: "long",
     timeZone: "UTC",
   }).format(date);
+}
+
+/** `vacation, Oct 12 – 14, 2026` or `betegszabadság, 2026. okt. 12. (délelőtt)`. */
+function formatLeave(metadata: NotificationMetadata, locale: AppLocale) {
+  const startDate = textValue(metadata.startDate);
+  const endDate = textValue(metadata.endDate) || startDate;
+  if (!startDate) return "";
+  const hu = locale === "hu";
+  const kind =
+    metadata.type === "SICK"
+      ? hu
+        ? "betegszabadság"
+        : "sick leave"
+      : hu
+        ? "szabadság"
+        : "vacation";
+  const dayPart =
+    metadata.dayPart === "MORNING"
+      ? hu
+        ? " (délelőtt)"
+        : " (morning)"
+      : metadata.dayPart === "AFTERNOON"
+        ? hu
+          ? " (délután)"
+          : " (afternoon)"
+        : "";
+  return `${kind}, ${formatDateRangeLabel(startDate, endDate, locale)}${dayPart}`;
 }
 
 function textValue(value: unknown) {

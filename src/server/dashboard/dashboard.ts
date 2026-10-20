@@ -609,6 +609,16 @@ export function calculateAverageWeekMinutes(input: {
   return Math.round(input.monthMinutes / elapsedWeeks);
 }
 
+// The greeting addresses the member by first name. A display name carries no name order, so no
+// word of it can stand in for the first name; it is only the fallback when firstName is blank.
+export function getGreetingName(member: {
+  displayName: string;
+  firstName: string;
+  lastName: string;
+}) {
+  return member.firstName.trim() || getDisplayName(member);
+}
+
 export function getContractorDashboardNextAction(input: {
   status: TimesheetPreviewStatus;
   selectedMonth: string;
@@ -675,7 +685,7 @@ async function getProfileDashboard(
       getWeeklyProjectChecklist(member.id, period),
     ]);
   const base = {
-    greetingName: getDisplayName(member),
+    greetingName: getGreetingName(member),
     period,
     activeProjectCount,
     monthMinutes,
@@ -833,7 +843,7 @@ async function getAdminDashboard(
 
   return {
     kind: "admin",
-    greetingName: getDisplayName(member),
+    greetingName: getGreetingName(member),
     period,
     priorityMetrics: [
       {

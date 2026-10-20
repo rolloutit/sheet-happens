@@ -11,7 +11,7 @@ const inputSchema = z.object({ entryId }).strict();
 
 const DESCRIPTION = `Bring a deleted time entry back, exactly as it was.
 
-A restore is re-validated as though the entry were being created now: the month must still be open (\`PERIOD_LOCKED\`), the project assignment must still be tracked per entry rather than declaring its hours monthly (\`PROJECT_DECLARES_MONTHLY\`), and the day must still fit under 24 hours with the entry back in it (\`DAILY_LIMIT_EXCEEDED\`). A restore can therefore fail even though the delete succeeded — the same way undo behaves in the web app.
+A restore is re-validated as though the entry were being created now: the month must still be open (\`PERIOD_LOCKED\`), the day must not be covered by a full-day leave (\`DAY_ON_LEAVE\`), the project assignment must still be tracked per entry rather than declaring its hours monthly (\`PROJECT_DECLARES_MONTHLY\`), and the day must still fit under 24 hours with the entry back in it (\`DAILY_LIMIT_EXCEEDED\`). A restore can therefore fail even though the delete succeeded — the same way undo behaves in the web app.
 
 Only a deleted entry can be restored. An id that is already live, was never deleted, or belongs to another member comes back as \`ENTRY_NOT_FOUND\`, so restoring the same entry twice fails on the second call rather than changing anything.
 

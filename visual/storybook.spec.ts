@@ -36,6 +36,30 @@ const storyCases: StoryVisualCase[] = [
     theme: "dark",
     locale: "hu",
   },
+  /**
+   * The leave calendar's ribbons, lanes, half days and holiday tint are layout that no unit test
+   * sees: a ribbon riding over the day numbers passed every assertion before it was caught here.
+   */
+  {
+    id: "sheet-leavecalendar--employee-view",
+    slug: "leave-calendar-employee-dark",
+    theme: "dark",
+    locale: "en",
+  },
+  {
+    id: "sheet-leavecalendar--crowded-week",
+    slug: "leave-calendar-crowded-light",
+    theme: "light",
+    locale: "en",
+    projects: ["desktop"],
+  },
+  {
+    id: "sheet-leavecalendar--admin-view",
+    slug: "leave-calendar-admin-light",
+    theme: "light",
+    locale: "en",
+    projects: ["desktop"],
+  },
   {
     id: "layout-appshell--foundation-page",
     slug: "app-shell-desktop-dark",
