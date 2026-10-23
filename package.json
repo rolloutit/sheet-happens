@@ -74,7 +74,7 @@
     "@better-auth/mcp": "^1.7.3",
     "@better-auth/passkey": "^1.7.3",
     "@better-auth/prisma-adapter": "^1.7.3",
-    "@hookform/resolvers": "^5.9.1",
+    "@hookform/resolvers": "^6.0.0",
     "@modelcontextprotocol/server": "^2.0.0",
     "@prisma/adapter-pg": "^7.10.0",
     "@prisma/client": "^7.10.0",
