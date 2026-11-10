@@ -1,3 +1,5 @@
+import type { TimeDaysWeek, TimeGridAssignedProject } from "@/src/server/time-tracking";
+
 export type TimeTrackingActionStatus = "idle" | "success" | "error";
 
 export type TimeTrackingActionState = {
@@ -40,12 +42,6 @@ export type DeleteTimeEntryActionInput = {
 };
 
 export type RestoreTimeEntryActionInput = DeleteTimeEntryActionInput;
-
-export type InactiveProjectWeekActionInput = {
-  projectId: string;
-  weekStartDate: string;
-  note?: string;
-};
 
 export type StartRunningTimerActionInput = {
   projectId: string;
@@ -93,3 +89,21 @@ export type DeleteMonthlyHourDeclarationActionInput = {
   projectId: string;
   periodStart: string;
 };
+
+export type LoadEarlierTimeDaysActionInput = {
+  /** The first day already shown; the page returned ends the day before it. */
+  before: string;
+  /** More than one re-reads every page already scrolled in, after a write. */
+  weeks?: number;
+};
+
+export type LoadEarlierTimeDaysActionResult =
+  | {
+      status: "success";
+      weeks: TimeDaysWeek[];
+      hasEarlier: boolean;
+      /** Assignments over the loaded weeks, for entries on projects the first page did not know. */
+      projects: TimeGridAssignedProject[];
+      lockedMonthStarts: string[];
+    }
+  | { status: "error"; message: string };

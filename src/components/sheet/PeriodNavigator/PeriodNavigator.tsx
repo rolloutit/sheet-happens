@@ -10,7 +10,7 @@ import { cn } from "@/src/lib/utils";
 import { MonthPickerPanel } from "../../ui/MonthPicker";
 import { Popover, PopoverContent, PopoverTrigger } from "../../ui/Popover";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "../../ui/Tooltip";
-import { ShortcutChip } from "../TimeScopeBar";
+import { ShortcutChip } from "../../ui/ShortcutChip";
 import type { PeriodNavigatorProps } from "./PeriodNavigator.types";
 
 /**
@@ -39,7 +39,9 @@ export function PeriodNavigator({
   menu,
   labelRef,
   disabled = false,
+  nextDisabled = false,
   className,
+  labelClassName,
   onPrevious,
   onNext,
   onToday,
@@ -69,7 +71,10 @@ export function PeriodNavigator({
                 aria-haspopup="dialog"
                 aria-expanded={pickerOpen}
                 disabled={disabled}
-                className="relative min-w-0 rounded-[var(--radius-pill)] px-3 py-1 text-sm font-medium text-foreground transition-colors duration-[var(--duration-micro)] hover:bg-secondary disabled:cursor-not-allowed disabled:opacity-50"
+                className={cn(
+                  "relative min-w-0 rounded-[var(--radius-pill)] px-3 py-1 text-sm font-medium text-foreground transition-colors duration-[var(--duration-micro)] hover:bg-secondary disabled:cursor-not-allowed disabled:opacity-50",
+                  labelClassName,
+                )}
               >
                 <AnimatePresence mode="popLayout" initial={false} custom={direction}>
                   <m.span
@@ -103,7 +108,7 @@ export function PeriodNavigator({
           <StepButton
             label={labels.next}
             shortcut={shortcuts?.next}
-            disabled={disabled}
+            disabled={disabled || nextDisabled}
             onClick={onNext}
           >
             <ChevronRight className="size-4" aria-hidden="true" />

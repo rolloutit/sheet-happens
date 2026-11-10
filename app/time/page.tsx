@@ -6,50 +6,35 @@ import {
   requireActiveAppMember,
 } from "@/src/server/auth/app-access";
 import {
+  getMemberMonthCalendar,
   getMemberMonthOverview,
-  getMemberWeeklyTimeGrid,
-  getMonday,
-  getMonthStartsInRange,
+  getMemberTimeDays,
+  getMemberTimeFrame,
+  getMemberYearOverview,
+  getMonthStart,
+  getTodayIsoInTimezone,
   parseDateOnly,
   TimeTrackingDateError,
 } from "@/src/server/time-tracking";
 
-import { TimeGridClient } from "./TimeGridClient";
+import { TimePageClient, type TimePageData } from "./TimePageClient";
+import { clampView, resolveTimeLocation, resolveViewStops, type TimeView } from "./view";
 
 export const dynamic = "force-dynamic";
+/** Seconds a visited tab or period is reused on the client; mutations evict it at once. */
+export const unstable_dynamicStaleTime = 30;
 
 type TimePageProps = {
-  searchParams?: Promise<{
-    week?: string;
-  }>;
+  searchParams?: Promise<Record<string, string | string[] | undefined>>;
 };
 
 export default async function TimePage({ searchParams }: TimePageProps) {
-  const { member } = await requireActiveAppMember("/time");
-  const resolvedSearchParams = await searchParams;
-  const requestedWeekStart = parseWeekStart(resolvedSearchParams?.week);
-  const week = await getMemberWeeklyTimeGrid({
-    memberId: member.id,
-    weekStart: requestedWeekStart,
-  });
-  /**
-   * The month level ships with the page, for every month the visible week touches — one, or two
-   * across a month boundary (§11).
-   *
-   * That is what makes all four stops reachable with no round-trip, which in turn is what lets a
-   * level change stay a pure layout animation: L4 needs no per-entry data, so it is a `groupBy` and
-   * two small `findMany`s per month rather than anything a spinner would have to cover.
-   *
-   * After the week rather than beside it, because which months the week touches is not known until
-   * the week is: the week start depends on the member's own timezone, which
-   * `getMemberWeeklyTimeGrid` resolves. `getMonthStartsInRange` is the same helper it uses to find
-   * the months it locks against, so the two can never disagree about where a month begins.
-   */
-  const months = await Promise.all(
-    getMonthStartsInRange(parseDateOnly(week.weekStart), parseDateOnly(week.weekEnd)).map(
-      (monthStart) => getMemberMonthOverview({ memberId: member.id, monthStart }),
-    ),
-  );
+  const [{ member }, params] = await Promise.all([
+    requireActiveAppMember("/time"),
+    searchParams ?? Promise.resolve({}),
+  ]);
+  const location = resolveTimeLocation(params);
+  const data = await loadView(member, location.view, parseAnchor(location.day));
 
   return (
     <AppShell
@@ -57,30 +42,75 @@ export default async function TimePage({ searchParams }: TimePageProps) {
       role={mapMemberToShellRole(member)}
       profile={mapMemberToShellProfile(member)}
       user={mapMemberToShellUser(member)}
+      // The period bar carries the timer here; a second pill in the header would repeat it.
+      timer={null}
     >
-      {/*
-       * Wider than the reading-width default from `xl` up, matching the admin surfaces
-       * (`max-w-[92rem]`). This page is not prose — its widest level is seven day columns side by
-       * side, and at 73.75rem a large display spends a third of the content area on empty margins
-       * while the columns are too narrow for a description and a time range. The cap stays, so the
-       * week does not turn into seven sparse strips on a 4K panel.
-       */}
-      <section className="mx-auto w-full max-w-[73.75rem] px-4 py-8 sm:px-6 lg:px-8 xl:max-w-[92rem]">
-        <TimeGridClient
-          week={week}
-          months={months}
-          durationDisplayFormat={member.durationDisplayFormat}
-        />
+      <section className="mx-auto w-full max-w-[73.75rem] px-4 py-6 sm:px-6 sm:py-8 lg:px-8 xl:max-w-[92rem]">
+        <TimePageClient data={data} durationDisplayFormat={member.durationDisplayFormat} />
       </section>
     </AppShell>
   );
 }
 
-function parseWeekStart(value: string | undefined) {
+/**
+ * Only the open view's data is loaded, beside the frame's (assignments, timer, draft) rather than
+ * after it. Which view a member may have depends on those assignments, so the rare fallbacks — a
+ * declared-only member — load their month once the frame has said so.
+ */
+async function loadView(
+  member: { id: string; timezone: string },
+  view: TimeView,
+  anchor: Date | null,
+): Promise<TimePageData> {
+  const memberId = member.id;
+  const today = parseDateOnly(getTodayIsoInTimezone(member.timezone));
+  const anchorDay = anchor ?? today;
+
+  if (view === "days") {
+    const days = await getMemberTimeDays({ memberId, endDay: anchor });
+    if (clampView(view, resolveViewStops(days.projects)) === "days") return { view, days };
+  }
+
+  const framePromise = getMemberTimeFrame({ memberId, anchor });
+
+  if (view === "weeks") {
+    const currentMonth = getMonthStart(today);
+    const anchorMonth = getMonthStart(anchorDay);
+    // A future month has nothing to show; it reads as this one, as a future day does in Days.
+    const monthStart = anchorMonth > currentMonth ? currentMonth : anchorMonth;
+    // Started with the calendar so a hybrid member's declarations do not wait for the frame.
+    const monthPromise = getMemberMonthOverview({ memberId, monthStart });
+    monthPromise.catch(() => {});
+    const [frame, calendar] = await Promise.all([
+      framePromise,
+      getMemberMonthCalendar({ memberId, monthStart }),
+    ]);
+
+    if (clampView(view, resolveViewStops(frame.projects)) === "weeks") {
+      const hybrid = frame.projects.some((project) => project.trackingMode === "DECLARED");
+      return { view, frame, calendar, month: hybrid ? await monthPromise : null };
+    }
+  }
+
+  // A future year has nothing to show; the period bar's forward arrow stops at this one.
+  const year = Math.min(anchorDay.getUTCFullYear(), today.getUTCFullYear());
+  const yearPromise = getMemberYearOverview({ memberId, year });
+  yearPromise.catch(() => {});
+  const frame = await framePromise;
+
+  if (!resolveViewStops(frame.projects).includes("days")) {
+    const month = await getMemberMonthOverview({ memberId, monthStart: getMonthStart(anchorDay) });
+    return { view: "months", frame, layout: "declared", month };
+  }
+
+  return { view: "months", frame, layout: "year", year: await yearPromise };
+}
+
+function parseAnchor(value: string | null) {
   if (!value) return null;
 
   try {
-    return getMonday(parseDateOnly(value));
+    return parseDateOnly(value);
   } catch (error) {
     if (error instanceof TimeTrackingDateError) return null;
     throw error;

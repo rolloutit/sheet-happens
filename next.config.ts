@@ -9,6 +9,14 @@ const nextConfig: NextConfig = {
     serverActions: {
       bodySizeLimit: "12mb",
     },
+    /**
+     * A full prefetch (the `/time` tabs warm each other) lives for `static`, shortened from 5 min so
+     * a view warmed in the background is never long out of date. A mutation's `revalidatePath`
+     * evicts it sooner. How long a *visited* page is reused is set per page, in `app/time/page.tsx`.
+     */
+    staleTimes: {
+      static: 60,
+    },
   },
   output: "standalone",
   /**

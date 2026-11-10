@@ -11,6 +11,7 @@ export {
   saveTimeEntryDraft,
   startRunningTimer,
   stopRunningTimer,
+  switchRunningTimer,
   TimeTrackingError,
   unmarkInactiveProjectWeek,
   updateTimeEntry,
@@ -37,6 +38,10 @@ export type {
   TimeTrackingErrorCode,
   TimeTrackingRequestMetadata,
 } from "./time-entries";
+export { getMemberTimeFrame } from "./time-frame";
+export type { MemberTimeFrame } from "./time-frame";
+export { buildTimeDaysWeeks, getMemberTimeDays, TIME_DAYS_PAGE_WEEKS } from "./time-days";
+export type { MemberTimeDays, TimeDaysDay, TimeDaysWeek } from "./time-days";
 export {
   buildDescriptionSuggestions,
   loadDescriptionSuggestionRows,
@@ -69,11 +74,32 @@ export type {
   BuildMonthOverviewInput,
   MemberMonthOverview,
   MonthOverviewAssignment,
+  MonthOverviewDayTotal,
   MonthOverviewDeclaration,
   MonthOverviewDeclarationProof,
   MonthOverviewDeclarationRow,
   MonthOverviewProject,
 } from "./month-overview";
+export { buildMonthCalendar, getMemberMonthCalendar } from "./month-calendar";
+export type {
+  BuildMonthCalendarInput,
+  MemberMonthCalendar,
+  MonthCalendarDay,
+  MonthCalendarEntry,
+  MonthCalendarEntryRow,
+  MonthCalendarWeek,
+} from "./month-calendar";
+export { buildYearOverview, getMemberYearOverview, yearMonthStarts } from "./year-overview";
+export type {
+  BuildYearOverviewInput,
+  MemberYearOverview,
+  YearOverviewClient,
+  YearOverviewDeclared,
+  YearOverviewLeaveDay,
+  YearOverviewMonth,
+  YearOverviewProfile,
+  YearOverviewTimesheetStatus,
+} from "./year-overview";
 export {
   buildHoursProofObjectKey,
   DeclarationError,

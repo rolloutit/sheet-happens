@@ -12,6 +12,7 @@ import { requireActiveAppMemberForAction } from "@/src/server/auth/app-access";
 import { AuthenticationError, AuthorizationError } from "@/src/server/auth/session";
 import { ObjectStorageConfigurationError } from "@/src/server/storage";
 import {
+  addDays,
   copyPreviousDayEntries,
   createTimeEntry,
   DeclarationError,
@@ -19,22 +20,26 @@ import {
   deleteTimeEntry,
   deleteTimeEntryDraft,
   duplicatePreviousWeek,
+  getMemberMonthCalendar,
+  getMemberTimeDays,
+  getMemberYearOverview,
   HOURS_PROOF_MAX_BYTES,
-  markInactiveProjectWeek,
   parseDateOnly,
   restoreTimeEntry,
   saveMonthlyHourDeclaration,
   saveTimeEntryDraft,
   startRunningTimer,
   stopRunningTimer,
+  switchRunningTimer,
   TimeTrackingDateError,
   type TimeTrackingDateErrorCode,
   TimeTrackingError,
   type TimeTrackingErrorCode,
-  unmarkInactiveProjectWeek,
   updateTimeEntry,
   uploadDeclarationProof,
   type CopyTimeEntriesResult,
+  type MemberMonthCalendar,
+  type MemberYearOverview,
   type TimeTrackingRequestMetadata,
 } from "@/src/server/time-tracking";
 
@@ -45,7 +50,8 @@ import type {
   DeleteMonthlyHourDeclarationActionInput,
   DeleteTimeEntryActionInput,
   DuplicatePreviousWeekActionInput,
-  InactiveProjectWeekActionInput,
+  LoadEarlierTimeDaysActionInput,
+  LoadEarlierTimeDaysActionResult,
   RestoreTimeEntryActionInput,
   SaveMonthlyHourDeclarationActionInput,
   SaveTimeEntryDraftActionInput,
@@ -112,12 +118,6 @@ const deleteTimeEntrySchema = z.object({
   timeEntryId: z.string().trim().min(1, "Time entry id is missing."),
 });
 
-const inactiveWeekSchema = z.object({
-  projectId: z.string().trim().min(1, "Choose a project."),
-  weekStartDate: z.string().trim().refine(isDateInputValue, "Choose a valid week."),
-  note: z.string().trim().max(500, "Note must be 500 characters or less.").optional(),
-});
-
 const startRunningTimerSchema = z.object({
   projectId: z.string().trim().min(1, "Choose a project."),
   description: z
@@ -125,6 +125,11 @@ const startRunningTimerSchema = z.object({
     .trim()
     .min(1, "Description is required.")
     .max(1000, "Description must be 1000 characters or less."),
+});
+
+const loadEarlierTimeDaysSchema = z.object({
+  before: z.string().trim().refine(isDateInputValue, "Choose a valid date."),
+  weeks: z.number().int().min(1).max(52).optional(),
 });
 
 const copyPreviousDayEntriesSchema = z.object({
@@ -385,6 +390,76 @@ export async function stopRunningTimerAction(): Promise<TimeTrackingActionState>
   }
 }
 
+/** Continue and the day log's composer: start a timer, stopping a running one first. */
+export async function switchRunningTimerAction(
+  input: StartRunningTimerActionInput,
+): Promise<TimeTrackingActionState> {
+  const t = await getTranslations("TimeTrackingActions");
+  const parsed = startRunningTimerSchema.safeParse(input);
+
+  if (!parsed.success) {
+    return {
+      status: "error",
+      message: t("errors.fixFields"),
+      fieldErrors: translateEntryFieldErrors(getEntryFieldErrors(parsed.error), t),
+    };
+  }
+
+  try {
+    const { member } = await requireActiveAppMemberForAction();
+    const result = await switchRunningTimer({
+      ...parsed.data,
+      memberId: member.id,
+      actorMemberId: member.id,
+      requestMetadata: await getTimeTrackingRequestMetadata(),
+    });
+
+    revalidatePath("/time");
+
+    return {
+      status: "success",
+      message:
+        result.stopped && "discarded" in result.stopped
+          ? t("success.timerSwitchedDiscarded")
+          : result.stopped
+            ? t("success.timerSwitched")
+            : t("success.timerStarted"),
+    };
+  } catch (error) {
+    return mapTimeTrackingActionError(error, t("errors.timerStartFailed"), t);
+  }
+}
+
+/** The day log's infinite scroll: `weeks` weeks (default one) ending the day before `before`. */
+export async function loadEarlierTimeDaysAction(
+  input: LoadEarlierTimeDaysActionInput,
+): Promise<LoadEarlierTimeDaysActionResult> {
+  const t = await getTranslations("TimeTrackingActions");
+  const parsed = loadEarlierTimeDaysSchema.safeParse(input);
+
+  if (!parsed.success) return { status: "error", message: t("errors.fixFields") };
+
+  try {
+    const { member } = await requireActiveAppMemberForAction();
+    const page = await getMemberTimeDays({
+      memberId: member.id,
+      endDay: addDays(parseDateOnly(parsed.data.before), -1),
+      weeks: parsed.data.weeks ?? 1,
+    });
+
+    return {
+      status: "success",
+      weeks: page.weeks,
+      hasEarlier: page.hasEarlier,
+      projects: page.projects,
+      lockedMonthStarts: page.lockedMonthStarts,
+    };
+  } catch (error) {
+    const mapped = mapTimeTrackingActionError(error, t("errors.generic"), t);
+    return { status: "error", message: mapped.message };
+  }
+}
+
 export async function copyPreviousDayEntriesAction(
   input: CopyPreviousDayEntriesActionInput,
 ): Promise<TimeTrackingActionState> {
@@ -509,74 +584,6 @@ export async function clearTimeEntryDraftAction(
     };
   } catch (error) {
     return mapTimeTrackingActionError(error, t("errors.draftClearFailed"), t);
-  }
-}
-
-export async function markInactiveProjectWeekAction(
-  input: InactiveProjectWeekActionInput,
-): Promise<TimeTrackingActionState> {
-  const t = await getTranslations("TimeTrackingActions");
-  const parsed = inactiveWeekSchema.safeParse(input);
-
-  if (!parsed.success) {
-    return {
-      status: "error",
-      message: t("errors.inactiveWeekSaveFailed"),
-    };
-  }
-
-  try {
-    const { member } = await requireActiveAppMemberForAction();
-    await markInactiveProjectWeek({
-      ...parsed.data,
-      weekStartDate: parseDateOnly(parsed.data.weekStartDate),
-      memberId: member.id,
-      actorMemberId: member.id,
-      requestMetadata: await getTimeTrackingRequestMetadata(),
-    });
-
-    revalidatePath("/time");
-
-    return {
-      status: "success",
-      message: t("success.inactiveWeekSaved"),
-    };
-  } catch (error) {
-    return mapTimeTrackingActionError(error, t("errors.inactiveWeekSaveFailed"), t);
-  }
-}
-
-export async function unmarkInactiveProjectWeekAction(
-  input: InactiveProjectWeekActionInput,
-): Promise<TimeTrackingActionState> {
-  const t = await getTranslations("TimeTrackingActions");
-  const parsed = inactiveWeekSchema.safeParse(input);
-
-  if (!parsed.success) {
-    return {
-      status: "error",
-      message: t("errors.inactiveWeekRemoveFailed"),
-    };
-  }
-
-  try {
-    const { member } = await requireActiveAppMemberForAction();
-    await unmarkInactiveProjectWeek({
-      ...parsed.data,
-      weekStartDate: parseDateOnly(parsed.data.weekStartDate),
-      memberId: member.id,
-      actorMemberId: member.id,
-      requestMetadata: await getTimeTrackingRequestMetadata(),
-    });
-
-    revalidatePath("/time");
-
-    return {
-      status: "success",
-      message: t("success.inactiveWeekRemoved"),
-    };
-  } catch (error) {
-    return mapTimeTrackingActionError(error, t("errors.inactiveWeekRemoveFailed"), t);
   }
 }
 
@@ -1009,4 +1016,65 @@ async function getTimeTrackingRequestMetadata(): Promise<TimeTrackingRequestMeta
     userAgent: requestHeaders.get("user-agent"),
     channel: "WEB",
   };
+}
+
+const loadMonthCalendarSchema = z.object({
+  monthStart: z.string().regex(/^\d{4}-\d{2}-01$/),
+});
+
+export type LoadMonthCalendarActionResult =
+  { status: "success"; calendar: MemberMonthCalendar } | { status: "error"; message: string };
+
+/** One month of the Weeks view, for the phone list's lazy loading of earlier months. */
+export async function loadMonthCalendarAction(input: {
+  monthStart: string;
+}): Promise<LoadMonthCalendarActionResult> {
+  const t = await getTranslations("TimeTrackingActions");
+  const parsed = loadMonthCalendarSchema.safeParse(input);
+
+  if (!parsed.success) {
+    return { status: "error", message: t("errors.monthCalendarLoadFailed") };
+  }
+
+  try {
+    const { member } = await requireActiveAppMemberForAction();
+    const calendar = await getMemberMonthCalendar({
+      memberId: member.id,
+      monthStart: parseDateOnly(parsed.data.monthStart, "Choose a valid month."),
+    });
+
+    return { status: "success", calendar };
+  } catch (error) {
+    const mapped = mapTimeTrackingActionError(error, t("errors.monthCalendarLoadFailed"), t);
+    return { status: "error", message: mapped.message };
+  }
+}
+
+export type LoadYearOverviewActionResult =
+  { status: "success"; overview: MemberYearOverview } | { status: "error"; message: string };
+
+const loadYearOverviewSchema = z.object({
+  year: z.number().int().min(2000).max(2100),
+});
+
+/** One year of the Months view, for lazily loading the years below the current one. */
+export async function loadYearOverviewAction(input: {
+  year: number;
+}): Promise<LoadYearOverviewActionResult> {
+  const t = await getTranslations("TimeTrackingActions");
+  const parsed = loadYearOverviewSchema.safeParse(input);
+
+  if (!parsed.success) {
+    return { status: "error", message: t("errors.yearOverviewLoadFailed") };
+  }
+
+  try {
+    const { member } = await requireActiveAppMemberForAction();
+    const overview = await getMemberYearOverview({ memberId: member.id, year: parsed.data.year });
+
+    return { status: "success", overview };
+  } catch (error) {
+    const mapped = mapTimeTrackingActionError(error, t("errors.yearOverviewLoadFailed"), t);
+    return { status: "error", message: mapped.message };
+  }
 }
