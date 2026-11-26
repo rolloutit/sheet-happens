@@ -30,7 +30,8 @@ export type AdminLeaveFilterBarProps = {
 /**
  * Month, people, kind and HR state, as a plain GET form so the server parses one set of params
  * for both views. The HR filter only applies to the list: the calendar shows who is away, which
- * does not depend on the admin's bookkeeping.
+ * does not depend on the admin's bookkeeping. The list defaults to `pending`, so "no HR filter"
+ * is the explicit `hr=all`, never an absent param.
  */
 export function AdminLeaveFilterBar({
   view,
@@ -48,7 +49,8 @@ export function AdminLeaveFilterBar({
 
   function hrefWithout(key: FilterKey, value?: string) {
     const params = new URLSearchParams(searchParams.toString());
-    deleteSearchParamValue(params, key, value);
+    if (key === "hr") params.set("hr", "all");
+    else deleteSearchParamValue(params, key, value);
     params.delete("page");
     const search = params.toString();
     return (search ? `/admin/leave?${search}` : "/admin/leave") as Route;
@@ -140,10 +142,10 @@ export function AdminLeaveFilterBar({
               name="hr"
               label={t("admin.filters.hr")}
               placeholder={t("admin.filters.hrOptions.all")}
-              defaultValue={hr === "all" ? undefined : hr}
+              defaultValue={hr}
               labels={pickerLabels.combobox}
               options={[
-                { value: "", label: t("admin.filters.hrOptions.all") },
+                { value: "all", label: t("admin.filters.hrOptions.all") },
                 { value: "pending", label: t("admin.filters.hrOptions.pending") },
                 { value: "processed", label: t("admin.filters.hrOptions.processed") },
               ]}
@@ -165,7 +167,7 @@ export function AdminLeaveFilterBar({
         onRemove={(id, value) => router.push(hrefWithout(id, value))}
         onClear={() =>
           router.push(
-            (view === "calendar" ? "/admin/leave?view=calendar" : "/admin/leave") as Route,
+            (view === "calendar" ? "/admin/leave?view=calendar" : "/admin/leave?hr=all") as Route,
           )
         }
       />

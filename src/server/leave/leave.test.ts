@@ -515,4 +515,11 @@ describe("leave helpers", () => {
       page: 1,
     });
   });
+
+  it("defaults the admin HR filter to pending, and shows everything only when asked", () => {
+    expect(normalizeAdminLeaveFilters({}).hr).toBe("pending");
+    expect(normalizeAdminLeaveFilters({ hr: "junk" }).hr).toBe("pending");
+    expect(normalizeAdminLeaveFilters({ hr: "all" }).hr).toBe("all");
+    expect(normalizeAdminLeaveFilters({ hr: "processed" }).hr).toBe("processed");
+  });
 });
