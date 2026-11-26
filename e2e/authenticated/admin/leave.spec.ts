@@ -78,7 +78,7 @@ test("records a half day, ticks it as processed and deletes it", async ({ page }
 
   // A run that failed half way leaves its leave behind, and the next one would hit the overlap
   // rule. Clear it first, through the same admin delete the test ends with.
-  await visit(page, `/admin/leave?month=${month}`);
+  await visit(page, `/admin/leave?month=${month}&hr=all`);
   for (let remaining = await row.count(); remaining > 0; remaining -= 1) {
     await deleteLeave(page, row.first());
     // Wait for the refreshed list, or the next pass would open the row just deleted.
@@ -101,7 +101,7 @@ test("records a half day, ticks it as processed and deletes it", async ({ page }
   await drawer.getByRole("button", { name: "Add leave" }).click();
   await expect(page.getByText("Leave added.")).toBeVisible();
 
-  await visit(page, `/admin/leave?month=${month}`);
+  await visit(page, `/admin/leave?month=${month}&hr=all`);
   const hr = page.getByRole("checkbox", {
     name: `Admin User (${rangeLabel}) processed`,
   });
@@ -139,7 +139,7 @@ test("records a past half day for an employee and deletes it", async ({ page }) 
     name: new RegExp(`Dóra Kovács.*${escapeRegExp(rangeLabel)}`),
   });
 
-  await visit(page, `/admin/leave?month=${month}`);
+  await visit(page, `/admin/leave?month=${month}&hr=all`);
   for (let remaining = await row.count(); remaining > 0; remaining -= 1) {
     await deleteLeave(page, row.first());
     await expect(row).toHaveCount(remaining - 1);
@@ -167,7 +167,7 @@ test("records a past half day for an employee and deletes it", async ({ page }) 
   await drawer.getByRole("button", { name: "Add leave" }).click();
   await expect(page.getByText("Leave added.")).toBeVisible();
 
-  await visit(page, `/admin/leave?month=${month}`);
+  await visit(page, `/admin/leave?month=${month}&hr=all`);
   // Recorded by the admin, but not yet entered into HR: the tick stays the admin's own step.
   await expect(
     page.getByRole("checkbox", { name: `Dóra Kovács (${rangeLabel}) processed` }),

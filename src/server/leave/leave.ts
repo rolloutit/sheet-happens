@@ -777,7 +777,8 @@ export function normalizeAdminLeaveFilters(raw: {
     types: listSearchParam(raw.type)
       .map((type) => type.toUpperCase())
       .filter((type): type is LeaveType => type === "VACATION" || type === "SICK"),
-    hr: hr === "pending" || hr === "processed" ? hr : "all",
+    // The list opens on the work still to do; everything is one explicit `hr=all` away.
+    hr: hr === "all" || hr === "processed" ? hr : "pending",
     page: Number.isInteger(page) && page > 0 ? page : 1,
   };
 }
